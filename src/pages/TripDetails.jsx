@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, FileText, Receipt, FolderOpen, ChevronRight, ChevronDown, ChevronUp,
   Share2, MapPin, Star, MessageCircle, Plane, Users, PalmtreeIcon,
-  User as UserIcon,
+  User as UserIcon, Phone, Pencil, Trash2, Plus,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
@@ -417,25 +417,434 @@ function JourneyMap({ cities }) {
 }
 
 // ─── Before You Go Accordion ───
+// ─── Before You Go: Sub-sections ───
+
+function MoneySimContent({ data }) {
+  return (
+    <div style={{ animation: "fadeUp 0.2s ease-out" }}>
+      {/* Currency rates row */}
+      {data.currencyRates && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {data.currencyRates.map((r, i) => (
+            <div key={i} style={{
+              flex: 1, background: C.bg, borderRadius: 10, padding: "10px 8px",
+              textAlign: "center",
+            }}>
+              <p style={{ fontSize: 11, color: C.sub, margin: "0 0 2px" }}>{r.label}</p>
+              <p style={{ fontSize: 15, fontWeight: 700, color: C.head, margin: 0 }}>{r.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Forex section */}
+      {data.forex && (
+        <div style={{ marginBottom: 20 }}>
+          <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>{"\uD83D\uDCB1"}</span> Forex
+          </h5>
+          <p style={{ fontSize: 14, color: C.sub, margin: "0 0 12px", lineHeight: "21px" }}>{data.forex.intro}</p>
+          <div style={{
+            background: C.bg, borderRadius: 10, padding: 14, marginBottom: 12,
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            {data.forex.options.map((opt, i) => (
+              <p key={i} style={{ fontSize: 14, color: C.sub, margin: 0, lineHeight: "21px" }}>
+                <span style={{ marginRight: 6 }}>{opt.icon}</span>{opt.text}
+              </p>
+            ))}
+          </div>
+          {data.forex.warning && (
+            <div style={{
+              background: "#FFFAEB", borderRadius: 10, padding: 14,
+              borderLeft: `3px solid #F79009`,
+            }}>
+              <p style={{ fontSize: 13, color: "#B54708", margin: 0, lineHeight: "20px" }}>
+                <span style={{ marginRight: 4 }}>{"\u26A0\uFE0F"}</span> {data.forex.warning}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SIM section */}
+      {data.sim && (
+        <div>
+          <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>{"\uD83D\uDCF1"}</span> {data.sim.title || "SIM & Connectivity"}
+          </h5>
+          <p style={{ fontSize: 14, color: C.sub, margin: "0 0 12px", lineHeight: "21px" }}>{data.sim.intro}</p>
+          <div style={{
+            background: C.bg, borderRadius: 10, padding: 14,
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            {data.sim.options.map((opt, i) => (
+              <p key={i} style={{ fontSize: 14, color: C.sub, margin: 0, lineHeight: "21px" }}>
+                <span style={{ marginRight: 6 }}>{opt.icon}</span>{opt.text}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fallback for simple items */}
+      {data.items && !data.currencyRates && (
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {data.items.map((item, j) => (
+            <li key={j} style={{ fontSize: 14, color: C.sub, lineHeight: "22px", marginBottom: 4 }}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PackingContent({ data }) {
+  const [items, setItems] = useState(data.checklist || []);
+  const [newItem, setNewItem] = useState("");
+
+  const toggleCheck = (idx) => {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, checked: !it.checked } : it));
+  };
+  const removeItem = (idx) => {
+    setItems(prev => prev.filter((_, i) => i !== idx));
+  };
+  const addItem = () => {
+    if (!newItem.trim()) return;
+    setItems(prev => [...prev, { item: newItem.trim(), emoji: "\uD83D\uDD0C", person: "essential", checked: false }]);
+    setNewItem("");
+  };
+
+  const checkedCount = items.filter(c => c.checked).length;
+
+  return (
+    <div style={{ animation: "fadeUp 0.2s ease-out" }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {items.map((it, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "11px 0",
+            borderBottom: i < items.length - 1 ? `1px solid ${C.div}` : "none",
+          }}>
+            <input
+              type="checkbox"
+              checked={it.checked}
+              onChange={() => toggleCheck(i)}
+              style={{ accentColor: C.p600, width: 18, height: 18, flexShrink: 0, cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 16, flexShrink: 0 }}>{it.emoji}</span>
+            <span style={{
+              flex: 1, fontSize: 14, color: it.checked ? C.inact : C.head,
+              textDecoration: it.checked ? "line-through" : "none",
+            }}>
+              {it.item}
+            </span>
+            <Pencil size={16} color={C.inact} style={{ cursor: "pointer", flexShrink: 0 }} />
+            <Trash2 size={16} color={C.inact} style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => removeItem(i)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Add item row */}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <input
+          type="text"
+          placeholder="Add item..."
+          value={newItem}
+          onChange={e => setNewItem(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && addItem()}
+          style={{
+            flex: 1, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.div}`,
+            fontSize: 14, fontFamily: "inherit", outline: "none", color: C.head,
+          }}
+        />
+        <button onClick={addItem} style={{
+          padding: "10px 20px", borderRadius: 8, background: C.p600, color: "#fff",
+          border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+        }}>
+          Add
+        </button>
+      </div>
+
+      {/* Progress */}
+      <p style={{ fontSize: 12, color: C.sub, margin: "10px 0 0" }}>
+        {checkedCount}/{items.length} packed
+      </p>
+    </div>
+  );
+}
+
+function AtDestinationContent({ data }) {
+  const [showVeg, setShowVeg] = useState(false);
+
+  return (
+    <div style={{ animation: "fadeUp 0.2s ease-out" }}>
+      {/* Arrival steps */}
+      {data.arrivalSteps && (
+        <div style={{ marginBottom: 24 }}>
+          <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 14px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>{"\uD83C\uDFF3\uFE0F"}</span> Arrival steps
+          </h5>
+          <div style={{
+            display: "flex", flexDirection: "column", gap: 0,
+            borderLeft: `2px solid ${C.div}`, marginLeft: 16, paddingLeft: 20,
+          }}>
+            {data.arrivalSteps.map((step, i) => (
+              <div key={i} style={{
+                position: "relative", paddingBottom: i < data.arrivalSteps.length - 1 ? 18 : 0,
+              }}>
+                {/* Dot on timeline */}
+                <div style={{
+                  position: "absolute", left: -29, top: 2,
+                  width: 28, height: 28, borderRadius: "50%",
+                  background: C.bg, border: `2px solid ${C.div}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13,
+                }}>
+                  {step.icon}
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 2px" }}>{step.title}</p>
+                  <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "19px" }}>{step.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Food & Dining */}
+      {data.foodDining && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 16 }}>{"\uD83C\uDF5B"}</span> {data.foodDining.title}
+            </h5>
+            <button
+              onClick={() => setShowVeg(!showVeg)}
+              style={{
+                display: "flex", alignItems: "center", gap: 4,
+                padding: "6px 12px", borderRadius: 20,
+                border: `1px solid ${showVeg ? "#039855" : C.div}`,
+                background: showVeg ? "#ECFDF3" : C.white,
+                cursor: "pointer", fontFamily: "inherit", fontSize: 13,
+                color: showVeg ? "#039855" : C.sub, fontWeight: 500,
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{"\uD83C\uDF31"}</span> Show veg
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {data.foodDining.dishes
+              .filter(d => !showVeg || d.veg)
+              .map((dish, i, arr) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", padding: "10px 0",
+                  borderBottom: i < arr.length - 1 ? `1px solid ${C.div}` : "none",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{dish.name}</span>
+                    <span style={{ fontSize: 13, color: C.sub, marginLeft: 8 }}>{dish.description}</span>
+                  </div>
+                  {dish.veg && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, color: "#039855",
+                      background: "#ECFDF3", padding: "2px 8px", borderRadius: 4,
+                      border: `1px solid #C0E5D5`, flexShrink: 0,
+                    }}>
+                      VEG
+                    </span>
+                  )}
+                </div>
+              ))}
+          </div>
+          {data.foodDining.tip && (
+            <div style={{
+              background: "#FFFAEB", borderRadius: 10, padding: 14, marginTop: 12,
+              borderLeft: `3px solid #F79009`,
+            }}>
+              <p style={{ fontSize: 13, color: "#B54708", margin: 0, lineHeight: "20px" }}>
+                <span style={{ marginRight: 4 }}>{"\u26A0\uFE0F"}</span> {data.foodDining.tip}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fallback for simple items */}
+      {data.items && !data.arrivalSteps && (
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {data.items.map((item, j) => (
+            <li key={j} style={{ fontSize: 14, color: C.sub, lineHeight: "22px", marginBottom: 4 }}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function GoodToKnowContent({ data }) {
+  return (
+    <div style={{ animation: "fadeUp 0.2s ease-out" }}>
+      {data.sections ? data.sections.map((sec, i) => (
+        <div key={i} style={{ marginBottom: i < data.sections.length - 1 ? 20 : 0 }}>
+          <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>{sec.icon}</span> {sec.title}
+          </h5>
+          {sec.text && (
+            <p style={{ fontSize: 14, color: C.sub, margin: 0, lineHeight: "22px" }}>{sec.text}</p>
+          )}
+          {sec.items && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {sec.items.map((it, j) => (
+                <div key={j} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "8px 0",
+                  borderBottom: j < sec.items.length - 1 ? `1px solid ${C.div}` : "none",
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{it.phrase}</span>
+                  <span style={{ fontSize: 13, color: C.sub }}>{it.meaning}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )) : data.items && (
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {data.items.map((item, j) => (
+            <li key={j} style={{ fontSize: 14, color: C.sub, lineHeight: "22px", marginBottom: 4 }}>{item}</li>
+          ))}
+        </ul>
+      )}
+      {data.electricityNote && (
+        <div style={{
+          background: C.bg, borderRadius: 10, padding: 14, marginTop: 16,
+        }}>
+          <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "20px" }}>
+            {"\uD83D\uDD0C"} {data.electricityNote}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmergencyContactsContent({ data }) {
+  return (
+    <div style={{ animation: "fadeUp 0.2s ease-out" }}>
+      {/* Screenshot warning */}
+      {data.screenshotWarning && (
+        <div style={{
+          background: "#FEF3F2", borderRadius: 8, padding: "10px 14px", marginBottom: 16,
+        }}>
+          <p style={{ fontSize: 13, color: "#B42318", margin: 0, fontWeight: 500 }}>
+            {"\u26A0\uFE0F"} {data.screenshotWarning}
+          </p>
+        </div>
+      )}
+
+      {/* Emergency numbers grid */}
+      {data.numbers && (
+        <div style={{ marginBottom: 20 }}>
+          <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>{"\uD83D\uDCDE"}</span> Emergency Numbers
+          </h5>
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
+          }}>
+            {data.numbers.map((n, i) => (
+              <div key={i} style={{
+                background: C.bg, borderRadius: 10, padding: "12px 14px",
+                ...(i === data.numbers.length - 1 && data.numbers.length % 2 !== 0 ? { gridColumn: "1 / 2" } : {}),
+              }}>
+                <p style={{ fontSize: 11, color: C.sub, margin: "0 0 4px", textTransform: "capitalize" }}>{n.label}</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: C.p600, margin: 0 }}>{n.number}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Hospitals */}
+      {data.hospitals && (
+        <div>
+          <h5 style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>{"\uD83C\uDFE5"}</span> Hospitals
+          </h5>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {data.hospitals.map((h, i) => (
+              <div key={i} style={{
+                background: C.bg, borderRadius: 10, padding: 14,
+              }}>
+                <p style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>{h.name}</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                  <a href={`tel:${h.phone}`} style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "6px 14px", borderRadius: 6,
+                    background: C.white, border: `1px solid ${C.div}`,
+                    textDecoration: "none", fontSize: 13, fontWeight: 600, color: C.b600,
+                    cursor: "pointer",
+                  }}>
+                    <Phone size={14} color={C.b600} /> Call
+                  </a>
+                  <a href={h.mapUrl} style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "6px 14px", borderRadius: 6,
+                    background: C.white, border: `1px solid ${C.div}`,
+                    textDecoration: "none", fontSize: 13, fontWeight: 600, color: C.p600,
+                    cursor: "pointer",
+                  }}>
+                    <MapPin size={14} color={C.p600} /> Map
+                  </a>
+                </div>
+                <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>{h.phone}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fallback for simple items */}
+      {data.items && !data.numbers && (
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {data.items.map((item, j) => (
+            <li key={j} style={{ fontSize: 14, color: C.sub, lineHeight: "22px", marginBottom: 4 }}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function BeforeYouGo({ data }) {
   const [openIdx, setOpenIdx] = useState(-1);
   if (!data) return null;
 
   const sections = [
-    data.moneySim,
-    data.packing,
-    data.atDestination,
-    data.goodToKnow,
-    data.emergencyContacts,
-  ].filter(Boolean);
+    { key: "moneySim", ...data.moneySim },
+    { key: "packing", ...data.packing },
+    { key: "atDestination", ...data.atDestination },
+    { key: "goodToKnow", ...data.goodToKnow },
+    { key: "emergencyContacts", ...data.emergencyContacts },
+  ].filter(s => s.title);
+
+  const renderContent = (sec) => {
+    switch (sec.key) {
+      case "moneySim": return <MoneySimContent data={data.moneySim} />;
+      case "packing": return <PackingContent data={data.packing} />;
+      case "atDestination": return <AtDestinationContent data={data.atDestination} />;
+      case "goodToKnow": return <GoodToKnowContent data={data.goodToKnow} />;
+      case "emergencyContacts": return <EmergencyContactsContent data={data.emergencyContacts} />;
+      default: return null;
+    }
+  };
 
   return (
     <div style={{ marginBottom: 24 }}>
       <h3 style={{ fontSize: 20, fontWeight: 600, color: C.head, margin: "0 0 4px" }}>Before you go</h3>
-      <p style={{ fontSize: 16, color: C.sub, margin: "0 0 16px" }}>Everything you need before your trip</p>
+      <p style={{ fontSize: 14, color: C.sub, margin: "0 0 16px" }}>Everything you need before your trip</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {sections.map((sec, i) => (
-          <div key={i} style={{
+          <div key={sec.key} style={{
             background: C.white, borderRadius: 12, overflow: "hidden",
             border: `1px solid ${C.div}`,
           }}>
@@ -447,7 +856,13 @@ function BeforeYouGo({ data }) {
                 fontFamily: "inherit", textAlign: "left",
               }}
             >
-              <span style={{ fontSize: 24 }}>{sec.icon}</span>
+              <div style={{
+                width: 40, height: 40, borderRadius: "50%", background: C.bg,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 20, flexShrink: 0,
+              }}>
+                {sec.icon}
+              </div>
               <div style={{ flex: 1 }}>
                 <h5 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: 0 }}>{sec.title}</h5>
                 <p style={{ fontSize: 13, color: C.sub, margin: "2px 0 0" }}>{sec.subtitle}</p>
@@ -455,27 +870,8 @@ function BeforeYouGo({ data }) {
               {openIdx === i ? <ChevronUp size={20} color={C.sub} /> : <ChevronRight size={20} color={C.sub} />}
             </button>
             {openIdx === i && (
-              <div style={{ padding: "0 16px 16px", animation: "fadeUp 0.2s ease-out" }}>
-                {sec.items && (
-                  <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    {sec.items.map((item, j) => (
-                      <li key={j} style={{ fontSize: 14, color: C.sub, lineHeight: "22px", marginBottom: 4 }}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-                {sec.checklist && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {sec.checklist.map((item, j) => (
-                      <label key={j} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: C.head, cursor: "pointer" }}>
-                        <input type="checkbox" defaultChecked={item.checked} style={{ accentColor: C.p600, width: 16, height: 16 }} />
-                        {item.item}
-                      </label>
-                    ))}
-                    <p style={{ fontSize: 12, color: C.sub, marginTop: 4 }}>
-                      {sec.checklist.filter(c => c.checked).length}/{sec.checklist.length} packed
-                    </p>
-                  </div>
-                )}
+              <div style={{ padding: "0 16px 16px" }}>
+                {renderContent(sec)}
               </div>
             )}
           </div>
@@ -647,10 +1043,10 @@ export default function TripDetails() {
   const isCompleted = trip.status === "completed";
 
   return (
-    <div style={{ background: C.bg, minHeight: "100%", paddingBottom: 80 }}>
+    <div style={{ background: C.white, minHeight: "100%", paddingBottom: 24 }}>
       {/* Header */}
       <div style={{
-        background: `linear-gradient(180deg, ${C.p100}66 0%, ${C.bg} 100%)`,
+        background: `linear-gradient(180deg, ${C.p100}44 0%, ${C.white} 100%)`,
         padding: "8px 16px 16px",
       }}>
         {/* Back + title row */}
@@ -669,11 +1065,6 @@ export default function TripDetails() {
             Your {trip.destination} Trip {trip.emoji}
           </h4>
         </div>
-
-        {/* Subtitle: city breakdown */}
-        <p style={{ fontSize: 14, color: C.sub, margin: "0 0 8px", paddingLeft: 44 }}>
-          {trip.nightsBreakdown}
-        </p>
 
         {/* Dates + countdown */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 44 }}>
@@ -700,7 +1091,7 @@ export default function TripDetails() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: "flex", background: C.white, borderBottom: `1px solid ${C.div}` }}>
+      <div style={{ display: "flex", background: C.white, borderBottom: `1px solid ${C.div}`, position: "sticky", top: 0, zIndex: 10 }}>
         {["details", "daywise"].map(t => (
           <button
             key={t}
@@ -756,7 +1147,6 @@ export default function TripDetails() {
       )}
 
       <ChatFAB />
-      <TripBottomNav />
     </div>
   );
 }

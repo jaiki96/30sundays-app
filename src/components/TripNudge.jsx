@@ -38,7 +38,7 @@ export default function TripNudge({ userState }) {
         <img src={destImg} alt="Bali" style={{ width: 44, height: 44, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Your Bali itinerary is ready</p>
-          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>7N · Ubud → Seminyak → Sanur</p>
+          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>20 May – 27 May, 2026</p>
           <p style={{ fontSize: 11, fontWeight: 600, color: C.p600, margin: "3px 0 0" }}>View Itinerary →</p>
         </div>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(227,27,83,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -50,19 +50,45 @@ export default function TripNudge({ userState }) {
 
   // ─── Customer ───
   if (userState === "customer") {
+    const destImg = destData.Vietnam?.card;
     content = (
       <>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(3,152,85,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Plane size={22} color="#039855" />
+        <div style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}>
+          {destImg ? (
+            <img src={destImg} alt="Vietnam" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover" }} />
+          ) : (
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(3,152,85,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Plane size={22} color="#039855" />
+            </div>
+          )}
+          <div style={{
+            position: "absolute", bottom: -3, right: -3, width: 22, height: 22,
+            borderRadius: "50%", background: "#039855", border: "2px solid #fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Plane size={10} color="#fff" style={{ transform: "rotate(-30deg)" }} />
+          </div>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Vietnam in 31 days</p>
-          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>DEL → HAN · Jun 20 · Air India</p>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "#039855", margin: "3px 0 0" }}>3 of 5 tasks done →</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: 0 }}>
+            Vietnam awaits you both! ✨
+          </p>
+          <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>20 Jun – 27 Jun, 2026</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+            <div style={{
+              flex: 1, height: 4, borderRadius: 2, background: "rgba(3,152,85,0.15)", overflow: "hidden",
+            }}>
+              <div style={{ width: "60%", height: "100%", borderRadius: 2, background: "#039855" }} />
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "#039855", whiteSpace: "nowrap" }}>3/5 done</span>
+          </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: "#039855", lineHeight: 1 }}>31</span>
-          <span style={{ fontSize: 9, color: C.sub }}>days</span>
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0,
+          background: "rgba(3,152,85,0.08)", borderRadius: 10, padding: "6px 10px",
+        }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "#039855", lineHeight: 1 }}>31</span>
+          <span style={{ fontSize: 8, fontWeight: 600, color: "#039855", textTransform: "uppercase", letterSpacing: 0.5 }}>days to go</span>
         </div>
       </>
     );

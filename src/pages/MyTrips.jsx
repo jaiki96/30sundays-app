@@ -1,37 +1,31 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Gift, Share2, ChevronRight } from "lucide-react";
+import { Gift, MapPin, Compass, ChevronRight, CalendarCheck, CheckCircle } from "lucide-react";
 import { C } from "../data";
-import { getTripsByStatus, getCountdown } from "../data/tripData";
+import { mockTrips, getCountdown } from "../data/tripData";
 
 // ─── SVG: Couple with suitcase illustration ───
 const CoupleIllo = () => (
   <svg width="160" height="140" viewBox="0 0 160 140" fill="none">
     <ellipse cx="80" cy="130" rx="60" ry="8" fill="#FFE4E8" opacity="0.6" />
-    {/* Suitcase */}
     <rect x="62" y="80" width="36" height="44" rx="6" fill="#FEA3B4" stroke="#E31B53" strokeWidth="1.5" />
     <rect x="72" y="74" width="16" height="8" rx="3" fill="none" stroke="#E31B53" strokeWidth="1.5" />
     <line x1="74" y1="92" x2="86" y2="92" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-    {/* Person 1 (left) */}
     <circle cx="50" cy="52" r="12" fill="#FFE4E8" stroke="#E31B53" strokeWidth="1.5" />
     <path d="M38 90c0-10 5-18 12-18s12 8 12 18" fill="#E31B53" opacity="0.9" />
     <circle cx="46" cy="50" r="1.5" fill="#E31B53" />
     <circle cx="54" cy="50" r="1.5" fill="#E31B53" />
     <path d="M47 56c1.5 2 4.5 2 6 0" stroke="#E31B53" strokeWidth="1" strokeLinecap="round" fill="none" />
-    {/* Person 2 (right) */}
     <circle cx="110" cy="52" r="12" fill="#FFE4E8" stroke="#FEA3B4" strokeWidth="1.5" />
     <path d="M98 90c0-10 5-18 12-18s12 8 12 18" fill="#FEA3B4" opacity="0.9" />
     <circle cx="106" cy="50" r="1.5" fill="#E31B53" />
     <circle cx="114" cy="50" r="1.5" fill="#E31B53" />
     <path d="M107 56c1.5 2 4.5 2 6 0" stroke="#E31B53" strokeWidth="1" strokeLinecap="round" fill="none" />
-    {/* Hearts */}
     <path d="M76 30c-1-3 -5-4-6-1s2 5 6 8c4-3 7-5 6-8s-5-2-6 1z" fill="#E31B53" opacity="0.8" />
     <path d="M90 22c-0.6-2-3-2.5-3.6-0.6s1.2 3 3.6 4.8c2.4-1.8 4.2-3 3.6-4.8s-3-1.4-3.6 0.6z" fill="#FEA3B4" opacity="0.7" />
-    <path d="M130 38c-0.5-1.5-2.5-2-3-0.5s1 2.5 3 4c2-1.5 3.5-2.5 3-4s-2.5-1-3 0.5z" fill="#FEA3B4" opacity="0.5" />
   </svg>
 );
 
-// ─── Login Gate ───
+// ─── Login Gate (for new users) ───
 function LoginGate() {
   const navigate = useNavigate();
   return (
@@ -48,10 +42,10 @@ function LoginGate() {
         Log in to view your booked trips and upcoming adventures
       </p>
       <button
-        onClick={() => navigate("/plan")}
+        onClick={() => navigate("/plan?return=trips")}
         style={{
           width: "100%", maxWidth: 320, marginTop: 32, padding: "14px 0",
-          borderRadius: 8, border: "none", background: C.p600, color: "#fff",
+          borderRadius: 12, border: "none", background: C.p600, color: "#fff",
           fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
           boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
         }}
@@ -65,162 +59,202 @@ function LoginGate() {
   );
 }
 
-// ─── Trip Card ───
+// ─── Lead Empty State ───
+function LeadEmptyState({ leadData }) {
+  const name = leadData?.name || "traveller";
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "48px 24px", textAlign: "center",
+    }}>
+      <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+        <circle cx="60" cy="60" r="58" fill="#FFE4E8" opacity="0.4" />
+        <path d="M60 35v50" stroke="#E31B53" strokeWidth="2" strokeLinecap="round" />
+        <path d="M35 40c0-14 11-25 25-25s25 11 25 25" fill="#FEA3B4" stroke="#E31B53" strokeWidth="1.5" />
+        <path d="M47 40c0-7 6-12 13-12s13 5 13 12" fill="#E31B53" opacity="0.3" />
+        <path d="M40 75l10-10h20l10 10" stroke="#E31B53" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M44 75l4 10M76 75l-4 10" stroke="#E31B53" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M85 28c-0.8-2.4-4-3.2-4.8-0.8s1.6 4 4.8 6.4c3.2-2.4 5.6-4 4.8-6.4s-4-1.6-4.8 0.8z" fill="#FEA3B4" opacity="0.6" />
+      </svg>
+      <h4 style={{ fontSize: 20, fontWeight: 700, color: C.head, marginTop: 20 }}>
+        No trips booked yet, {name}!
+      </h4>
+      <p style={{ fontSize: 14, color: C.sub, marginTop: 8, lineHeight: "20px", maxWidth: 280 }}>
+        The best journeys begin with two tickets and zero plans.
+        Well, we've got the plans — you bring the plus one. 💕
+      </p>
+      <Link
+        to="/plan"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          marginTop: 24, padding: "13px 28px", borderRadius: 12, background: C.p600,
+          color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none",
+          boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
+        }}
+      >
+        <Compass size={16} />
+        View planned itineraries
+      </Link>
+    </div>
+  );
+}
+
+// ─── Section Label ───
+function SectionLabel({ icon: Icon, label, color, bg }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+      <div style={{ width: 28, height: 28, borderRadius: 8, background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Icon size={14} color={color} />
+      </div>
+      <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>{label}</span>
+    </div>
+  );
+}
+
+// ─── Trip Card (full-bleed carousel format matching ItineraryCard) ───
 function TripCard({ trip }) {
   const countdown = getCountdown(trip.startDate);
-  const statusLabel = trip.status === "upcoming" ? "Booked" : trip.status === "ongoing" ? "Ongoing" : "Completed";
-  const statusStyle = trip.status === "upcoming"
-    ? { color: "#039855", background: "#ECFDF3", border: "1px solid #C0E5D5" }
-    : trip.status === "ongoing"
-    ? { color: C.p600, background: C.p100, border: `1px solid ${C.p300}` }
-    : { color: C.sub, background: C.bg, border: `1px solid ${C.div}` };
-
-  const [imgIdx, setImgIdx] = useState(0);
   const imgs = trip.heroImages;
+
+  // Status-specific styling
+  const statusConfig = {
+    ongoing: { label: "Ongoing", emoji: "🔥", color: "#fff", bg: "rgba(227,27,83,0.85)" },
+    upcoming: { label: "Booked", emoji: "✈️", color: "#fff", bg: "rgba(3,152,85,0.85)" },
+    completed: { label: "Completed", emoji: "✨", color: "#fff", bg: "rgba(83,88,98,0.75)" },
+  };
+  const sc = statusConfig[trip.status];
+
+  // Format dates
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
+  const dateRange = `${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}, ${new Date(trip.endDate).getFullYear()}`;
 
   return (
     <Link to={`/trips/${trip.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
       <div style={{
-        background: C.white, borderRadius: 12, overflow: "hidden",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+        width: "100%", borderRadius: 16, overflow: "hidden", position: "relative",
+        height: 300, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", cursor: "pointer",
       }}>
-        {/* Hero image */}
-        <div style={{ position: "relative", width: "100%", aspectRatio: "16/10", overflow: "hidden" }}>
-          <img
-            src={imgs[imgIdx]}
-            alt={trip.destination}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            onError={(e) => { e.target.src = imgs[0]; }}
-          />
-          {/* Carousel dots */}
-          {imgs.length > 1 && (
-            <div style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5 }}>
-              {imgs.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgIdx(i); }}
-                  style={{
-                    width: 6, height: 6, borderRadius: "50%", border: "none", cursor: "pointer", padding: 0,
-                    background: i === imgIdx ? "#fff" : "rgba(255,255,255,0.5)",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          {/* Countdown badge */}
-          {countdown && (
-            <div style={{
-              position: "absolute", bottom: 10, right: 10,
-              backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-              background: "rgba(255,255,255,0.25)", borderRadius: 20,
-              padding: "5px 12px", display: "flex", alignItems: "center", gap: 4,
-              border: "1px solid rgba(255,255,255,0.3)",
-            }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>⏳ {countdown}</span>
-            </div>
-          )}
-        </div>
+        <img src={imgs[0]} alt={trip.destination} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.82) 100%)" }} />
 
-        {/* Card content */}
-        <div style={{ padding: 16 }}>
-          {/* Status badge */}
+        {/* Status badge — top left (glassmorphism) */}
+        <span style={{
+          position: "absolute", top: 12, left: 12,
+          display: "inline-flex", alignItems: "center", gap: 4,
+          fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+          color: sc.color, background: sc.bg,
+          backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.2)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        }}>
+          {sc.emoji} {sc.label}
+        </span>
+
+        {/* Countdown / Day badge — top right */}
+        {trip.status === "upcoming" && countdown && (
           <span style={{
-            display: "inline-block", fontSize: 12, fontWeight: 600,
-            padding: "3px 10px", borderRadius: 20, marginBottom: 8,
-            ...statusStyle,
+            position: "absolute", top: 12, right: 12,
+            fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+            color: "#fff", background: "rgba(255,255,255,0.2)",
+            backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(255,255,255,0.2)",
           }}>
-            {statusLabel}
+            ⏳ {countdown}
           </span>
+        )}
+        {trip.status === "ongoing" && (
+          <span style={{
+            position: "absolute", top: 12, right: 12,
+            display: "inline-flex", alignItems: "center", gap: 4,
+            fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+            color: "#fff", background: "rgba(227,27,83,0.85)",
+            backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}>
+            <MapPin size={10} color="#fff" /> Day {getCurrentDay(trip)}
+          </span>
+        )}
 
-          {/* Duration */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.p600, marginBottom: 4 }}>
-            🔥 {trip.totalNights} Nights
+        {/* Bottom overlay content */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 14px 14px" }}>
+          {/* Trip name + nights */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 4px" }}>
+            <h3 style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, letterSpacing: "-0.3px" }}>{trip.destination}</h3>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>·</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>🌙 {trip.totalNights}N</span>
           </div>
 
-          {/* Trip name */}
-          <h4 style={{
-            fontSize: 18, fontWeight: 600, color: C.head, margin: "0 0 4px",
-            overflow: "hidden", textOverflow: "ellipsis",
-            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-          }}>
-            {trip.tripName} — {trip.startDateDisplay}
-          </h4>
+          {/* Dates banner */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
+            <CalendarCheck size={11} color="rgba(255,255,255,0.75)" />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>{dateRange}</span>
+          </div>
 
-          {/* City breakdown */}
-          <p style={{ fontSize: 14, color: C.sub, margin: "0 0 12px" }}>
-            {trip.nightsBreakdown}
-          </p>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: C.div, marginBottom: 12 }} />
-
-          {/* Share action */}
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            style={{
-              display: "flex", alignItems: "center", gap: 6, background: "none",
-              border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <Share2 size={14} color={C.p600} />
-            <span style={{ fontSize: 14, fontWeight: 600, color: C.p600 }}>Share Itinerary</span>
-          </button>
+          {/* Price row + CTA */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>₹{(trip.totalPackageValue / 1000).toFixed(0)}k</span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}> total</span>
+              {trip.status === "upcoming" && trip.amountPaid < trip.totalPackageValue && (
+                <span style={{ fontSize: 11, color: "#FEA3B4", marginLeft: 6 }}>
+                  · ₹{((trip.totalPackageValue - trip.amountPaid) / 1000).toFixed(0)}k due
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                {trip.status === "ongoing" ? "Today's Plan" : trip.status === "upcoming" ? "Details" : "View"}
+              </span>
+              <ChevronRight size={14} color="#fff" />
+            </div>
+          </div>
         </div>
       </div>
     </Link>
   );
 }
 
-// ─── Empty States ───
-function EmptyActive() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 24px", textAlign: "center" }}>
-      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
-        <circle cx="50" cy="50" r="48" fill="#FFE4E8" opacity="0.5" />
-        <path d="M35 55c0-10 6-18 15-18s15 8 15 18" stroke="#E31B53" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <circle cx="42" cy="42" r="8" stroke="#E31B53" strokeWidth="1.5" fill="#fff" />
-        <circle cx="58" cy="42" r="8" stroke="#FEA3B4" strokeWidth="1.5" fill="#fff" />
-        <path d="M30 68h40" stroke="#FEA3B4" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 4" />
-        <circle cx="70" cy="30" r="4" fill="#FEA3B4" opacity="0.4" />
-      </svg>
-      <h4 style={{ fontSize: 18, fontWeight: 600, color: C.head, marginTop: 16 }}>No upcoming trips yet</h4>
-      <p style={{ fontSize: 16, color: C.sub, marginTop: 6 }}>Start planning your next getaway</p>
-      <Link to="/" style={{
-        marginTop: 20, padding: "12px 28px", borderRadius: 8, background: C.p600,
-        color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none",
-      }}>
-        Explore destinations
-      </Link>
-    </div>
-  );
-}
-
-function EmptyCompleted() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 24px", textAlign: "center" }}>
-      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
-        <circle cx="50" cy="50" r="48" fill="#FFE4E8" opacity="0.5" />
-        <rect x="30" y="35" width="40" height="32" rx="4" stroke="#E31B53" strokeWidth="1.5" fill="#fff" />
-        <rect x="35" y="40" width="14" height="10" rx="2" fill="#FEA3B4" opacity="0.5" />
-        <rect x="52" y="40" width="14" height="10" rx="2" fill="#FEA3B4" opacity="0.3" />
-        <rect x="35" y="54" width="14" height="10" rx="2" fill="#FEA3B4" opacity="0.3" />
-        <rect x="52" y="54" width="14" height="10" rx="2" fill="#FEA3B4" opacity="0.5" />
-        <circle cx="72" cy="30" r="3" fill="#FEA3B4" opacity="0.4" />
-      </svg>
-      <h4 style={{ fontSize: 18, fontWeight: 600, color: C.head, marginTop: 16 }}>No trips completed yet</h4>
-      <p style={{ fontSize: 16, color: C.sub, marginTop: 6 }}>Your travel memories will appear here</p>
-    </div>
-  );
+// Helper: get current day number for ongoing trips
+function getCurrentDay(trip) {
+  const start = new Date(trip.startDate);
+  const now = new Date();
+  const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+  return Math.min(Math.max(diff + 1, 1), trip.totalNights);
 }
 
 // ─── Main Component ───
-export default function MyTrips({ userState }) {
-  const [tab, setTab] = useState("active");
-  const isLoggedIn = userState === "customer" || userState === "done";
+export default function MyTrips({ userState, leadData }) {
+  const isNew = userState === "new";
+  const isLead = userState === "lead";
 
-  if (!isLoggedIn) return <LoginGate />;
+  // New user → login gate
+  if (isNew) return <LoginGate />;
 
-  const trips = getTripsByStatus(tab);
+  // Lead → show empty state with witty message
+  if (isLead) {
+    return (
+      <div style={{ background: `linear-gradient(180deg, ${C.p100}55 0%, ${C.bg} 12%)`, minHeight: "100%" }}>
+        <div style={{ padding: "12px 16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: C.head }}>My Trips</h2>
+        </div>
+        <LeadEmptyState leadData={leadData} />
+      </div>
+    );
+  }
+
+  // Customer/done — single scroll with priority: ongoing → upcoming → completed
+  const ongoing = mockTrips.filter(t => t.status === "ongoing");
+  const upcoming = mockTrips
+    .filter(t => t.status === "upcoming")
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+  const completed = mockTrips
+    .filter(t => t.status === "completed")
+    .sort((a, b) => new Date(b.endDate) - new Date(a.endDate));
+
+  const hasTrips = ongoing.length + upcoming.length + completed.length > 0;
 
   return (
     <div style={{ background: `linear-gradient(180deg, ${C.p100}55 0%, ${C.bg} 12%)`, minHeight: "100%" }}>
@@ -236,33 +270,66 @@ export default function MyTrips({ userState }) {
         </button>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: "flex", padding: "16px 16px 0", borderBottom: `1px solid ${C.div}` }}>
-        {["active", "completed"].map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1, padding: "10px 0", border: "none", background: "none", cursor: "pointer",
-              fontSize: 16, fontWeight: 600, fontFamily: "inherit",
-              color: tab === t ? C.p600 : C.sub,
-              borderBottom: tab === t ? `2px solid ${C.p600}` : "2px solid transparent",
-              transition: "all 0.2s",
-            }}
-          >
-            {t === "active" ? "Active" : "Completed"}
-          </button>
-        ))}
-      </div>
+      {!hasTrips ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 24px", textAlign: "center" }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>🏝️</p>
+          <h4 style={{ fontSize: 18, fontWeight: 600, color: C.head }}>No trips yet</h4>
+          <p style={{ fontSize: 14, color: C.sub, marginTop: 6, lineHeight: "20px" }}>
+            Every couple needs a getaway. Yours is just a tap away.
+          </p>
+          <Link to="/" style={{
+            marginTop: 20, padding: "12px 28px", borderRadius: 10, background: C.p600,
+            color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none",
+            boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
+          }}>
+            Explore destinations
+          </Link>
+        </div>
+      ) : (
+        <div style={{ padding: "16px 16px 80px", display: "flex", flexDirection: "column", gap: 12 }}>
 
-      {/* Trip list */}
-      <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
-        {trips.length === 0 ? (
-          tab === "active" ? <EmptyActive /> : <EmptyCompleted />
-        ) : (
-          trips.map(trip => <TripCard key={trip.id} trip={trip} />)
-        )}
-      </div>
+          {/* ── Ongoing trips (highest priority) ── */}
+          {ongoing.length > 0 && (
+            <div>
+              <SectionLabel icon={MapPin} label="Happening now" color={C.p600} bg={C.p100} />
+              {ongoing.map(trip => <TripCard key={trip.id} trip={trip} />)}
+            </div>
+          )}
+
+          {/* ── Upcoming trips ── */}
+          {upcoming.length > 0 && (
+            <div style={{ marginTop: ongoing.length > 0 ? 8 : 0 }}>
+              <SectionLabel icon={CalendarCheck} label="Coming up" color="#039855" bg="#ECFDF3" />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {upcoming.map(trip => <TripCard key={trip.id} trip={trip} />)}
+              </div>
+            </div>
+          )}
+
+          {/* ── Completed trips ── */}
+          {completed.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <SectionLabel icon={CheckCircle} label="Memories made" color={C.sub} bg={C.bg} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {completed.map(trip => <TripCard key={trip.id} trip={trip} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom nudge */}
+          <div style={{
+            marginTop: 12, padding: "14px 16px", borderRadius: 14,
+            background: C.p100, textAlign: "center",
+          }}>
+            <p style={{ fontSize: 13, color: C.p900, fontWeight: 500 }}>
+              💕 Planning your next couple's escape?
+            </p>
+            <Link to="/" style={{ fontSize: 13, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
+              Explore destinations →
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -47,19 +47,19 @@ export default function Destination() {
       {/* Vibe carousels */}
       {relaxed.length > 0 && (
         <div style={{ marginTop: 22 }}>
-          <SectionHeader emoji="🧘" title="Relaxed" sub="Slow mornings & sunsets" />
+          <SectionHeader emoji="🧘" title="Relaxed" sub="Slow mornings & sunsets" linkTo={`/listing?vibe=Relaxed&dest=${name}`} linkLabel="View all" />
           <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{relaxed.map((it, i) => <ItineraryCard key={i} it={it} vibe="Relaxed" />)}</div>
         </div>
       )}
       {explorer.length > 0 && (
         <div style={{ marginTop: 22 }}>
-          <SectionHeader emoji="🧭" title="Explorer" sub="See more, do more" />
+          <SectionHeader emoji="🧭" title="Explorer" sub="See more, do more" linkTo={`/listing?vibe=Explorer&dest=${name}`} linkLabel="View all" />
           <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{explorer.map((it, i) => <ItineraryCard key={i} it={it} vibe="Explorer" />)}</div>
         </div>
       )}
       {offbeat.length > 0 && (
         <div style={{ marginTop: 22 }}>
-          <SectionHeader emoji="🗺️" title="Offbeat" sub="Skip the crowds" />
+          <SectionHeader emoji="🗺️" title="Offbeat" sub="Skip the crowds" linkTo={`/listing?vibe=Offbeat&dest=${name}`} linkLabel="View all" />
           <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{offbeat.map((it, i) => <ItineraryCard key={i} it={it} vibe="Offbeat" />)}</div>
         </div>
       )}

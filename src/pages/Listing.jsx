@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal, X, Sparkles, Calendar, Gauge, Users } from "lucide-react";
 import { C, VS, allItineraries, destinations } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
 
@@ -18,10 +18,21 @@ const sortOptions = [
   { label: "Duration: Shortest first", fn: (a, b) => a.nights - b.nights },
 ];
 
-export default function Listing() {
+export default function Listing({ userState, leadData }) {
   const [params] = useSearchParams();
   const initialVibe = params.get("vibe") || "";
   const initialDest = params.get("dest") || "";
+  const isWelcome = params.get("welcome") === "1";
+  const welcomeName = params.get("name") || leadData?.name || "";
+  const [showWelcome, setShowWelcome] = useState(isWelcome);
+
+  // Auto-dismiss welcome banner after 8 seconds
+  useEffect(() => {
+    if (showWelcome) {
+      const t = setTimeout(() => setShowWelcome(false), 8000);
+      return () => clearTimeout(t);
+    }
+  }, [showWelcome]);
 
   const [filters, setFilters] = useState({
     vibes: initialVibe ? new Set([initialVibe]) : new Set(),
@@ -108,7 +119,7 @@ export default function Listing() {
         {filtered.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {filtered.map(it => (
-              <ItineraryCard key={it.id} it={it} variant="listing" />
+              <ItineraryCard key={it.id} it={it} fullWidth />
             ))}
           </div>
         ) : (
@@ -281,37 +292,51 @@ export default function Listing() {
         </>
       )}
 
-      {/* ═══ Personalization Drawer (first visit) ═══ */}
-      {showDrawer && (
-        <>
-          <div onClick={closeDrawer} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 40 }} />
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 20px 32px", zIndex: 50 }} className="animate-slide-up">
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 4 }}>What kind of trip?</h3>
-            <p style={{ fontSize: 12, color: C.sub, marginBottom: 16 }}>We'll show you the best matches</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[
-                { v: "Relaxed", emoji: "🧘", desc: "Slow mornings, spas & sunsets" },
-                { v: "Explorer", emoji: "🧭", desc: "See more, do more, full itinerary" },
-                { v: "Offbeat", emoji: "🗺️", desc: "Hidden gems, skip the crowds" },
-              ].map(item => (
-                <button key={item.v} onClick={() => { setFilters(f => ({ ...f, vibes: new Set([item.v]) })); closeDrawer(); }} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14,
-                  border: `1.5px solid ${C.div}`, background: C.white, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                }}>
-                  <span style={{ fontSize: 24 }}>{item.emoji}</span>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{item.v}</p>
-                    <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>{item.desc}</p>
-                  </div>
-                </button>
-              ))}
+      {/* ═══ Welcome Banner (post-signup) ═══ */}
+      {showWelcome && (
+        <div style={{
+          position: "absolute", bottom: 72, left: 12, right: 12, zIndex: 30,
+          borderRadius: 18, padding: "18px 16px",
+          backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+          background: "rgba(255, 255, 255, 0.75)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.15), inset 0 0 0 0.5px rgba(255,255,255,0.4)",
+          border: "1px solid rgba(255,255,255,0.3)",
+          animation: "nudgeIn 0.5s ease-out",
+        }}>
+          <button
+            onClick={() => setShowWelcome(false)}
+            style={{
+              position: "absolute", top: 8, right: 10, width: 20, height: 20,
+              background: "none", border: "none", cursor: "pointer", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <X size={12} color="rgba(0,0,0,0.3)" />
+          </button>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+              background: `linear-gradient(135deg, ${C.p100} 0%, #fff 100%)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: `1px solid ${C.p300}44`,
+            }}>
+              <Sparkles size={20} color={C.p600} />
             </div>
-            <button onClick={closeDrawer} style={{ width: "100%", marginTop: 12, padding: "10px 0", fontSize: 13, fontWeight: 500, color: C.inact, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              Show me everything
-            </button>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.p900, margin: "0 0 3px" }}>
+                {welcomeName ? `We're thrilled, ${welcomeName}! 🎉` : "We're thrilled! 🎉"}
+              </p>
+              <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px" }}>
+                A travel consultant from 30 Sundays will connect with you shortly. Till then, explore our curated itineraries!
+              </p>
+            </div>
           </div>
-        </>
+        </div>
+      )}
+
+      {/* ═══ Travel Details Drawer (first visit — collect dates, pace, crowds) ═══ */}
+      {showDrawer && (
+        <TravelDetailsDrawer onClose={closeDrawer} filters={filters} setFilters={setFilters} />
       )}
     </div>
   );
@@ -338,5 +363,148 @@ function QuickChip({ label, active, onToggle }) {
       {label}
       {active && <X size={10} color={C.p600} strokeWidth={2.5} style={{ marginLeft: 2 }} />}
     </button>
+  );
+}
+
+function TravelDetailsDrawer({ onClose, filters, setFilters }) {
+  const [selectedPace, setSelectedPace] = useState("");
+  const [selectedCrowds, setSelectedCrowds] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [nights, setNights] = useState("");
+
+  // Get tomorrow as min date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split("T")[0];
+
+  const nightOptions = [3, 4, 5, 6, 7, 8, 9, 10];
+
+  const handleDone = () => {
+    setFilters(f => ({
+      ...f,
+      pace: selectedPace ? new Set([selectedPace]) : f.pace,
+      crowds: selectedCrowds ? new Set([selectedCrowds]) : f.crowds,
+    }));
+    onClose();
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 40 }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 20px 32px", zIndex: 50, maxHeight: "80%", overflowY: "auto" }} className="animate-slide-up hide-scrollbar">
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 4 }}>Help us personalise your trips</h3>
+        <p style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>A few quick picks for better recommendations</p>
+
+        {/* Travel Dates — exact from date + nights */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Calendar size={14} color={C.p600} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>When are you planning to travel?</p>
+          </div>
+          <p style={{ fontSize: 11, color: C.inact, marginBottom: 10, paddingLeft: 22 }}>For accurate pricing & flight availability</p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1.3 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>From date</label>
+              <input
+                type="date"
+                min={minDate}
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                style={{
+                  width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13,
+                  border: `1.5px solid ${fromDate ? C.p600 : C.div}`, background: fromDate ? C.p100 : C.white,
+                  color: fromDate ? C.p600 : C.sub, fontFamily: "inherit", outline: "none",
+                  fontWeight: fromDate ? 600 : 400, boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ flex: 0.7 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>Nights</label>
+              <div style={{ position: "relative" }}>
+                <select
+                  value={nights}
+                  onChange={e => setNights(e.target.value)}
+                  style={{
+                    width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13,
+                    border: `1.5px solid ${nights ? C.p600 : C.div}`, background: nights ? C.p100 : C.white,
+                    color: nights ? C.p600 : C.sub, fontFamily: "inherit", outline: "none",
+                    fontWeight: nights ? 600 : 400, appearance: "none", boxSizing: "border-box",
+                  }}
+                >
+                  <option value="">Select</option>
+                  {nightOptions.map(n => <option key={n} value={n}>{n}N</option>)}
+                </select>
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: C.sub, pointerEvents: "none" }}>▼</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pace */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Gauge size={14} color="#0F6E56" />
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>What's your ideal pace?</p>
+          </div>
+          <p style={{ fontSize: 11, color: C.inact, marginBottom: 8, paddingLeft: 22 }}>So your itinerary doesn't feel hectic or rushed</p>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[
+              { key: "Unhurried", label: "Unhurried", desc: "Sleep in, no FOMO" },
+              { key: "Balanced", label: "Balanced", desc: "Best of both worlds" },
+            ].map(p => {
+              const on = selectedPace === p.key;
+              return (
+                <button key={p.key} onClick={() => setSelectedPace(on ? "" : p.key)} style={{
+                  flex: 1, padding: "10px 12px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  background: on ? "#E1F5EE" : C.white, border: `1.5px solid ${on ? "#0F6E56" : C.div}`,
+                }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: on ? "#0F6E56" : C.head, margin: 0 }}>{p.label}</p>
+                  <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>{p.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Crowd Levels */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Users size={14} color="#B54708" />
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Crowd preference?</p>
+          </div>
+          <p style={{ fontSize: 11, color: C.inact, marginBottom: 8, paddingLeft: 22 }}>Totally personal — no wrong answer here</p>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[
+              { key: "Low", label: "Low crowds", desc: "Quiet, offbeat spots" },
+              { key: "Mixed", label: "Doesn't matter", desc: "Popular is fine too" },
+            ].map(c => {
+              const on = selectedCrowds === c.key;
+              return (
+                <button key={c.key} onClick={() => setSelectedCrowds(on ? "" : c.key)} style={{
+                  flex: 1, padding: "10px 12px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  background: on ? "#FFFAEB" : C.white, border: `1.5px solid ${on ? "#B54708" : C.div}`,
+                }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: on ? "#B54708" : C.head, margin: 0 }}>{c.label}</p>
+                  <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>{c.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <button onClick={handleDone} style={{
+          width: "100%", padding: "14px 0", borderRadius: 12, border: "none",
+          background: C.p600, color: "#fff", fontSize: 14, fontWeight: 600,
+          cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
+        }}>
+          Show me trips
+        </button>
+        <button onClick={onClose} style={{ width: "100%", marginTop: 8, padding: "10px 0", fontSize: 13, fontWeight: 500, color: C.inact, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+          Skip for now
+        </button>
+      </div>
+    </>
   );
 }

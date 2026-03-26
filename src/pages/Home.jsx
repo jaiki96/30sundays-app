@@ -154,7 +154,7 @@ export default function Home({ userState }) {
         <div style={{ background: C.p100, borderRadius: 16, padding: "22px 20px", textAlign: "center" }}>
           <h3 style={{ fontSize: 17, fontWeight: 700, color: C.p900, marginBottom: 5 }}>Ready to plan your getaway?</h3>
           <p style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>Tell us where you'd love to go</p>
-          <Link to="/plan" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: "#fff", background: C.p900, border: "none", borderRadius: 8, padding: "11px 26px", textDecoration: "none", boxShadow: "0 4px 16px rgba(137,18,62,0.25)" }}>
+          <Link to="/plan" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: "#fff", background: C.p600, border: "none", borderRadius: 8, padding: "11px 26px", textDecoration: "none", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
             Plan My Trip <ArrowRight size={15} />
           </Link>
         </div>

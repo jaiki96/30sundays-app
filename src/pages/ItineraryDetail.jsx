@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions } from "../data/dayOptions";
@@ -51,6 +51,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
   const [toast, setToast] = useState(null); // { message, undoData } or null
   const toastTimerRef = useRef(null);
+  const [showPricingSheet, setShowPricingSheet] = useState(false);
+  const [travelDates, setTravelDates] = useState(null); // { month, travelers }
+  const [pricingState, setPricingState] = useState("cached"); // "cached" | "loading" | "live"
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
@@ -334,46 +337,95 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
-      {/* ═══ 5. International Flights ═══ */}
-      {internationalLegs.length > 0 && (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", marginBottom: 12 }}>
-            <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>International Flights</p>
+      {/* ═══ 4b. Pricing & Availability ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Pricing & Availability</p>
+
+        {/* Price status card */}
+        <div style={{
+          borderRadius: 14, overflow: "hidden",
+          border: `1px solid ${travelDates ? C.sBorder : C.div}`,
+          background: travelDates ? C.sBg : C.white,
+        }}>
+          {/* Current price display */}
+          <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                <span style={{ fontSize: 20, fontWeight: 700, color: C.head }}>₹{it.price}</span>
+                <span style={{ fontSize: 12, color: C.sub }}>/person</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                {travelDates ? (
+                  <>
+                    <Zap size={10} color={C.sText} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.sText }}>Live price · {new Date(travelDates.fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {travelDates.nights}N · {travelDates.travelers} pax</span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar size={10} color={C.inact} />
+                    <span style={{ fontSize: 11, color: C.inact }}>Estimated price · may vary by dates</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {pricingState === "loading" && (
+              <div style={{ width: 28, height: 28, borderRadius: "50%", border: `2px solid ${C.p300}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite" }} />
+            )}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 16px" }}>
-            {internationalLegs.map((leg) => {
-              const legIdx = flightLegs.indexOf(leg);
-              const flight = getFlightForLeg(legIdx);
-              if (!flight) return null;
-              return (
-                <FlightCard key={legIdx} flight={flight} leg={leg} itineraryId={it.id} legIndex={legIdx} />
-              );
-            })}
+
+          {/* Travel dates banner if set */}
+          {travelDates && (
+            <div style={{ padding: "0 16px 12px", display: "flex", gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 500, color: C.sText, background: `${C.sText}10`, padding: "3px 8px", borderRadius: 6 }}>📅 {new Date(travelDates.fromDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {travelDates.nights}N</span>
+              <span style={{ fontSize: 11, fontWeight: 500, color: C.sText, background: `${C.sText}10`, padding: "3px 8px", borderRadius: 6 }}>👥 {travelDates.travelers} adults</span>
+            </div>
+          )}
+
+          {/* CTA */}
+          <div style={{ padding: "0 16px 14px" }}>
+            <button onClick={() => setShowPricingSheet(true)} style={{
+              width: "100%", padding: "11px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+              fontSize: 13, fontWeight: 600,
+              background: travelDates ? C.white : C.p100, color: travelDates ? C.p600 : C.p600,
+              border: `1.5px solid ${travelDates ? C.p300 : C.p600}`,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}>
+              <Zap size={13} color={C.p600} />
+              {travelDates ? "Update travel details" : "Get real-time pricing"}
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* ═══ 5b. Internal Flights ═══ */}
-      {internalLegs.length > 0 && (
-        <>
-          <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", marginBottom: 12 }}>
-              <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>Internal Flights</p>
+      <Divider />
+
+      {/* ═══ 5. Flights — Coming Soon Notice ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Flights</p>
+        <div style={{
+          borderRadius: 14, padding: "16px 16px", border: `1.5px dashed ${C.div}`,
+          background: "#FAFAFA",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EBE9FE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Plane size={16} color="#6938EF" />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 16px" }}>
-              {internalLegs.map((leg) => {
-                const legIdx = flightLegs.indexOf(leg);
-                const flight = getFlightForLeg(legIdx);
-                if (!flight) return null;
-                return (
-                  <FlightCard key={legIdx} flight={flight} leg={leg} itineraryId={it.id} legIndex={legIdx} />
-                );
-              })}
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 4px" }}>Flights not included in this price</p>
+              <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "0 0 10px" }}>
+                Our travel consultant will help you find the best flights for your dates. In-app flight booking is coming soon!
+              </p>
+              <button style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10,
+                background: "#EBE9FE", border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 12, fontWeight: 600, color: "#6938EF",
+              }}>
+                <Plane size={12} color="#6938EF" /> Talk to consultant about flights
+              </button>
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </div>
 
       <Divider />
 
@@ -461,6 +513,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           initialDay={showViewer.day}
           initialActivity={showViewer.activity}
           onClose={() => setShowViewer(null)}
+        />
+      )}
+
+      {/* ═══ Pricing Details Bottom Sheet ═══ */}
+      {showPricingSheet && (
+        <PricingSheet
+          onClose={() => setShowPricingSheet(false)}
+          initialDates={travelDates}
+          onSubmit={(data) => {
+            setTravelDates(data);
+            setPricingState("loading");
+            setShowPricingSheet(false);
+            // Simulate live price fetch
+            setTimeout(() => setPricingState("live"), 2000);
+          }}
         />
       )}
 
@@ -676,6 +743,116 @@ function VideoViewer({ days, initialDay, initialActivity, onClose }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ═══ Pricing Bottom Sheet ═══
+function PricingSheet({ onClose, initialDates, onSubmit }) {
+  const travelerOpts = [2, 4, 6, 8];
+  const [fromDate, setFromDate] = useState(initialDates?.fromDate || "");
+  const [nights, setNights] = useState(initialDates?.nights || "");
+  const [travelers, setTravelers] = useState(initialDates?.travelers || 2);
+  const nightOptions = [3, 4, 5, 6, 7, 8, 9, 10];
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split("T")[0];
+  const isValid = fromDate && nights;
+
+  // Format date for display
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  return (
+    <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, zIndex: 100, borderRadius: 44, overflow: "hidden", pointerEvents: "none" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", pointerEvents: "auto" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 20px 34px", pointerEvents: "auto" }} className="animate-slide-up">
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 4 }}>Get real-time pricing</h3>
+        <p style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>We'll fetch live hotel rates and availability for your dates</p>
+
+        {/* Travel Dates — exact from date + nights */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <Calendar size={14} color={C.p600} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>When are you travelling?</p>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1.3 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>From date</label>
+              <input
+                type="date"
+                min={minDate}
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                style={{
+                  width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13,
+                  border: `1.5px solid ${fromDate ? C.p600 : C.div}`, background: fromDate ? C.p100 : C.white,
+                  color: fromDate ? C.p600 : C.sub, fontFamily: "inherit", outline: "none",
+                  fontWeight: fromDate ? 600 : 400, boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ flex: 0.7 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>Nights</label>
+              <div style={{ position: "relative" }}>
+                <select
+                  value={nights}
+                  onChange={e => setNights(e.target.value)}
+                  style={{
+                    width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13,
+                    border: `1.5px solid ${nights ? C.p600 : C.div}`, background: nights ? C.p100 : C.white,
+                    color: nights ? C.p600 : C.sub, fontFamily: "inherit", outline: "none",
+                    fontWeight: nights ? 600 : 400, appearance: "none", boxSizing: "border-box",
+                  }}
+                >
+                  <option value="">Select</option>
+                  {nightOptions.map(n => <option key={n} value={n}>{n}N</option>)}
+                </select>
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: C.sub, pointerEvents: "none" }}>▼</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Travelers */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <Users size={14} color={C.p600} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>How many adults?</p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {travelerOpts.map(t => {
+              const on = travelers === t;
+              return (
+                <button key={t} onClick={() => setTravelers(t)} style={{
+                  flex: 1, padding: "10px 0", borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 14, fontWeight: on ? 700 : 500,
+                  color: on ? C.p600 : C.sub, background: on ? C.p100 : C.white, border: `1.5px solid ${on ? C.p600 : C.div}`,
+                }}>{t}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <button
+          onClick={() => { if (isValid) onSubmit({ fromDate, nights: Number(nights), travelers }); }}
+          disabled={!isValid}
+          style={{
+            width: "100%", padding: "14px 0", borderRadius: 12, border: "none", cursor: isValid ? "pointer" : "default",
+            background: isValid ? C.p600 : C.div, color: isValid ? "#fff" : C.inact,
+            fontSize: 14, fontWeight: 600, fontFamily: "inherit",
+            boxShadow: isValid ? "0 4px 16px rgba(227,27,83,0.3)" : "none",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+          <Zap size={14} /> Fetch live prices
+        </button>
+      </div>
     </div>
   );
 }
