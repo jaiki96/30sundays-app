@@ -3,6 +3,8 @@ import { useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, SlidersHorizontal, X, Sparkles, Calendar, Gauge, Users } from "lucide-react";
 import { C, VS, allItineraries, destinations } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
+import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
+import { getUpgradeInfo } from "../data/upgradeData";
 
 const nightRanges = [
   { label: "3–5N", min: 3, max: 5 },
@@ -46,6 +48,7 @@ export default function Listing({ userState, leadData }) {
   const [showFilters, setShowFilters] = useState(false);
   const [filterTab, setFilterTab] = useState("Filters");
   const [showDrawer, setShowDrawer] = useState(false);
+  const [upgradeItinerary, setUpgradeItinerary] = useState(null); // itinerary for upgrade drawer
 
   useEffect(() => {
     const seen = sessionStorage.getItem("listing-drawer-seen");
@@ -119,7 +122,7 @@ export default function Listing({ userState, leadData }) {
         {filtered.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {filtered.map(it => (
-              <ItineraryCard key={it.id} it={it} fullWidth />
+              <ItineraryCard key={it.id} it={it} fullWidth onUpgradeClick={(itData) => setUpgradeItinerary(itData)} />
             ))}
           </div>
         ) : (
@@ -338,6 +341,18 @@ export default function Listing({ userState, leadData }) {
       {showDrawer && (
         <TravelDetailsDrawer onClose={closeDrawer} filters={filters} setFilters={setFilters} />
       )}
+
+      {/* ═══ Hotel Upgrade Drawer ═══ */}
+      {upgradeItinerary && (() => {
+        const info = getUpgradeInfo(upgradeItinerary.id, upgradeItinerary.days);
+        return info.upgradeCount > 0 ? (
+          <HotelUpgradeDrawer
+            upgrades={info.upgrades}
+            totalAdditional={info.totalAdditional}
+            onClose={() => setUpgradeItinerary(null)}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

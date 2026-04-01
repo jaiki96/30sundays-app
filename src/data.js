@@ -84,7 +84,7 @@ const slImgs = [
   `${CDN}/srilanka/victoria_lake_kandy_SLA00074.jpg`,
 ];
 
-const maldivesImgs = [
+export const maldivesImgs = [
   `${CDN}/hotels/maldives/hero-images/11_hero.webp`,
   `${CDN}/hotels/maldives/hero-images/12_hero.webp`,
   `${CDN}/hotels/maldives/hero-images/13_hero.webp`,

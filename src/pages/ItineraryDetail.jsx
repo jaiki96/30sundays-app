@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions } from "../data/dayOptions";
 import ChangeDaySheet from "../components/ChangeDaySheet";
+import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
+import { getUpgradeInfo } from "../data/upgradeData";
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
 
@@ -54,8 +56,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [showPricingSheet, setShowPricingSheet] = useState(false);
   const [travelDates, setTravelDates] = useState(null); // { month, travelers }
   const [pricingState, setPricingState] = useState("cached"); // "cached" | "loading" | "live"
+  const [showUpgradeDrawer, setShowUpgradeDrawer] = useState(false);
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
+
+  const upgradeInfo = getUpgradeInfo(it.id, it.days);
 
   // Flight legs
   const flightLegs = useMemo(() => getFlightLegs(it), [it]);
@@ -295,9 +300,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       <div>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
         <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
-          {hotels.map((h, i) => (
-            <Link key={i} to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
-              style={{ width: 280, minWidth: 280, flexShrink: 0, borderRadius: 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
+          {hotels.map((h, i) => {
+            // Check if this hotel has an upgrade available
+            const upgradeForHotel = upgradeInfo.upgrades.find(u => u.cityIndex === i);
+            return (
+            <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
+            <Link to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
+              style={{ borderRadius: upgradeForHotel ? "14px 14px 0 0" : 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ padding: "10px 10px 0" }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
               </div>
@@ -331,8 +340,59 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 </span>
               </div>
             </Link>
-          ))}
+            {/* upgrade row under hotel card */}
+            {upgradeForHotel && (
+              <div onClick={() => setShowUpgradeDrawer(true)} style={{
+                marginTop: -1, background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)",
+                border: "1px solid #E8D5A3", borderTop: "none", borderRadius: "0 0 14px 14px",
+                padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%", background: "rgba(184,134,11,0.12)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <Sparkles size={14} color="#B8860B" strokeWidth={2.2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 2, lineHeight: "14px" }}>
+                    <span style={{ fontSize: 10, color: "#6B4F1D", fontWeight: 500 }}>Upgrade to 5</span>
+                    <Star size={8} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} />
+                  </div>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: C.head, lineHeight: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {upgradeForHotel.upgrade.name}
+                  </p>
+                </div>
+                <span style={{ fontSize: 11, color: "#B8860B", fontWeight: 600, whiteSpace: "nowrap" }}>See details</span>
+              </div>
+            )}
+            </div>
+            );
+          })}
         </div>
+
+        {/* "Upgrade all hotels" banner */}
+        {upgradeInfo.upgradeCount >= 2 && (
+          <div onClick={() => setShowUpgradeDrawer(true)} style={{
+            margin: "16px 16px 0", background: C.p100, border: `1.5px solid ${C.p300}`,
+            borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%", background: C.white,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Sparkles size={16} color={C.p600} strokeWidth={2.5} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.head, display: "flex", alignItems: "center", gap: 2, lineHeight: "18px" }}>
+                Upgrade all hotels to 5<Star size={10} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} />
+              </span>
+              <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, lineHeight: "16px", marginTop: 2, display: "block" }}>
+                {upgradeInfo.upgradeCount} hotels · <span style={{ color: C.p600, fontWeight: 600 }}>+₹{upgradeInfo.totalAdditional.toLocaleString("en-IN")} total</span>
+              </span>
+            </div>
+            <span style={{ fontSize: 12, color: C.p600, fontWeight: 600, whiteSpace: "nowrap" }}>View details</span>
+          </div>
+        )}
       </div>
 
       <Divider />
@@ -581,6 +641,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ═══ Hotel Upgrade Drawer ═══ */}
+      {showUpgradeDrawer && upgradeInfo.upgradeCount > 0 && (
+        <HotelUpgradeDrawer
+          upgrades={upgradeInfo.upgrades}
+          totalAdditional={upgradeInfo.totalAdditional}
+          onClose={() => setShowUpgradeDrawer(false)}
+        />
       )}
     </div>
   );

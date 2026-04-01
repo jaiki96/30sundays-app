@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Calendar } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Calendar, Sparkles } from "lucide-react";
 import { C, VS, allItineraries } from "../data";
+import { getUpgradeInfo } from "../data/upgradeData";
 
 // Glassmorphism vibe chip style
 const vibeChipStyle = (v) => ({
@@ -41,15 +42,17 @@ const formatTravelDates = (travelDates, nights) => {
   return `${from.toLocaleDateString("en-IN", opts)} – ${to.toLocaleDateString("en-IN", opts)}, ${to.getFullYear()}`;
 };
 
-export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates }) {
+export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates, onUpgradeClick }) {
   const v = VS[vibe || it.vibe];
   const cardW = fullWidth ? "100%" : 272;
   const cardH = fullWidth ? 300 : 280;
   const hasDates = travelDates?.fromDate;
+  const { upgradeCount } = getUpgradeInfo(it.id, it.days);
 
   return (
+    <div style={{ flexShrink: 0 }}>
     <Link to={`/itinerary/${it.id}`} style={{ textDecoration: "none", color: "inherit", flexShrink: 0, display: "block" }}>
-      <div style={{ width: cardW, minWidth: fullWidth ? undefined : cardW, borderRadius: 16, overflow: "hidden", position: "relative", height: cardH, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", cursor: "pointer" }}>
+      <div style={{ width: cardW, minWidth: fullWidth ? undefined : cardW, borderRadius: upgradeCount > 0 ? "16px 16px 0 0" : 16, overflow: "hidden", position: "relative", height: cardH, boxShadow: upgradeCount > 0 ? "none" : "0 4px 20px rgba(0,0,0,0.12)", cursor: "pointer" }}>
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.82) 100%)" }} />
 
@@ -106,5 +109,31 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
         </div>
       </div>
     </Link>
+    {/* upgrade nudge pill */}
+    {upgradeCount > 0 && (
+      <div
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpgradeClick?.(it); }}
+        style={{
+          marginTop: -1, borderRadius: "0 0 16px 16px",
+          background: "linear-gradient(135deg, #FFFDF5 0%, #FFF8E7 50%, #FFF3D6 100%)",
+          borderTop: "none",
+          border: "1px solid #E8D5A3",
+          borderTopColor: "transparent",
+          padding: "8px 14px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          cursor: "pointer",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Sparkles size={14} color="#B8860B" strokeWidth={2.2} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#6B4F1D", lineHeight: "16px" }}>
+            {upgradeCount} hotel upgrade{upgradeCount > 1 ? "s" : ""} available
+          </span>
+        </div>
+        <ArrowUpRight size={14} color="#8B7340" strokeWidth={2} />
+      </div>
+    )}
+    </div>
   );
 }
