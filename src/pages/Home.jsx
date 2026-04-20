@@ -21,6 +21,19 @@ export default function Home({ userState }) {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const navigate = useNavigate();
 
+  const renderDestSections = (slice, chunkIdx) => slice.map((d, idx) => {
+    const items = getItinerariesForDest(d.name);
+    if (!items.length) return null;
+    return (
+      <div key={d.name} style={{ marginTop: chunkIdx === 0 && idx === 0 ? 22 : 26 }}>
+        <SectionHeader emoji={d.flag} title={d.name} sub={d.sub} linkTo={`/listing?dest=${encodeURIComponent(d.name)}`} />
+        <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
+          {items.map((it, i) => <ItineraryCard key={i} it={it} vibe={it.vibe} hideDest={it.dest !== "Maldives"} />)}
+        </div>
+      </div>
+    );
+  });
+
   return (
     <div style={{ background: `linear-gradient(180deg, ${C.p100}55 0%, ${C.white} 14%)`, paddingTop: 12 }}>
       {/* Header */}
@@ -35,24 +48,64 @@ export default function Home({ userState }) {
             <div style={{ width: 66, height: 66, borderRadius: "50%", overflow: "hidden", border: `2.5px solid ${C.div}`, padding: 2 }}>
               <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }} />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 500, color: C.sub, whiteSpace: "nowrap" }}>{d.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: C.sub, whiteSpace: "nowrap" }}>{d.name}</span>
           </Link>
         ))}
       </div>
 
-      {/* Destination carousels */}
-      {HOME_DESTS.map((d, idx) => {
-        const items = getItinerariesForDest(d.name);
-        if (!items.length) return null;
-        return (
-          <div key={d.name} style={{ marginTop: idx === 0 ? 22 : 26 }}>
-            <SectionHeader emoji={d.flag} title={d.name} sub={d.sub} linkTo={`/listing?dest=${encodeURIComponent(d.name)}`} />
-            <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
-              {items.map((it, i) => <ItineraryCard key={i} it={it} vibe={it.vibe} />)}
-            </div>
+      {/* Destination carousels — interleaved with traveller moments + USPs to break monotony */}
+      {renderDestSections(HOME_DESTS.slice(0, 2), 0)}
+
+      {/* Traveller moments — auto-scrolling marquee */}
+      <div style={{ marginTop: 26 }}>
+        <div style={{ padding: "0 16px", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+            <span style={{ fontSize: 16 }}>📸</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Traveller moments</span>
           </div>
-        );
-      })}
+          <p style={{ fontSize: 12, color: C.sub }}>Real photos from couples who travelled with us</p>
+        </div>
+        <div style={{ overflow: "hidden", width: "100%" }}>
+          <div className="marquee-strip" style={{ display: "flex", gap: 10, width: "max-content" }}>
+            {[...travellerMoments, ...travellerMoments].map((p, i) => (
+              <div key={i} style={{ width: 140, minWidth: 140, height: 195, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0 }}>
+                <img src={p.img} alt={`Traveller in ${p.dest}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 55%, rgba(0,0,0,0.7))" }} />
+                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <MapPin size={10} color={C.p300} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{p.dest}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {renderDestSections(HOME_DESTS.slice(2, 4), 1)}
+
+      {/* USPs */}
+      <div style={{ margin: "30px 0 0", padding: "24px 16px", background: `linear-gradient(135deg, ${C.p100}55 0%, #EDF3FF66 100%)` }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 3 }}>Why 30 Sundays?</h2>
+        <p style={{ fontSize: 12, color: C.sub, marginBottom: 16 }}>Designed for couples who deserve better</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {usps.map((u, i) => {
+            const Icon = iconMap[u.icon];
+            return (
+              <div key={i} style={{ background: C.white, borderRadius: 12, padding: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${u.color}12`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+                  <Icon size={16} color={u.color} />
+                </div>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: C.head, marginBottom: 2 }}>{u.title}</h4>
+                <p style={{ fontSize: 11, lineHeight: "15px", color: C.sub }}>{u.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {renderDestSections(HOME_DESTS.slice(4), 2)}
 
       {/* Real Couples, Real Itineraries */}
       <div style={{ marginTop: 26 }}>
@@ -80,53 +133,6 @@ export default function Home({ userState }) {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* USPs */}
-      <div style={{ margin: "30px 0 0", padding: "24px 16px", background: `linear-gradient(135deg, ${C.p100}55 0%, #EDF3FF66 100%)` }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 3 }}>Why 30 Sundays?</h2>
-        <p style={{ fontSize: 12, color: C.sub, marginBottom: 16 }}>Designed for couples who deserve better</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {usps.map((u, i) => {
-            const Icon = iconMap[u.icon];
-            return (
-              <div key={i} style={{ background: C.white, borderRadius: 12, padding: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${u.color}12`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                  <Icon size={16} color={u.color} />
-                </div>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: C.head, marginBottom: 2 }}>{u.title}</h4>
-                <p style={{ fontSize: 11, lineHeight: "15px", color: C.sub }}>{u.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Traveller moments — auto-scrolling marquee */}
-      <div style={{ marginTop: 26 }}>
-        <div style={{ padding: "0 16px", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-            <span style={{ fontSize: 16 }}>📸</span>
-            <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Traveller moments</span>
-          </div>
-          <p style={{ fontSize: 12, color: C.sub }}>Real photos from couples who travelled with us</p>
-        </div>
-        <div style={{ overflow: "hidden", width: "100%" }}>
-          <div className="marquee-strip" style={{ display: "flex", gap: 10, width: "max-content" }}>
-            {[...travellerMoments, ...travellerMoments].map((p, i) => (
-              <div key={i} style={{ width: 140, minWidth: 140, height: 195, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-                <img src={p.img} alt={`Traveller in ${p.dest}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 55%, rgba(0,0,0,0.7))" }} />
-                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                    <MapPin size={10} color={C.p300} />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{p.dest}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

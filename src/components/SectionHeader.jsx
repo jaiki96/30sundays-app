@@ -7,17 +7,17 @@ export default function SectionHeader({ emoji, title, sub, linkTo, linkLabel = "
     <div style={{ padding: "0 16px", marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {emoji && <span style={{ fontSize: 16 }}>{emoji}</span>}
-          <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>{title}</span>
-          <ChevronRight size={16} color={C.inact} style={{ marginLeft: -2 }} />
+          {emoji && <span style={{ fontSize: 18 }}>{emoji}</span>}
+          <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>{title}</span>
+          <ChevronRight size={18} color={C.inact} style={{ marginLeft: -2 }} />
         </div>
         {linkTo && (
-          <Link to={linkTo} style={{ fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
-            {linkLabel} <ChevronRight size={13} color={C.p600} />
+          <Link to={linkTo} style={{ fontSize: 14, fontWeight: 600, color: C.p600, textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
+            {linkLabel} <ChevronRight size={15} color={C.p600} />
           </Link>
         )}
       </div>
-      {sub && <p style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{sub}</p>}
+      {sub && <p style={{ fontSize: 14, color: C.sub, marginTop: 3 }}>{sub}</p>}
     </div>
   );
 }

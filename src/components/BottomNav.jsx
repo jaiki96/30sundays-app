@@ -32,7 +32,7 @@ export default function BottomNav({ userState }) {
           >
             {on && <div style={{ position: "absolute", top: -6, left: "50%", transform: "translateX(-50%)", width: 18, height: 3, borderRadius: 2, background: C.p600 }} />}
             <Icon size={20} color={on ? C.p600 : C.inact} strokeWidth={on ? 2.2 : 1.8} />
-            <span style={{ fontSize: 10, fontWeight: on ? 600 : 500, color: on ? C.p600 : C.inact }}>{tab.label}</span>
+            <span style={{ fontSize: 12, fontWeight: on ? 600 : 500, color: on ? C.p600 : C.inact }}>{tab.label}</span>
           </NavLink>
         );
       })}
