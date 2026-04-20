@@ -4,7 +4,7 @@ import { C } from "../data";
 
 const tabs = [
   { to: "/", label: "Explore", icon: Compass },
-  { to: "/plan", label: "Plan", icon: Map },
+  { to: "/plan", label: "My Plans", icon: Map },
   { to: "/trips", label: "My Trips", icon: Briefcase },
   { to: "/account", label: "Account", icon: User },
 ];

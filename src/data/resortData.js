@@ -7,14 +7,16 @@ export const CATEGORY_COLORS = {
   budget_friendly: { text: "#027A48", bg: "#ECFDF3" },
   popular_couples: { text: "#89123E", bg: "#FFE4E8" },
   indian_restaurant: { text: "#B54708", bg: "#FFFAEB" },
+  ultra_luxury: { text: "#5A3A00", bg: "#FDF6D3" },
 };
 
 export const CATEGORY_META = {
   experience_seaplane: { emoji: "🛩️", label: "Experience Seaplane", subtitle: "Arrive in style" },
   quiet_intimate: { emoji: "🤫", label: "Quiet & Intimate", subtitle: "Privacy over party" },
   budget_friendly: { emoji: "💰", label: "Budget Friendly", subtitle: "Maldives without the splurge" },
-  popular_couples: { emoji: "💑", label: "Popular among Couples", subtitle: "Most loved by honeymooners" },
+  popular_couples: { emoji: "💑", label: "Popular among Indian Couples", subtitle: "Handpicked favourites from Indian honeymooners" },
   indian_restaurant: { emoji: "🍛", label: "Indian Restaurant", subtitle: "Taste of home, far from home" },
+  ultra_luxury: { emoji: "💎", label: "Ultra Luxury", subtitle: "The finest overwater escapes money can book" },
 };
 
 const CDN = "https://cdn.30sundays.club/app_content";
@@ -113,7 +115,7 @@ export const resorts = [
     refundable: true,
     editorial_description: "If there's one resort that defines what ultra-luxury in the Maldives should feel like, it's Soneva Fushi. Set on the largest island in the Baa Atoll — a UNESCO Biosphere Reserve — it's where barefoot luxury was literally invented. This is the Maldives for people who've already done the Maldives.",
     about_hotel_text: "Soneva Fushi is a legendary 5-star resort in the Baa Atoll UNESCO Biosphere Reserve. Famous for its 'no shoes, no news' philosophy, it offers spacious jungle and beachfront villas with private pools. Highlights include an open-air cinema, observatory, chocolate room, ice cream parlour, and a 1.4km sandbank. The house reef features manta rays during season.",
-    categories: ["experience_seaplane", "quiet_intimate"],
+    categories: ["experience_seaplane", "quiet_intimate", "ultra_luxury"],
     veg_friendly: false,
     google_rating: 4.8,
     google_rating_count: 1243,
@@ -188,7 +190,7 @@ export const resorts = [
     refundable: true,
     editorial_description: "OZEN is what happens when you take the Maldives' best all-inclusive concept and execute it flawlessly. Everything — from underwater dining at M6m to the Spa by Clarins — is included. No bill anxiety, no mental math. Just pure holiday. Ideal for couples who want premium without the premium stress.",
     about_hotel_text: "OZEN LIFE MAADHOO is a luxury all-inclusive resort in South Malé Atoll. Its signature INDULGENCE plan includes all meals across 4 restaurants (including the underwater M6m), premium beverages, spa treatments, excursions, and more. Featuring both Earth and Wind villas (beach and overwater), it offers one of the most complete luxury experiences in the Maldives.",
-    categories: ["popular_couples", "budget_friendly", "indian_restaurant"],
+    categories: ["popular_couples", "budget_friendly", "indian_restaurant", "ultra_luxury"],
     veg_friendly: true,
     google_rating: 4.7,
     google_rating_count: 1567,
@@ -262,7 +264,7 @@ export const resorts = [
     refundable: true,
     editorial_description: "The St. Regis is for couples who want the Maldives dialled up to its absolute maximum. Butler service, whale shark excursions in the Dhaalu Atoll, the Iridium Spa, Blue Hole bar — every touchpoint is unapologetically premium. If budget is not the constraint and experience is, this is your answer.",
     about_hotel_text: "The St. Regis Maldives Vommuli Resort is a landmark of ultra-luxury in the Dhaalu Atoll. Every villa comes with a private pool and dedicated butler. The resort's architecture is inspired by marine life — the Whale Bar is shaped like a whale and the Iridium Spa like a jellyfish. With a world-class dive centre, tennis courts, and exceptional dining, it's the pinnacle of Maldivian hospitality.",
-    categories: ["experience_seaplane", "quiet_intimate", "popular_couples"],
+    categories: ["experience_seaplane", "quiet_intimate", "popular_couples", "ultra_luxury"],
     veg_friendly: false,
     google_rating: 4.9,
     google_rating_count: 978,

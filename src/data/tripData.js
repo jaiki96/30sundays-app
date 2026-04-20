@@ -46,6 +46,12 @@ export const mockTrips = [
     },
     leadTraveler: { name: "Rahul Sharma", phone: "+91 98765 43210", role: "Lead traveler" },
     coTravelers: [{ name: "Priya Sharma", phone: "+91 98765 43211", role: "Co-traveler" }],
+    consultant: { name: "Riya Shah", phone: "+919876500011" },
+    addOns: {
+      visa: { purchased: true, documentUrl: null },
+      insurance: { purchased: false },
+      forex: { enabled: true },
+    },
     itineraryDays: [
       { day: 1, city: "Phuket", activities: ["Arrive in Phuket", "Check-in at Andakira Hotel", "Patong Beach sunset walk"] },
       { day: 2, city: "Phuket", activities: ["Phi Phi Island day trip", "Snorkeling at Maya Bay", "Seafood dinner at Banzaan Market"] },
@@ -463,6 +469,12 @@ export const mockTrips = [
     },
     leadTraveler: { name: "Ananya Reddy", phone: "+91 90000 12345", role: "Lead traveler" },
     coTravelers: [{ name: "Vikram Reddy", phone: "+91 90000 12346", role: "Co-traveler" }],
+    consultant: { name: "Aarav Mehta", phone: "+919876500022" },
+    addOns: {
+      visa: { purchased: true, documentUrl: "#" },
+      insurance: { purchased: true, documentUrl: "#" },
+      forex: { enabled: true },
+    },
     itineraryDays: [
       { day: 1, city: "Ubud", activities: ["Arrive in Bali", "Check-in at Ubud resort", "Monkey Forest visit"] },
       { day: 2, city: "Ubud", activities: ["Tegallalang Rice Terraces", "Tirta Empul Temple", "Yoga session"] },
@@ -700,6 +712,12 @@ export const mockTrips = [
     },
     leadTraveler: { name: "Meera Nair", phone: "+91 87654 32100", role: "Lead traveler" },
     coTravelers: [{ name: "Arjun Nair", phone: "+91 87654 32101", role: "Co-traveler" }],
+    consultant: { name: "Kabir Iyer", phone: "+919876500033" },
+    addOns: {
+      visa: { purchased: false },
+      insurance: { purchased: false },
+      forex: { enabled: true },
+    },
     itineraryDays: [
       { day: 1, city: "Hanoi", activities: ["Arrive in Hanoi", "Old Quarter walking tour", "Water Puppet Show"] },
       { day: 2, city: "Hanoi", activities: ["Ho Chi Minh Mausoleum", "Temple of Literature", "Street food tour"] },

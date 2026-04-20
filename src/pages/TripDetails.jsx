@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
+import ConsultantCard from "../components/ConsultantCard";
+import AddOnsSection from "../components/AddOnsSection";
 
 // ─── Simplified 2-tab bottom nav for trip details ───
 function TripBottomNav() {
@@ -1116,9 +1118,24 @@ export default function TripDetails() {
           {!isCompleted && <PaymentBanner trip={trip} navigate={navigate} />}
 
           <DocumentsSection />
+          {!isCompleted && trip.addOns && (
+            <AddOnsSection addOns={trip.addOns} />
+          )}
           <CoTravelersSection trip={trip} />
           <ItineraryGlance trip={trip} />
           <FlightsSection flights={trip.flights} />
+          {trip.consultant && (
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 18, fontWeight: 600, color: C.head, margin: "0 0 12px" }}>
+                {isCompleted ? "Your trip manager" : "Your trip manager"}
+              </h4>
+              <ConsultantCard
+                consultant={trip.consultant}
+                role="Your trip manager"
+                context={`my ${trip.destination} trip (${trip.startDateDisplay}–${trip.endDateDisplay})`}
+              />
+            </div>
+          )}
           <HotelsSection hotels={trip.hotels} />
           <JourneyMap cities={trip.journeyMapCities} />
 

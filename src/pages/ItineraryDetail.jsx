@@ -1,11 +1,20 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles } from "lucide-react";
-import { C, allItineraries, destData, reviews, getCustomerPhotos } from "../data";
+import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight } from "lucide-react";
+import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions } from "../data/dayOptions";
+import { Camera } from "lucide-react";
 import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
+import ConsultantCard from "../components/ConsultantCard";
+
+const PREBOOKING_CONSULTANTS = [
+  { name: "Riya Shah", phone: "+919876500011" },
+  { name: "Aarav Mehta", phone: "+919876500022" },
+  { name: "Kabir Iyer", phone: "+919876500033" },
+  { name: "Sana Kapoor", phone: "+919876500044" },
+];
 import { getUpgradeInfo } from "../data/upgradeData";
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
@@ -57,6 +66,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [travelDates, setTravelDates] = useState(null); // { month, travelers }
   const [pricingState, setPricingState] = useState("cached"); // "cached" | "loading" | "live"
   const [showUpgradeDrawer, setShowUpgradeDrawer] = useState(false);
+  const [showDayPhotos, setShowDayPhotos] = useState(null); // { dayNum, photoIdx }
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
@@ -279,6 +289,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                       Change day plan
                     </button>
                   )}
+                  {/* Day traveler photos */}
+                  {customerPhotos[it.dest] && (
+                    <DayTravellerPhotos
+                      dest={it.dest}
+                      dayNum={day.dayNum}
+                      dayIndex={globalDayIndex}
+                      totalDays={daysWithActivities.length}
+                      onPhotoClick={(photoIdx) => setShowDayPhotos({ dayNum: day.dayNum, photoIdx })}
+                    />
+                  )}
                 </div>
               </div>
             );
@@ -459,6 +479,49 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
+      {/* ═══ 4c. Book your trip — Payment Card ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Book your trip</p>
+        {(() => {
+          const priceNum = Number(String(it.price).replace(/,/g, "")) || 0;
+          const firstInstallment = Math.round(priceNum * 2 * 0.2);
+          return (
+        <div style={{
+          borderRadius: 12, border: `1px solid ${C.div}`, background: C.white,
+          padding: "12px 14px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 11, color: C.sub, margin: "0 0 2px" }}>First installment</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>
+                ₹{firstInstallment.toLocaleString("en-IN")}
+                <span style={{ fontSize: 11, fontWeight: 400, color: C.sub, marginLeft: 4 }}>to confirm</span>
+              </p>
+            </div>
+            <button onClick={() => alert("Razorpay checkout would open here")} style={{
+              padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer",
+              background: C.p600, color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+              whiteSpace: "nowrap", flexShrink: 0,
+            }}>
+              Pay via Razorpay
+            </button>
+          </div>
+          <Link to={`/itinerary/${it.id}/payment-plan`} style={{
+            marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.div}`, textDecoration: "none",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: 11, color: C.sub }}>4-installment plan</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 12, fontWeight: 600, color: C.p600 }}>
+              View payment plan <ChevronRight size={12} />
+            </span>
+          </Link>
+        </div>
+          );
+        })()}
+      </div>
+
+      <Divider />
+
       {/* ═══ 5. Flights — Coming Soon Notice ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Flights</p>
@@ -485,6 +548,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             </div>
           </div>
         </div>
+      </div>
+
+      <Divider />
+
+      {/* ═══ 5b. Travel Consultant ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Your travel consultant</p>
+        {(() => {
+          const unassigned = Number(it.id) % 3 === 0;
+          const consultant = unassigned ? null : PREBOOKING_CONSULTANTS[Number(it.id) % PREBOOKING_CONSULTANTS.length];
+          return (
+            <ConsultantCard
+              consultant={consultant}
+              role="Your travel consultant"
+              context={`my ${it.dest} trip`}
+              unassigned={unassigned}
+            />
+          );
+        })()}
       </div>
 
       <Divider />
@@ -570,6 +652,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       {showViewer && (
         <VideoViewer
           days={daysWithActivities}
+          dest={it.dest}
           initialDay={showViewer.day}
           initialActivity={showViewer.activity}
           onClose={() => setShowViewer(null)}
@@ -651,6 +734,104 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           onClose={() => setShowUpgradeDrawer(false)}
         />
       )}
+
+      {/* ═══ Day Traveller Photos Fullscreen ═══ */}
+      {showDayPhotos && customerPhotos[it.dest] && (
+        <DayPhotosGallery
+          dest={it.dest}
+          dayNum={showDayPhotos.dayNum}
+          startIdx={showDayPhotos.photoIdx}
+          onClose={() => setShowDayPhotos(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ═══ Day Traveller Photos (inline in each day) ═══
+function DayTravellerPhotos({ dest, dayNum, dayIndex, totalDays, onPhotoClick }) {
+  const photos = customerPhotos[dest];
+  const tags = getCustomerPhotos(dest);
+  const names = couplePhotoNames[dest] || [];
+  const count = couplesCount[dest] || 500;
+  if (!photos || photos.length === 0) return null;
+
+  // Pick 3 photos per day by rotating through the pool
+  const startOffset = (dayIndex * 3) % photos.length;
+  const dayPhotos = [0, 1, 2].map(i => {
+    const idx = (startOffset + i) % photos.length;
+    return { img: photos[idx], tag: tags[idx]?.tag || dest, couple: names[idx] || "", realIdx: idx };
+  });
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+        <Camera size={12} color={C.p600} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.head }}>Day {dayNum} photos from travelers</span>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        {dayPhotos.map((p, i) => (
+          <div key={i} onClick={() => onPhotoClick(p.realIdx)} style={{ flex: 1, height: 70, borderRadius: 10, overflow: "hidden", position: "relative", cursor: "pointer" }}>
+            <img src={p.img} alt={p.tag} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.65))" }} />
+            <span style={{ position: "absolute", bottom: 4, left: 5, right: 5, fontSize: 8, fontWeight: 600, color: "#fff", lineHeight: "10px" }}>{p.tag}</span>
+          </div>
+        ))}
+      </div>
+      {/* CTA nudge */}
+      <div onClick={() => onPhotoClick(dayPhotos[0].realIdx)} style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
+        <Play size={10} color={C.p600} fill={C.p600} />
+        <span style={{ fontSize: 10, fontWeight: 600, color: C.p600 }}>See how {count}+ couples experienced this</span>
+      </div>
+    </div>
+  );
+}
+
+// ═══ Day Photos Fullscreen Gallery ═══
+function DayPhotosGallery({ dest, dayNum, startIdx, onClose }) {
+  const [idx, setIdx] = useState(startIdx);
+  const touchRef = useRef(null);
+  const photos = customerPhotos[dest];
+  const tags = getCustomerPhotos(dest);
+  const names = couplePhotoNames[dest] || [];
+  const total = photos.length;
+
+  const handleTouchStart = (e) => { touchRef.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchRef.current === null) return;
+    const diff = touchRef.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && idx < total - 1) setIdx(idx + 1);
+      else if (diff < 0 && idx > 0) setIdx(idx - 1);
+    }
+    touchRef.current = null;
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#000", display: "flex", flexDirection: "column", maxWidth: 390, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", zIndex: 2 }}>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>{names[idx] || dest}</p>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>{dest} · {tags[idx]?.tag || "Day " + dayNum}</p>
+        </div>
+        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <XIcon size={18} color="#fff" />
+        </button>
+      </div>
+      <div style={{ textAlign: "center", padding: "0 0 8px", zIndex: 2 }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{idx + 1} / {total}</span>
+      </div>
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <img src={photos[idx]} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+        {idx > 0 && <div onClick={() => setIdx(idx - 1)} style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />}
+        {idx < total - 1 && <div onClick={() => setIdx(idx + 1)} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 4, padding: "10px 0", flexWrap: "wrap", maxWidth: "90%", margin: "0 auto" }}>
+        {photos.slice(0, 15).map((_, i) => (
+          <div key={i} onClick={() => setIdx(i)} style={{ width: i === idx ? 18 : 6, height: 6, borderRadius: 3, background: i === idx ? C.p600 : "rgba(255,255,255,0.3)", transition: "all 0.2s", cursor: "pointer" }} />
+        ))}
+      </div>
+      <div style={{ height: 24 }} />
     </div>
   );
 }
@@ -711,7 +892,7 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
 }
 
 // ═══ Full-Screen Video/Stories Viewer ═══
-function VideoViewer({ days, initialDay, initialActivity, onClose }) {
+function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
   const [dayIdx, setDayIdx] = useState(initialDay);
   const [actIdx, setActIdx] = useState(initialActivity);
   const [showDetails, setShowDetails] = useState(false);
@@ -782,6 +963,20 @@ function VideoViewer({ days, initialDay, initialActivity, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Customer photos nudge — glassmorphism pill */}
+      {dest && customerPhotos[dest] && (
+        <div style={{ position: "absolute", bottom: 110, right: 16, zIndex: 3, display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 20, padding: "6px 12px 6px 6px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.15)" }}>
+          <div style={{ display: "flex" }}>
+            {customerPhotos[dest].slice(0, 2).map((img, i) => (
+              <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.4)", marginLeft: i > 0 ? -6 : 0 }}>
+                <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            ))}
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{customerPhotos[dest].length} photos</span>
+        </div>
+      )}
 
       {/* Bottom overlay */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2, background: "linear-gradient(transparent, rgba(0,0,0,0.85))", padding: "80px 16px 28px" }}>

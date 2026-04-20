@@ -73,3 +73,14 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes marqueeScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-strip {
+  animation: marqueeScroll 25s linear infinite;
+}
+.marquee-strip:hover {
+  animation-play-state: paused;
+}
+

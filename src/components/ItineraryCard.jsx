@@ -86,9 +86,9 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
             </div>
           ) : (
             <div className="hs" style={{ gap: 4, marginBottom: 10 }}>
-              {it.route.map((r, i) => (
+              {(it.villas || it.route).map((r, i) => (
                 <span key={i} style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                  {i > 0 && " · "}{r.n}N {r.city}
+                  {i > 0 && " · "}{r.n}N {r.type || r.city}
                 </span>
               ))}
             </div>

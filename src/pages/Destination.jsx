@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Star, Play, Plane, Clock, FileCheck, MapPin, ChevronRight, X as XIcon } from "lucide-react";
-import { C, destData, destinations, getItinerariesForDest, reviews, getCustomerPhotos } from "../data";
+import { useState, useRef } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Star, Play, Plane, Clock, FileCheck, MapPin, ChevronRight, X as XIcon, Users } from "lucide-react";
+import { C, destData, destinations, getItinerariesForDest, reviews, getCustomerPhotos, customerPhotos, coupleStories, couplesCount, couplePhotoNames, allItineraries } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
 import SectionHeader from "../components/SectionHeader";
 
@@ -10,6 +10,9 @@ export default function Destination() {
   const d = destData[name];
   const [galleryIdx, setGalleryIdx] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showTravellersGallery, setShowTravellersGallery] = useState(false);
+  const [travGalleryIdx, setTravGalleryIdx] = useState(0);
+  const navigate = useNavigate();
   if (!d) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Destination not found</div>;
 
   const itins = getItinerariesForDest(name);
@@ -43,6 +46,25 @@ export default function Destination() {
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>From <strong style={{ fontSize: 16 }}>₹{d.startPrice}</strong>/person</span>
         </div>
       </div>
+
+      {/* Couples count bar */}
+      {couplesCount[name] && customerPhotos[name] && (
+        <div style={{ padding: "12px 16px 0" }}>
+          <div onClick={() => { setShowTravellersGallery(true); setTravGalleryIdx(0); }} style={{ display: "flex", alignItems: "center", gap: 12, background: C.p100, borderRadius: 14, padding: "10px 16px", cursor: "pointer" }}>
+            <div style={{ display: "flex", marginLeft: 0 }}>
+              {customerPhotos[name].slice(0, 5).map((img, i) => (
+                <div key={i} style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", border: "2px solid #fff", marginLeft: i > 0 ? -8 : 0, position: "relative", zIndex: 5 - i }}>
+                  <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: 0 }}>{couplesCount[name]}+ couples explored {name}</p>
+              <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>with 30 Sundays</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Vibe carousels */}
       {relaxed.length > 0 && (
@@ -143,6 +165,37 @@ export default function Destination() {
         </div>
       )}
 
+      {/* Real Couples, Real Itineraries */}
+      {coupleStories.filter(s => s.dest === name).length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <div style={{ padding: "0 16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+              <span style={{ fontSize: 16 }}>💑</span>
+              <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Real Couples, Real Itineraries</span>
+            </div>
+            <p style={{ fontSize: 12, color: C.sub }}>Tap to see their complete journey</p>
+          </div>
+          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
+            {coupleStories.filter(s => s.dest === name).map((s, i) => (
+              <div key={i} onClick={() => { setShowTravellersGallery(true); setTravGalleryIdx(0); }} style={{ width: 280, minWidth: 280, borderRadius: 16, overflow: "hidden", flexShrink: 0, background: C.white, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", cursor: "pointer" }}>
+                <div style={{ height: 240, position: "relative", overflow: "hidden" }}>
+                  <img src={s.heroImg} alt={s.couple} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 40%, rgba(0,0,0,0.75))" }} />
+                  <div style={{ position: "absolute", bottom: 12, left: 14, right: 14 }}>
+                    <p style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{s.couple}</p>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)" }}>{s.dest}</p>
+                  </div>
+                </div>
+                <div style={{ padding: "10px 14px 12px", display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.04)" }}>
+                  <MapPin size={12} color={C.p600} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>{s.route}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Key Facts */}
       <div style={{ margin: "28px 16px 0" }}>
         <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Key facts</span>
@@ -165,8 +218,8 @@ export default function Destination() {
         </div>
       </div>
 
-      {/* Traveller moments */}
-      <TravellerMoments name={name} galleryIdx={galleryIdx} setGalleryIdx={setGalleryIdx} />
+      {/* Traveller moments — marquee with couple names & activity tags */}
+      <TravellerMomentsMarquee name={name} onPhotoClick={(idx) => { setTravGalleryIdx(idx); setShowTravellersGallery(true); }} />
 
       {/* Reviews */}
       {(() => { const visibleReviews = showAllReviews ? destReviews : destReviews.slice(0, 3); return (
@@ -231,16 +284,29 @@ export default function Destination() {
           Plan my {name} trip <ArrowRight size={16} />
         </Link>
       </div>
+
+      {/* Fullscreen Travellers Photo Gallery */}
+      {showTravellersGallery && customerPhotos[name] && (
+        <TravellersFullscreenGallery
+          name={name}
+          photos={customerPhotos[name]}
+          coupleNames={couplePhotoNames[name]}
+          startIdx={travGalleryIdx}
+          onClose={() => setShowTravellersGallery(false)}
+          navigate={navigate}
+        />
+      )}
     </div>
   );
 }
 
-function TravellerMoments({ name, galleryIdx, setGalleryIdx }) {
+function TravellerMomentsMarquee({ name, onPhotoClick }) {
   const photos = getCustomerPhotos(name);
+  const names = couplePhotoNames[name] || [];
   if (!photos.length) return null;
 
   return (
-    <div style={{ marginTop: 28 }}>
+    <div style={{ marginTop: 20 }}>
       <div style={{ padding: "0 16px", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 16 }}>📸</span>
@@ -248,59 +314,97 @@ function TravellerMoments({ name, galleryIdx, setGalleryIdx }) {
         </div>
         <p style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>Couples who explored {name} with us</p>
       </div>
-      <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-        {photos.map((photo, i) => (
-          <div key={i} onClick={() => setGalleryIdx(i)} style={{ width: 140, minWidth: 140, height: 190, borderRadius: 14, overflow: "hidden", flexShrink: 0, position: "relative", cursor: "pointer" }}>
-            <img src={photo.img} alt={photo.tag} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 60%, rgba(0,0,0,0.65))" }} />
-            <div style={{ position: "absolute", bottom: 8, left: 8, right: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <MapPin size={10} color={C.p300} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{photo.tag}</span>
+      <div style={{ overflow: "hidden", width: "100%" }}>
+        <div className="marquee-strip" style={{ display: "flex", gap: 10, width: "max-content" }}>
+          {[...photos, ...photos].map((photo, i) => {
+            const realIdx = i % photos.length;
+            const coupleName = names[realIdx] || "";
+            return (
+              <div key={i} onClick={() => onPhotoClick(realIdx)} style={{ width: 180, minWidth: 180, height: 240, borderRadius: 14, overflow: "hidden", flexShrink: 0, position: "relative", cursor: "pointer" }}>
+                <img src={photo.img} alt={photo.tag} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.75))" }} />
+                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
+                  {coupleName && <p style={{ fontSize: 11, fontWeight: 600, color: "#fff", margin: "0 0 2px", opacity: 0.9 }}>{coupleName}</p>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <MapPin size={10} color={C.p300} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{photo.tag}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TravellersFullscreenGallery({ name, photos, coupleNames, startIdx, onClose, navigate }) {
+  const [idx, setIdx] = useState(startIdx);
+  const touchRef = useRef(null);
+  const total = photos.length;
+  const tags = getCustomerPhotos(name);
+  const activityTag = tags[idx] ? tags[idx].tag : name;
+  const coupleName = coupleNames ? (coupleNames[idx] || "") : "";
+
+  // Find matching couple story for itinerary CTA
+  const story = coupleStories.find(s => s.dest === name);
+  const itinerary = story ? allItineraries.find(it => it.id === story.itineraryId) : null;
+
+  const handleTouchStart = (e) => { touchRef.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchRef.current === null) return;
+    const diff = touchRef.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && idx < total - 1) setIdx(idx + 1);
+      else if (diff < 0 && idx > 0) setIdx(idx - 1);
+    }
+    touchRef.current = null;
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#000", display: "flex", flexDirection: "column", maxWidth: 390, margin: "0 auto" }}>
+      {/* Top bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", zIndex: 2 }}>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>{coupleName || name}</p>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>{name} · {activityTag}</p>
+        </div>
+        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <XIcon size={18} color="#fff" />
+        </button>
+      </div>
+
+      {/* Counter */}
+      <div style={{ textAlign: "center", padding: "0 0 8px", zIndex: 2 }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{idx + 1} / {total}</span>
+      </div>
+
+      {/* Image */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <img src={photos[idx]} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+        {idx > 0 && <div onClick={() => setIdx(idx - 1)} style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />}
+        {idx < total - 1 && <div onClick={() => setIdx(idx + 1)} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />}
+      </div>
+
+      {/* Progress dots */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 4, padding: "10px 0", flexWrap: "wrap", maxWidth: "90%", margin: "0 auto" }}>
+        {photos.slice(0, 15).map((_, i) => (
+          <div key={i} onClick={() => setIdx(i)} style={{ width: i === idx ? 18 : 6, height: 6, borderRadius: 3, background: i === idx ? C.p600 : "rgba(255,255,255,0.3)", transition: "all 0.2s", cursor: "pointer" }} />
         ))}
       </div>
 
-      {/* Fullscreen Gallery — rendered inside #phone-frame via absolute positioning */}
-      {galleryIdx !== null && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", pointerEvents: "none" }}>
-          <div style={{ width: 390, height: 844, background: "rgba(0,0,0,0.97)", display: "flex", flexDirection: "column", borderRadius: 44, overflow: "hidden", pointerEvents: "auto" }}>
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 16px 8px" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{galleryIdx + 1} / {photos.length}</span>
-              <button onClick={() => setGalleryIdx(null)} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <XIcon size={18} color="#fff" />
-              </button>
+      {/* Bottom bar — itinerary CTA */}
+      {story && itinerary && (
+        <div style={{ padding: "8px 16px 24px", background: "linear-gradient(transparent, rgba(0,0,0,0.9) 30%)" }}>
+          <div style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>{story.couple}'s Itinerary</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>{itinerary.nights}N · {itinerary.route.map(r => r.city).join(" → ")}</p>
             </div>
-            {/* Main image */}
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 12px", position: "relative", minHeight: 0 }}>
-              <img src={photos[galleryIdx].img} alt={photos[galleryIdx].tag} style={{ maxWidth: "100%", maxHeight: "100%", borderRadius: 12, objectFit: "contain" }} />
-              {galleryIdx > 0 && (
-                <button onClick={() => setGalleryIdx(i => i - 1)} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  <ArrowLeft size={18} color="#fff" />
-                </button>
-              )}
-              {galleryIdx < photos.length - 1 && (
-                <button onClick={() => setGalleryIdx(i => i + 1)} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  <ArrowRight size={18} color="#fff" />
-                </button>
-              )}
-            </div>
-            {/* Tag */}
-            <div style={{ padding: "12px 16px 8px", textAlign: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{photos[galleryIdx].tag}</span>
-              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginLeft: 8 }}>· {name}</span>
-            </div>
-            {/* Thumbnails */}
-            <div className="hs" style={{ gap: 6, padding: "0 16px 20px" }}>
-              {photos.map((p, i) => (
-                <div key={i} onClick={() => setGalleryIdx(i)} style={{ width: 48, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0, cursor: "pointer", border: i === galleryIdx ? "2px solid #fff" : "2px solid transparent", opacity: i === galleryIdx ? 1 : 0.5 }}>
-                  <img src={p.img} alt={p.tag} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-              ))}
-            </div>
+            <button onClick={() => { onClose(); navigate(`/itinerary/${story.itineraryId}`); }} style={{ background: C.p600, border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(227,27,83,0.4)" }}>
+              View <ArrowRight size={14} />
+            </button>
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ import { CATEGORY_META, getResortsByCategory } from "../data/resortData";
 import SectionHeader from "../components/SectionHeader";
 import ResortCard from "../components/ResortCard";
 
-const CATEGORIES = ["experience_seaplane", "quiet_intimate", "budget_friendly", "popular_couples", "indian_restaurant"];
+const CATEGORIES = ["experience_seaplane", "popular_couples", "ultra_luxury"];
 
 export default function MaldivesDestination() {
   const d = destData.Maldives;

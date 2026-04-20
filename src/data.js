@@ -230,13 +230,13 @@ export const allItineraries = [
     days: [{ city: "Chiang Mai", n: 3, sub: "Doi Suthep · Cooking · Craft" }, { city: "Chiang Rai", n: 2, sub: "White Temple · Blue Temple · Night market" }, { city: "Pai", n: 2, sub: "Canyon · Hot springs · Bamboo bridge" }],
     pace: "Unhurried", crowds: "Low", vegFood: "High" },
   // Maldives (3)
-  { id: 16, dest: "Maldives", vibe: "Relaxed", nights: 5, price: "89,998", route: [{ city: "Malé", n: 2 }, { city: "Addu", n: 3 }], veg: true, resort: "Anantara Veli", img: maldivesImgs[0],
+  { id: 16, dest: "Maldives", vibe: "Relaxed", nights: 5, price: "89,998", route: [{ city: "Malé", n: 2 }, { city: "Addu", n: 3 }], villas: [{ type: "Beach Villa", n: 2 }, { type: "Water Villa", n: 3 }], veg: true, resort: "Anantara Veli", img: maldivesImgs[0],
     days: [{ city: "Malé", n: 2, sub: "City tour · Fish market · Transfer" }, { city: "Addu", n: 3, sub: "Overwater villa · Spa · Diving" }],
     pace: "Unhurried", crowds: "Low", vegFood: "High" },
-  { id: 17, dest: "Maldives", vibe: "Relaxed", nights: 4, price: "1,12,998", route: [{ city: "Malé", n: 1 }, { city: "Baa Atoll", n: 3 }], veg: false, resort: "Soneva Fushi", img: maldivesImgs[3],
+  { id: 17, dest: "Maldives", vibe: "Relaxed", nights: 4, price: "1,12,998", route: [{ city: "Malé", n: 1 }, { city: "Baa Atoll", n: 3 }], villas: [{ type: "Beach Villa", n: 1 }, { type: "Water Villa", n: 3 }], veg: false, resort: "Soneva Fushi", img: maldivesImgs[3],
     days: [{ city: "Malé", n: 1, sub: "Airport transfer · Seaplane" }, { city: "Baa Atoll", n: 3, sub: "Manta snorkel · Overwater dining · Sandbank" }],
     pace: "Unhurried", crowds: "Low", vegFood: "Medium" },
-  { id: 18, dest: "Maldives", vibe: "Explorer", nights: 7, price: "95,498", route: [{ city: "Malé", n: 2 }, { city: "S.Ari", n: 3 }, { city: "Fuvahmulah", n: 2 }], veg: false, resort: "Centara Grand", img: maldivesImgs[6],
+  { id: 18, dest: "Maldives", vibe: "Explorer", nights: 7, price: "95,498", route: [{ city: "Malé", n: 2 }, { city: "S.Ari", n: 3 }, { city: "Fuvahmulah", n: 2 }], villas: [{ type: "Beach Villa", n: 3 }, { type: "Water Villa", n: 4 }], veg: false, resort: "Centara Grand", img: maldivesImgs[6],
     days: [{ city: "Malé", n: 2, sub: "Local island · Fish market · Mosque" }, { city: "S.Ari", n: 3, sub: "Whale shark · Diving · Resort" }, { city: "Fuvahmulah", n: 2, sub: "Tiger shark dive · Local life" }],
     pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
   // Sri Lanka (3)
@@ -365,6 +365,60 @@ export const customerPhotos = {
     `${CP}/thailand/anupriya_and_sumit_tha00040_1G2hsd6DpkEMi7nueduDAFXMXZD84SFe1.webp`,
     `${CP}/thailand/anupriya_and_sumit_tha00057_1FbQ0L9Urc6iL6GI2-MWS4eFudJGDk54r.webp`,
   ],
+};
+
+// ─── Real Couple Stories (for "Real Couples, Real Itineraries" section) ───
+export const coupleStories = [
+  {
+    couple: "Shraddha & Rohit",
+    dest: "Bali",
+    itineraryId: 5,
+    route: "Ubud · Seminyak · Nusa Penida",
+    heroImg: customerPhotos.Bali[0],
+    gallery: customerPhotos.Bali.slice(0, 10),
+  },
+  {
+    couple: "Ritu & Amit",
+    dest: "Vietnam",
+    itineraryId: 10,
+    route: "Hanoi · Ha Long · HCMC",
+    heroImg: customerPhotos.Vietnam[0],
+    gallery: customerPhotos.Vietnam.slice(0, 10),
+  },
+  {
+    couple: "Dinesh & Harshitha",
+    dest: "Maldives",
+    itineraryId: 16,
+    route: "Malé · Addu Atoll",
+    heroImg: customerPhotos.Maldives[0],
+    gallery: customerPhotos.Maldives.slice(0, 10),
+  },
+  {
+    couple: "Sharv & Pranjali",
+    dest: "Thailand",
+    itineraryId: 13,
+    route: "Bangkok · Chiang Mai · Krabi",
+    heroImg: customerPhotos.Thailand[0],
+    gallery: customerPhotos.Thailand.slice(0, 10),
+  },
+];
+
+// Couples count per destination (for social proof bar)
+export const couplesCount = {
+  Bali: 847,
+  Vietnam: 523,
+  Thailand: 691,
+  Maldives: 412,
+  "Sri Lanka": 318,
+  "New Zealand": 156,
+};
+
+// Couple names mapped to photo indices per destination
+export const couplePhotoNames = {
+  Bali: ["Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Ayushi & Kaustubh", "Utsav & Prachi", "Utsav & Prachi", "Utsav & Prachi", "Utsav & Prachi", "Utsav & Prachi"],
+  Maldives: Array(15).fill("Dinesh & Harshitha"),
+  Vietnam: Array(15).fill("Raaghav & Ritika"),
+  Thailand: ["Sharv & Pranjali", "Sharv & Pranjali", "Sharv & Pranjali", "Sharv & Pranjali", "Sharv & Pranjali", "Sharv & Pranjali", "Sharv & Pranjali", "Anupriya & Sumit", "Anupriya & Sumit", "Anupriya & Sumit", "Anupriya & Sumit", "Anupriya & Sumit", "Anupriya & Sumit", "Anupriya & Sumit", "Anupriya & Sumit"],
 };
 
 // Home page: random mix from all destinations

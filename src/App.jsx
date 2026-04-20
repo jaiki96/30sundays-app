@@ -21,6 +21,7 @@ import ReviewHotel from "./pages/ReviewHotel";
 import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
 import PaymentDetails from "./pages/PaymentDetails";
+import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
 
@@ -48,6 +49,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
         <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} />} />
+        <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />

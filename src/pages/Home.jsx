@@ -1,7 +1,15 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Heart, Eye, Shield, Headphones, MapPin, Star, ArrowRight, ChevronRight, X as XIcon } from "lucide-react";
-import { C, destinations, itinerariesByVibe, reviews, usps, travellerMoments, destData } from "../data";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Heart, Eye, Shield, Headphones, MapPin, Star, ArrowRight, ChevronRight, X as XIcon, ChevronLeft, Camera } from "lucide-react";
+import { C, destinations, reviews, usps, travellerMoments, destData, coupleStories, allItineraries, getItinerariesForDest } from "../data";
+
+const HOME_DESTS = [
+  { name: "Bali", flag: "🇮🇩", sub: "Temples, rice fields & sunset beaches" },
+  { name: "Vietnam", flag: "🇻🇳", sub: "Bays, lanterns & bustling streets" },
+  { name: "Thailand", flag: "🇹🇭", sub: "Islands, palaces & night markets" },
+  { name: "Maldives", flag: "🇲🇻", sub: "Overwater villas & coral reefs" },
+  { name: "New Zealand", flag: "🇳🇿", sub: "Fiords, peaks & epic road trips" },
+];
 import ItineraryCard from "../components/ItineraryCard";
 import SectionHeader from "../components/SectionHeader";
 
@@ -9,6 +17,9 @@ const iconMap = { Heart, Eye, Shield, Headphones };
 
 export default function Home({ userState }) {
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [selectedCouple, setSelectedCouple] = useState(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const navigate = useNavigate();
 
   return (
     <div style={{ background: `linear-gradient(180deg, ${C.p100}55 0%, ${C.white} 14%)`, paddingTop: 12 }}>
@@ -29,27 +40,46 @@ export default function Home({ userState }) {
         ))}
       </div>
 
-      {/* Relaxed carousel */}
-      <div style={{ marginTop: 22 }}>
-        <SectionHeader emoji="🧘" title="Relaxed" sub="Slow mornings, spa days, and sunsets together" linkTo="/listing?vibe=Relaxed" />
-        <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
-          {itinerariesByVibe.relaxed.map((it, i) => <ItineraryCard key={i} it={it} vibe="Relaxed" />)}
-        </div>
-      </div>
+      {/* Destination carousels */}
+      {HOME_DESTS.map((d, idx) => {
+        const items = getItinerariesForDest(d.name);
+        if (!items.length) return null;
+        return (
+          <div key={d.name} style={{ marginTop: idx === 0 ? 22 : 26 }}>
+            <SectionHeader emoji={d.flag} title={d.name} sub={d.sub} linkTo={`/listing?dest=${encodeURIComponent(d.name)}`} />
+            <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
+              {items.map((it, i) => <ItineraryCard key={i} it={it} vibe={it.vibe} />)}
+            </div>
+          </div>
+        );
+      })}
 
-      {/* Explorer carousel */}
+      {/* Real Couples, Real Itineraries */}
       <div style={{ marginTop: 26 }}>
-        <SectionHeader emoji="🧭" title="Explorer" sub="See more, do more — the highlights, your way" linkTo="/listing?vibe=Explorer" />
-        <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
-          {itinerariesByVibe.explorer.map((it, i) => <ItineraryCard key={i} it={it} vibe="Explorer" />)}
+        <div style={{ padding: "0 16px", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+            <span style={{ fontSize: 16 }}>💑</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Real Couples, Real Itineraries</span>
+          </div>
+          <p style={{ fontSize: 12, color: C.sub }}>Tap to see their complete journey</p>
         </div>
-      </div>
-
-      {/* Offbeat carousel */}
-      <div style={{ marginTop: 26 }}>
-        <SectionHeader emoji="🗺️" title="Offbeat" sub="Skip the crowds, discover hidden gems" linkTo="/listing?vibe=Offbeat" />
         <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>
-          {itinerariesByVibe.offbeat.map((it, i) => <ItineraryCard key={i} it={it} vibe="Offbeat" />)}
+          {coupleStories.map((s, i) => (
+            <div key={i} onClick={() => { setSelectedCouple(s); setGalleryIndex(0); }} style={{ width: 280, minWidth: 280, borderRadius: 16, overflow: "hidden", flexShrink: 0, background: C.white, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", cursor: "pointer" }}>
+              <div style={{ height: 240, position: "relative", overflow: "hidden" }}>
+                <img src={s.heroImg} alt={s.couple} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 40%, rgba(0,0,0,0.75))" }} />
+                <div style={{ position: "absolute", bottom: 12, left: 14, right: 14 }}>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{s.couple}</p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)" }}>{s.dest}</p>
+                </div>
+              </div>
+              <div style={{ padding: "10px 14px 12px", display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.04)" }}>
+                <MapPin size={12} color={C.p600} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: C.sub }}>{s.route}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -73,7 +103,7 @@ export default function Home({ userState }) {
         </div>
       </div>
 
-      {/* Traveller moments */}
+      {/* Traveller moments — auto-scrolling marquee */}
       <div style={{ marginTop: 26 }}>
         <div style={{ padding: "0 16px", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
@@ -82,19 +112,21 @@ export default function Home({ userState }) {
           </div>
           <p style={{ fontSize: 12, color: C.sub }}>Real photos from couples who travelled with us</p>
         </div>
-        <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-          {travellerMoments.map((p, i) => (
-            <div key={i} style={{ width: 140, minWidth: 140, height: 195, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-              <img src={p.img} alt={`Traveller in ${p.dest}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 55%, rgba(0,0,0,0.7))" }} />
-              <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  <MapPin size={10} color={C.p300} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{p.dest}</span>
+        <div style={{ overflow: "hidden", width: "100%" }}>
+          <div className="marquee-strip" style={{ display: "flex", gap: 10, width: "max-content" }}>
+            {[...travellerMoments, ...travellerMoments].map((p, i) => (
+              <div key={i} style={{ width: 140, minWidth: 140, height: 195, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0 }}>
+                <img src={p.img} alt={`Traveller in ${p.dest}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 55%, rgba(0,0,0,0.7))" }} />
+                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <MapPin size={10} color={C.p300} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{p.dest}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -159,6 +191,17 @@ export default function Home({ userState }) {
           </Link>
         </div>
       </div>
+
+      {/* Fullscreen Couple Gallery Overlay */}
+      {selectedCouple && (
+        <CoupleGallery
+          couple={selectedCouple}
+          galleryIndex={galleryIndex}
+          setGalleryIndex={setGalleryIndex}
+          onClose={() => setSelectedCouple(null)}
+          onViewItinerary={() => { setSelectedCouple(null); navigate(`/itinerary/${selectedCouple.itineraryId}`); }}
+        />
+      )}
     </div>
   );
 }
@@ -177,6 +220,81 @@ function ReviewCard({ r }) {
         <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
       </div>
       <p style={{ fontSize: 11, lineHeight: "16px", color: C.sub }}>"{r.text}"</p>
+    </div>
+  );
+}
+
+function CoupleGallery({ couple, galleryIndex, setGalleryIndex, onClose, onViewItinerary }) {
+  const touchRef = useRef(null);
+  const total = couple.gallery.length;
+  const itinerary = allItineraries.find(it => it.id === couple.itineraryId);
+
+  const handleTouchStart = (e) => { touchRef.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchRef.current === null) return;
+    const diff = touchRef.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && galleryIndex < total - 1) setGalleryIndex(galleryIndex + 1);
+      else if (diff < 0 && galleryIndex > 0) setGalleryIndex(galleryIndex - 1);
+    }
+    touchRef.current = null;
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#000", display: "flex", flexDirection: "column", maxWidth: 390, margin: "0 auto" }}>
+      {/* Top bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", position: "relative", zIndex: 2 }}>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>{couple.couple}</p>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>{couple.dest}</p>
+        </div>
+        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <XIcon size={18} color="#fff" />
+        </button>
+      </div>
+
+      {/* Image counter */}
+      <div style={{ textAlign: "center", padding: "0 0 8px", zIndex: 2 }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{galleryIndex + 1} / {total}</span>
+      </div>
+
+      {/* Gallery image */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <img
+          src={couple.gallery[galleryIndex]}
+          alt={`${couple.couple} photo ${galleryIndex + 1}`}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        />
+        {/* Tap zones for desktop */}
+        {galleryIndex > 0 && (
+          <div onClick={() => setGalleryIndex(galleryIndex - 1)} style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />
+        )}
+        {galleryIndex < total - 1 && (
+          <div onClick={() => setGalleryIndex(galleryIndex + 1)} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />
+        )}
+      </div>
+
+      {/* Progress dots */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 5, padding: "10px 0" }}>
+        {couple.gallery.map((_, i) => (
+          <div key={i} style={{ width: i === galleryIndex ? 18 : 6, height: 6, borderRadius: 3, background: i === galleryIndex ? C.p600 : "rgba(255,255,255,0.3)", transition: "all 0.2s" }} />
+        ))}
+      </div>
+
+      {/* Bottom bar — itinerary CTA */}
+      {itinerary && (
+        <div style={{ padding: "12px 16px 24px", background: "linear-gradient(transparent, rgba(0,0,0,0.9) 30%)" }}>
+          <div style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0 }}>{couple.couple}'s Itinerary</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>{itinerary.nights}N · {itinerary.route.map(r => r.city).join(" → ")}</p>
+            </div>
+            <button onClick={onViewItinerary} style={{ background: C.p600, border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(227,27,83,0.4)" }}>
+              View <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
