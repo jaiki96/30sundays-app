@@ -102,7 +102,7 @@ export const maldivesImgs = [
   `${CDN}/hotels/maldives/hero-images/134_hero.webp`,
 ];
 
-// Pick from a pool — deterministic by index
+// Pick from a pool, deterministic by index
 const pick = (arr, i) => arr[i % arr.length];
 
 // ─── Destination Data ───
@@ -165,7 +165,7 @@ export const destData = {
     name: "New Zealand", flag: "🇳🇿", startPrice: "1,65,098",
     circle: nzImgs[0], card: nzImgs[8], hero: nzImgs[10],
     visa: "NZeTA required (apply online)",
-    flights: "No direct flights — connect via Singapore, KL or Sydney",
+    flights: "No direct flights, connect via Singapore, KL or Sydney",
     idealNights: "10–14 nights to cover both North & South Islands",
     activities: ["Milford Sound Cruise", "Bungee at Queenstown", "Hobbiton Tour", "Glacier Walk", "Rotorua Geothermals", "Stargazing at Tekapo"],
     actImgs: nzImgs.slice(0, 6),
@@ -259,6 +259,86 @@ export const allItineraries = [
   { id: 24, dest: "New Zealand", vibe: "Offbeat", name: "Fiords & Alps", nights: 10, price: "1,95,098", route: [{ city: "Christchurch", n: 3 }, { city: "Milford", n: 4 }, { city: "Wanaka", n: 3 }], veg: false, img: nzImgs[4],
     days: [{ city: "Christchurch", n: 3, sub: "Cathedral · Markets · TranzAlpine" }, { city: "Milford", n: 4, sub: "Fiord cruise · Hikes · Glaciers" }, { city: "Wanaka", n: 3, sub: "Roys Peak · Puzzling World · Lake" }],
     pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+
+  // Vietnam additions (ids 25-30)
+  { id: 25, dest: "Vietnam", vibe: "Explorer", name: "Mountains & Bay", nights: 10, price: "78,498", route: [{ city: "Hanoi", n: 2 }, { city: "Sapa", n: 3 }, { city: "Ha Long", n: 2 }, { city: "Hoi An", n: 3 }], veg: false, img: vietnamImgs[6],
+    days: [{ city: "Hanoi", n: 2, sub: "Old Quarter · Street food · Temple" }, { city: "Sapa", n: 3, sub: "Terraces · Hill tribe trek · Fansipan" }, { city: "Ha Long", n: 2, sub: "Bay cruise · Kayaking · Caves" }, { city: "Hoi An", n: 3, sub: "Lanterns · Tailoring · Beach" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 26, dest: "Vietnam", vibe: "Explorer", name: "Streets & Seas", nights: 6, price: "58,998", route: [{ city: "HCMC", n: 2 }, { city: "Mekong", n: 2 }, { city: "Phu Quoc", n: 2 }], veg: false, img: vietnamImgs[2],
+    days: [{ city: "HCMC", n: 2, sub: "Cu Chi · Markets · Rooftop bars" }, { city: "Mekong", n: 2, sub: "Floating market · Boat · Homestay" }, { city: "Phu Quoc", n: 2, sub: "Island beach · Snorkeling" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 27, dest: "Vietnam", vibe: "Relaxed", name: "Beachside Bliss", nights: 5, price: "62,998", route: [{ city: "Da Nang", n: 2 }, { city: "Phu Quoc", n: 3 }], veg: true, img: vietnamImgs[1],
+    days: [{ city: "Da Nang", n: 2, sub: "Beach · Spa · Sunsets" }, { city: "Phu Quoc", n: 3, sub: "Island resort · Snorkel · Pearl farm" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 28, dest: "Vietnam", vibe: "Relaxed", name: "Lanterns & Sunsets", nights: 10, price: "82,498", route: [{ city: "Hoi An", n: 4 }, { city: "Da Nang", n: 3 }, { city: "Nha Trang", n: 3 }], veg: true, img: vietnamImgs[7],
+    days: [{ city: "Hoi An", n: 4, sub: "Ancient town · Cooking · Beach" }, { city: "Da Nang", n: 3, sub: "Golden Bridge · Marble Mountains" }, { city: "Nha Trang", n: 3, sub: "Beach · Snorkel · Mud baths" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 29, dest: "Vietnam", vibe: "Offbeat", name: "Highland Hideaways", nights: 8, price: "72,998", route: [{ city: "Sapa", n: 3 }, { city: "Ha Giang", n: 3 }, { city: "Ninh Binh", n: 2 }], veg: false, img: vietnamImgs[6],
+    days: [{ city: "Sapa", n: 3, sub: "Tribe villages · Valley trek" }, { city: "Ha Giang", n: 3, sub: "Loop ride · Karst cliffs · H'mong" }, { city: "Ninh Binh", n: 2, sub: "Boat · Caves · Rice paddies" }],
+    pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+  { id: 30, dest: "Vietnam", vibe: "Offbeat", name: "Mekong Mosaic", nights: 10, price: "78,498", route: [{ city: "HCMC", n: 2 }, { city: "Mekong", n: 3 }, { city: "Can Tho", n: 2 }, { city: "Phu Quoc", n: 3 }], veg: true, img: vietnamImgs[3],
+    days: [{ city: "HCMC", n: 2, sub: "War museum · Markets · Street food" }, { city: "Mekong", n: 3, sub: "Delta villages · Boat · Fruit farm" }, { city: "Can Tho", n: 2, sub: "Floating market sunrise" }, { city: "Phu Quoc", n: 3, sub: "Beach · Cable car · Fishing" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+
+  // Thailand additions (ids 31-36)
+  { id: 31, dest: "Thailand", vibe: "Explorer", name: "Temples & Tides", nights: 10, price: "82,998", route: [{ city: "Bangkok", n: 3 }, { city: "Ayutthaya", n: 2 }, { city: "Phuket", n: 3 }, { city: "Phi Phi", n: 2 }], veg: false, img: thailandImgs[2],
+    days: [{ city: "Bangkok", n: 3, sub: "Grand Palace · Markets · Street food" }, { city: "Ayutthaya", n: 2, sub: "Ruins · Cycling · River cruise" }, { city: "Phuket", n: 3, sub: "Old Town · Beaches · Sunset cruise" }, { city: "Phi Phi", n: 2, sub: "Maya Bay · Snorkel · Viewpoint" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 32, dest: "Thailand", vibe: "Explorer", name: "City & Sea", nights: 5, price: "52,498", route: [{ city: "Bangkok", n: 2 }, { city: "Phi Phi", n: 3 }], veg: true, img: thailandImgs[0],
+    days: [{ city: "Bangkok", n: 2, sub: "Palace · Floating market · Rooftop" }, { city: "Phi Phi", n: 3, sub: "Island hop · Kayak · Snorkel" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "High" },
+  { id: 33, dest: "Thailand", vibe: "Relaxed", name: "Beach Bungalows", nights: 5, price: "58,498", route: [{ city: "Koh Lanta", n: 3 }, { city: "Phuket", n: 2 }], veg: true, img: thailandImgs[4],
+    days: [{ city: "Koh Lanta", n: 3, sub: "Quiet beach · Spa · Sunset" }, { city: "Phuket", n: 2, sub: "Old Town · Beach club · Dining" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 34, dest: "Thailand", vibe: "Relaxed", name: "Quiet Coves", nights: 10, price: "78,498", route: [{ city: "Hua Hin", n: 3 }, { city: "Koh Samui", n: 4 }, { city: "Koh Phangan", n: 3 }], veg: false, img: thailandImgs[1],
+    days: [{ city: "Hua Hin", n: 3, sub: "Royal palace · Spa · Beach" }, { city: "Koh Samui", n: 4, sub: "Overwater stay · Temples · Dining" }, { city: "Koh Phangan", n: 3, sub: "Hidden bays · Yoga · Waterfalls" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "Medium" },
+  { id: 35, dest: "Thailand", vibe: "Offbeat", name: "Rivers & Ruins", nights: 5, price: "48,998", route: [{ city: "Kanchanaburi", n: 2 }, { city: "Ayutthaya", n: 1 }, { city: "Bangkok", n: 2 }], veg: true, img: thailandImgs[3],
+    days: [{ city: "Kanchanaburi", n: 2, sub: "Erawan falls · Bridge · Rafthouse" }, { city: "Ayutthaya", n: 1, sub: "Ancient ruins · Cycling" }, { city: "Bangkok", n: 2, sub: "Chinatown · Canals · Markets" }],
+    pace: "Balanced", crowds: "Low", vegFood: "High" },
+  { id: 36, dest: "Thailand", vibe: "Offbeat", name: "Islands Untouched", nights: 10, price: "78,998", route: [{ city: "Koh Lipe", n: 4 }, { city: "Trang", n: 3 }, { city: "Krabi", n: 3 }], veg: false, img: thailandImgs[2],
+    days: [{ city: "Koh Lipe", n: 4, sub: "Reef · Kayak · Quiet beaches" }, { city: "Trang", n: 3, sub: "Emerald cave · Island ferry" }, { city: "Krabi", n: 3, sub: "Railay · Rock climb · Hot springs" }],
+    pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+
+  // Sri Lanka additions (ids 37-42)
+  { id: 37, dest: "Sri Lanka", vibe: "Relaxed", name: "Tea Country", nights: 5, price: "44,998", route: [{ city: "Nuwara Eliya", n: 3 }, { city: "Ella", n: 2 }], veg: true, img: slImgs[17],
+    days: [{ city: "Nuwara Eliya", n: 3, sub: "Tea estates · Lake Gregory · Golf" }, { city: "Ella", n: 2, sub: "Train ride · Nine Arches · Peaks" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 38, dest: "Sri Lanka", vibe: "Relaxed", name: "Sands & Spices", nights: 10, price: "68,498", route: [{ city: "Bentota", n: 3 }, { city: "Galle", n: 3 }, { city: "Mirissa", n: 4 }], veg: true, img: slImgs[6],
+    days: [{ city: "Bentota", n: 3, sub: "River safari · Ayurveda · Beach" }, { city: "Galle", n: 3, sub: "Fort · Lighthouse · Boutiques" }, { city: "Mirissa", n: 4, sub: "Whale watching · Surf · Secret Beach" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 39, dest: "Sri Lanka", vibe: "Explorer", name: "Ancient Routes", nights: 5, price: "46,998", route: [{ city: "Dambulla", n: 2 }, { city: "Kandy", n: 2 }, { city: "Colombo", n: 1 }], veg: false, img: slImgs[5],
+    days: [{ city: "Dambulla", n: 2, sub: "Cave temples · Sigiriya rock" }, { city: "Kandy", n: 2, sub: "Temple of tooth · Botanic gardens" }, { city: "Colombo", n: 1, sub: "Pettah · Gangaramaya" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 40, dest: "Sri Lanka", vibe: "Explorer", name: "Hills & History", nights: 10, price: "72,498", route: [{ city: "Colombo", n: 2 }, { city: "Kandy", n: 2 }, { city: "Sigiriya", n: 2 }, { city: "Ella", n: 2 }, { city: "Galle", n: 2 }], veg: false, img: slImgs[9],
+    days: [{ city: "Colombo", n: 2, sub: "Temples · Markets · Street food" }, { city: "Kandy", n: 2, sub: "Temple · Lake · Cultural show" }, { city: "Sigiriya", n: 2, sub: "Rock fortress · Safari" }, { city: "Ella", n: 2, sub: "Train · Nine Arches · Little Adam's" }, { city: "Galle", n: 2, sub: "Fort · Beaches · Lighthouse" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 41, dest: "Sri Lanka", vibe: "Offbeat", name: "North & Wild", nights: 5, price: "44,998", route: [{ city: "Jaffna", n: 3 }, { city: "Trincomalee", n: 2 }], veg: false, img: slImgs[14],
+    days: [{ city: "Jaffna", n: 3, sub: "Nallur · Causeway · Islands" }, { city: "Trincomalee", n: 2, sub: "Pigeon Island · Koneswaram" }],
+    pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+  { id: 42, dest: "Sri Lanka", vibe: "Offbeat", name: "Unknown South", nights: 10, price: "68,998", route: [{ city: "Arugam Bay", n: 4 }, { city: "Yala", n: 3 }, { city: "Udawalawe", n: 3 }], veg: false, img: slImgs[13],
+    days: [{ city: "Arugam Bay", n: 4, sub: "Surf · Lagoon · Kumana park" }, { city: "Yala", n: 3, sub: "Leopard safari · Beach camp" }, { city: "Udawalawe", n: 3, sub: "Elephant transit · Safari" }],
+    pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+
+  // New Zealand additions (ids 43-48)
+  { id: 43, dest: "New Zealand", vibe: "Explorer", name: "North Island Wonders", nights: 7, price: "1,48,498", route: [{ city: "Auckland", n: 2 }, { city: "Rotorua", n: 3 }, { city: "Taupo", n: 2 }], veg: false, img: nzImgs[1],
+    days: [{ city: "Auckland", n: 2, sub: "Sky Tower · Harbour · Waiheke" }, { city: "Rotorua", n: 3, sub: "Hobbiton · Geothermals · Māori" }, { city: "Taupo", n: 2, sub: "Huka Falls · Lake · Skydive" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 44, dest: "New Zealand", vibe: "Explorer", name: "Grand Tour", nights: 14, price: "2,38,498", route: [{ city: "Auckland", n: 2 }, { city: "Rotorua", n: 3 }, { city: "Queenstown", n: 4 }, { city: "Milford", n: 2 }, { city: "Wanaka", n: 3 }], veg: false, img: nzImgs[0],
+    days: [{ city: "Auckland", n: 2, sub: "Harbour · Waiheke wines" }, { city: "Rotorua", n: 3, sub: "Hobbiton · Thermals · Culture" }, { city: "Queenstown", n: 4, sub: "Bungee · LOTR · Jet boat" }, { city: "Milford", n: 2, sub: "Fiord cruise · Overnight" }, { city: "Wanaka", n: 3, sub: "Roys Peak · Vineyards · Lake" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 45, dest: "New Zealand", vibe: "Relaxed", name: "Vineyard Valleys", nights: 10, price: "1,85,498", route: [{ city: "Marlborough", n: 3 }, { city: "Queenstown", n: 4 }, { city: "Wanaka", n: 3 }], veg: true, img: nzImgs[10],
+    days: [{ city: "Marlborough", n: 3, sub: "Sauvignon tasting · Sounds cruise" }, { city: "Queenstown", n: 4, sub: "Lake · Gondola · Wineries" }, { city: "Wanaka", n: 3, sub: "Slow lake town · Puzzling World" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 46, dest: "New Zealand", vibe: "Relaxed", name: "Slow South", nights: 14, price: "2,28,498", route: [{ city: "Christchurch", n: 3 }, { city: "Lake Tekapo", n: 3 }, { city: "Queenstown", n: 4 }, { city: "Dunedin", n: 4 }], veg: true, img: nzImgs[4],
+    days: [{ city: "Christchurch", n: 3, sub: "Cathedral · Gardens · Trams" }, { city: "Lake Tekapo", n: 3, sub: "Stargazing · Hot pools · Mt Cook" }, { city: "Queenstown", n: 4, sub: "Lakeside · Vineyards · Gondola" }, { city: "Dunedin", n: 4, sub: "Otago · Railway · Wildlife" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 47, dest: "New Zealand", vibe: "Offbeat", name: "Glacier Country", nights: 7, price: "1,48,498", route: [{ city: "Franz Josef", n: 2 }, { city: "Fox Glacier", n: 2 }, { city: "Wanaka", n: 3 }], veg: false, img: nzImgs[8],
+    days: [{ city: "Franz Josef", n: 2, sub: "Heli-hike · Hot pools" }, { city: "Fox Glacier", n: 2, sub: "Lake Matheson · Glacier walk" }, { city: "Wanaka", n: 3, sub: "Roys Peak · Lake · Trails" }],
+    pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+  { id: 48, dest: "New Zealand", vibe: "Offbeat", name: "Wild Coast", nights: 14, price: "2,42,498", route: [{ city: "Kaikoura", n: 3 }, { city: "Stewart Island", n: 4 }, { city: "Catlins", n: 3 }, { city: "Dunedin", n: 4 }], veg: false, img: nzImgs[6],
+    days: [{ city: "Kaikoura", n: 3, sub: "Whale watch · Seals · Peninsula" }, { city: "Stewart Island", n: 4, sub: "Kiwi spotting · Bush walks" }, { city: "Catlins", n: 3, sub: "Waterfalls · Seal bay · Lighthouse" }, { city: "Dunedin", n: 4, sub: "Penguins · Otago · Albatross" }],
+    pace: "Balanced", crowds: "Low", vegFood: "Medium" },
 ];
 
 // Group itineraries by vibe for home carousels
@@ -275,10 +355,10 @@ export const reviews = [
   { name: "Nishant & Priya", text: "They don't suggest over touristy places. Their offbeat Bali itinerary was a revelation!", dest: "Bali" },
   { name: "Rohit & Sneha", text: "Price transparency was refreshing. Vietnam was perfectly paced for us.", dest: "Vietnam" },
   { name: "Aakash & Meera", text: "From booking to return, support was incredible. Maldives felt designed just for us.", dest: "Maldives" },
-  { name: "Tanvi & Kunal", text: "The Bali swing, the rice terraces, the private dinners — every moment was thoughtfully planned.", dest: "Bali" },
+  { name: "Tanvi & Kunal", text: "The Bali swing, the rice terraces, the private dinners, every moment was thoughtfully planned.", dest: "Bali" },
   { name: "Shreya & Arjun", text: "We did Thailand with them and honestly the Phi Phi islands day was the highlight of our year.", dest: "Thailand" },
   { name: "Megha & Vishal", text: "Sri Lanka was a dream. The Ella train ride alone was worth the trip. Can't recommend enough!", dest: "Sri Lanka" },
-  { name: "Pooja & Siddharth", text: "New Zealand felt like a movie. Milford Sound, the Hobbiton tour — absolutely unreal experience.", dest: "New Zealand" },
+  { name: "Pooja & Siddharth", text: "New Zealand felt like a movie. Milford Sound, the Hobbiton tour, absolutely unreal experience.", dest: "New Zealand" },
   { name: "Ananya & Ravi", text: "Ha Long Bay cruise was magical. They handled every detail so we could just enjoy being together.", dest: "Vietnam" },
   { name: "Diya & Karthik", text: "The Maldives overwater villa was a bucket list moment. 30 Sundays made it happen within our budget!", dest: "Maldives" },
   { name: "Ritika & Manish", text: "Loved how they mixed popular spots with hidden gems in Thailand. Pai was an unexpected favourite.", dest: "Thailand" },
@@ -287,7 +367,7 @@ export const reviews = [
 // ─── USPs ───
 export const usps = [
   { title: "Made for Couples", desc: "Trips designed exclusively for two", icon: "Heart", color: C.p600 },
-  { title: "Price Transparency", desc: "Full split — no hidden markups", icon: "Eye", color: C.b600 },
+  { title: "Price Transparency", desc: "Full split, no hidden markups", icon: "Eye", color: C.b600 },
   { title: "No Tourist Traps", desc: "Only 8+ rated, hand-picked gems", icon: "Shield", color: C.sText },
   { title: "24/7 Support", desc: "From booking through your return", icon: "Headphones", color: C.purple },
 ];

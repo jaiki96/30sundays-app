@@ -225,7 +225,7 @@ export default function ResortDetail() {
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, padding: "8px 12px", borderRadius: 8, background: C.sBg }}>
             <Calendar size={13} color={C.sText} />
             <span style={{ fontSize: 12, fontWeight: 600, color: C.sText }}>
-              {checkInLabel} — {checkOutLabel} · {selectedNights} nights
+              {checkInLabel}, {checkOutLabel} · {selectedNights} nights
             </span>
           </div>
         )}
@@ -646,7 +646,7 @@ export default function ResortDetail() {
 
       <div style={{ height: 20 }} />
 
-      {/* ─── Sticky Bottom Bar — moved 60px lower ─── */}
+      {/* ─── Sticky Bottom Bar, moved 60px lower ─── */}
       <div style={{
         position: "fixed", bottom: -4, left: 0, right: 0, maxWidth: 390, margin: "0 auto",
         background: C.white, borderTop: `1px solid ${C.div}`,

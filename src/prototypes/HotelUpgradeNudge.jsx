@@ -497,7 +497,7 @@ function BottomNav({ active }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SCREEN 1 — PLANNING PAGE
+   SCREEN 1, PLANNING PAGE
    ═══════════════════════════════════════════════════════════════════ */
 function PlanningScreen({ fadeIn, onSelectItinerary, onOpenDrawer }) {
   return (
@@ -761,7 +761,7 @@ function PlanningScreen({ fadeIn, onSelectItinerary, onOpenDrawer }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SCREEN 2 — ITINERARY DETAILS (Hotel section)
+   SCREEN 2, ITINERARY DETAILS (Hotel section)
    Matches existing ItineraryDetail.jsx hotel card design exactly:
    horizontal scroll, 280px cards, 14px border-radius, 1px border
    ═══════════════════════════════════════════════════════════════════ */
@@ -815,7 +815,7 @@ function DetailsScreen({ fadeIn, itinerary, onBack, onOpenDrawer }) {
         </div>
       </div>
 
-      {/* hotels section — horizontal scroll matching existing app */}
+      {/* hotels section, horizontal scroll matching existing app */}
       <div>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "20px 16px 12px" }}>
           Hotels
@@ -975,7 +975,7 @@ function DetailsScreen({ fadeIn, itinerary, onBack, onOpenDrawer }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   SCREEN 3 — BOTTOM DRAWER
+   SCREEN 3, BOTTOM DRAWER
    ═══════════════════════════════════════════════════════════════════ */
 function DrawerScreen({
   itinerary,
@@ -1075,7 +1075,7 @@ function DrawerScreen({
                   transition: "all 0.25s ease",
                 }}
               >
-                {/* accordion header — shows CURRENT hotel info */}
+                {/* accordion header, shows CURRENT hotel info */}
                 <div
                   onClick={() => setExpandedAccordion(isOpen ? null : idx)}
                   style={{
@@ -1111,7 +1111,7 @@ function DrawerScreen({
                   )}
                 </div>
 
-                {/* accordion body — shows only UPGRADE hotel */}
+                {/* accordion body, shows only UPGRADE hotel */}
                 {isOpen && (
                   <div style={{ padding: "0 14px 14px", animation: "fadeUp 0.3s ease both" }}>
                     <div style={{ height: 1, background: C.div, marginBottom: 12 }} />
@@ -1121,7 +1121,7 @@ function DrawerScreen({
                       textTransform: "uppercase", letterSpacing: 0.8, display: "block", marginBottom: 8,
                     }}>Upgrade to</span>
 
-                    {/* upgrade hotel — full width, image left, pink border */}
+                    {/* upgrade hotel, full width, image left, pink border */}
                     <div style={{
                       display: "flex", gap: 12, padding: 12, borderRadius: 12,
                       border: `1.5px solid ${C.p300}`, background: "#FAFAFA",

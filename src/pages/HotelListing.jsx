@@ -78,7 +78,7 @@ export default function HotelListing() {
       });
     }
 
-    // Sort — always put current hotel first
+    // Sort, always put current hotel first
     const sortFn = sortOptions[sortIdx].fn;
     result.sort((a, b) => {
       if (a.id === currentHotelId) return -1;

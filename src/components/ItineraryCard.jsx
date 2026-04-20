@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Calendar } from "lucide-react";
 import { C, VS, allItineraries } from "../data";
 
-// Version tag — subtle uppercase label
+// Version tag, subtle uppercase label
 const versionBadgeStyle = {
   fontSize: 11,
   fontWeight: 700,
@@ -58,7 +58,7 @@ const formatTravelDates = (travelDates, nights) => {
 export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates, hideDest = false }) {
   const v = VS[vibe || it.vibe];
   const cardW = fullWidth ? "100%" : 272;
-  const cardH = fullWidth ? 320 : 300;
+  const cardH = fullWidth ? 360 : 340;
   const hasDates = travelDates?.fromDate;
 
   return (
@@ -68,7 +68,7 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.82) 100%)" }} />
 
-        {/* Vibe tag top-right — glassmorphism */}
+        {/* Vibe tag top-right, glassmorphism */}
         <span style={{ position: "absolute", top: 12, right: 12, ...vibeChipStyle(v) }}>{it.vibe}</span>
 
         {/* Veg badge top-left */}

@@ -6,10 +6,10 @@
 const CDN = "https://cdn.30sundays.club/app_content";
 
 const upgradeData = {
-  // Bali 7N Relaxed (id: 1) — Ubud, Seminyak, Sanur
+  // Bali 7N Relaxed (id: 1), Ubud, Seminyak, Sanur
   1: [
     {
-      cityIndex: 0, // Ubud — 4★ → 5★
+      cityIndex: 0, // Ubud, 4★ → 5★
       current: {
         name: "Padma Resort Ubud",
         stars: 4,
@@ -34,7 +34,7 @@ const upgradeData = {
     },
     // Seminyak is already 5★ (The Mulia), no upgrade
     {
-      cityIndex: 2, // Sanur — 4★ → 5★
+      cityIndex: 2, // Sanur, 4★ → 5★
       current: {
         name: "COMO Uma Sanur",
         stars: 4,
@@ -59,10 +59,10 @@ const upgradeData = {
     },
   ],
 
-  // Bali 5N Relaxed (id: 2) — Seminyak, Nusa Dua
+  // Bali 5N Relaxed (id: 2), Seminyak, Nusa Dua
   2: [
     {
-      cityIndex: 1, // Nusa Dua — 4★ → 5★
+      cityIndex: 1, // Nusa Dua, 4★ → 5★
       current: {
         name: "Hilton Bali Resort",
         stars: 4,
@@ -87,10 +87,10 @@ const upgradeData = {
     },
   ],
 
-  // Bali 7N Explorer (id: 4) — Ubud, Kintamani, Canggu
+  // Bali 7N Explorer (id: 4), Ubud, Kintamani, Canggu
   4: [
     {
-      cityIndex: 2, // Canggu — 4★ → 5★
+      cityIndex: 2, // Canggu, 4★ → 5★
       current: {
         name: "Canggu Beach Resort",
         stars: 4,

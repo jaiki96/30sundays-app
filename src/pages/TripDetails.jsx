@@ -217,7 +217,7 @@ function ItineraryGlance({ trip }) {
               border: `2px solid ${i === 0 ? "#039855" : C.div}`,
             }} />
             <h5 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: "0 0 6px" }}>
-              Day {day.day} — {day.city}
+              Day {day.day}, {day.city}
             </h5>
             <ul style={{ margin: 0, paddingLeft: 16 }}>
               {day.activities.map((a, j) => (

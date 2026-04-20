@@ -77,60 +77,7 @@ export default function MaldivesDestination() {
         );
       })()}
 
-      {/* Inline Filter Section — always visible, trip start date + travelers */}
-      <div style={{ margin: "20px 16px 0", padding: "16px", borderRadius: 14, background: C.white, border: `1px solid ${C.div}`, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: C.head, display: "block", marginBottom: 14 }}>Customize your search</span>
-
-        {/* Trip start date */}
-        <div style={{ marginBottom: 14 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6, display: "block" }}>Trip start date</span>
-          <input
-            type="date"
-            value={filters.dates || ""}
-            onChange={e => setFilters(prev => ({ ...prev, dates: e.target.value }))}
-            min={new Date().toISOString().split("T")[0]}
-            style={{
-              width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13,
-              border: `1px solid ${C.div}`, background: C.bg, color: C.head,
-              fontFamily: "inherit", boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        {/* Travelers */}
-        <div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 8, display: "block" }}>Travelers</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <button
-              onClick={() => handleTravelers(-1)}
-              disabled={filters.travelers <= 1}
-              style={{
-                width: 32, height: 32, borderRadius: 16, border: `1px solid ${C.div}`,
-                background: C.white, display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: filters.travelers <= 1 ? "not-allowed" : "pointer", opacity: filters.travelers <= 1 ? 0.4 : 1,
-              }}
-            >
-              <Minus size={14} color={C.sub} />
-            </button>
-            <span style={{ fontSize: 15, fontWeight: 600, color: C.head, minWidth: 60, textAlign: "center" }}>
-              {filters.travelers} Adult{filters.travelers > 1 ? "s" : ""}
-            </span>
-            <button
-              onClick={() => handleTravelers(1)}
-              disabled={filters.travelers >= 6}
-              style={{
-                width: 32, height: 32, borderRadius: 16, border: `1px solid ${C.div}`,
-                background: C.white, display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: filters.travelers >= 6 ? "not-allowed" : "pointer", opacity: filters.travelers >= 6 ? 0.4 : 1,
-              }}
-            >
-              <Plus size={14} color={C.sub} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Remaining Category Sections — each resort renders separate cards per night config */}
+      {/* Remaining Category Sections, each resort renders separate cards per night config */}
       {CATEGORIES.slice(1).map(catKey => {
         const meta = CATEGORY_META[catKey];
         const categoryResorts = getResortsByCategory(catKey);

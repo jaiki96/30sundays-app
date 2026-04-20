@@ -198,7 +198,7 @@ export const mockTrips = [
         items: [
           "Dress modestly when visiting temples (cover knees & shoulders)",
           "Remove shoes before entering temples",
-          "Bargain at markets — start at 50% of asking price",
+          "Bargain at markets, start at 50% of asking price",
           "Tipping: 20–50 Baht for good service is appreciated",
           "Thailand time is 1.5 hours ahead of IST",
         ],
@@ -330,7 +330,7 @@ export const mockTrips = [
           {
             title: "Railay Beach Exploration",
             venue: "Railay Beach, Krabi",
-            description: "Accessible only by boat — dramatic limestone cliffs, pristine sand, and turquoise waters.",
+            description: "Accessible only by boat, dramatic limestone cliffs, pristine sand, and turquoise waters.",
             photo: `${CDN}/thailand/pileh_lagoon_439.jpg`,
           },
         ],

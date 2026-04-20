@@ -43,7 +43,12 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Change Day — Bottom Sheet animations */
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+/* Change Day, Bottom Sheet animations */
 @keyframes sheetSlideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }

@@ -202,7 +202,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
       </div>
 
-      {/* ═══ 2. See Your Trip — Video Thumbnails ═══ */}
+      {/* ═══ 2. See Your Trip, Video Thumbnails ═══ */}
       <div style={{ padding: "16px 0 0" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>See your trip</p>
         {/* Day tabs */}
@@ -479,7 +479,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
-      {/* ═══ 4c. Book your trip — Payment Card ═══ */}
+      {/* ═══ 4c. Book your trip, Payment Card ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Book your trip</p>
         {(() => {
@@ -522,7 +522,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
-      {/* ═══ 5. Flights — Coming Soon Notice ═══ */}
+      {/* ═══ 5. Flights, Coming Soon Notice ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Flights</p>
         <div style={{
@@ -964,7 +964,7 @@ function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
         </div>
       </div>
 
-      {/* Customer photos nudge — glassmorphism pill */}
+      {/* Customer photos nudge, glassmorphism pill */}
       {dest && customerPhotos[dest] && (
         <div style={{ position: "absolute", bottom: 110, right: 16, zIndex: 3, display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 20, padding: "6px 12px 6px 6px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.15)" }}>
           <div style={{ display: "flex" }}>
@@ -1039,7 +1039,7 @@ function PricingSheet({ onClose, initialDates, onSubmit }) {
         <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 4 }}>Get real-time pricing</h3>
         <p style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>We'll fetch live hotel rates and availability for your dates</p>
 
-        {/* Travel Dates — exact from date + nights */}
+        {/* Travel Dates, exact from date + nights */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
             <Calendar size={14} color={C.p600} />

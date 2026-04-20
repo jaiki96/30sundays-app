@@ -29,7 +29,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge }) {
           <img src={resort.hero_image} alt={resort.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 50%, rgba(0,0,0,0.25))" }} />
 
-          {/* Veg badge — top left */}
+          {/* Veg badge, top left */}
           {resort.veg_friendly && (
             <div style={{
               position: "absolute", top: 10, left: 10,
@@ -41,7 +41,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge }) {
             </div>
           )}
 
-          {/* Category badge — top right */}
+          {/* Category badge, top right */}
           {badgeColor && badgeLabel && (
             <div style={{
               position: "absolute", top: 10, right: 10,
@@ -53,7 +53,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge }) {
             </div>
           )}
 
-          {/* Night badge — bottom left on image */}
+          {/* Night badge, bottom left on image */}
           <div style={{
             position: "absolute", bottom: 10, left: 10,
             background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)",

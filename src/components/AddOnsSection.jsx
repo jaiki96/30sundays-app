@@ -135,7 +135,7 @@ function DocumentRow({ available, label, url }) {
       </div>
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>Available soon — we'll notify you.</p>
+        <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>Available soon, we'll notify you.</p>
       </div>
     </div>
   );
@@ -174,10 +174,10 @@ function VisaSheet({ state, onClose }) {
         )}
         <p style={{ fontSize: 14, color: C.head, margin: "0 0 10px" }}>Why it's worth it?</p>
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: C.head, lineHeight: "22px" }}>
-          <li><b>One-day processing</b> — paperwork sorted while you pack</li>
-          <li><b>30-day stay</b> — perfect for your trip duration</li>
+          <li><b>One-day processing</b>, paperwork sorted while you pack</li>
+          <li><b>30-day stay</b>, perfect for your trip duration</li>
           <li>Official single-entry e-Visa issued by Indonesian Immigration</li>
-          <li>No airport payment or currency hassles — everything's prepaid in INR</li>
+          <li>No airport payment or currency hassles, everything's prepaid in INR</li>
         </ul>
       </div>
 

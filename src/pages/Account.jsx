@@ -121,7 +121,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
             );
           })}
 
-          {/* Logout — only when logged in */}
+          {/* Logout, only when logged in */}
           {isLoggedIn && (
             <button
               onClick={handleLogout}

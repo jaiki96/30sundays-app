@@ -112,7 +112,7 @@ export default function FilterBar({ filters, setFilters }) {
         </div>
       </div>
 
-      {/* Dates — Flexible month selector */}
+      {/* Dates, Flexible month selector */}
       <div style={{ marginBottom: 14 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 8, display: "block" }}>Flexible dates</span>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>

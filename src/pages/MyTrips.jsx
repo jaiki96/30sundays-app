@@ -80,8 +80,7 @@ function LeadEmptyState({ leadData }) {
         No trips booked yet, {name}!
       </h4>
       <p style={{ fontSize: 14, color: C.sub, marginTop: 8, lineHeight: "20px", maxWidth: 280 }}>
-        The best journeys begin with two tickets and zero plans.
-        Well, we've got the plans — you bring the plus one. 💕
+        Your curated itinerary is ready and waiting. Review it, tweak it, and let's lock in your next getaway. 💕
       </p>
       <Link
         to="/plan"
@@ -140,7 +139,7 @@ function TripCard({ trip }) {
         <img src={imgs[0]} alt={trip.destination} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.82) 100%)" }} />
 
-        {/* Status badge — top left (glassmorphism) */}
+        {/* Status badge, top left (glassmorphism) */}
         <span style={{
           position: "absolute", top: 12, left: 12,
           display: "inline-flex", alignItems: "center", gap: 4,
@@ -153,7 +152,7 @@ function TripCard({ trip }) {
           {sc.emoji} {sc.label}
         </span>
 
-        {/* Countdown / Day badge — top right */}
+        {/* Countdown / Day badge, top right */}
         {trip.status === "upcoming" && countdown && (
           <span style={{
             position: "absolute", top: 12, right: 12,
@@ -245,7 +244,7 @@ export default function MyTrips({ userState, leadData }) {
     );
   }
 
-  // Customer/done — single scroll with priority: ongoing → upcoming → completed
+  // Customer/done, single scroll with priority: ongoing → upcoming → completed
   const ongoing = mockTrips.filter(t => t.status === "ongoing");
   const upcoming = mockTrips
     .filter(t => t.status === "upcoming")

@@ -185,7 +185,7 @@ export default function Listing({ userState, leadData }) {
               </button>
             </div>
 
-            {/* Scrollable content — Filters tab */}
+            {/* Scrollable content, Filters tab */}
             {filterTab === "Filters" && (
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 0" }} className="hide-scrollbar">
               {/* Destination */}
@@ -203,7 +203,7 @@ export default function Listing({ userState, leadData }) {
                 </div>
               </FilterSection>
 
-              {/* Duration — multi-select */}
+              {/* Duration, multi-select */}
               <FilterSection title="Duration">
                 <div style={{ display: "flex", gap: 8 }}>
                   {nightRanges.map((r, i) => {
@@ -218,7 +218,7 @@ export default function Listing({ userState, leadData }) {
                 </div>
               </FilterSection>
 
-              {/* Pace — multi-select */}
+              {/* Pace, multi-select */}
               <FilterSection title="Pace">
                 <div style={{ display: "flex", gap: 8 }}>
                   {["Unhurried", "Balanced"].map(p => {
@@ -233,7 +233,7 @@ export default function Listing({ userState, leadData }) {
                 </div>
               </FilterSection>
 
-              {/* Crowds — multi-select */}
+              {/* Crowds, multi-select */}
               <FilterSection title="Crowd level">
                 <div style={{ display: "flex", gap: 8 }}>
                   {["Low", "Mixed"].map(c => {
@@ -258,7 +258,7 @@ export default function Listing({ userState, leadData }) {
             </div>
             )}
 
-            {/* Sort tab — clean list style */}
+            {/* Sort tab, clean list style */}
             {filterTab === "Sort" && (
               <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 0" }} className="hide-scrollbar">
                 {sortOptions.map((opt, i) => (
@@ -334,7 +334,7 @@ export default function Listing({ userState, leadData }) {
         </div>
       )}
 
-      {/* ═══ Travel Details Drawer (first visit — collect dates, pace, crowds) ═══ */}
+      {/* ═══ Travel Details Drawer (first visit, collect dates, pace, crowds) ═══ */}
       {showDrawer && (
         <TravelDetailsDrawer onClose={closeDrawer} filters={filters} setFilters={setFilters} />
       )}
@@ -397,7 +397,7 @@ function TravelDetailsDrawer({ onClose, filters, setFilters }) {
         <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, marginBottom: 4 }}>Help us personalise your trips</h3>
         <p style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>A few quick picks for better recommendations</p>
 
-        {/* Travel Dates — exact from date + nights */}
+        {/* Travel Dates, exact from date + nights */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <Calendar size={14} color={C.p600} />
@@ -474,7 +474,7 @@ function TravelDetailsDrawer({ onClose, filters, setFilters }) {
             <Users size={14} color="#B54708" />
             <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Crowd preference?</p>
           </div>
-          <p style={{ fontSize: 11, color: C.inact, marginBottom: 8, paddingLeft: 22 }}>Totally personal — no wrong answer here</p>
+          <p style={{ fontSize: 11, color: C.inact, marginBottom: 8, paddingLeft: 22 }}>Totally personal, no wrong answer here</p>
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { key: "Low", label: "Low crowds", desc: "Quiet, offbeat spots" },

@@ -473,7 +473,7 @@ export function generateFlightsForRoute(from, to, date, pax = 2) {
       "Full refund if cancelled 7 days before departure",
       "Full refund if cancelled 14 days before departure",
       "50% refund if cancelled 3 days before departure",
-      "Non-refundable — credit shell only",
+      "Non-refundable, credit shell only",
       "Full refund if cancelled 5 days before departure",
     ];
     const dateChangePolicies = [

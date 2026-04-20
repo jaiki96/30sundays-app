@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles } from "lucide-react";
 import { C, destinations, allItineraries } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
+import DatePicker from "../components/DatePicker";
 
 const funLines = [
   "Meanwhile, your dream beach is warming up the sand for you...",
@@ -70,7 +71,7 @@ const IlloOtp = () => (
 
 const destNames = ["Thailand", "Vietnam", "Bali", "Maldives", "Sri Lanka", "New Zealand"];
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
-const adultOptions = [2, 4, 6, 8, 10];
+const adultOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function Plan({ userState, setUserState, leadData, setLeadData }) {
   const navigate = useNavigate();
@@ -86,7 +87,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
       } else if (returnTo === "account") {
         navigate("/account", { replace: true });
       } else {
-        // Already a lead — show the success screen
+        // Already a lead, show the success screen
         setPhase("success");
       }
     }
@@ -110,6 +111,9 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   const [showAdultDropdown, setShowAdultDropdown] = useState(false);
   const [hasChildren, setHasChildren] = useState(false);
   const [showChildrenApology, setShowChildrenApology] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [nights, setNights] = useState(null);
+  const [showNightsDropdown, setShowNightsDropdown] = useState(false);
 
   // Welcome banner dismiss
   const [showWelcome, setShowWelcome] = useState(true);
@@ -222,6 +226,8 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         dests,
         adults,
         children: hasChildren ? 1 : 0,
+        startDate,
+        nights,
       };
       setLeadData(data);
       setUserState("lead");
@@ -230,9 +236,12 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
       } else if (returnTo === "account") {
         navigate("/account", { replace: true });
       } else {
-        // Stay on Plan page, show success with itineraries
-        setPhase("success");
-        setShowWelcome(true);
+        // Transient curating state for feedback, then success
+        setPhase("curating");
+        setTimeout(() => {
+          setPhase("success");
+          setShowWelcome(true);
+        }, 2400);
       }
     }
   };
@@ -250,6 +259,36 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   // ─── RENDER ───
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 700, background: C.white }}>
+
+      {/* ═══ CURATING TRANSIENT STATE ═══ */}
+      {phase === "curating" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
+          <div style={{
+            width: 96, height: 96, borderRadius: 28,
+            background: `linear-gradient(135deg, ${C.p100} 0%, #FFF5F0 100%)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            marginBottom: 20, position: "relative",
+            animation: "scaleIn 0.4s ease-out",
+          }}>
+            <Sparkles size={40} color={C.p600} style={{ animation: "pulse 1.6s ease-in-out infinite" }} />
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, margin: "0 0 6px" }}>
+            Curating your getaway…
+          </h2>
+          <p style={{ fontSize: 14, color: C.sub, margin: 0, lineHeight: "20px", maxWidth: 300 }}>
+            Hand-picking itineraries based on your preferences. This takes just a moment.
+          </p>
+          <div style={{ display: "flex", gap: 6, marginTop: 26 }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: C.p600, opacity: 0.35,
+                animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+              }} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ═══ SUCCESS SCREEN (post-signup, stays on Plan page) ═══ */}
       {phase === "success" && (
@@ -291,13 +330,111 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                     <Sparkles size={20} color={C.p600} />
                   </div>
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: C.p900, margin: "0 0 3px" }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: C.p900, margin: "0 0 4px" }}>
                       We're thrilled, {successName}! 🎉
                     </p>
-                    <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px" }}>
-                      A travel consultant from 30 Sundays will connect with you shortly. Meanwhile, here's what we'd recommend for {successDests.join(" & ")}!
+                    <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
+                      We've curated {recommendedItineraries.length} itinerar{recommendedItineraries.length === 1 ? "y" : "ies"} for {successDests.join(" & ")}, scroll to explore.
+                      A travel consultant will also reach out shortly to personalise further.
                     </p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Dates-missing prompt, shown when user skipped startDate / nights */}
+            {(!leadData?.startDate || !leadData?.nights) && (
+              <div style={{
+                margin: "4px 0 16px", borderRadius: 16, padding: "16px",
+                background: `linear-gradient(135deg, ${C.p100} 0%, #FFF5F0 100%)`,
+                border: `1px solid ${C.p300}66`,
+                position: "relative", zIndex: 30,
+              }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 14 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Sparkles size={18} color={C.p600} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: C.p900, margin: "0 0 2px" }}>
+                      Unlock your exact itinerary
+                    </p>
+                    <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
+                      Add your travel dates and nights and we'll lock in prices + availability for you.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ position: "relative", zIndex: 15 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>Trip start date</label>
+                    <DatePicker value={startDate} onChange={setStartDate} />
+                  </div>
+
+                  <div style={{ position: "relative", zIndex: 10 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>How many nights?</label>
+                    <button
+                      onClick={() => setShowNightsDropdown(!showNightsDropdown)}
+                      style={{
+                        width: "100%", boxSizing: "border-box",
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "11px 14px", borderRadius: 12,
+                        background: C.white,
+                        border: `1.5px solid ${nights ? "#027A48" : C.div}`,
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: nights ? 600 : 500, color: nights ? C.head : C.sub }}>
+                        {nights ? (nights === 0 ? "Flexible" : `${nights} Nights`) : "Select number of nights"}
+                      </span>
+                      <ChevronDown size={16} color={C.sub} style={{ transition: "transform 0.2s", transform: showNightsDropdown ? "rotate(180deg)" : "none" }} />
+                    </button>
+                    {showNightsDropdown && (
+                      <div style={{
+                        position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50,
+                        background: C.white, borderRadius: 12, border: `1px solid ${C.div}`,
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden",
+                        maxHeight: 240, overflowY: "auto",
+                      }}>
+                        {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0].map((n, idx, arr) => {
+                          const sel = nights === n;
+                          const label = n === 0 ? "Flexible" : `${n} Nights`;
+                          return (
+                            <button
+                              key={n}
+                              onClick={() => { setNights(n); setShowNightsDropdown(false); }}
+                              style={{
+                                display: "flex", alignItems: "center",
+                                width: "100%", padding: "11px 16px",
+                                background: sel ? C.p100 : "none",
+                                border: "none", cursor: "pointer", fontFamily: "inherit",
+                                borderBottom: idx < arr.length - 1 ? `1px solid ${C.div}` : "none",
+                                fontSize: 14, fontWeight: sel ? 700 : 500,
+                                color: sel ? C.p600 : C.head, textAlign: "left",
+                              }}
+                            >{label}</button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (!startDate || !nights) return;
+                      setLeadData({ ...leadData, startDate, nights });
+                    }}
+                    disabled={!startDate || !nights}
+                    style={{
+                      marginTop: 4, padding: "12px 0", borderRadius: 12, border: "none",
+                      background: (startDate && nights) ? C.p600 : C.inact,
+                      color: "#fff", fontSize: 14, fontWeight: 700,
+                      cursor: (startDate && nights) ? "pointer" : "not-allowed",
+                      fontFamily: "inherit",
+                      boxShadow: (startDate && nights) ? "0 4px 12px rgba(227,27,83,0.3)" : "none",
+                    }}
+                  >
+                    Save & see my itinerary
+                  </button>
                 </div>
               </div>
             )}
@@ -488,8 +625,8 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                   ref={el => otpRefs.current[i] = el}
                   value={otp[i]}
                   style={{
-                    width: 56, height: 60, borderRadius: 14, textAlign: "center",
-                    fontSize: 22, fontWeight: 600, color: C.head, fontFamily: "inherit",
+                    width: 44, height: 48, borderRadius: 12, textAlign: "center",
+                    fontSize: 18, fontWeight: 600, color: C.head, fontFamily: "inherit",
                     border: `1.5px solid ${otpError ? "#B42318" : otp[i] ? C.p600 : C.div}`,
                     background: otpError ? "#FEF3F2" : otp[i] ? "#FFE4E844" : "#FAFAFA",
                     outline: "none",
@@ -543,16 +680,16 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         <>
           {/* Scrollable content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 0" }} className="hide-scrollbar">
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.head, marginBottom: 4, animation: "fadeUp 0.3s ease-out" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, marginBottom: 2, animation: "fadeUp 0.3s ease-out" }}>
               Tell us about your trip
             </h2>
-            <p style={{ fontSize: 13, color: C.sub, marginBottom: 24, animation: "fadeUp 0.3s ease-out 0.05s both" }}>
+            <p style={{ fontSize: 14, color: C.sub, marginBottom: 16, animation: "fadeUp 0.3s ease-out 0.05s both" }}>
               We'll curate the perfect getaway for you
             </p>
 
             {/* ── 1. Name ── */}
-            <div style={{ marginBottom: 24, animation: "fadeUp 0.3s ease-out 0.08s both" }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: C.head, marginBottom: 8, display: "block" }}>
+            <div style={{ marginBottom: 16, animation: "fadeUp 0.3s ease-out 0.08s both" }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 6, display: "block" }}>
                 Your name <span style={{ color: C.p600 }}>*</span>
               </label>
               <input
@@ -568,14 +705,14 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             </div>
 
             {/* ── 2. Travellers ── */}
-            <div style={{ marginBottom: 24, animation: "fadeUp 0.3s ease-out 0.12s both" }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: C.head, marginBottom: 12, display: "block" }}>
+            <div style={{ marginBottom: 16, position: "relative", zIndex: 20, animation: "fadeUp 0.3s ease-out 0.12s both" }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 8, display: "block" }}>
                 Travellers
               </label>
 
               {/* Adults dropdown */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${C.div}` }}>
-                <p style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: 0 }}>Adults</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.div}` }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Adults</p>
                 <div style={{ position: "relative" }}>
                   <button
                     onClick={() => setShowAdultDropdown(!showAdultDropdown)}
@@ -619,12 +756,40 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                 </div>
               </div>
 
+              {/* Adults apology, if not exactly 2 (couples only) */}
+              {adults !== 2 && (
+                <div style={{
+                  marginTop: 12, padding: "14px", borderRadius: 14,
+                  background: "linear-gradient(135deg, #FFF5F0 0%, #FFE4E8 100%)",
+                  border: `1px solid ${C.p300}44`,
+                  animation: "fadeUp 0.3s ease-out",
+                }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 12, background: C.p100, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Heart size={16} color={C.p600} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: C.p900, margin: "0 0 4px" }}>
+                        We're so sorry! 😔
+                      </p>
+                      <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
+                        30 Sundays is exclusively crafted for couples, intimate getaways,
+                        private dinners, that kind of magic. We don't curate group trips yet.
+                      </p>
+                      <p style={{ fontSize: 13, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>
+                        For now, try a couples-only escape? You deserve it. 💕
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Travelling with children toggle */}
-              <div style={{ padding: "14px 0" }}>
+              <div style={{ padding: "10px 0" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: C.head, margin: 0 }}>Travelling with children?</p>
-                    <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>Age 0–11</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Travelling with children?</p>
+                    <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>Age 0–11</p>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
@@ -662,12 +827,12 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                         <p style={{ fontSize: 14, fontWeight: 600, color: C.p900, margin: "0 0 4px" }}>
                           We're so sorry! 😔
                         </p>
-                        <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px" }}>
-                          Right now, 30 Sundays is exclusively crafted for couples — romantic getaways,
+                        <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
+                          Right now, 30 Sundays is exclusively crafted for couples, romantic getaways,
                           sunset dinners for two, that kind of magic. We don't have kids' itineraries yet,
                           but we're working on it!
                         </p>
-                        <p style={{ fontSize: 12, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>
+                        <p style={{ fontSize: 13, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>
                           For now, maybe plan a couples-only escape? You deserve it. 💕
                         </p>
                       </div>
@@ -677,20 +842,20 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
               </div>
             </div>
 
-            {/* ── 3. Destinations (last — scalable) ── */}
-            <div style={{ marginBottom: 24, animation: "fadeUp 0.3s ease-out 0.16s both" }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: C.head, marginBottom: 4, display: "block" }}>
+            {/* ── 3. Destinations ── */}
+            <div style={{ marginBottom: 16, animation: "fadeUp 0.3s ease-out 0.16s both" }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 2, display: "block" }}>
                 Where do you want to go? <span style={{ color: C.p600 }}>*</span>
               </label>
-              <p style={{ fontSize: 11, color: C.sub, marginBottom: 10 }}>Pick one or more — we'll curate for each</p>
+              <p style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Pick one or more, we'll curate for each</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {destNames.map(d => {
                   const sel = dests.includes(d);
                   return (
                     <button key={d} onClick={() => toggleDest(d)} style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                      padding: "12px 10px", borderRadius: 14, cursor: "pointer",
-                      fontSize: 13, fontWeight: sel ? 600 : 500,
+                      padding: "10px 10px", borderRadius: 12, cursor: "pointer",
+                      fontSize: 14, fontWeight: sel ? 600 : 500,
                       color: sel ? C.p600 : C.sub,
                       background: sel ? C.p100 : "#FAFAFA",
                       border: `1.5px solid ${sel ? C.p600 : C.div}`,
@@ -702,6 +867,72 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* ── 4. Trip start date ── */}
+            <div style={{ marginBottom: 16, position: "relative", zIndex: 15, animation: "fadeUp 0.3s ease-out 0.18s both" }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 2, display: "block" }}>
+                When's your trip? <span style={{ color: C.p600 }}>*</span>
+              </label>
+              <p style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Trip start date</p>
+              <DatePicker value={startDate} onChange={setStartDate} />
+            </div>
+
+            {/* ── 5. Nights ── */}
+            <div style={{ marginBottom: 16, position: "relative", zIndex: 10, animation: "fadeUp 0.3s ease-out 0.2s both" }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 2, display: "block" }}>
+                How many nights? <span style={{ color: C.p600 }}>*</span>
+              </label>
+              <p style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Duration of your getaway</p>
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setShowNightsDropdown(!showNightsDropdown)}
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px 14px", borderRadius: 12,
+                    background: "#FAFAFA",
+                    border: `1.5px solid ${nights ? "#027A48" : C.div}`,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: nights ? 600 : 500, color: nights ? C.head : C.sub }}>
+                    {nights ? (nights === 0 ? "Flexible" : `${nights} Nights`) : "Select number of nights"}
+                  </span>
+                  <ChevronDown size={16} color={C.sub} style={{ transition: "transform 0.2s", transform: showNightsDropdown ? "rotate(180deg)" : "none" }} />
+                </button>
+                {showNightsDropdown && (
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50,
+                    background: C.white, borderRadius: 12, border: `1px solid ${C.div}`,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden",
+                    maxHeight: 280, overflowY: "auto",
+                  }}>
+                    {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0].map((n, idx, arr) => {
+                      const sel = nights === n;
+                      const label = n === 0 ? "Flexible" : `${n} Nights`;
+                      return (
+                        <button
+                          key={n}
+                          onClick={() => { setNights(n); setShowNightsDropdown(false); }}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "flex-start",
+                            width: "100%", padding: "12px 16px",
+                            background: sel ? C.p100 : "none",
+                            border: "none", cursor: "pointer", fontFamily: "inherit",
+                            borderBottom: idx < arr.length - 1 ? `1px solid ${C.div}` : "none",
+                            fontSize: 14, fontWeight: sel ? 700 : 500,
+                            color: sel ? C.p600 : C.head,
+                            textAlign: "left",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

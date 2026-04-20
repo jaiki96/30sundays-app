@@ -100,10 +100,10 @@ export default function HotelPDP() {
           </div>
         </div>
 
-        {/* ═══ Photo Gallery — 1 big + 2 small + "+N" tile ═══ */}
+        {/* ═══ Photo Gallery, 1 big + 2 small + "+N" tile ═══ */}
         <div style={{ padding: "0 16px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gridTemplateRows: "1fr 1fr", gap: 3, height: 220, borderRadius: 12, overflow: "hidden" }}>
-            {/* Large photo — spans 2 rows */}
+            {/* Large photo, spans 2 rows */}
             <div style={{ gridRow: "1 / 3", cursor: "pointer" }} onClick={() => { setGalleryIdx(0); setGalleryOpen(true); }}>
               <img src={galleryImages[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
@@ -111,7 +111,7 @@ export default function HotelPDP() {
             <div style={{ cursor: "pointer" }} onClick={() => { setGalleryIdx(1); setGalleryOpen(true); }}>
               <img src={galleryImages[1].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            {/* Bottom-right — "+N Photos" overlay */}
+            {/* Bottom-right, "+N Photos" overlay */}
             <div style={{ position: "relative", cursor: "pointer" }} onClick={() => { setGalleryIdx(2); setGalleryOpen(true); }}>
               <img src={galleryImages[2].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               {remainingCount > 0 && (

@@ -290,14 +290,14 @@ function getContextLine(dayType, itinerary, dayIndex) {
 
   switch (dayType) {
     case "arrival":
-      return "Your airport transfer is in the morning — here are options for the rest of your day";
+      return "Your airport transfer is in the morning, here are options for the rest of your day";
     case "departure":
-      return "You'll head to the airport in the afternoon — pick how you'd like to spend your morning";
+      return "You'll head to the airport in the afternoon, pick how you'd like to spend your morning";
     case "inter_hotel_transfer":
-      return `You're moving from ${prevCity} to ${day.city} today — here's what we can fit in`;
+      return `You're moving from ${prevCity} to ${day.city} today, here's what we can fit in`;
     case "full_day":
     default:
-      return "Full day to explore — pick the vibe you prefer";
+      return "Full day to explore, pick the vibe you prefer";
   }
 }
 

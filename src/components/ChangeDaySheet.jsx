@@ -89,7 +89,7 @@ export default function ChangeDaySheet({ dayData, onSelect, onClose }) {
           <div style={{ padding: "12px 16px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>
-                Change Day {dayNumber} — {city}
+                Change Day {dayNumber}, {city}
               </p>
               <p style={{ fontSize: 13, color: C.sub, margin: "4px 0 0", lineHeight: "17px" }}>
                 {contextLine}

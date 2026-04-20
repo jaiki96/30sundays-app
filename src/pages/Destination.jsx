@@ -218,7 +218,7 @@ export default function Destination() {
         </div>
       </div>
 
-      {/* Traveller moments — marquee with couple names & activity tags */}
+      {/* Traveller moments, marquee with couple names & activity tags */}
       <TravellerMomentsMarquee name={name} onPhotoClick={(idx) => { setTravGalleryIdx(idx); setShowTravellersGallery(true); }} />
 
       {/* Reviews */}
@@ -394,7 +394,7 @@ function TravellersFullscreenGallery({ name, photos, coupleNames, startIdx, onCl
         ))}
       </div>
 
-      {/* Bottom bar — itinerary CTA */}
+      {/* Bottom bar, itinerary CTA */}
       {story && itinerary && (
         <div style={{ padding: "8px 16px 24px", background: "linear-gradient(transparent, rgba(0,0,0,0.9) 30%)" }}>
           <div style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

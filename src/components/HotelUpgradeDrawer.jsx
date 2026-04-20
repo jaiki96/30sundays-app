@@ -14,12 +14,12 @@ const RatingBadge = ({ score }) => (
 );
 
 /**
- * HotelUpgradeDrawer — bottom drawer overlay for hotel upgrades.
+ * HotelUpgradeDrawer, bottom drawer overlay for hotel upgrades.
  *
  * Props:
- *   upgrades — array from getUpgradeInfo().upgrades
- *   totalAdditional — total additional cost
- *   onClose — close handler
+ *   upgrades, array from getUpgradeInfo().upgrades
+ *   totalAdditional, total additional cost
+ *   onClose, close handler
  */
 export default function HotelUpgradeDrawer({ upgrades, totalAdditional, onClose }) {
   const [expanded, setExpanded] = useState(null);
@@ -30,7 +30,7 @@ export default function HotelUpgradeDrawer({ upgrades, totalAdditional, onClose 
 
   const drawerContent = (
     <>
-      {/* keyframes — injected once */}
+      {/* keyframes, injected once */}
       <style>{`
         @keyframes huSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         @keyframes huFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -56,7 +56,7 @@ export default function HotelUpgradeDrawer({ upgrades, totalAdditional, onClose 
             <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div }} />
           </div>
 
-          {/* header — white bg, light grey border */}
+          {/* header, white bg, light grey border */}
           <div style={{
             padding: "16px 20px 18px", background: C.white,
             borderBottom: `1px solid ${C.div}`,
