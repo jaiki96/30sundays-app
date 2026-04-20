@@ -1,15 +1,36 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { C } from "../data";
+
+const MOBILE_BREAKPOINT = 768;
 
 export default function PhoneFrame({ children }) {
   const scrollRef = useRef(null);
   const location = useLocation();
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [location.pathname]);
 
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // Mobile: render full-screen, no frame chrome
+  if (isMobile) {
+    return (
+      <div id="phone-frame" style={{ width: "100vw", minHeight: "100vh", background: C.white, fontFamily: "'Figtree', sans-serif", display: "flex", flexDirection: "column", position: "relative" }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: 84, WebkitOverflowScrolling: "touch" }} className="hide-scrollbar">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: show the iOS-style phone frame
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#E5E5E5", fontFamily: "'Figtree', sans-serif" }}>
       <div id="phone-frame" style={{ width: 390, height: 844, background: C.white, borderRadius: 44, overflow: "hidden", position: "relative", boxShadow: "0 25px 80px rgba(0,0,0,0.18)", display: "flex", flexDirection: "column" }}>
