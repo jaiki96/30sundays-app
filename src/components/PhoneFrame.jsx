@@ -19,10 +19,11 @@ export default function PhoneFrame({ children }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Mobile: render full-screen, no frame chrome
+  // Mobile: render full-screen, no frame chrome. Fixed viewport height so
+  // the bottom nav can stick to the bottom across scroll / route changes.
   if (isMobile) {
     return (
-      <div id="phone-frame" style={{ width: "100vw", minHeight: "100vh", background: C.white, fontFamily: "'Figtree', sans-serif", display: "flex", flexDirection: "column", position: "relative" }}>
+      <div id="phone-frame" style={{ width: "100vw", height: "100dvh", background: C.white, fontFamily: "'Figtree', sans-serif", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: 84, WebkitOverflowScrolling: "touch" }} className="hide-scrollbar">
           {children}
         </div>
