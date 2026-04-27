@@ -442,7 +442,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             {/* Recommended itineraries */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {recommendedItineraries.map(it => (
-                <ItineraryCard key={it.id} it={it} fullWidth />
+                <ItineraryCard key={it.id} it={it} fullWidth showVersion />
               ))}
             </div>
 

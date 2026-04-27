@@ -12,6 +12,8 @@ const HOME_DESTS = [
 ];
 import ItineraryCard from "../components/ItineraryCard";
 import SectionHeader from "../components/SectionHeader";
+import WatchTeaser from "../components/WatchTeaser";
+import { videosForHome } from "../data/watchData";
 
 const iconMap = { Heart, Eye, Shield, Headphones };
 
@@ -55,6 +57,16 @@ export default function Home({ userState }) {
 
       {/* Destination carousels, interleaved with traveller moments + USPs to break monotony */}
       {renderDestSections(HOME_DESTS.slice(0, 2), 0)}
+
+      {/* Watch — educational video teaser */}
+      <WatchTeaser
+        emoji="😵‍💫"
+        title="Can't decide where to go?"
+        subtitle="Watch a few quick videos and pick smartly in minutes"
+        videos={videosForHome()}
+        libraryTitle="The Travel Edit"
+        librarySubtitle="Curated by 30 Sundays. Made for couples."
+      />
 
       {/* Traveller moments, auto-scrolling marquee */}
       <div style={{ marginTop: 26 }}>

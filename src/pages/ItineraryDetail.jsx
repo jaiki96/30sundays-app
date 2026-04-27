@@ -8,6 +8,8 @@ import { Camera } from "lucide-react";
 import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
+import WatchTeaser from "../components/WatchTeaser";
+import { videosForDest } from "../data/watchData";
 
 const PREBOOKING_CONSULTANTS = [
   { name: "Riya Shah", phone: "+919876500011" },
@@ -67,6 +69,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [pricingState, setPricingState] = useState("cached"); // "cached" | "loading" | "live"
   const [showUpgradeDrawer, setShowUpgradeDrawer] = useState(false);
   const [showDayPhotos, setShowDayPhotos] = useState(null); // { dayNum, photoIdx }
+  const [showDayWiseDrawer, setShowDayWiseDrawer] = useState(false);
+  const [drawerActiveDay, setDrawerActiveDay] = useState(0);
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
@@ -90,6 +94,29 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const d = destData[it.dest];
   const daysWithActivities = getDayActivities(it);
   const baseHotels = getHotels(it);
+  const isVietnam = it.dest === "Vietnam";
+
+  // Vietnam-only highlights: first unique activity per day, capped at 8
+  const highlights = useMemo(() => {
+    if (!isVietnam) return [];
+    const seen = new Set();
+    const items = [];
+    daysWithActivities.forEach((day, dayIdx) => {
+      day.activities.forEach((act, actIdx) => {
+        if (seen.has(act.name)) return;
+        seen.add(act.name);
+        items.push({
+          name: act.name,
+          img: act.img,
+          dayNum: day.dayNum,
+          city: day.city,
+          dayIndex: dayIdx,
+          activityIndex: actIdx,
+        });
+      });
+    });
+    return items.slice(0, 8);
+  }, [daysWithActivities, isVietnam]);
 
   // Merge saved hotel selections
   const hotels = baseHotels.map((h, i) => {
@@ -202,43 +229,89 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
       </div>
 
-      {/* ═══ 2. See Your Trip, Video Thumbnails ═══ */}
-      <div style={{ padding: "16px 0 0" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>See your trip</p>
-        {/* Day tabs */}
-        <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
-          {daysWithActivities.map((day, i) => (
-            <button key={i} onClick={() => setActiveDay(i)} style={{
-              padding: "8px 14px", borderRadius: 10, minWidth: 80, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-              background: activeDay === i ? C.p600 : "#F5F5F5",
-              border: activeDay === i ? "none" : `1px solid ${C.div}`,
-              textAlign: "left",
-            }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {day.dayNum}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
-                <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
-                <span style={{ fontSize: 10, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
+      {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
+      {isVietnam ? (
+        <div style={{ padding: "16px 0 0" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "0 16px", marginBottom: 10 }}>
+            <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>Trip highlights</p>
+            <span style={{ fontSize: 11, color: C.sub }}>{highlights.length} experiences</span>
+          </div>
+          <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
+            {highlights.map((h, i) => (
+              <div
+                key={i}
+                onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })}
+                style={{
+                  width: 200, minWidth: 200, height: 280, borderRadius: 16, overflow: "hidden",
+                  position: "relative", flexShrink: 0, cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
+                }}
+              >
+                <img
+                  src={h.img}
+                  alt={h.name}
+                  className={`ken-burns${i % 3 === 1 ? " ken-burns-2" : i % 3 === 2 ? " ken-burns-3" : ""}`}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+                {/* gradient */}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.85))" }} />
+                {/* day chip */}
+                <div style={{
+                  position: "absolute", top: 10, left: 10,
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: 999, padding: "4px 9px",
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>Day {h.dayNum}</span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>· {h.city}</span>
+                </div>
+                {/* title */}
+                <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 14, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "18px" }}>
+                  {h.name}
+                </p>
               </div>
-            </button>
-          ))}
+            ))}
+          </div>
         </div>
-        {/* Video thumbnails */}
-        <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-          {daysWithActivities[activeDay]?.activities.map((act, i) => (
-            <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
-              width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
-            }}>
-              <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.8))" }} />
-              {/* Play button */}
-              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Play size={16} color="#fff" fill="#fff" />
+      ) : (
+        <div style={{ padding: "16px 0 0" }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>See your trip</p>
+          {/* Day tabs */}
+          <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
+            {daysWithActivities.map((day, i) => (
+              <button key={i} onClick={() => setActiveDay(i)} style={{
+                padding: "8px 14px", borderRadius: 10, minWidth: 80, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+                background: activeDay === i ? C.p600 : "#F5F5F5",
+                border: activeDay === i ? "none" : `1px solid ${C.div}`,
+                textAlign: "left",
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {day.dayNum}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
+                  <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
+                  <span style={{ fontSize: 10, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          {/* Video thumbnails */}
+          <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
+            {daysWithActivities[activeDay]?.activities.map((act, i) => (
+              <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
+                width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+              }}>
+                <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.8))" }} />
+                {/* Play button */}
+                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Play size={16} color="#fff" fill="#fff" />
+                </div>
+                <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
               </div>
-              <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <Divider />
 
@@ -256,26 +329,65 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             const hasOptions = dayHasOptions(globalDayIndex);
 
             return (
-              <div key={i} style={{ position: "relative", marginBottom: i < visibleDays.length - 1 ? 20 : 0 }}>
+              <div key={i} style={{ position: "relative", marginBottom: i < visibleDays.length - 1 ? (isVietnam ? 14 : 20) : 0 }}>
                 <div style={{ position: "absolute", left: -20, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${i === 0 ? "#027A48" : C.inact}` }} />
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
-                    {swapped && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 600, color: C.p600, background: C.p100,
-                        borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap",
-                      }}>
-                        {swapped.vibeLabel}
-                      </span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
+                      {swapped && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 600, color: C.p600, background: C.p100,
+                          borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap",
+                        }}>
+                          {swapped.vibeLabel}
+                        </span>
+                      )}
+                    </div>
+                    {isVietnam && hasOptions && (
+                      <button
+                        onClick={() => setChangeDayIndex(globalDayIndex)}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: 0, background: "none", border: "none",
+                          fontSize: 12, fontWeight: 600, color: C.p600, cursor: "pointer",
+                          fontFamily: "inherit", flexShrink: 0,
+                        }}
+                        aria-label="Change day plan"
+                      >
+                        <RefreshCw size={12} color={C.p600} />
+                        Change
+                      </button>
                     )}
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                    {displayActivities.map((a, j) => (
-                      <span key={j} style={{ fontSize: 12, color: C.sub }}>• {a}</span>
-                    ))}
-                  </div>
-                  {hasOptions && (
+                  {isVietnam ? (
+                    <div className="hs" style={{ gap: 10, marginTop: 8, paddingBottom: 2, marginRight: -16 }}>
+                      {displayActivities.map((a, j) => {
+                        const thumb = day.activities[j]?.img || it.img;
+                        return (
+                          <div
+                            key={j}
+                            onClick={() => setShowViewer({ day: globalDayIndex, activity: j })}
+                            style={{ width: 76, minWidth: 76, flexShrink: 0, cursor: "pointer" }}
+                          >
+                            <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", background: C.div }}>
+                              <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            </div>
+                            <p style={{ fontSize: 11, color: C.head, fontWeight: 500, margin: "6px 0 0", lineHeight: "13px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                              {a}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                      {displayActivities.map((a, j) => (
+                        <span key={j} style={{ fontSize: 12, color: C.sub }}>• {a}</span>
+                      ))}
+                    </div>
+                  )}
+                  {!isVietnam && hasOptions && (
                     <button
                       onClick={() => setChangeDayIndex(globalDayIndex)}
                       style={{
@@ -290,7 +402,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                     </button>
                   )}
                   {/* Day traveler photos */}
-                  {customerPhotos[it.dest] && (
+                  {!isVietnam && customerPhotos[it.dest] && (
                     <DayTravellerPhotos
                       dest={it.dest}
                       dayNum={day.dayNum}
@@ -310,6 +422,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
           }}>
             {expanded ? "Hide details" : "Read more"} {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        )}
+        {isVietnam && (
+          <button
+            onClick={() => { setDrawerActiveDay(0); setShowDayWiseDrawer(true); }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              width: "100%", marginTop: 16, padding: "12px 16px",
+              background: "#fff", border: `1px solid ${C.div}`, borderRadius: 12,
+              fontSize: 13, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <Play size={12} color={C.p600} fill={C.p600} />
+            View day-wise itinerary
+            <ChevronRight size={14} color={C.sub} />
           </button>
         )}
       </div>
@@ -552,6 +679,24 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
+      {/* ═══ 5a. Trip briefings — educational videos for this trip ═══ */}
+      {(() => {
+        const deck = videosForDest(it.dest);
+        if (!deck.length) return null;
+        return (
+          <>
+            <WatchTeaser
+              title={`Want to know the secrets of ${it.dest}?`}
+              subtitle="Local tips, hidden gems, and what most travelers miss"
+              videos={deck}
+              libraryTitle={`The ${it.dest} Edit`}
+              librarySubtitle="Curated by 30 Sundays. Made for couples."
+            />
+            <Divider />
+          </>
+        );
+      })()}
+
       {/* ═══ 5b. Travel Consultant ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Your travel consultant</p>
@@ -656,6 +801,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           initialDay={showViewer.day}
           initialActivity={showViewer.activity}
           onClose={() => setShowViewer(null)}
+        />
+      )}
+
+      {/* ═══ Day-wise Full Screen (Vietnam) ═══ */}
+      {showDayWiseDrawer && (
+        <DayWiseScreen
+          days={daysWithActivities}
+          dest={it.dest}
+          itineraryId={it.id}
+          hotels={hotels}
+          activeDay={drawerActiveDay}
+          setActiveDay={setDrawerActiveDay}
+          onPlay={(day, activity) => setShowViewer({ day, activity })}
+          onChangeDay={(globalDayIndex) => setChangeDayIndex(globalDayIndex)}
+          onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
+          onClose={() => setShowDayWiseDrawer(false)}
         />
       )}
 
@@ -1116,6 +1277,457 @@ function PricingSheet({ onClose, initialDates, onSubmit }) {
           }}>
           <Zap size={14} /> Fetch live prices
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══ Day-wise Drawer (Vietnam) ═══
+const VIETNAM_NARRATIVES = {
+  Hanoi:    [{ t: "Arrival in Hanoi",    s: "Settle in, walk the Old Quarter, end with street food." },
+             { t: "Old soul of the city", s: "Temples, lakes, and a water puppet show." }],
+  "Ha Long":[{ t: "Sail into the bay",   s: "Cruise emerald waters and kayak through limestone caves." },
+             { t: "Caves & quiet coves", s: "Hidden lagoons, sunrise tai chi, slow sailing." }],
+  HCMC:     [{ t: "Saigon's pulse",      s: "War Remnants, market hopping, rooftop sundowners." },
+             { t: "Cu Chi & culture",    s: "Crawl the tunnels, then watch the city dance at night." },
+             { t: "Slow & savor",        s: "Coffee crawl, tailor stops, last shopping run." }],
+  Sapa:     [{ t: "Into the highlands",  s: "Trek through rice terraces with hill-tribe guides." },
+             { t: "Fansipan summit",     s: "Cable car to Indochina's roof; clouds at your feet." },
+             { t: "Village & valley",    s: "Homestay lunch, weaving demos, slow valley walks." }],
+  "Hoi An": [{ t: "Lantern town",        s: "Tailors, ancient streets, and a riverside dinner." },
+             { t: "Cooking & coast",     s: "Market-to-table class, then beach time at An Bang." },
+             { t: "Slow Hoi An",         s: "Bicycle the rice fields, sunset by the lanterns." },
+             { t: "Memories show",       s: "Riverside spectacle that lights up the night." }],
+  "Da Nang":[{ t: "Beach city welcome",  s: "Golden Bridge, sunset cruise on Han River." },
+             { t: "Marble & mountains",  s: "Marble Mountains caves, Ba Na Hills cable car." },
+             { t: "Spa & sand",          s: "My Khe Beach morning, full-body spa afternoon." }],
+  "Phu Quoc":[{ t: "Island arrival",     s: "Sunset on Long Beach, fresh seafood by the shore." },
+             { t: "Snorkel & sail",      s: "Three-island hop with snorkel gear and lunch." },
+             { t: "Slow island day",     s: "Spa, kayaking, fishing village walk." }],
+  Mekong:   [{ t: "Mekong Delta day",    s: "Sampan rides, floating markets, coconut candy." }],
+  "Ninh Binh":[{ t: "Tam Coc rowboats",  s: "Glide past karst peaks and rice paddies." },
+             { t: "Bich Dong & Bai Dinh", s: "Pagodas, caves, and a quiet boat ride." }],
+  "Phong Nha":[{ t: "Paradise Cave",     s: "Walk inside a cathedral of stalactites." },
+             { t: "Dark Cave adventure", s: "Zipline, mud bath, swim through a cave river." },
+             { t: "Jungle & river",      s: "Botanic garden, kayaking, slow village lunch." }],
+  "Nha Trang":[{ t: "Beach welcome",     s: "Promenade walk, seafood dinner by the bay." },
+             { t: "Snorkel & spa",       s: "Boat day to Hon Mun, mud bath afternoon." },
+             { t: "Po Nagar & ponies",   s: "Cham temples, beach hour, sunset bar." }],
+  "Ha Giang":[{ t: "Loop begins",        s: "Heaven's Gate, terraced valleys, twisting roads." },
+             { t: "Markets & motors",    s: "Hill-tribe markets, valley vistas, cliffside cafés." },
+             { t: "Slow descent",        s: "River canyons, homestay lunch, easy ride back." }],
+};
+
+function getDayPlan(day, dayIdx, daysWithActivities) {
+  const sameCityCount = daysWithActivities.slice(0, dayIdx).filter(d => d.city === day.city).length;
+  const cityDayIdx = sameCityCount;
+  const narrArr = VIETNAM_NARRATIVES[day.city] || [];
+  const narrative = narrArr[cityDayIdx] || { t: day.city, s: day.activities.map(a => a.name).join(" · ") };
+
+  const isFirstDay = dayIdx === 0;
+  const isLastDay = dayIdx === daysWithActivities.length - 1;
+  const prevCity = dayIdx > 0 ? daysWithActivities[dayIdx - 1].city : null;
+  const nextCity = dayIdx < daysWithActivities.length - 1 ? daysWithActivities[dayIdx + 1].city : null;
+  const cityChanged = prevCity && prevCity !== day.city;
+  const departingTomorrow = nextCity && nextCity !== day.city;
+
+  let transfer = null;
+  if (isFirstDay) transfer = { ico: "✈️", text: `Mumbai → ${day.city} · arriving 10:30 AM` };
+  else if (cityChanged) transfer = { ico: "🚗", text: `${prevCity} → ${day.city} · ~4 hr scenic transfer` };
+  else if (isLastDay) transfer = { ico: "✈️", text: `${day.city} → Mumbai · 6:30 PM departure` };
+  else if (departingTomorrow) transfer = { ico: "🛏️", text: `Last night in ${day.city} before transfer to ${nextCity}` };
+
+  const hotelName = `${day.city} Heritage Resort`;
+  const roomType = "Deluxe King · Breakfast included";
+
+  const meals = isFirstDay
+    ? ["Welcome dinner"]
+    : isLastDay
+      ? ["Farewell breakfast"]
+      : cityChanged
+        ? ["Lunch en route", "Dinner at hotel"]
+        : ["Breakfast"];
+
+  const SLOTS = ["Morning", "Afternoon", "Evening"];
+  const ICONS = { Morning: "🌅", Afternoon: "☀️", Evening: "🌙" };
+  const DURATIONS = ["2 hrs", "3 hrs", "1.5 hrs", "2.5 hrs"];
+  const groups = { Morning: [], Afternoon: [], Evening: [] };
+  day.activities.forEach((a, i) => {
+    const slot = SLOTS[i % SLOTS.length];
+    groups[slot].push({ ...a, duration: DURATIONS[i % DURATIONS.length], idx: i });
+  });
+
+  return { narrative, transfer, hotelName, roomType, meals, groups, ICONS, cityDayIdx };
+}
+
+function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDay, onPlay, onChangeDay, onPhotoOpen, onClose }) {
+  const [closing, setClosing] = useState(false);
+  const handleClose = () => { setClosing(true); setTimeout(onClose, 280); };
+  const day = days[activeDay];
+  const plan = day ? getDayPlan(day, activeDay, days) : null;
+  const totalActs = day?.activities.length || 0;
+  const DURATIONS = ["2 hrs", "3 hrs", "1.5 hrs", "2.5 hrs"];
+  const totalDuration = day?.activities.reduce((sum, _, i) => sum + parseFloat(DURATIONS[i % 4]), 0) || 0;
+  const dayHotelIdx = hotels?.findIndex(h => h.city === day?.city) ?? -1;
+  const dayHotel = dayHotelIdx >= 0 ? hotels[dayHotelIdx] : null;
+  const destReviewsForDest = reviews.filter(r => r.dest === dest);
+
+  // Build portrait card list: transfer (if any) + activities
+  const portraitCards = [];
+  if (plan?.transfer) {
+    portraitCards.push({
+      type: "transfer",
+      icon: plan.transfer.ico,
+      title: plan.transfer.text,
+      img: day.activities[0]?.img,
+    });
+  }
+  day?.activities.forEach((a, i) => {
+    portraitCards.push({
+      type: "activity",
+      title: a.name,
+      img: a.img,
+      duration: DURATIONS[i % 4],
+      idx: i,
+    });
+  });
+
+  // Activity description bank
+  const ACT_DESC = {
+    "Old Quarter":      "Maze of 36 narrow streets — each named after the trade once practiced there. Walk past silk shops, herbal apothecaries, and pho stalls older than your grandparents.",
+    "Street food":      "Hanoi on a plate: bun cha smoke, egg coffee crema, banh cuon steamed fresh. A local guide takes you to spots tourists never find.",
+    "Temple":           "Tran Quoc Pagoda on West Lake — Vietnam's oldest, set on a quiet island. Incense, lotus ponds, and a six-tiered tower glowing at dusk.",
+    "Bay cruise":       "Overnight on a luxury junk among 1,600 limestone islets. Sunset kayaking, fresh seafood, and stargazing from the upper deck.",
+    "Kayaking":         "Paddle into hidden lagoons reachable only at low tide. Pass floating fishing villages and emerald grottos.",
+    "Caves":            "Sung Sot ('Surprise Cave') — three vast chambers filled with stalactites lit by carefully placed warm lights.",
+    "Cu Chi":           "Crawl through a section of the 250 km tunnel network used during the war. Above ground: a glimpse of village life that never stopped.",
+    "Markets":          "Ben Thanh by day, Ben Thanh Night by dusk. Sip sugarcane juice, haggle for silk, eat banh xeo at a plastic-stool counter.",
+    "Rooftop bars":     "Watch District 1 light up from 50 floors above. Saigon classic cocktails with a side of city skyline.",
+    "Golden Bridge":    "The 150 m bridge held aloft by giant stone hands. Cloud-walking is the unofficial sport here.",
+    "Beach":            "An Bang or My Khe — soft white sand, gentle surf, palm-thatched cabanas, and the sweet kick of a co-co coconut.",
+    "Spa":              "Vietnamese herbal compress massage. 90 minutes of warm oils, lemongrass steam, and quiet.",
+    "Lanterns":         "After sundown, Hoi An's old town turns into a river of color. Float a candle on the Thu Bon for good luck.",
+    "Tailoring":        "Pick your fabric in the morning, pick up your custom-fitted suit or ao dai by evening. A Hoi An rite of passage.",
+    "Cooking":          "Market shop with a chef, then cook 4 dishes in a riverside class — pho, fresh spring rolls, banh xeo, mango sticky rice.",
+    "Island beach":     "Sao Beach's sugar-fine sand stretches a kilometer. Hammocks, calm water, and grilled prawns delivered to your towel.",
+    "Snorkeling":       "Reefs around An Thoi archipelago — clownfish, parrotfish, and the occasional reef shark in 5 m water.",
+    "Boat rides":       "Bamboo sampans through the Tam Coc waterway, paddled by women who use their feet to row.",
+    "Pagodas":          "Bai Dinh — Southeast Asia's largest pagoda complex. 500 stone arhat statues line the corridor.",
+    "Paradise Cave":    "31 km of cathedral-scale formations. Wooden walkways take you a kilometer in.",
+    "Dark Cave":        "Zipline in, mud-bath inside, then swim back out through a cave river. Gear and guide included.",
+    "Jungle":           "Phong Nha National Park trek with a former cave explorer. Birds, butterflies, and a hidden waterfall lunch spot.",
+    "Lantern Night":    "The town lit by 5,000 silk lanterns. Quietest at the corners; loudest at the night market.",
+  };
+  const fallback = "Curated experience hand-picked by our local team. Tap to see why we love it.";
+
+  return (
+    <div style={{
+      position: "fixed", top: "50%", left: "50%",
+      transform: "translate(-50%, -50%)",
+      width: 390, height: 844, borderRadius: 44,
+      zIndex: 100, background: "#fff",
+      overflow: "hidden",
+      animation: closing ? "fadeOutBg 0.28s ease-out forwards" : "fadeInBg 0.28s ease-out forwards",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Top bar */}
+      <div style={{ flexShrink: 0, padding: "44px 16px 10px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${C.div}` }}>
+        <button onClick={handleClose} style={{ width: 32, height: 32, borderRadius: "50%", background: "#F5F5F5", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <ArrowLeft size={16} color={C.head} />
+        </button>
+        <div>
+          <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>Day-wise itinerary</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0 }}>Day {day?.dayNum} · {day?.city}</p>
+        </div>
+      </div>
+
+      {/* Sticky day pills */}
+      <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.div}`, background: "#fff" }}>
+        <div className="hs" style={{ gap: 6, padding: "10px 16px" }}>
+          {days.map((d, i) => (
+            <button key={i} onClick={() => setActiveDay(i)} style={{
+              padding: "8px 14px", borderRadius: 10, minWidth: 80, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+              background: activeDay === i ? C.p600 : "#F5F5F5",
+              border: activeDay === i ? "none" : `1px solid ${C.div}`,
+              textAlign: "left",
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {d.dayNum}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
+                <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
+                <span style={{ fontSize: 10, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{d.city}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto" }}>
+        {/* Day header / narrative */}
+        <div style={{ padding: "16px 16px 12px" }}>
+          <p style={{ fontSize: 20, fontWeight: 700, color: C.head, margin: 0 }}>{plan?.narrative.t}</p>
+          <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 8px" }}>{totalActs} activities · ~{totalDuration} hrs</p>
+          <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "19px" }}>{plan?.narrative.s}</p>
+        </div>
+
+        {/* Portrait thumbnails: transfer + activities */}
+        <div className="hs" style={{ gap: 10, padding: "0 16px 16px" }}>
+          {portraitCards.map((c, i) => (
+            <div
+              key={i}
+              onClick={() => c.type === "activity" && onPlay(activeDay, c.idx)}
+              style={{
+                width: 140, minWidth: 140, height: 200, borderRadius: 14, overflow: "hidden",
+                position: "relative", flexShrink: 0,
+                cursor: c.type === "activity" ? "pointer" : "default",
+                background: c.type === "transfer" ? C.p100 : C.div,
+              }}
+            >
+              {c.img && (
+                <img
+                  src={c.img}
+                  alt={c.title}
+                  className={c.type === "activity" ? "" : ""}
+                  style={{
+                    width: "100%", height: "100%", objectFit: "cover",
+                    display: "block",
+                    filter: c.type === "transfer" ? "blur(2px) brightness(0.55)" : "none",
+                  }}
+                />
+              )}
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 40%, rgba(0,0,0,0.85))" }} />
+              {c.type === "activity" && (
+                <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 999 }}>
+                  {c.duration}
+                </span>
+              )}
+              {c.type === "transfer" && (
+                <div style={{ position: "absolute", top: 12, left: 12, fontSize: 22 }}>{c.icon}</div>
+              )}
+              <p style={{
+                position: "absolute", bottom: 10, left: 10, right: 10,
+                fontSize: 12, fontWeight: 600, color: "#fff", margin: 0, lineHeight: "15px",
+              }}>
+                {c.title}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Day in detail */}
+        <div style={{ padding: "0 16px 8px" }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "4px 0 12px" }}>What you'll do</p>
+          {day?.activities.map((a, i) => (
+            <div key={i} style={{
+              display: "flex", gap: 12, padding: "10px 0",
+              borderBottom: i < day.activities.length - 1 ? `1px solid ${C.div}` : "none",
+            }}>
+              <div onClick={() => onPlay(activeDay, i)} style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative", cursor: "pointer", background: C.div }}>
+                <img src={a.img} alt={a.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Play size={11} color="#fff" fill="#fff" />
+                </div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: 0 }}>{a.name}</p>
+                  <span style={{ fontSize: 10, color: C.sub }}>· {DURATIONS[i % 4]}</span>
+                </div>
+                <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px" }}>
+                  {ACT_DESC[a.name] || fallback}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Hotel card — internal design language */}
+        {dayHotel && (() => {
+          const NEIGHBORHOODS = {
+            Hanoi: "Hoan Kiem · Old Quarter",
+            "Ha Long": "Bay Front",
+            HCMC: "District 1 · Saigon",
+            "Da Nang": "My Khe Beach",
+            "Hoi An": "Ancient Town",
+            "Phu Quoc": "Long Beach",
+            Sapa: "Town Centre",
+            Mekong: "Can Tho",
+            "Ninh Binh": "Tam Coc",
+            "Phong Nha": "Son Trach",
+            "Nha Trang": "Tran Phu Beach",
+            "Ha Giang": "Old Town",
+          };
+          const neighborhood = NEIGHBORHOODS[dayHotel.city] || dayHotel.city;
+          const ratingOutOf10 = (parseFloat(dayHotel.rating) * 2).toFixed(1);
+          const altCount = 3;
+          return (
+            <div style={{ padding: "16px 16px 0" }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "0 0 4px" }}>Tonight's stay</p>
+              <p style={{ fontSize: 12, color: C.sub, margin: "0 0 10px" }}>{dayHotel.dayRange} · {dayHotel.city}</p>
+              <Link
+                to={`/hotel-detail/${itineraryId}/${dayHotelIdx}/${encodeURIComponent(dayHotel.hotelId || "")}?current=${encodeURIComponent(dayHotel.hotelId || "")}`}
+                style={{ borderRadius: 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}
+              >
+                {/* Image */}
+                <div style={{ height: 200, overflow: "hidden" }}>
+                  <img src={dayHotel.img} alt={dayHotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: "12px 14px 14px" }}>
+                  {/* 30 Sundays Recommended badge */}
+                  <div style={{
+                    display: "inline-flex", alignItems: "center",
+                    background: C.p100, color: C.p600,
+                    borderRadius: 999, padding: "4px 10px",
+                    fontSize: 11, fontWeight: 600,
+                    marginBottom: 10,
+                  }}>
+                    30 Sundays Recommended
+                  </div>
+
+                  {/* Star class + Booking rating row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <Star size={13} fill="#027A48" color="#027A48" strokeWidth={0} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#027A48" }}>5 star hotel</span>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <span style={{
+                        background: "#003B95", color: "#fff",
+                        fontSize: 10, fontWeight: 700,
+                        padding: "2px 5px", borderRadius: 4,
+                        fontFamily: "system-ui, sans-serif", letterSpacing: -0.2,
+                      }}>B.</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.head }}>{ratingOutOf10}</span>
+                      <span style={{ fontSize: 10, color: C.sub }}>/ 10</span>
+                    </div>
+                  </div>
+
+                  {/* Name */}
+                  <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: "0 0 2px", lineHeight: "20px" }}>{dayHotel.name}</p>
+
+                  {/* Room type */}
+                  <p style={{ fontSize: 12, color: C.sub, margin: "0 0 6px" }}>{dayHotel.type}</p>
+
+                  {/* Address */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14 }}>
+                    <MapPin size={11} color={C.sub} />
+                    <span style={{ fontSize: 12, color: C.sub }}>{neighborhood}, {dayHotel.city}</span>
+                  </div>
+
+                  {/* Two CTAs — text links */}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 16,
+                    paddingTop: 10, borderTop: `1px solid ${C.div}`,
+                  }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      fontSize: 13, fontWeight: 600, color: C.p600,
+                    }}>
+                      View details
+                      <ChevronRight size={13} color={C.p600} />
+                    </span>
+                    <span style={{ width: 1, height: 14, background: C.div }} />
+                    <span
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/hotels/${itineraryId}/${dayHotelIdx}?current=${encodeURIComponent(dayHotel.hotelId || "")}`; }}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer",
+                      }}
+                    >
+                      <RefreshCw size={12} color={C.p600} />
+                      See {altCount} alternatives
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          );
+        })()}
+
+        {/* Traveller moments — marquee, same as destination page */}
+        {dest && customerPhotos[dest] && (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ padding: "0 16px", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 16 }}>📸</span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>Traveller moments</span>
+              </div>
+              <p style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>Couples who explored {dest} with us</p>
+            </div>
+            <div style={{ overflow: "hidden", width: "100%" }}>
+              <div className="marquee-strip" style={{ display: "flex", gap: 10, width: "max-content" }}>
+                {(() => {
+                  const photos = getCustomerPhotos(dest);
+                  const names = couplePhotoNames[dest] || [];
+                  return [...photos, ...photos].map((photo, i) => {
+                    const realIdx = i % photos.length;
+                    const coupleName = names[realIdx] || "";
+                    return (
+                      <div key={i} onClick={() => onPhotoOpen(day?.dayNum, realIdx)} style={{ width: 180, minWidth: 180, height: 240, borderRadius: 14, overflow: "hidden", flexShrink: 0, position: "relative", cursor: "pointer" }}>
+                        <img src={photo.img} alt={photo.tag} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.75))" }} />
+                        <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
+                          {coupleName && <p style={{ fontSize: 11, fontWeight: 600, color: "#fff", margin: "0 0 2px", opacity: 0.9 }}>{coupleName}</p>}
+                          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <MapPin size={10} color={C.p300} />
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{photo.tag}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reviews — same Google-card design as destination page */}
+        {destReviewsForDest.length > 0 && (
+          <div style={{ margin: "26px 16px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.white, borderRadius: 12, padding: "8px 12px", boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>4.6</span>
+                <span style={{ fontSize: 12, color: C.sub }}>/5</span>
+              </div>
+              <p style={{ fontSize: 12, color: C.sub }}>1,000+ Google reviews</p>
+            </div>
+            {destReviewsForDest.slice(0, 3).map((r, i) => (
+              <div key={i} style={{ background: C.white, borderRadius: 12, padding: 14, boxShadow: "0 1px 6px rgba(0,0,0,0.04)", borderLeft: `3px solid ${C.p300}`, marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.p100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: C.p600 }}>{r.name[0]}</div>
+                    <div>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: C.head, margin: 0 }}>{r.name}</p>
+                      <p style={{ fontSize: 10, color: C.sub, margin: 0 }}>{r.dest}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
+                </div>
+                <p style={{ fontSize: 11, lineHeight: "16px", color: C.sub, margin: 0 }}>"{r.text}"</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Change day CTA */}
+        <div style={{ padding: "20px 16px 28px" }}>
+          <button
+            onClick={() => onChangeDay(activeDay)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              width: "100%", padding: "14px 16px",
+              background: "#fff", border: `1.5px solid ${C.p600}`, borderRadius: 12,
+              fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <RefreshCw size={14} color={C.p600} />
+            Change this day
+          </button>
+        </div>
       </div>
     </div>
   );

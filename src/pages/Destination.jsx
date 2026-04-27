@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight, Star, Play, Plane, Clock, FileCheck, MapPin, Che
 import { C, destData, destinations, getItinerariesForDest, reviews, getCustomerPhotos, customerPhotos, coupleStories, couplesCount, couplePhotoNames, allItineraries } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
 import SectionHeader from "../components/SectionHeader";
+import WatchTeaser from "../components/WatchTeaser";
+import { videosForDest } from "../data/watchData";
 
 export default function Destination() {
   const { name } = useParams();
@@ -164,6 +166,15 @@ export default function Destination() {
           </div>
         </div>
       )}
+
+      {/* Get to know [Destination] — educational videos, after offbeat activities */}
+      <WatchTeaser
+        title={`Get to know ${name}`}
+        subtitle="Compare cities, see top picks, learn what to skip"
+        videos={videosForDest(name)}
+        libraryTitle={`The ${name} Edit`}
+        librarySubtitle="Curated by 30 Sundays. Made for couples."
+      />
 
       {/* Real Couples, Real Itineraries */}
       {coupleStories.filter(s => s.dest === name).length > 0 && (

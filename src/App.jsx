@@ -24,6 +24,7 @@ import PaymentDetails from "./pages/PaymentDetails";
 import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
+import WatchDeepLink from "./pages/WatchDeepLink";
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
@@ -61,6 +62,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/trips/:tripId" element={<TripDetails />} />
         <Route path="/trips/:tripId/payments" element={<PaymentDetails />} />
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
+        <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && <TripNudge userState={userState} />}
       <BottomNav userState={userState} />

@@ -89,3 +89,12 @@
   animation-play-state: paused;
 }
 
+@keyframes kenBurns {
+  0%   { transform: scale(1.06) translate(0, 0); }
+  50%  { transform: scale(1.18) translate(-2%, -1.5%); }
+  100% { transform: scale(1.06) translate(0, 0); }
+}
+.ken-burns { animation: kenBurns 9s ease-in-out infinite; transform-origin: center; }
+.ken-burns-2 { animation: kenBurns 11s ease-in-out -2.5s infinite; }
+.ken-burns-3 { animation: kenBurns 10s ease-in-out -5s infinite; }
+

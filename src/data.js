@@ -188,7 +188,7 @@ export const allItineraries = [
   { id: 2, dest: "Bali", vibe: "Relaxed", name: "Beach Club Bliss", nights: 5, price: "78,998", route: [{ city: "Seminyak", n: 2 }, { city: "Nusa Dua", n: 3 }], veg: false, img: baliImgs[1],
     days: [{ city: "Seminyak", n: 2, sub: "Spa · Sunset bars · Beach" }, { city: "Nusa Dua", n: 3, sub: "Luxury resort · Water sports" }],
     pace: "Unhurried", crowds: "Low", vegFood: "Medium" },
-  { id: 3, dest: "Bali", vibe: "Relaxed", name: "Temples & Terraces", nights: 7, price: "72,498", route: [{ city: "Ubud", n: 3 }, { city: "Kintamani", n: 2 }, { city: "Sanur", n: 2 }], veg: true, img: baliImgs[2],
+  { id: 3, dest: "Bali", vibe: "Relaxed", name: "Temples, Rice & Terraces", nights: 7, price: "72,498", route: [{ city: "Ubud", n: 3 }, { city: "Kintamani", n: 2 }, { city: "Sanur", n: 2 }], veg: true, img: baliImgs[2],
     days: [{ city: "Ubud", n: 3, sub: "Art villages · Hot springs · Rice paddies" }, { city: "Kintamani", n: 2, sub: "Volcano views · Lake · Coffee" }, { city: "Sanur", n: 2, sub: "Quiet beach · Cycling · Markets" }],
     pace: "Unhurried", crowds: "Low", vegFood: "High" },
   { id: 4, dest: "Bali", vibe: "Explorer", name: "Surf & Summit", nights: 7, price: "58,498", route: [{ city: "Ubud", n: 2 }, { city: "Kintamani", n: 2 }, { city: "Canggu", n: 3 }], veg: false, img: baliImgs[3],

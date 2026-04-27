@@ -4,6 +4,10 @@ import { C } from "../data";
 
 const MOBILE_BREAKPOINT = 768;
 
+// Pages where BottomNav is rendered. Mirror BottomNav.showOn so the scroll
+// container only reserves space when the nav is actually visible.
+const NAV_PATHS = new Set(["/", "/plan", "/trips", "/account"]);
+
 export default function PhoneFrame({ children }) {
   const scrollRef = useRef(null);
   const location = useLocation();
@@ -19,12 +23,14 @@ export default function PhoneFrame({ children }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  const navPad = NAV_PATHS.has(location.pathname) ? 84 : 0;
+
   // Mobile: render full-screen, no frame chrome. Fixed viewport height so
   // the bottom nav can stick to the bottom across scroll / route changes.
   if (isMobile) {
     return (
       <div id="phone-frame" style={{ width: "100vw", height: "100dvh", background: C.white, fontFamily: "'Figtree', sans-serif", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: 84, WebkitOverflowScrolling: "touch" }} className="hide-scrollbar">
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: navPad, WebkitOverflowScrolling: "touch" }} className="hide-scrollbar">
           {children}
         </div>
       </div>
@@ -48,7 +54,7 @@ export default function PhoneFrame({ children }) {
         <div style={{ width: 126, height: 36, background: "#000", borderRadius: 20, position: "absolute", top: 4, left: "50%", transform: "translateX(-50%)", zIndex: 30 }} />
 
         {/* Scrollable content */}
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: 84 }} className="hide-scrollbar">
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: navPad }} className="hide-scrollbar">
           {children}
         </div>
 

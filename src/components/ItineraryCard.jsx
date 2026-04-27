@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Calendar } from "lucide-react";
 import { C, VS, allItineraries } from "../data";
 
@@ -55,7 +56,70 @@ const formatTravelDates = (travelDates, nights) => {
   return `${from.toLocaleDateString("en-IN", opts)} – ${to.toLocaleDateString("en-IN", opts)}, ${to.getFullYear()}`;
 };
 
-export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates, hideDest = false }) {
+// Route as inline title: "2N Ubud → 2N Seminyak → 3N Sanur"
+// Single line; auto-scrolls horizontally if it overflows the card width.
+function RouteTitle({ route, fullWidth }) {
+  const containerRef = useRef(null);
+  const measureRef = useRef(null);
+  const [overflows, setOverflows] = useState(false);
+
+  const text = route.map(r => `${r.n}N ${r.city}`).join("  →  ");
+
+  useEffect(() => {
+    const c = containerRef.current;
+    const m = measureRef.current;
+    if (!c || !m) return;
+    setOverflows(m.scrollWidth > c.clientWidth + 1);
+  }, [text]);
+
+  const titleStyle = {
+    fontSize: fullWidth ? 20 : 18,
+    fontWeight: 700,
+    color: "#fff",
+    letterSpacing: "-0.2px",
+    lineHeight: 1.2,
+    whiteSpace: "nowrap",
+    display: "inline-block",
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        width: "100%",
+        margin: "0 0 2px",
+        maskImage: overflows
+          ? "linear-gradient(to right, #000 0%, #000 82%, transparent 100%)"
+          : undefined,
+        WebkitMaskImage: overflows
+          ? "linear-gradient(to right, #000 0%, #000 82%, transparent 100%)"
+          : undefined,
+      }}
+    >
+      {/* Hidden measurer to detect overflow */}
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        style={{ ...titleStyle, position: "absolute", visibility: "hidden", pointerEvents: "none" }}
+      >
+        {text}
+      </span>
+
+      {overflows ? (
+        <div className="marquee-strip" style={{ display: "inline-flex", width: "max-content" }}>
+          <span style={titleStyle}>{text}</span>
+          <span style={{ ...titleStyle, paddingLeft: 40 }}>{text}</span>
+        </div>
+      ) : (
+        <span style={titleStyle}>{text}</span>
+      )}
+    </div>
+  );
+}
+
+export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates, hideDest = false, showVersion = false }) {
   const v = VS[vibe || it.vibe];
   const cardW = fullWidth ? "100%" : 272;
   const cardH = fullWidth ? 360 : 340;
@@ -85,21 +149,33 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{it.dest}</span>
                 <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>🌙 {it.nights}N</span>
-                <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
-                <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.5px", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" }}>{getVersion(it)}</span>
+                {showVersion && (<>
+                  <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.5px", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" }}>{getVersion(it)}</span>
+                </>)}
               </div>
             </>
           ) : hideDest ? (
             <>
-              <h3 style={{ fontSize: fullWidth ? 22 : 20, fontWeight: 700, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.3px", lineHeight: 1.15 }}>
-                {it.name || it.route.map(r => r.city).join(" · ")}
-              </h3>
+              {/* Title: route inline with nights, single-line marquee */}
+              <RouteTitle route={it.route} fullWidth={fullWidth} />
+
+              {/* Subtitle: variant tagline (the old name) */}
+              {it.name && (
+                <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.78)", margin: "0 0 6px", letterSpacing: "0.1px", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {it.name}
+                </p>
+              )}
+
+              {/* Meta row: dest · total nights · (version only in Plan) · resort */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 6px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{it.dest}</span>
                 <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>🌙 {it.nights}N</span>
-                <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
-                <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.5px", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" }}>{getVersion(it)}</span>
+                {showVersion && (<>
+                  <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.5px", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" }}>{getVersion(it)}</span>
+                </>)}
                 {it.resort && (<>
                   <span style={{ fontSize: 14, lineHeight: 1, color: "rgba(255,255,255,0.65)" }}>•</span>
                   <span style={{ fontSize: 14, fontWeight: 600, color: C.p300 }}>★ {it.resort}</span>
@@ -112,13 +188,13 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
                 <h3 style={{ fontSize: fullWidth ? 24 : 22, fontWeight: 700, color: "#fff", margin: 0, letterSpacing: "-0.3px" }}>{it.dest}</h3>
                 <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>·</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>🌙 {it.nights}N</span>
-                <span style={versionBadgeStyle}>{getVersion(it)}</span>
+                {showVersion && <span style={versionBadgeStyle}>{getVersion(it)}</span>}
               </div>
               {it.resort && <p style={{ fontSize: 14, color: C.p300, fontWeight: 600, margin: "0 0 4px" }}>★ {it.resort}</p>}
             </>
           )}
 
-          {/* Bottom banner: dates (if available) or route */}
+          {/* Bottom banner: dates (if available); for hideDest the route is in the title so nothing else needed */}
           {hasDates ? (
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
               <Calendar size={11} color="rgba(255,255,255,0.75)" />
@@ -126,7 +202,7 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
                 {formatTravelDates(travelDates, it.nights)}
               </span>
             </div>
-          ) : (
+          ) : !hideDest ? (
             <div className="hs" style={{ gap: 4, marginBottom: 10 }}>
               {(it.villas || it.route).map((r, i) => (
                 <span key={i} style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -134,6 +210,8 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
                 </span>
               ))}
             </div>
+          ) : (
+            <div style={{ marginBottom: 10 }} />
           )}
 
           {/* Price + View link */}
