@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, Calendar } from "lucide-react";
 import { C, VS, allItineraries } from "../data";
 
@@ -56,65 +56,48 @@ const formatTravelDates = (travelDates, nights) => {
   return `${from.toLocaleDateString("en-IN", opts)} – ${to.toLocaleDateString("en-IN", opts)}, ${to.getFullYear()}`;
 };
 
-// Route as inline title: "2N Ubud → 2N Seminyak → 3N Sanur"
-// Single line; auto-scrolls horizontally if it overflows the card width.
+// Route as inline title: "2N Ubud · 2N Seminyak · 3N Sanur"
+// 2-line max, dot separator. Overflow → drops tail cities, appends "+N cities" italic.
 function RouteTitle({ route, fullWidth }) {
-  const containerRef = useRef(null);
-  const measureRef = useRef(null);
-  const [overflows, setOverflows] = useState(false);
+  const ref = useRef(null);
+  const [k, setK] = useState(route.length);
 
-  const text = route.map(r => `${r.n}N ${r.city}`).join("  →  ");
+  const fontSize = fullWidth ? 17 : 16;
+  const lineHeight = 1.25;
 
-  useEffect(() => {
-    const c = containerRef.current;
-    const m = measureRef.current;
-    if (!c || !m) return;
-    setOverflows(m.scrollWidth > c.clientWidth + 1);
-  }, [text]);
+  useLayoutEffect(() => { setK(route.length); }, [route]);
 
-  const titleStyle = {
-    fontSize: fullWidth ? 20 : 18,
-    fontWeight: 700,
-    color: "#fff",
-    letterSpacing: "-0.2px",
-    lineHeight: 1.2,
-    whiteSpace: "nowrap",
-    display: "inline-block",
-  };
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const maxH = fontSize * lineHeight * 2 + 1;
+    if (el.scrollHeight > maxH && k > 1) setK(k - 1);
+  });
+
+  const visible = route.slice(0, k);
+  const remaining = route.length - k;
+  const text = visible.map(r => `${r.n}N ${r.city}`).join("  ·  ");
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        width: "100%",
-        margin: "0 0 2px",
-        maskImage: overflows
-          ? "linear-gradient(to right, #000 0%, #000 82%, transparent 100%)"
-          : undefined,
-        WebkitMaskImage: overflows
-          ? "linear-gradient(to right, #000 0%, #000 82%, transparent 100%)"
-          : undefined,
-      }}
-    >
-      {/* Hidden measurer to detect overflow */}
+    <div style={{ width: "100%", margin: "0 0 4px" }}>
       <span
-        ref={measureRef}
-        aria-hidden="true"
-        style={{ ...titleStyle, position: "absolute", visibility: "hidden", pointerEvents: "none" }}
+        ref={ref}
+        style={{
+          fontSize, fontWeight: 700, color: "#fff", letterSpacing: "-0.2px",
+          lineHeight, display: "block",
+          wordBreak: "normal", overflowWrap: "break-word",
+        }}
       >
         {text}
+        {remaining > 0 && (
+          <span style={{
+            fontSize: 12, fontWeight: 500, fontStyle: "italic",
+            color: "rgba(255,255,255,0.78)", marginLeft: 6, letterSpacing: "0.1px",
+          }}>
+            +{remaining} {remaining === 1 ? "city" : "cities"}
+          </span>
+        )}
       </span>
-
-      {overflows ? (
-        <div className="marquee-strip" style={{ display: "inline-flex", width: "max-content" }}>
-          <span style={titleStyle}>{text}</span>
-          <span style={{ ...titleStyle, paddingLeft: 40 }}>{text}</span>
-        </div>
-      ) : (
-        <span style={titleStyle}>{text}</span>
-      )}
     </div>
   );
 }
@@ -157,15 +140,8 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
             </>
           ) : hideDest ? (
             <>
-              {/* Title: route inline with nights, single-line marquee */}
+              {/* Title: route inline with nights, 2-line cap with +N cities suffix */}
               <RouteTitle route={it.route} fullWidth={fullWidth} />
-
-              {/* Subtitle: variant tagline (the old name) */}
-              {it.name && (
-                <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.78)", margin: "0 0 6px", letterSpacing: "0.1px", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {it.name}
-                </p>
-              )}
 
               {/* Meta row: dest · total nights · (version only in Plan) · resort */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 6px", flexWrap: "wrap" }}>
