@@ -1187,14 +1187,18 @@ function ActivityCards({ activities, city }) {
                 background: act.photo ? `url(${act.photo}) center/cover no-repeat` : "#F4F2F0",
               }}>
                 <div style={{
-                  position: "absolute", left: 116, top: 90,
+                  position: "absolute", right: 8, bottom: 8,
                   display: "flex", alignItems: "center", gap: 4,
-                  padding: "4px 6px", background: "#181E4C",
-                  boxShadow: "inset -1px -1px 4px rgba(255,255,255,0.25)",
-                  borderRadius: 4,
+                  padding: "4px 8px",
+                  background: "rgba(20,20,28,0.38)",
+                  backdropFilter: "blur(14px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(14px) saturate(180%)",
+                  border: "0.5px solid rgba(255,255,255,0.28)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(0,0,0,0.18)",
+                  borderRadius: 999,
                 }}>
-                  <PlayCircle size={12} color="#fff" strokeWidth={1.8} />
-                  <span style={{ fontSize: 10, fontWeight: 500, color: "#fff", lineHeight: "14px" }}>{dur}</span>
+                  <PlayCircle size={11} color="#fff" strokeWidth={2} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "#fff", lineHeight: "14px", letterSpacing: 0.1 }}>{dur}</span>
                 </div>
               </div>
               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 2 }}>
