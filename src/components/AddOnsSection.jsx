@@ -54,7 +54,7 @@ function Sheet({ title, onClose, children, footer }) {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 200,
+      position: "absolute", inset: 0, zIndex: 200,
       display: "flex", flexDirection: "column", justifyContent: "flex-end",
     }}>
       <div

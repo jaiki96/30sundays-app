@@ -41,7 +41,7 @@ function ChatFAB() {
       onClick={() => alert("Chat with your travel consultant — opens WhatsApp.")}
       aria-label="Chat with consultant"
       style={{
-        position: "fixed", bottom: 140, right: 16, width: 52, height: 52,
+        position: "absolute", bottom: 140, right: 16, width: 52, height: 52,
         borderRadius: "50%", background: C.p600, border: "none", padding: 0, cursor: "pointer",
         boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
         display: "grid", placeItems: "center", lineHeight: 0,
@@ -198,7 +198,7 @@ function CoTravelersSection({ trip }) {
       {/* Manage Guests Bottom Sheet */}
       {showSheet && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 100,
+          position: "absolute", inset: 0, zIndex: 100,
           display: "flex", flexDirection: "column", justifyContent: "flex-end",
         }}>
           <div
