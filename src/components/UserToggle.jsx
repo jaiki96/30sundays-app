@@ -29,13 +29,14 @@ export default function UserToggle({ userState, setUserState }) {
         style={{
           position: "fixed", bottom: 84, right: 16, zIndex: 90,
           width: 44, height: 44, borderRadius: "50%",
-          background: C.p600, color: "#fff", border: "none",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          background: C.p600, color: "#fff", border: "none", padding: 0,
+          display: "grid", placeItems: "center",
+          lineHeight: 0,
           cursor: "pointer", fontFamily: "inherit",
           boxShadow: "0 6px 20px rgba(227,27,83,0.45)",
         }}
       >
-        {open ? <XIcon size={20} /> : <Beaker size={18} />}
+        {open ? <XIcon size={20} strokeWidth={2.2} /> : <Beaker size={20} strokeWidth={2} />}
       </button>
 
       {/* Popup menu */}
