@@ -44,8 +44,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
     <PhoneFrame>
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
-        <Route path="/" element={<Home userState={userState} />} />
-        <Route path="/v2" element={<HomeV2 />} />
+        <Route path="/" element={<HomeV2 />} />
+        <Route path="/v1" element={<Home userState={userState} />} />
         <Route path="/destination/Maldives" element={<MaldivesDestination />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/destination/:name" element={<Destination />} />
