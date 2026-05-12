@@ -415,74 +415,91 @@ function FlightsSection({ flights }) {
 }
 
 // ─── Hotel Cards Carousel (Figma-styled: Day label above, rating + Booking.com badge) ───
-function HotelsSection({ hotels, tripId }) {
+function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false }) {
   const navigate = useNavigate();
+  const directionUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${hotel.name}, ${hotel.city}`)}`;
+  const goPdp = () => tripId && navigate(`/trips/${tripId}/hotel/${hotelIdx}`);
+
+  return (
+    <div
+      onClick={goPdp}
+      style={{
+        width: fullWidth ? "100%" : undefined,
+        background: C.white, borderRadius: 12,
+        display: "flex", flexDirection: "column", gap: 20,
+        cursor: tripId ? "pointer" : "default",
+      }}
+    >
+      {/* Image block */}
+      <div style={{
+        padding: 10, height: 240, borderRadius: 12,
+        background: hotel.photo
+          ? `url(${hotel.photo}) center/cover no-repeat`
+          : "#F4F2F0",
+      }} />
+
+      {/* Description */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Rating row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Star size={20} fill="#4EAC7E" color="#4EAC7E" strokeWidth={0} />
+              <span style={{ fontSize: 14, fontWeight: 500, color: "#4EAC7E", lineHeight: "20px" }}>{hotel.stars} star hotel</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#003580", padding: "2px 4px", borderRadius: 3 }}>B</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", lineHeight: "20px" }}>{hotel.bookingRating} Rated</span>
+            </div>
+          </div>
+
+          {/* Meta */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <h5 style={{ fontSize: 14, fontWeight: 500, color: "#000", margin: 0, lineHeight: "20px" }}>{hotel.name}</h5>
+            <p style={{ fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px" }}>{hotel.roomType}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <MapPin size={14} color="#666C99" />
+              <span style={{ fontSize: 12, color: "#666C99", lineHeight: "16px" }}>{hotel.address || hotel.city}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Get direction button */}
+        <a
+          href={directionUrl}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
+            padding: "8px 24px", height: 44,
+            background: C.white, border: "1px solid #E0E2EB",
+            boxShadow: "0 4px 12px -4px #E0E2EB",
+            borderRadius: 40, color: "#FD014F", textDecoration: "none",
+            fontSize: 14, fontWeight: 500,
+          }}
+        >
+          <MapPin size={20} color="#FD014F" />
+          Get direction
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function HotelsSection({ hotels, tripId }) {
   if (!hotels || hotels.length === 0) return null;
   return (
     <div style={{ marginBottom: 24 }}>
-      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Hotels</h4>
-      <div className="hs" style={{ gap: 12, paddingLeft: 0, paddingRight: 16 }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Your hotels</h4>
+      <div className="hs" style={{ gap: 16, paddingLeft: 0, paddingRight: 16 }}>
         {hotels.map((ht, idx) => (
-          <div key={ht.id} style={{ minWidth: 280, maxWidth: 300, flexShrink: 0 }}>
-            {/* Day label above the card */}
+          <div key={ht.id} style={{ minWidth: 309, maxWidth: 309, flexShrink: 0 }}>
             <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 16, fontWeight: 500, color: "#181E4C", lineHeight: "22px" }}>{ht.dayRange}</div>
               <div style={{ fontSize: 14, color: "#666C99", lineHeight: "20px" }}>{ht.city}</div>
             </div>
-            {/* Card */}
-            <div
-              onClick={() => tripId && navigate(`/trips/${tripId}/hotel/${idx}`)}
-              style={{
-                background: C.white, borderRadius: 12, overflow: "hidden",
-                filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
-                cursor: tripId ? "pointer" : "default",
-              }}>
-              {/* Image with rating + booking badge overlay */}
-              <div style={{ position: "relative", padding: 8, background: C.white }}>
-                <img
-                  src={ht.photo || ht.fallbackPhoto}
-                  alt={ht.name}
-                  style={{ width: "100%", aspectRatio: "16/10", objectFit: "cover", borderRadius: "8px 8px 0 0", display: "block" }}
-                  onError={(e) => { e.target.src = ht.fallbackPhoto; }}
-                />
-                {/* Star rating badge bottom-left */}
-                <div style={{
-                  position: "absolute", left: 16, bottom: 16,
-                  display: "flex", alignItems: "center", padding: "0 6px",
-                  background: "rgba(255,255,255,0.9)", border: "1px solid #fff",
-                  borderRadius: "0 4px",
-                  height: 22,
-                }}>
-                  <Star size={14} fill="#4EAC7E" color="#4EAC7E" strokeWidth={0} />
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#4EAC7E", marginLeft: 2 }}>{ht.stars} star hotel</span>
-                </div>
-                {/* Booking.com rating badge bottom-right */}
-                <div style={{
-                  position: "absolute", right: 16, bottom: 16,
-                  display: "flex", alignItems: "center", gap: 4, padding: "0 8px",
-                  background: "rgba(255,255,255,0.95)", border: "1px solid #fff",
-                  borderRadius: "0 4px",
-                  height: 22,
-                }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: "#003580", background: "#003580", color: "#fff", padding: "1px 3px", borderRadius: 2 }}>B</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#181E4C" }}>{ht.bookingRating} Rated</span>
-                </div>
-              </div>
-              {/* Body */}
-              <div style={{ padding: "8px 12px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 4 }}>
-                  <h5 style={{ fontSize: 14, fontWeight: 500, color: "#000", margin: 0, lineHeight: "20px", flex: 1 }}>{ht.name}</h5>
-                  {ht.price && (
-                    <span style={{ fontSize: 12, color: "#666C99", lineHeight: "16px", whiteSpace: "nowrap" }}>{ht.price}</span>
-                  )}
-                </div>
-                <p style={{ fontSize: 12, color: "#666C99", margin: "0 0 4px", lineHeight: "16px" }}>{ht.roomType}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <MapPin size={14} color="#666C99" />
-                  <span style={{ fontSize: 12, color: "#666C99", lineHeight: "16px" }}>{ht.city}</span>
-                </div>
-              </div>
-            </div>
+            <BookedHotelCard hotel={ht} tripId={tripId} hotelIdx={idx} />
           </div>
         ))}
       </div>
@@ -1197,70 +1214,18 @@ function ActivityCards({ activities, city }) {
 }
 
 function DayHotelCard({ hotel, trip }) {
-  const navigate = useNavigate();
   if (!hotel) return null;
-  // Match day's hotel to trip.hotels by name to get the right index for navigation
   const matchIdx = trip?.hotels?.findIndex(h => h.name === hotel.name);
   const canNavigate = trip && matchIdx !== undefined && matchIdx >= 0;
   return (
     <div style={{ background: C.white, padding: "24px 20px" }}>
-      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", lineHeight: "28px" }}>Your stay</h4>
-      <div
-        onClick={() => canNavigate && navigate(`/trips/${trip.id}/hotel/${matchIdx}`)}
-        style={{
-          borderRadius: 12, overflow: "hidden",
-          filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
-          cursor: canNavigate ? "pointer" : "default",
-        }}>
-        <div style={{ position: "relative", padding: 8, background: C.white }}>
-          <div style={{
-            width: "100%", aspectRatio: "16/10", borderRadius: "8px 8px 0 0",
-            background: hotel.photo ? `url(${hotel.photo}) center/cover no-repeat` : "#F4F2F0",
-          }} />
-          <div style={{
-            position: "absolute", left: 16, bottom: 16,
-            display: "flex", alignItems: "center", padding: "0 6px",
-            background: "rgba(255,255,255,0.9)", border: "1px solid #fff",
-            borderRadius: "0 4px", height: 22,
-          }}>
-            <Star size={14} fill="#4EAC7E" color="#4EAC7E" strokeWidth={0} />
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#4EAC7E", marginLeft: 2 }}>{hotel.stars} star hotel</span>
-          </div>
-          <div style={{
-            position: "absolute", right: 16, bottom: 16,
-            display: "flex", alignItems: "center", gap: 4, padding: "0 8px",
-            background: "rgba(255,255,255,0.95)", border: "1px solid #fff",
-            borderRadius: "0 4px", height: 22,
-          }}>
-            <span style={{ fontSize: 9, fontWeight: 700, background: "#003580", color: "#fff", padding: "1px 3px", borderRadius: 2 }}>B</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#181E4C" }}>{hotel.bookingRating} Rated</span>
-          </div>
-        </div>
-        <div style={{ padding: "8px 12px 16px" }}>
-          <h5 style={{ fontSize: 14, fontWeight: 500, color: "#000", margin: "0 0 4px", lineHeight: "20px" }}>{hotel.name}</h5>
-          <p style={{ fontSize: 12, color: "#666C99", margin: "0 0 4px", lineHeight: "16px" }}>{hotel.roomType}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <MapPin size={14} color="#666C99" />
-            <span style={{ fontSize: 12, color: "#666C99", lineHeight: "16px" }}>{hotel.city}</span>
-          </div>
-        </div>
-      </div>
-      <a
-        href={getDirectionUrl(`${hotel.name}, ${hotel.city}`)}
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          padding: "8px 24px", marginTop: 16,
-          background: C.white, border: "1px solid #E0E2EB",
-          boxShadow: "0 4px 12px -4px #E0E2EB",
-          borderRadius: 40, color: "#FD014F", textDecoration: "none",
-          fontSize: 14, fontWeight: 500,
-        }}
-      >
-        <MapPin size={20} color="#FD014F" />
-        Get direction
-      </a>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", lineHeight: "28px" }}>Your hotel</h4>
+      <BookedHotelCard
+        hotel={hotel}
+        tripId={canNavigate ? trip.id : undefined}
+        hotelIdx={canNavigate ? matchIdx : undefined}
+        fullWidth
+      />
     </div>
   );
 }
