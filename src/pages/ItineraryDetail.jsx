@@ -13,6 +13,8 @@ import DayScoringRow from "../components/DayScoringRow";
 import DayScoringModal from "../components/DayScoringModal";
 import { getDayScore } from "../data/dayScoring";
 import { videosForDest } from "../data/watchData";
+import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
+import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 
 const PREBOOKING_CONSULTANTS = [
   { name: "Riya Shah", phone: "+919876500011" },
@@ -1089,14 +1091,25 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
 function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
   const [dayIdx, setDayIdx] = useState(initialDay);
   const [actIdx, setActIdx] = useState(initialActivity);
-  const [scoringMetric, setScoringMetric] = useState(null);
+  const [sheetState, setSheetState] = useState("hidden"); // "hidden" | "peek" | "full"
+  const [activeMetric, setActiveMetric] = useState(null);
+  const [chooseToast, setChooseToast] = useState(null);
   const touchStart = useRef(null);
 
   const currentDay = days[dayIdx];
   const activities = currentDay?.activities || [];
   const currentAct = activities[actIdx] || activities[0];
-  const score = currentDay ? getDayScore(currentDay, dayIdx, days) : null;
-  const globalDayNum = days.slice(0, dayIdx).reduce((a, d) => a + d.n, 0) + 1;
+  const dayNum = days.slice(0, dayIdx).reduce((a, d) => a + d.n, 0) + 1;
+
+  const scoring = useMemo(() => getDayScoring(currentDay, dayIdx, days), [currentDay, dayIdx, days]);
+  const tours = useMemo(() => getDayTours(currentDay, dayIdx, days), [currentDay, dayIdx, days]);
+  const allDaysScoring = useMemo(() => getAllDaysScoring(days), [days]);
+
+  // Mock price + option
+  const optionNum = 1, totalOptions = 3;
+  const price = 23450 + dayIdx * 250;
+  const strikePrice = Math.round(price / 0.8);
+  const description = `Curated experiences in ${currentDay?.city}, with guided activities, transfers, and tasting stops included.`;
 
   const goNext = useCallback(() => {
     if (actIdx < activities.length - 1) {
@@ -1117,6 +1130,7 @@ function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
   }, [actIdx, dayIdx, days]);
 
   const handleTap = (e) => {
+    if (sheetState !== "hidden") return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x > rect.width * 0.55) goNext();
@@ -1125,113 +1139,302 @@ function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
 
   const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientY; };
   const handleTouchEnd = (e) => {
-    if (!touchStart.current) return;
+    if (!touchStart.current || sheetState !== "hidden") { touchStart.current = null; return; }
     const diff = touchStart.current - e.changedTouches[0].clientY;
     if (diff > 60 && dayIdx < days.length - 1) { setDayIdx(d => d + 1); setActIdx(0); }
     else if (diff < -60 && dayIdx > 0) { setDayIdx(d => d - 1); setActIdx(0); }
     touchStart.current = null;
   };
 
+  const handleChoose = () => {
+    setChooseToast(`Day ${dayNum} · ${currentDay?.city} chosen ✓`);
+    setTimeout(() => setChooseToast(null), 1800);
+  };
+
   return (
     <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, zIndex: 200, background: "#000", borderRadius: 44, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      {/* Image area (top half) */}
-      <div style={{ position: "relative", height: 420, flexShrink: 0, overflow: "hidden", background: "#000" }}>
-        <img src={currentAct?.img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-        {/* Dark gradient at top for header readability */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(rgba(0,0,0,0.55) 0%, transparent 30%, transparent 75%, rgba(0,0,0,0.4) 100%)" }} />
+      {/* Background image — always present */}
+      <img src={currentAct?.img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
 
-        {/* Tap area for navigation */}
-        <div onClick={handleTap} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "absolute", inset: 0 }} />
+      {/* Top dark gradient — always */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 100, background: "linear-gradient(180deg, rgba(0,0,0,0.8) 10%, rgba(0,0,0,0) 100%)", zIndex: 2 }} />
 
-        {/* Header: progress + title + close */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "44px 16px 0", zIndex: 2 }}>
-          {/* Progress bars */}
-          <div style={{ display: "flex", gap: 3, marginBottom: 10 }}>
-            {activities.map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 2.5, borderRadius: 2, background: i <= actIdx ? "#fff" : "rgba(255,255,255,0.3)" }} />
-            ))}
-          </div>
-          {/* Activity name + close */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-            <p style={{ fontSize: 16, fontWeight: 600, color: "#fff", margin: 0, lineHeight: "20px", flex: 1, minWidth: 0 }}>
-              {currentAct?.name}
-            </p>
-            <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.18)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-              <XIcon size={14} color="#fff" />
-            </button>
-          </div>
+      {/* Bottom gradient — only when sheet hidden */}
+      {sheetState === "hidden" && (
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 220, background: "linear-gradient(transparent, rgba(0,0,0,0.85))", zIndex: 2 }} />
+      )}
+
+      {/* Tap zone (left/right nav) — only when sheet hidden */}
+      {sheetState === "hidden" && (
+        <div onClick={handleTap} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "absolute", inset: 0, zIndex: 1 }} />
+      )}
+
+      {/* TOP — progress bars + activity title + close (always visible) */}
+      <div style={{ position: "relative", zIndex: 5, padding: "50px 16px 0" }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+          {activities.map((_, i) => (
+            <div key={i} style={{ flex: 1, height: 4, borderRadius: 8, background: "rgba(255,255,255,0.5)", overflow: "hidden" }}>
+              <div style={{ width: i < actIdx ? "100%" : i === actIdx ? "60%" : "0%", height: "100%", background: "#fff", transition: "width 0.3s" }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 400, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
+            {currentAct?.name}
+          </span>
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <XIcon size={16} color="#fff" />
+          </button>
         </div>
       </div>
 
-      {/* Bottom card */}
-      <div className="hide-scrollbar" style={{ flex: 1, background: "#fff", borderRadius: "16px 16px 0 0", marginTop: -16, position: "relative", zIndex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        {/* Grabber */}
-        <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: "#E5E7EB" }} />
-        </div>
-
-        <div style={{ padding: "12px 16px 0" }}>
-          {/* Day + Option pill */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>
-              Day {globalDayNum} – {currentDay?.city}
-            </p>
-            <span style={{ fontSize: 11, color: C.sub }}>Option 1 of 3</span>
-          </div>
-
-          {/* Description (placeholder line) */}
-          <p style={{ fontSize: 12, color: C.sub, margin: "0 0 10px", lineHeight: "17px" }}>
-            {currentDay?.sub || activities.map(a => a.name).join(" · ")}
-          </p>
-
-          {/* Price row */}
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹23,450</span>
-            <span style={{ fontSize: 12, color: C.sub, textDecoration: "line-through" }}>₹26,000</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#027A48" }}>(-20%)</span>
-          </div>
-
-          {/* Scoring row */}
-          <div style={{ marginLeft: -16, marginRight: -16, marginBottom: 4 }}>
-            <DayScoringRow score={score} onOpen={(m) => setScoringMetric(m)} />
-          </div>
-
-          {/* Your day will cover */}
-          <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: "16px 0 8px" }}>Your day will cover:</p>
-          <div style={{ position: "relative", paddingLeft: 14, marginBottom: 16 }}>
-            <div style={{ position: "absolute", left: 3, top: 6, bottom: 6, width: 1, borderLeft: "1px dashed #D0D5DD" }} />
-            {activities.map((act, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", position: "relative" }}>
-                <div style={{ position: "absolute", left: -14, top: 12, width: 7, height: 7, borderRadius: "50%", background: i === actIdx ? C.p600 : "#fff", border: `2px solid ${i === actIdx ? C.p600 : "#D0D5DD"}` }} />
-                <span style={{ fontSize: 12, fontWeight: i === actIdx ? 700 : 500, color: i === actIdx ? C.head : C.sub }}>
-                  {act.name}
-                </span>
+      {/* Customer photos pill — only when sheet hidden */}
+      {sheetState === "hidden" && dest && customerPhotos[dest] && (
+        <div style={{ position: "absolute", bottom: 200, right: 16, zIndex: 5, display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 20, padding: "6px 12px 6px 6px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.15)" }}>
+          <div style={{ display: "flex" }}>
+            {customerPhotos[dest].slice(0, 2).map((img, i) => (
+              <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.4)", marginLeft: i > 0 ? -6 : 0 }}>
+                <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
             ))}
           </div>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{customerPhotos[dest].length} photos</span>
+        </div>
+      )}
+
+      {/* BOTTOM — title + Choose pill (Stage 1) */}
+      {sheetState === "hidden" && (
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 16px 28px", zIndex: 5 }}>
+          <div onClick={() => setSheetState("peek")} style={{ cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", lineHeight: 1.4 }}>
+                Day {dayNum} - {currentDay?.city}
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleChoose(); }}
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  padding: "6px 14px", background: C.p600, color: "#fff",
+                  border: "none", borderRadius: 999,
+                  fontSize: 12, fontWeight: 500, fontFamily: "inherit", cursor: "pointer",
+                  boxShadow: "0 4px 16px -2px rgba(253,1,79,0.25)",
+                }}
+              >
+                Choose
+              </button>
+            </div>
+            <p style={{ margin: "0 0 6px", fontSize: 14, color: "#F9F9FB" }}>Option {optionNum} of {totalOptions}</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#F9F9FB", lineHeight: 1.35, opacity: 0.9 }}>
+              {description}
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, opacity: 0.85 }}>
+              <ChevronUp size={14} color="#fff" />
+              <span style={{ fontSize: 11, color: "#fff", fontWeight: 500 }}>Tap to see day details</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SHEET (Stage 2 / 3) */}
+      {sheetState !== "hidden" && (
+        <DaySheet
+          state={sheetState}
+          setState={setSheetState}
+          day={currentDay}
+          dayNum={dayNum}
+          dayIdx={dayIdx}
+          dest={dest}
+          scoring={scoring}
+          tours={tours}
+          price={price}
+          strikePrice={strikePrice}
+          optionNum={optionNum}
+          totalOptions={totalOptions}
+          description={description}
+          onMetricOpen={setActiveMetric}
+          onChoose={handleChoose}
+        />
+      )}
+
+      {/* Metric drill-in modal */}
+      {activeMetric && (
+        <DayScoreModal
+          metric={activeMetric}
+          scoring={scoring}
+          allDaysScoring={allDaysScoring}
+          currentDayIdx={dayIdx}
+          dayLabel={`Day ${dayNum} · ${currentDay?.city}`}
+          onClose={() => setActiveMetric(null)}
+        />
+      )}
+
+      {/* Choose toast */}
+      {chooseToast && (
+        <div style={{
+          position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)", zIndex: 50,
+          padding: "10px 18px", borderRadius: 999, background: "rgba(20,20,22,0.95)",
+          color: "#fff", fontSize: 13, fontWeight: 500, letterSpacing: 0.2,
+          boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+        }}>{chooseToast}</div>
+      )}
+    </div>
+  );
+}
+
+// Day-detail bottom sheet — Stage 2 (peek) and Stage 3 (full).
+function DaySheet({ state, setState, day, dayNum, dayIdx, dest, scoring, tours, price, strikePrice, optionNum, totalOptions, description, onMetricOpen, onChoose }) {
+  const sheetHeight = state === "peek" ? "62%" : "calc(100% - 38px)";
+  const photos = dest && customerPhotos[dest] ? customerPhotos[dest] : [];
+  const galleryItems = photos.length >= 6 ? photos.slice(0, 6) : [...photos, ...(day?.activities || [])].slice(0, 6);
+
+  return (
+    <>
+      {/* Backdrop above image, below sheet */}
+      <div onClick={() => setState("hidden")} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 8 }} />
+
+      <div className="animate-slide-up" style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: sheetHeight,
+        background: "#fff", borderRadius: "16px 16px 0 0", zIndex: 9,
+        display: "flex", flexDirection: "column", overflow: "hidden",
+        transition: "height 0.3s ease",
+      }}>
+        {/* Drag handle (toggles peek <-> full) */}
+        <div
+          onClick={() => setState(state === "peek" ? "full" : "peek")}
+          style={{ padding: "8px 0 4px", cursor: "pointer", flexShrink: 0 }}
+        >
+          <div style={{ width: 72, height: 4, borderRadius: 999, background: "#E0E2EB", margin: "0 auto" }} />
+        </div>
+
+        <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+          {/* Day title row */}
+          <div style={{ padding: "12px 20px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <h2 style={{ margin: 0, flex: 1, fontSize: 18, fontWeight: 600, color: "#181E4C", lineHeight: 1.4 }}>
+                Day {dayNum} - {day?.city}
+              </h2>
+              <span style={{ fontSize: 14, color: "#666C99" }}>Option {optionNum} of {totalOptions}</span>
+            </div>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#666C99", lineHeight: 1.35 }}>
+              {description}
+            </p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 18, fontWeight: 600, color: "#181E4C" }}>Rs.{price.toLocaleString("en-IN")}</span>
+              <span style={{ fontSize: 14, color: "#666C99", textDecoration: "line-through" }}>Rs.{strikePrice.toLocaleString("en-IN")}</span>
+              <span style={{ fontSize: 14, color: "#666C99" }}>(-20%)</span>
+            </div>
+          </div>
+
+          {/* SCORE ROW */}
+          <DayScoreRow scoring={scoring} onOpen={onMetricOpen} />
+
+          {/* Your day will cover */}
+          <div style={{ padding: "16px 20px 8px" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>
+              Your day will cover:
+            </h3>
+            {tours.map((tour, ti) => (
+              <TourBlock key={ti} tour={tour} />
+            ))}
+          </div>
+
+          <div style={{ height: 1, background: "#E0E2EB", margin: "8px 0" }} />
+
+          {/* Reviewer */}
+          <div style={{ padding: "16px 20px 16px" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Our customer says</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.p100, color: C.p600, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>N</div>
+              <span style={{ fontSize: 16, fontWeight: 500, color: "#090C10" }}>Nishant</span>
+            </div>
+            <div style={{ display: "flex", gap: 2, marginBottom: 8 }}>
+              {[1,2,3,4,5].map(s => <Star key={s} size={16} color="#4EAC7E" fill="#4EAC7E" strokeWidth={0} />)}
+            </div>
+            <p style={{ margin: "0 0 4px", fontSize: 14, color: "#666C99", lineHeight: 1.45 }}>
+              They don't suggest over touristy places like others. Their Jatiluwih terraces + Beach love combination in Bali is a must try for every couple. We had a great time enjoying the sunset sitting on Bean bags from a cliff overlooking an ocean. No other travel agent understands Couples like this!
+            </p>
+            <span style={{ fontSize: 14, color: "#181E4C", fontWeight: 500, cursor: "pointer" }}>Read more</span>
+          </div>
+
+          {/* Traveller stories grid */}
+          {galleryItems.length >= 3 && (
+            <div style={{ padding: "8px 20px 24px" }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Traveller stories</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {galleryItems.map((p, i) => {
+                  const src = p.img || p;
+                  return (
+                    <div key={i} style={{ aspectRatio: "1 / 1", borderRadius: 8, overflow: "hidden", background: "#F5F5F5" }}>
+                      <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sticky CTA */}
-        <div style={{ marginTop: "auto", padding: "12px 16px 20px", borderTop: `1px solid ${C.div}`, background: "#fff" }}>
-          <button onClick={onClose} style={{
-            width: "100%", padding: "14px 16px",
-            background: C.p600, color: "#fff", border: "none", borderRadius: 999,
-            fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: "12px 16px", background: "#fff",
+          borderTop: "1px solid #E0E2EB", boxShadow: "0 -2px 11px rgba(0,0,0,0.06)",
+        }}>
+          <button onClick={onChoose} style={{
+            width: "100%", padding: "12px 24px", borderRadius: 999,
+            background: C.p600, color: "#fff", border: "none",
+            fontSize: 16, fontWeight: 500, fontFamily: "inherit", cursor: "pointer",
+            boxShadow: "0 4px 16px -2px rgba(253,1,79,0.25)",
           }}>
             Choose this day
           </button>
         </div>
       </div>
+    </>
+  );
+}
 
-      {/* Scoring drill-in modals */}
-      {scoringMetric && (
-        <DayScoringModal
-          key={scoringMetric}
-          metric={scoringMetric}
-          score={score}
-          onClose={() => setScoringMetric(null)}
-        />
-      )}
+// One tour group: heading + dashed-line timeline of items (intro text + activity cards).
+function TourBlock({ tour }) {
+  return (
+    <div style={{ marginBottom: 16, border: "1px solid #E0E2EB", borderRadius: 8, padding: 8 }}>
+      <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 500, color: "#181E4C" }}>{tour.heading}</h4>
+      <div style={{ position: "relative", paddingLeft: 16 }}>
+        {/* Dashed timeline */}
+        <div style={{ position: "absolute", left: 3, top: 12, bottom: 12, width: 0, borderLeft: "1px dashed #4EAC7E" }} />
+        {tour.intro && (
+          <div style={{ position: "relative", marginBottom: 12 }}>
+            <div style={{ position: "absolute", left: -16, top: 4, width: 8, height: 8, borderRadius: "50%", background: "#4EAC7E" }} />
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#181E4C" }}>{tour.intro.label}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99", lineHeight: 1.35 }}>{tour.intro.desc}</p>
+          </div>
+        )}
+        {tour.items.map((it, i) => (
+          <div key={i} style={{ position: "relative", marginBottom: i < tour.items.length - 1 ? 10 : 0 }}>
+            <div style={{
+              position: "absolute", left: -16, top: 36,
+              width: 8, height: 8, borderRadius: "50%",
+              background: i === 0 && tour.intro ? "#fff" : "#4EAC7E",
+              border: i === 0 && tour.intro ? "1px solid #4EAC7E" : "none",
+              boxSizing: "border-box",
+            }} />
+            <div style={{
+              display: "flex", alignItems: "center", padding: "0 0 0 8px",
+              background: "#fff", borderRadius: 8,
+              boxShadow: "0 4px 16px -4px rgba(16,24,40,0.06)",
+              border: "1px solid #F0F1F5",
+            }}>
+              <div style={{ width: 64, height: 64, borderRadius: 8, overflow: "hidden", background: "#F5F5F5", flexShrink: 0 }}>
+                <img src={it.img} alt={it.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, padding: "8px 12px" }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#181E4C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{it.desc}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
