@@ -35,20 +35,66 @@ function TripBottomNav() {
   );
 }
 
-// ─── Chat FAB ───
+// ─── Chat FAB (typing-bubble + halo pulse + unread bob) ───
 function ChatFAB() {
   return (
     <button
       onClick={() => alert("Chat with your travel consultant — opens WhatsApp.")}
       aria-label="Chat with consultant"
       style={{
-        position: "absolute", bottom: 140, right: 16, width: 52, height: 52,
-        borderRadius: "50%", background: C.p600, border: "none", padding: 0, cursor: "pointer",
-        boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
+        position: "absolute", bottom: 140, right: 16,
+        width: 52, height: 52, borderRadius: "50%",
+        background: "transparent", border: "none", padding: 0, cursor: "pointer",
         display: "grid", placeItems: "center", lineHeight: 0,
         zIndex: 15,
-      }}>
-      <MessageCircle size={22} color="#fff" fill="#fff" />
+        overflow: "visible",
+      }}
+    >
+      {/* Outward halo ripple (sits behind the button face) */}
+      <span style={{
+        position: "absolute", inset: 0, borderRadius: "50%",
+        background: C.p600,
+        animation: "cfHalo 2.4s ease-out infinite",
+        pointerEvents: "none",
+      }} />
+
+      {/* Static coral face */}
+      <span style={{
+        position: "absolute", inset: 0, borderRadius: "50%",
+        background: C.p600,
+        boxShadow: "0 6px 18px rgba(227,27,83,0.32)",
+      }} />
+
+      {/* Bubble + 3 typing dots */}
+      <svg
+        width="26" height="26" viewBox="0 0 24 24"
+        aria-hidden="true"
+        style={{ position: "relative", zIndex: 1 }}
+      >
+        <path
+          d="M3 11.5a8.5 8.5 0 1 1 4.2 7.32l-3.2.88a.5.5 0 0 1-.62-.62l.88-3.2A8.5 8.5 0 0 1 3 11.5z"
+          fill="#fff"
+        />
+        <circle cx="8"  cy="11.5" r="1.3" fill={C.p600} className="cf-dot cf-d1" />
+        <circle cx="12" cy="11.5" r="1.3" fill={C.p600} className="cf-dot cf-d2" />
+        <circle cx="16" cy="11.5" r="1.3" fill={C.p600} className="cf-dot cf-d3" />
+      </svg>
+
+      <style>{`
+        @keyframes cfHalo {
+          0%   { transform: scale(1);   opacity: 0.45; }
+          70%  { opacity: 0; }
+          100% { transform: scale(1.7); opacity: 0; }
+        }
+        @keyframes cfDot {
+          0%, 60%, 100% { opacity: 0.3; }
+          30%           { opacity: 1; }
+        }
+        .cf-dot  { animation: cfDot 1.4s ease-in-out infinite; }
+        .cf-d1   { animation-delay: 0s; }
+        .cf-d2   { animation-delay: 0.18s; }
+        .cf-d3   { animation-delay: 0.36s; }
+      `}</style>
     </button>
   );
 }

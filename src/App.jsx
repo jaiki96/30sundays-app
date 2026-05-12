@@ -14,6 +14,7 @@ import Detail from "./pages/Detail";
 import ItineraryDetail from "./pages/ItineraryDetail";
 import Plan from "./pages/Plan";
 import LoginV2 from "./pages/LoginV2";
+import LogoAnim from "./pages/LogoAnim";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -32,9 +33,9 @@ import WatchDeepLink from "./pages/WatchDeepLink";
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
-  const showNudge = pathname === "/" && userState !== "new";
+  const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
-  const hideShell = pathname === "/login-v2" || pathname === "/plan";
+  const hideShell = pathname === "/login-v2" || pathname === "/plan" || pathname === "/logo-anim";
 
   if (isPrototype) {
     return (
@@ -59,6 +60,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/login-v2" element={<LoginV2 />} />
+        <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />

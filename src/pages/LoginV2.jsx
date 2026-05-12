@@ -56,6 +56,7 @@ const slides = [
     eyebrow: "Your itinerary, in progress",
     title: "Your consultant is\nputting it together",
     sub: "Sign in to see what we're planning for you two",
+    highlights: ["consultant"],
     showItineraryMock: true,
     skipColor: SKIP_PALETTE.navy,   // bright sky over rice terraces
     logoColor: SKIP_PALETTE.navy,
@@ -67,6 +68,7 @@ const slides = [
     eyebrow: "Curated for couples",
     title: "6 destinations,\nhand-picked for two",
     sub: "Bali, Vietnam, New Zealand and more. Tweak any trip you like.",
+    highlights: ["hand-picked"],
     skipColor: SKIP_PALETTE.ink,    // hazy bluish karst sky
     logoColor: SKIP_PALETTE.ink,
   },
@@ -77,10 +79,24 @@ const slides = [
     eyebrow: "Your trip, in your pocket",
     title: "Vouchers, day plans,\n24/7 support",
     sub: "Everything you booked, ready offline when you land",
+    highlights: ["Vouchers"],
     skipColor: SKIP_PALETTE.navy,   // bright Maldives sky
     logoColor: SKIP_PALETTE.navy,
   },
 ];
+
+// Wrap any word in `highlights` with a coral span; preserves \n line breaks
+function renderWithHighlights(text, highlights, color) {
+  if (!highlights || highlights.length === 0) return text;
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(${highlights.map(escape).join("|")})`, "gi");
+  const parts = text.split(pattern);
+  return parts.map((p, i) =>
+    highlights.some((h) => h.toLowerCase() === p.toLowerCase())
+      ? <span key={i} style={{ color }}>{p}</span>
+      : p
+  );
+}
 
 // ─── Carousel (state isolated locally — DO NOT lift) ───
 function HeroCarousel({ collapsed, onSkip }) {
@@ -182,23 +198,17 @@ function HeroCarousel({ collapsed, onSkip }) {
         padding: "14px 18px",
         paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: 7,
-            background: T.coral,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 12px rgba(227,27,83,0.32)",
-          }}>
-            <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>30</span>
-          </div>
-          <span style={{
-            fontSize: 14, fontWeight: 700,
-            color: slides[slide].logoColor,
-            transition: "color 400ms ease",
-          }}>
-            Sundays
-          </span>
-        </div>
+        <img
+          src="/logo.png"
+          alt="30 Sundays"
+          style={{
+            height: 40,
+            width: "auto",
+            display: "block",
+            // logo has its own colours; drop a subtle shadow so it reads on busy hero areas
+            filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.18))",
+          }}
+        />
         <button
           onClick={onSkip}
           style={{
@@ -257,7 +267,7 @@ function HeroCarousel({ collapsed, onSkip }) {
               textShadow: "0 2px 14px rgba(0,0,0,0.32)",
               transition: "font-size 280ms ease",
             }}>
-              {s.title}
+              {renderWithHighlights(s.title, s.highlights, T.coral)}
             </h2>
 
             {/* Sub */}
@@ -437,18 +447,6 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
           display: "flex", flexDirection: "column",
           background: "#fff",
         }}>
-          <div style={{
-            maxHeight: collapsed ? 0 : 80,
-            opacity: collapsed ? 0 : 1,
-            overflow: "hidden",
-            transition: "max-height 320ms ease, opacity 200ms ease",
-            marginBottom: collapsed ? 0 : 12,
-          }}>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: T.navy, margin: 0, letterSpacing: -0.2 }}>
-              Enter your number to begin
-            </h3>
-          </div>
-
           {/* Country code + phone */}
           <div style={{ display: "flex", gap: 8 }}>
             <button

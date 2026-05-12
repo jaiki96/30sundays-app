@@ -1,24 +1,29 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Plane, Heart, Star, X } from "lucide-react";
+import { ChevronRight, Plane, Heart, Star, X, Sparkles } from "lucide-react";
 import { C, destData } from "../data";
 
 const bgColors = {
   lead: "rgba(255, 228, 232, 0.65)",
   customer: "rgba(236, 253, 243, 0.65)",
   done: "rgba(235, 233, 254, 0.65)",
+  new: "rgba(255, 244, 214, 0.70)",        // brand light yellow
 };
 
 const borderStyle = {
   lead: "0.5px solid rgba(227, 27, 83, 0.15)",
   customer: "0.5px solid rgba(3, 152, 85, 0.15)",
   done: "0.5px solid rgba(105, 56, 239, 0.15)",
+  new: "0.5px solid rgba(245, 184, 28, 0.22)",
 };
+
+// Deep amber for legible text/icon on the light yellow tint
+const NEW_ACCENT = "#B88500";
 
 export default function TripNudge({ userState }) {
   const [dismissed, setDismissed] = useState(false);
 
-  if (userState === "new" || dismissed) return null;
+  if (dismissed) return null;
 
   const dismiss = (e) => {
     e.preventDefault();
@@ -94,6 +99,57 @@ export default function TripNudge({ userState }) {
     );
   }
 
+  // ─── New (anonymous) — nudge to sign in & check for a pending itinerary ───
+  if (userState === "new") {
+    content = (
+      <>
+        <div
+          className="tn-glow"
+          style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: "rgba(245,184,28,0.14)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Sparkles size={22} color={NEW_ACCENT} className="tn-sparkle" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Already in touch with our team?</p>
+          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>Sign in to see your itinerary</p>
+          <p style={{ fontSize: 11, fontWeight: 600, color: NEW_ACCENT, margin: "3px 0 0" }}>Sign in →</p>
+        </div>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(245,184,28,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <ChevronRight size={16} color={NEW_ACCENT} />
+        </div>
+        {/* Glow + sparkle pulse keyframes, scoped to this nudge variant */}
+        <style>{`
+          @keyframes tnGlowPulse {
+            0%, 100% {
+              box-shadow:
+                0 0 0 0 rgba(245, 184, 28, 0.40),
+                0 0 10px 0 rgba(245, 184, 28, 0.18);
+              transform: scale(1);
+            }
+            50% {
+              box-shadow:
+                0 0 0 10px rgba(245, 184, 28, 0),
+                0 0 22px 4px rgba(245, 184, 28, 0.35);
+              transform: scale(1.05);
+            }
+          }
+          @keyframes tnSparkleSpin {
+            0%   { transform: rotate(0deg)   scale(1); }
+            50%  { transform: rotate(10deg)  scale(1.12); }
+            100% { transform: rotate(0deg)   scale(1); }
+          }
+          .tn-glow    { animation: tnGlowPulse 2.4s ease-in-out infinite; }
+          .tn-sparkle { animation: tnSparkleSpin 2.4s ease-in-out infinite; transform-origin: center; }
+        `}</style>
+      </>
+    );
+  }
+
   // ─── Trip Done ───
   if (userState === "done") {
     content = (
@@ -115,7 +171,11 @@ export default function TripNudge({ userState }) {
 
   if (!content) return null;
 
-  const linkTo = userState === "lead" ? "/detail/1" : userState === "customer" ? "/trips/trip-3" : "/plan";
+  const linkTo =
+    userState === "lead" ? "/detail/1" :
+    userState === "customer" ? "/trips/trip-3" :
+    userState === "new" ? "/plan" :
+    "/plan";
   return (
     <Link
       to={linkTo}
