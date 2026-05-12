@@ -415,32 +415,35 @@ function FlightsSection({ flights }) {
 }
 
 // ─── Hotel Cards Carousel (Figma-styled: Day label above, rating + Booking.com badge) ───
-function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false }) {
+function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDirection = false }) {
   const navigate = useNavigate();
   const directionUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${hotel.name}, ${hotel.city}`)}`;
-  const goPdp = () => tripId && navigate(`/trips/${tripId}/hotel/${hotelIdx}`);
+  const goPdp = () => tripId !== undefined && navigate(`/trips/${tripId}/hotel/${hotelIdx}`);
 
   return (
-    <div
-      onClick={goPdp}
-      style={{
-        width: fullWidth ? "100%" : undefined,
-        background: C.white, borderRadius: 12,
-        display: "flex", flexDirection: "column", gap: 20,
-        cursor: tripId ? "pointer" : "default",
-      }}
-    >
-      {/* Image block */}
-      <div style={{
-        padding: 10, height: 240, borderRadius: 12,
-        background: hotel.photo
-          ? `url(${hotel.photo}) center/cover no-repeat`
-          : "#F4F2F0",
-      }} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: fullWidth ? "100%" : undefined }}>
+      {/* Offering card */}
+      <div
+        onClick={goPdp}
+        style={{
+          background: C.white, borderRadius: 12,
+          filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
+          cursor: tripId !== undefined ? "pointer" : "default",
+          overflow: "hidden",
+        }}
+      >
+        {/* Image block: 8px white inset around the image */}
+        <div style={{ padding: 8, background: C.white }}>
+          <div style={{
+            height: 224, borderRadius: "8px 8px 0 0",
+            background: hotel.photo
+              ? `url(${hotel.photo}) center/cover no-repeat`
+              : "#F4F2F0",
+          }} />
+        </div>
 
-      {/* Description */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Description block */}
+        <div style={{ padding: "8px 12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
           {/* Rating row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -463,8 +466,10 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false }) {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Get direction button */}
+      {/* Get direction button — only on the single Day-wise stay */}
+      {showGetDirection && (
         <a
           href={directionUrl}
           target="_blank"
@@ -482,7 +487,7 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false }) {
           <MapPin size={20} color="#FD014F" />
           Get direction
         </a>
-      </div>
+      )}
     </div>
   );
 }
@@ -490,12 +495,16 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false }) {
 function HotelsSection({ hotels, tripId }) {
   if (!hotels || hotels.length === 0) return null;
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Your hotels</h4>
-      <div className="hs" style={{ gap: 16, paddingLeft: 0, paddingRight: 16 }}>
+    <div style={{
+      margin: "0 -16px 0",
+      padding: "24px 20px",
+      display: "flex", flexDirection: "column", gap: 16,
+    }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: 0, lineHeight: "28px" }}>Your hotels</h4>
+      <div className="hs" style={{ gap: 16, paddingRight: 20, marginRight: -20 }}>
         {hotels.map((ht, idx) => (
-          <div key={ht.id} style={{ minWidth: 309, maxWidth: 309, flexShrink: 0 }}>
-            <div style={{ marginBottom: 8 }}>
+          <div key={ht.id} style={{ minWidth: 309, maxWidth: 309, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div>
               <div style={{ fontSize: 16, fontWeight: 500, color: "#181E4C", lineHeight: "22px" }}>{ht.dayRange}</div>
               <div style={{ fontSize: 14, color: "#666C99", lineHeight: "20px" }}>{ht.city}</div>
             </div>
@@ -1225,6 +1234,7 @@ function DayHotelCard({ hotel, trip }) {
         tripId={canNavigate ? trip.id : undefined}
         hotelIdx={canNavigate ? matchIdx : undefined}
         fullWidth
+        showGetDirection
       />
     </div>
   );
