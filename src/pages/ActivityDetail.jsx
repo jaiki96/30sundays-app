@@ -122,7 +122,7 @@ export default function ActivityDetail() {
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#181E4C", margin: 0, lineHeight: 1.25 }}>{detail.name}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <Star size={13} fill="#FD014F" color="#FD014F" />
+              <Star size={13} fill="#FBBC05" color="#FBBC05" />
               <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{detail.rating}</span>
               <span style={{ fontSize: 12, color: C.sub }}>({detail.reviewCount.toLocaleString()})</span>
             </div>
@@ -490,7 +490,7 @@ function ReviewsBlock({ detail }) {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
                 {Array.from({ length: 5 }).map((_, j) => (
-                  <Star key={j} size={10} fill={j < r.rating ? "#FD014F" : "#E0E2EB"} color={j < r.rating ? "#FD014F" : "#E0E2EB"} />
+                  <Star key={j} size={10} fill={j < r.rating ? "#FBBC05" : "#E0E2EB"} color={j < r.rating ? "#FBBC05" : "#E0E2EB"} />
                 ))}
               </div>
             </div>

@@ -9,6 +9,7 @@ import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
 import ConsultantCard from "../components/ConsultantCard";
 import AddOnsSection from "../components/AddOnsSection";
+import { buildActivityDetail } from "../data/activityData";
 
 // ─── Simplified 2-tab bottom nav for trip details ───
 function TripBottomNav() {
@@ -447,7 +448,7 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
           {/* Rating row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Star size={20} fill="#4EAC7E" color="#4EAC7E" strokeWidth={0} />
+              <Star size={20} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
               <span style={{ fontSize: 14, fontWeight: 500, color: "#4EAC7E", lineHeight: "20px" }}>{hotel.stars} star hotel</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -1180,6 +1181,7 @@ function ActivityCards({ activities, city, tripId, dayIdx }) {
         {activities.map((act, i) => {
           const mins = (i + 1) * 30 + 75;
           const dur = `${Math.floor(mins / 60)}:${(mins % 60).toString().padStart(2, "0")}`;
+          const meta = buildActivityDetail(act, { city, isBooked: true });
           const open = () => navigate(`/trips/${tripId}/day/${dayIdx}/activity/${i}`);
           return (
             <div key={i} onClick={open} style={{ display: "flex", gap: 12, cursor: "pointer" }}>
@@ -1188,6 +1190,7 @@ function ActivityCards({ activities, city, tripId, dayIdx }) {
                 borderRadius: 8, overflow: "hidden",
                 background: act.photo ? `url(${act.photo}) center/cover no-repeat` : "#F4F2F0",
               }}>
+                {/* Duration badge — bottom-right glass pill */}
                 <div style={{
                   position: "absolute", right: 8, bottom: 8,
                   display: "flex", alignItems: "center", gap: 4,
@@ -1211,15 +1214,21 @@ function ActivityCards({ activities, city, tripId, dayIdx }) {
                     overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
                   }}>{act.description}</p>
                 </div>
-                <a
-                  href={getDirectionUrl(`${act.venue}, ${city}`)}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ fontSize: 12, fontWeight: 600, color: "#FD014F", marginTop: 8, textDecoration: "none" }}
-                >
-                  Get direction
-                </a>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <Star size={12} fill="#FBBC05" color="#FBBC05" />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#181E4C" }}>{meta.rating}</span>
+                  </div>
+                  <a
+                    href={getDirectionUrl(`${act.venue}, ${city}`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ fontSize: 12, fontWeight: 600, color: "#FD014F", textDecoration: "none" }}
+                  >
+                    Get direction
+                  </a>
+                </div>
               </div>
             </div>
           );

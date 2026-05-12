@@ -481,20 +481,24 @@ export function getDayTours(day, dayIdx, allDays) {
         ? { label: "Departure transfer", desc: `Hotel checkout and transfer to ${day.city} Airport.` }
         : null;
 
+  // Preserve original activity index so cards can deep-link to the detail page
+  const indexed = acts.map((a, idx) => ({ ...a, _actIdx: idx }));
+
   // Group: roughly half/half. If acts <= 2, single tour.
-  const half = Math.ceil(acts.length / 2);
-  const morning = acts.slice(0, half);
-  const afternoon = acts.slice(half);
+  const half = Math.ceil(indexed.length / 2);
+  const morning = indexed.slice(0, half);
+  const afternoon = indexed.slice(half);
 
   const toItem = (a) => ({
     name: a.name,
     img: a.img,
     desc: `Curated experience in ${day.city}. Includes guide and private transfer.`,
+    actIdx: a._actIdx,
   });
 
   const tours = [];
-  if (acts.length <= 2) {
-    tours.push({ heading: "Tour 1: Day plan", intro, items: acts.map(toItem) });
+  if (indexed.length <= 2) {
+    tours.push({ heading: "Tour 1: Day plan", intro, items: indexed.map(toItem) });
   } else {
     tours.push({ heading: "Tour 1: Morning", intro, items: morning.map(toItem) });
     if (afternoon.length) tours.push({ heading: "Tour 2: Afternoon", intro: null, items: afternoon.map(toItem) });

@@ -86,7 +86,7 @@ export default function HotelPDP() {
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  <Star size={11} fill="#FD014F" color="#FD014F" />
+                  <Star size={11} fill="#FBBC05" color="#FBBC05" />
                   <span style={{ fontSize: 11, fontWeight: 600, color: "#FD014F" }}>{hotel.stars} star hotel</span>
                 </div>
                 <span style={{
