@@ -5,6 +5,7 @@ import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import Home from "./pages/Home";
+import HomeV2 from "./pages/HomeV2";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
 import ResortDetail from "./pages/ResortDetail";
@@ -12,6 +13,8 @@ import Listing from "./pages/Listing";
 import Detail from "./pages/Detail";
 import ItineraryDetail from "./pages/ItineraryDetail";
 import Plan from "./pages/Plan";
+import LoginV2 from "./pages/LoginV2";
+import LogoAnim from "./pages/LogoAnim";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -20,6 +23,8 @@ import HotelPDP from "./pages/HotelPDP";
 import ReviewHotel from "./pages/ReviewHotel";
 import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
+import BookedHotelPDP from "./pages/BookedHotelPDP";
+import ActivityDetail from "./pages/ActivityDetail";
 import PaymentDetails from "./pages/PaymentDetails";
 import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
@@ -28,8 +33,9 @@ import WatchDeepLink from "./pages/WatchDeepLink";
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
-  const showNudge = pathname === "/" && userState !== "new";
+  const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
+  const hideShell = pathname === "/login-v2" || pathname === "/plan" || pathname === "/logo-anim";
 
   if (isPrototype) {
     return (
@@ -43,7 +49,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
     <PhoneFrame>
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
-        <Route path="/" element={<Home userState={userState} />} />
+        <Route path="/" element={<HomeV2 />} />
+        <Route path="/v1" element={<Home userState={userState} />} />
         <Route path="/destination/Maldives" element={<MaldivesDestination />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/destination/:name" element={<Destination />} />
@@ -52,6 +59,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} />} />
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
+        <Route path="/login-v2" element={<LoginV2 />} />
+        <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
@@ -60,12 +69,15 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/review-hotel/:itineraryId/:stayIndex" element={<ReviewHotel selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/trips" element={<MyTrips userState={userState} leadData={leadData} />} />
         <Route path="/trips/:tripId" element={<TripDetails />} />
+        <Route path="/trips/:tripId/hotel/:hotelIdx" element={<BookedHotelPDP />} />
+        <Route path="/trips/:tripId/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
+        <Route path="/itinerary/:id/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
         <Route path="/trips/:tripId/payments" element={<PaymentDetails />} />
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && <TripNudge userState={userState} />}
-      <BottomNav userState={userState} />
+      {!hideShell && <BottomNav userState={userState} />}
     </PhoneFrame>
   );
 }

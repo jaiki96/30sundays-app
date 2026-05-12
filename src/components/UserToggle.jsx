@@ -27,15 +27,16 @@ export default function UserToggle({ userState, setUserState }) {
         onClick={() => setOpen(v => !v)}
         aria-label="Demo state switcher"
         style={{
-          position: "fixed", bottom: 84, right: 16, zIndex: 90,
+          position: "absolute", bottom: 84, right: 16, zIndex: 90,
           width: 44, height: 44, borderRadius: "50%",
-          background: C.p600, color: "#fff", border: "none",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          background: C.p600, color: "#fff", border: "none", padding: 0,
+          display: "grid", placeItems: "center",
+          lineHeight: 0,
           cursor: "pointer", fontFamily: "inherit",
           boxShadow: "0 6px 20px rgba(227,27,83,0.45)",
         }}
       >
-        {open ? <XIcon size={20} /> : <Beaker size={18} />}
+        {open ? <XIcon size={20} strokeWidth={2.2} /> : <Beaker size={20} strokeWidth={2} />}
       </button>
 
       {/* Popup menu */}
@@ -44,11 +45,11 @@ export default function UserToggle({ userState, setUserState }) {
           {/* Backdrop */}
           <div
             onClick={() => setOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 85, background: "rgba(0,0,0,0.2)" }}
+            style={{ position: "absolute", inset: 0, zIndex: 85, background: "rgba(0,0,0,0.2)" }}
           />
           {/* Menu */}
           <div style={{
-            position: "fixed", bottom: 136, right: 16, zIndex: 95,
+            position: "absolute", bottom: 136, right: 16, zIndex: 95,
             width: 220, background: C.white, borderRadius: 14,
             boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
             border: `1px solid ${C.div}`, overflow: "hidden",

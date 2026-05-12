@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
@@ -9,6 +9,9 @@ import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
 import WatchTeaser from "../components/WatchTeaser";
+import DayScoringRow from "../components/DayScoringRow";
+import DayScoringModal from "../components/DayScoringModal";
+import { getDayScore } from "../data/dayScoring";
 import { videosForDest } from "../data/watchData";
 import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
@@ -57,9 +60,10 @@ function getHotels(it) {
 
 export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const { id } = useParams();
+  const navigate = useNavigate();
   const it = allItineraries.find(i => i.id === Number(id));
   const [expanded, setExpanded] = useState(false);
-  const [activeDay, setActiveDay] = useState(0);
+  const [activeDay, setActiveDay] = useState(-1); // -1 = Highlights tab
   const [showViewer, setShowViewer] = useState(null); // { day, activity }
   const [saved, setSaved] = useState(false);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
@@ -98,9 +102,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const baseHotels = getHotels(it);
   const isVietnam = it.dest === "Vietnam";
 
-  // Vietnam-only highlights: first unique activity per day, capped at 8
+  // Top highlights: first unique activity per day, capped at 8
   const highlights = useMemo(() => {
-    if (!isVietnam) return [];
     const seen = new Set();
     const items = [];
     daysWithActivities.forEach((day, dayIdx) => {
@@ -118,7 +121,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       });
     });
     return items.slice(0, 8);
-  }, [daysWithActivities, isVietnam]);
+  }, [daysWithActivities]);
 
   // Merge saved hotel selections
   const hotels = baseHotels.map((h, i) => {
@@ -279,8 +282,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       ) : (
         <div style={{ padding: "16px 0 0" }}>
           <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>See your trip</p>
-          {/* Day tabs */}
+          {/* Tabs: Highlights + Day pills */}
           <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
+            <button onClick={() => setActiveDay(-1)} style={{
+              padding: "8px 14px", borderRadius: 10, minWidth: 90, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+              background: activeDay === -1 ? C.p600 : "#F5F5F5",
+              border: activeDay === -1 ? "none" : `1px solid ${C.div}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === -1 ? "#fff" : C.head, margin: 0 }}>Highlights</p>
+            </button>
             {daysWithActivities.map((day, i) => (
               <button key={i} onClick={() => setActiveDay(i)} style={{
                 padding: "8px 14px", borderRadius: 10, minWidth: 80, cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
@@ -296,21 +307,43 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
               </button>
             ))}
           </div>
-          {/* Video thumbnails */}
+          {/* Video thumbnails — Highlights or active day */}
           <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-            {daysWithActivities[activeDay]?.activities.map((act, i) => (
-              <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
-                width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
-              }}>
-                <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.8))" }} />
-                {/* Play button */}
-                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Play size={16} color="#fff" fill="#fff" />
-                </div>
-                <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
-              </div>
-            ))}
+            {activeDay === -1
+              ? highlights.map((h, i) => (
+                  <div key={i} onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })} style={{
+                    width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+                  }}>
+                    <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.85))" }} />
+                    {/* Day chip */}
+                    <div style={{
+                      position: "absolute", top: 10, left: 10,
+                      background: "rgba(255,255,255,0.95)", borderRadius: 999,
+                      padding: "3px 8px", fontSize: 10, fontWeight: 700, color: C.head,
+                    }}>
+                      Day {h.dayNum} · {h.city}
+                    </div>
+                    {/* Play button */}
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Play size={16} color="#fff" fill="#fff" />
+                    </div>
+                    <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{h.name}</p>
+                  </div>
+                ))
+              : daysWithActivities[activeDay]?.activities.map((act, i) => (
+                  <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
+                    width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+                  }}>
+                    <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.8))" }} />
+                    {/* Play button */}
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Play size={16} color="#fff" fill="#fff" />
+                    </div>
+                    <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
+                  </div>
+                ))}
           </div>
         </div>
       )}
@@ -752,7 +785,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
           <span style={{ fontSize: 20, fontWeight: 700, color: C.head }}>4.6</span>
           <span style={{ fontSize: 12, color: C.sub }}>/5</span>
-          <div style={{ display: "flex", gap: 1, marginLeft: 4 }}>{[1,2,3,4,5].map(s => <Star key={s} size={12} fill="#34A853" color="#34A853" strokeWidth={0} />)}</div>
+          <div style={{ display: "flex", gap: 1, marginLeft: 4 }}>{[1,2,3,4,5].map(s => <Star key={s} size={12} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
         </div>
         <p style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>Based on Google reviews</p>
         <p style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 10 }}>Our customers say</p>
@@ -763,7 +796,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{r.name}</p>
-                  <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#34A853" color="#34A853" strokeWidth={0} />)}</div>
+                  <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
                 </div>
                 <p style={{ fontSize: 13, color: C.sub, margin: "4px 0 0", lineHeight: "18px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>"{r.text}"</p>
               </div>
@@ -800,6 +833,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         <VideoViewer
           days={daysWithActivities}
           dest={it.dest}
+          itineraryId={it.id}
           initialDay={showViewer.day}
           initialActivity={showViewer.activity}
           onClose={() => setShowViewer(null)}
@@ -1055,7 +1089,7 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
 }
 
 // ═══ Full-Screen Video/Stories Viewer ═══
-function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
+function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onClose }) {
   const [dayIdx, setDayIdx] = useState(initialDay);
   const [actIdx, setActIdx] = useState(initialActivity);
   const [sheetState, setSheetState] = useState("hidden"); // "hidden" | "peek" | "full"
@@ -1211,6 +1245,7 @@ function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
           dayNum={dayNum}
           dayIdx={dayIdx}
           dest={dest}
+          itineraryId={itineraryId}
           scoring={scoring}
           tours={tours}
           price={price}
@@ -1249,7 +1284,7 @@ function VideoViewer({ days, dest, initialDay, initialActivity, onClose }) {
 }
 
 // Day-detail bottom sheet — Stage 2 (peek) and Stage 3 (full).
-function DaySheet({ state, setState, day, dayNum, dayIdx, dest, scoring, tours, price, strikePrice, optionNum, totalOptions, description, onMetricOpen, onChoose }) {
+function DaySheet({ state, setState, day, dayNum, dayIdx, dest, itineraryId, scoring, tours, price, strikePrice, optionNum, totalOptions, description, onMetricOpen, onChoose }) {
   const sheetHeight = state === "peek" ? "62%" : "calc(100% - 38px)";
   const photos = dest && customerPhotos[dest] ? customerPhotos[dest] : [];
   const galleryItems = photos.length >= 6 ? photos.slice(0, 6) : [...photos, ...(day?.activities || [])].slice(0, 6);
@@ -1301,7 +1336,7 @@ function DaySheet({ state, setState, day, dayNum, dayIdx, dest, scoring, tours, 
               Your day will cover:
             </h3>
             {tours.map((tour, ti) => (
-              <TourBlock key={ti} tour={tour} />
+              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIdx} />
             ))}
           </div>
 
@@ -1315,7 +1350,7 @@ function DaySheet({ state, setState, day, dayNum, dayIdx, dest, scoring, tours, 
               <span style={{ fontSize: 16, fontWeight: 500, color: "#090C10" }}>Nishant</span>
             </div>
             <div style={{ display: "flex", gap: 2, marginBottom: 8 }}>
-              {[1,2,3,4,5].map(s => <Star key={s} size={16} color="#4EAC7E" fill="#4EAC7E" strokeWidth={0} />)}
+              {[1,2,3,4,5].map(s => <Star key={s} size={16} color="#FBBC05" fill="#FBBC05" strokeWidth={0} />)}
             </div>
             <p style={{ margin: "0 0 4px", fontSize: 14, color: "#666C99", lineHeight: 1.45 }}>
               They don't suggest over touristy places like others. Their Jatiluwih terraces + Beach love combination in Bali is a must try for every couple. We had a great time enjoying the sunset sitting on Bean bags from a cliff overlooking an ocean. No other travel agent understands Couples like this!
@@ -1362,7 +1397,8 @@ function DaySheet({ state, setState, day, dayNum, dayIdx, dest, scoring, tours, 
 }
 
 // One tour group: heading + dashed-line timeline of items (intro text + activity cards).
-function TourBlock({ tour }) {
+function TourBlock({ tour, itineraryId, dayIdx }) {
+  const navigate = useNavigate();
   return (
     <div style={{ marginBottom: 16, border: "1px solid #E0E2EB", borderRadius: 8, padding: 8 }}>
       <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 500, color: "#181E4C" }}>{tour.heading}</h4>
@@ -1385,12 +1421,19 @@ function TourBlock({ tour }) {
               border: i === 0 && tour.intro ? "1px solid #4EAC7E" : "none",
               boxSizing: "border-box",
             }} />
-            <div style={{
-              display: "flex", alignItems: "center", padding: "0 0 0 8px",
-              background: "#fff", borderRadius: 8,
-              boxShadow: "0 4px 16px -4px rgba(16,24,40,0.06)",
-              border: "1px solid #F0F1F5",
-            }}>
+            <div
+              onClick={() => {
+                if (it.actIdx == null || itineraryId == null || dayIdx == null) return;
+                navigate(`/itinerary/${itineraryId}/day/${dayIdx}/activity/${it.actIdx}`);
+              }}
+              style={{
+                display: "flex", alignItems: "center", padding: "0 8px 0 8px",
+                background: "#fff", borderRadius: 8,
+                boxShadow: "0 4px 16px -4px rgba(16,24,40,0.06)",
+                border: "1px solid #F0F1F5",
+                cursor: it.actIdx != null ? "pointer" : "default",
+              }}
+            >
               <div style={{ width: 64, height: 64, borderRadius: 8, overflow: "hidden", background: "#F5F5F5", flexShrink: 0 }}>
                 <img src={it.img} alt={it.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
@@ -1398,6 +1441,11 @@ function TourBlock({ tour }) {
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#181E4C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</p>
                 <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{it.desc}</p>
               </div>
+              {it.actIdx != null && (
+                <div style={{ flexShrink: 0, paddingRight: 4, color: "#FD014F", display: "flex", alignItems: "center" }}>
+                  <ChevronRight size={18} />
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -1823,7 +1871,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
                   {/* Star class + Booking rating row */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                      <Star size={13} fill="#027A48" color="#027A48" strokeWidth={0} />
+                      <Star size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
                       <span style={{ fontSize: 12, fontWeight: 600, color: "#027A48" }}>5 star hotel</span>
                     </div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
