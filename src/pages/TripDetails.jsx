@@ -415,13 +415,14 @@ function FlightsSection({ flights }) {
 }
 
 // ─── Hotel Cards Carousel (Figma-styled: Day label above, rating + Booking.com badge) ───
-function HotelsSection({ hotels }) {
+function HotelsSection({ hotels, tripId }) {
+  const navigate = useNavigate();
   if (!hotels || hotels.length === 0) return null;
   return (
     <div style={{ marginBottom: 24 }}>
       <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Hotels</h4>
       <div className="hs" style={{ gap: 12, paddingLeft: 0, paddingRight: 16 }}>
-        {hotels.map(ht => (
+        {hotels.map((ht, idx) => (
           <div key={ht.id} style={{ minWidth: 280, maxWidth: 300, flexShrink: 0 }}>
             {/* Day label above the card */}
             <div style={{ marginBottom: 8 }}>
@@ -429,10 +430,13 @@ function HotelsSection({ hotels }) {
               <div style={{ fontSize: 14, color: "#666C99", lineHeight: "20px" }}>{ht.city}</div>
             </div>
             {/* Card */}
-            <div style={{
-              background: C.white, borderRadius: 12, overflow: "hidden",
-              filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
-            }}>
+            <div
+              onClick={() => tripId && navigate(`/trips/${tripId}/hotel/${idx}`)}
+              style={{
+                background: C.white, borderRadius: 12, overflow: "hidden",
+                filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
+                cursor: tripId ? "pointer" : "default",
+              }}>
               {/* Image with rating + booking badge overlay */}
               <div style={{ position: "relative", padding: 8, background: C.white }}>
                 <img
@@ -1192,12 +1196,22 @@ function ActivityCards({ activities, city }) {
   );
 }
 
-function DayHotelCard({ hotel }) {
+function DayHotelCard({ hotel, trip }) {
+  const navigate = useNavigate();
   if (!hotel) return null;
+  // Match day's hotel to trip.hotels by name to get the right index for navigation
+  const matchIdx = trip?.hotels?.findIndex(h => h.name === hotel.name);
+  const canNavigate = trip && matchIdx !== undefined && matchIdx >= 0;
   return (
     <div style={{ background: C.white, padding: "24px 20px" }}>
       <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", lineHeight: "28px" }}>Your stay</h4>
-      <div style={{ borderRadius: 12, overflow: "hidden", filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))" }}>
+      <div
+        onClick={() => canNavigate && navigate(`/trips/${trip.id}/hotel/${matchIdx}`)}
+        style={{
+          borderRadius: 12, overflow: "hidden",
+          filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
+          cursor: canNavigate ? "pointer" : "default",
+        }}>
         <div style={{ position: "relative", padding: 8, background: C.white }}>
           <div style={{
             width: "100%", aspectRatio: "16/10", borderRadius: "8px 8px 0 0",
@@ -1423,7 +1437,7 @@ function DayWiseTab({ trip }) {
       <DatePicker days={days} selectedDay={selectedDay} onSelect={setSelectedDay} />
       <DayHero day={day} />
       <ActivityCards activities={day.activities} city={day.city} />
-      <DayHotelCard hotel={day.hotel} />
+      <DayHotelCard hotel={day.hotel} trip={trip} />
       <HighlightsSection day={day} />
       <AIChatbotCard />
       <ReviewsSection />
@@ -1584,7 +1598,7 @@ export default function TripDetails() {
               />
             </div>
           )}
-          <HotelsSection hotels={trip.hotels} />
+          <HotelsSection hotels={trip.hotels} tripId={trip.id} />
           <ThirtySundaysPass trip={trip} />
           <JourneyMap cities={trip.journeyMapCities} />
 
