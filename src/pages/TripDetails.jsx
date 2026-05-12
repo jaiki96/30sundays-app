@@ -1166,7 +1166,8 @@ function DayHero({ day }) {
   );
 }
 
-function ActivityCards({ activities, city }) {
+function ActivityCards({ activities, city, tripId, dayIdx }) {
+  const navigate = useNavigate();
   if (!activities?.length) return null;
   return (
     <div style={{
@@ -1179,8 +1180,9 @@ function ActivityCards({ activities, city }) {
         {activities.map((act, i) => {
           const mins = (i + 1) * 30 + 75;
           const dur = `${Math.floor(mins / 60)}:${(mins % 60).toString().padStart(2, "0")}`;
+          const open = () => navigate(`/trips/${tripId}/day/${dayIdx}/activity/${i}`);
           return (
-            <div key={i} style={{ display: "flex", gap: 12 }}>
+            <div key={i} onClick={open} style={{ display: "flex", gap: 12, cursor: "pointer" }}>
               <div style={{
                 position: "relative", width: 175, height: 120, flexShrink: 0,
                 borderRadius: 8, overflow: "hidden",
@@ -1213,6 +1215,7 @@ function ActivityCards({ activities, city }) {
                   href={getDirectionUrl(`${act.venue}, ${city}`)}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   style={{ fontSize: 12, fontWeight: 600, color: "#FD014F", marginTop: 8, textDecoration: "none" }}
                 >
                   Get direction
@@ -1415,7 +1418,7 @@ function DayWiseTab({ trip }) {
     <div style={{ background: C.white }}>
       <DatePicker days={days} selectedDay={selectedDay} onSelect={setSelectedDay} />
       <DayHero day={day} />
-      <ActivityCards activities={day.activities} city={day.city} />
+      <ActivityCards activities={day.activities} city={day.city} tripId={trip.id} dayIdx={selectedDay} />
       <DayHotelCard hotel={day.hotel} trip={trip} />
       <HighlightsSection day={day} />
       <AIChatbotCard />

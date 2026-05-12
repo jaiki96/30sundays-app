@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
@@ -58,6 +58,7 @@ function getHotels(it) {
 
 export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const { id } = useParams();
+  const navigate = useNavigate();
   const it = allItineraries.find(i => i.id === Number(id));
   const [expanded, setExpanded] = useState(false);
   const [activeDay, setActiveDay] = useState(-1); // -1 = Highlights tab
@@ -329,7 +330,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                   </div>
                 ))
               : daysWithActivities[activeDay]?.activities.map((act, i) => (
-                  <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
+                  <div key={i} onClick={() => navigate(`/itinerary/${it.id}/day/${activeDay}/activity/${i}`)} style={{
                     width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
                   }}>
                     <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />

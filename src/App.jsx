@@ -22,6 +22,7 @@ import ReviewHotel from "./pages/ReviewHotel";
 import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
 import BookedHotelPDP from "./pages/BookedHotelPDP";
+import ActivityDetail from "./pages/ActivityDetail";
 import PaymentDetails from "./pages/PaymentDetails";
 import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
@@ -64,6 +65,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/trips" element={<MyTrips userState={userState} leadData={leadData} />} />
         <Route path="/trips/:tripId" element={<TripDetails />} />
         <Route path="/trips/:tripId/hotel/:hotelIdx" element={<BookedHotelPDP />} />
+        <Route path="/trips/:tripId/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
+        <Route path="/itinerary/:id/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
         <Route path="/trips/:tripId/payments" element={<PaymentDetails />} />
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
