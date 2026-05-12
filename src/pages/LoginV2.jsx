@@ -15,11 +15,11 @@ const GoogleG = ({ size = 14 }) => (
 // ─── Design tokens ───
 const T = {
   coral: "#E31B53",
-  blush: "#FFE4E8",
+  blush: "#FFE4E8",       // brand light pink — used for filled OTP, dropdown highlight
   navy: "#181D27",
   muted: "#6B7280",
   line: "rgba(0,0,0,0.06)",
-  surface: "#F7F8FB",
+  surface: "#F7F8FB",     // soft neutral for inputs on a white page
 };
 
 // ─── Country codes ───
