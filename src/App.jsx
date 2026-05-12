@@ -13,6 +13,7 @@ import Listing from "./pages/Listing";
 import Detail from "./pages/Detail";
 import ItineraryDetail from "./pages/ItineraryDetail";
 import Plan from "./pages/Plan";
+import LoginV2 from "./pages/LoginV2";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -33,6 +34,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
   const { pathname } = useLocation();
   const showNudge = pathname === "/" && userState !== "new";
   const isPrototype = pathname.startsWith("/prototype/");
+  const hideShell = pathname === "/login-v2" || pathname === "/plan";
 
   if (isPrototype) {
     return (
@@ -56,6 +58,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} />} />
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
+        <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
@@ -72,7 +75,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && <TripNudge userState={userState} />}
-      <BottomNav userState={userState} />
+      {!hideShell && <BottomNav userState={userState} />}
     </PhoneFrame>
   );
 }

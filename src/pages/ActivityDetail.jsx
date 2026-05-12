@@ -103,7 +103,12 @@ export default function ActivityDetail() {
         {/* Header */}
         <div style={{ padding: "10px 16px 0", display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={() => navigate(backUrl)}
+            onClick={() => {
+              // Prefer history pop so user returns to the exact previous scroll/state.
+              // Fallback to backUrl if there's no history (e.g. deep-linked entry).
+              if (window.history.length > 1) navigate(-1);
+              else navigate(backUrl);
+            }}
             style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.9)", border: `1px solid ${C.div}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
           >
             <ArrowLeft size={18} color="#181E4C" />
@@ -198,7 +203,7 @@ function HeroGallery({ detail, onOpenGallery, onLockedTap }) {
     );
   }
 
-  // Planning: 3 images + 4th locked teaser tile
+  // Planning: 3 images + thin locked-guide banner below
   return (
     <div style={{ padding: "16px 16px 0" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gridTemplateRows: "1fr 1fr", gap: 3, height: 240, borderRadius: 12, overflow: "hidden" }}>
@@ -208,9 +213,47 @@ function HeroGallery({ detail, onOpenGallery, onLockedTap }) {
         <div style={{ cursor: "pointer" }} onClick={() => onOpenGallery(1)}>
           <img src={photos[1]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         </div>
-        <LockedTeaserTile onTap={onLockedTap} poster={photos[2]} />
+        <div style={{ cursor: "pointer" }} onClick={() => onOpenGallery(2)}>
+          <img src={photos[2]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        </div>
       </div>
+      <LockedGuideBanner onTap={onLockedTap} />
     </div>
+  );
+}
+
+function LockedGuideBanner({ onTap }) {
+  return (
+    <button
+      onClick={onTap}
+      style={{
+        width: "100%", marginTop: 8,
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "10px 12px",
+        background: "linear-gradient(90deg, #181E4C 0%, #2C3470 100%)",
+        border: "none", borderRadius: 10,
+        cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+        boxShadow: "0 2px 8px rgba(24,30,76,0.18)",
+      }}
+    >
+      <div style={{
+        width: 28, height: 28, borderRadius: "50%",
+        background: "rgba(255,255,255,0.16)",
+        border: "0.5px solid rgba(255,255,255,0.28)",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        <Lock size={13} color="#fff" />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 12, fontWeight: 600, color: "#fff", margin: 0, lineHeight: 1.3 }}>
+          🎬 Curated video guide hidden here
+        </p>
+        <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.7)", margin: "1px 0 0", lineHeight: 1.3 }}>
+          Book this trip with 30 Sundays to unlock
+        </p>
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 600, color: "#FD014F", flexShrink: 0 }}>Unlock →</span>
+    </button>
   );
 }
 
@@ -266,36 +309,6 @@ function VideoTile({ videoUrl, videoDuration, poster, onTap }) {
       }}>
         <Play size={10} color="#fff" fill="#fff" />
         <span style={{ fontSize: 10, fontWeight: 600, color: "#fff" }}>{videoDuration}</span>
-      </div>
-    </div>
-  );
-}
-
-function LockedTeaserTile({ onTap, poster }) {
-  return (
-    <div
-      onClick={onTap}
-      style={{ position: "relative", cursor: "pointer", overflow: "hidden", background: "#181E4C" }}
-    >
-      <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: 0.35 }} />
-      <div style={{
-        position: "absolute", inset: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: 10, textAlign: "center",
-        background: "linear-gradient(180deg, rgba(24,30,76,0.55) 0%, rgba(24,30,76,0.75) 100%)",
-      }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: "50%",
-          background: "rgba(255,255,255,0.18)",
-          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-          border: "0.5px solid rgba(255,255,255,0.28)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          marginBottom: 6,
-        }}>
-          <Lock size={16} color="#fff" />
-        </div>
-        <p style={{ fontSize: 11, fontWeight: 600, color: "#fff", margin: 0, lineHeight: 1.2 }}>Backstage pass</p>
-        <p style={{ fontSize: 9.5, color: "rgba(255,255,255,0.8)", margin: "2px 0 0", lineHeight: 1.2 }}>Book the trip → guide unlocks</p>
       </div>
     </div>
   );

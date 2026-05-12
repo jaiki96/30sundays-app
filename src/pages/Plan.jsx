@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, M
 import { C, destinations, allItineraries } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
 import DatePicker from "../components/DatePicker";
+import LoginV2 from "./LoginV2";
 
 const funLines = [
   "Meanwhile, your dream beach is warming up the sand for you...",
@@ -93,8 +94,9 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
     }
   }, []);
 
-  // phase: "phone" | "otp" | "details" | "success"
-  const [phase, setPhase] = useState(userState === "lead" && leadData ? "success" : "phone");
+  // phase: "auth" | "details" | "curating" | "success"
+  // ("auth" covers what used to be "phone" + "otp" — handled by LoginV2)
+  const [phase, setPhase] = useState(userState === "lead" && leadData ? "success" : "auth");
   const [countryIdx, setCountryIdx] = useState(0);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
@@ -200,25 +202,33 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
     setShowChildrenApology(true);
   };
 
-  // Determine CTA state per phase
+  // Determine CTA state per phase (auth phase has its own CTA inside LoginV2)
   let ctaLabel = "";
   let ctaEnabled = false;
-  if (phase === "phone") { ctaLabel = "Send OTP"; ctaEnabled = phoneValid; }
-  else if (phase === "otp") { ctaLabel = "Verify"; ctaEnabled = otp.every(d => d); }
-  else if (phase === "details") { ctaLabel = "Explore Itineraries"; ctaEnabled = name.trim().length > 0 && dests.length > 0; }
+  if (phase === "details") { ctaLabel = "Explore Itineraries"; ctaEnabled = name.trim().length > 0 && dests.length > 0; }
+
+  // Called by LoginV2 when OTP verifies successfully
+  const handleAuthComplete = ({ country: c, phone: p }) => {
+    setPhone(p);
+    setCountryIdx(countryCodes.findIndex((cc) => cc.code === c.code));
+    setPhase("details");
+  };
+
+  // OTP validation that LoginV2 calls — keep the legacy "0000 = invalid" rule
+  const validateOtp = (otpStr) => {
+    if (otpStr === "0000") return "Invalid OTP. Please try again.";
+    return null;
+  };
+
+  // Skip from LoginV2 → bounce home (or return target)
+  const handleAuthSkip = () => {
+    if (returnTo === "trips") navigate("/trips", { replace: true });
+    else if (returnTo === "account") navigate("/account", { replace: true });
+    else navigate("/", { replace: true });
+  };
 
   const ctaAction = () => {
-    if (phase === "phone") {
-      setPhase("otp");
-    } else if (phase === "otp") {
-      const enteredOtp = otp.join("");
-      if (enteredOtp === "0000") {
-        setOtpError("Invalid OTP. Please try again.");
-        return;
-      }
-      setOtpError("");
-      setPhase("details");
-    } else if (phase === "details") {
+    if (phase === "details") {
       const data = {
         phone,
         countryCode: country.code,
@@ -247,8 +257,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   };
 
   const goBack = () => {
-    if (phase === "otp") setPhase("phone");
-    else if (phase === "details") setPhase("otp");
+    if (phase === "details") setPhase("auth");
     else if (phase === "success") navigate("/");
     else navigate(-1);
   };
@@ -462,217 +471,26 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         </>
       )}
 
-      {/* ═══ NON-SUCCESS SCREENS ═══ */}
-      {phase !== "success" && (
-        <>
-          {/* Top bar */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px 0" }}>
-            <button onClick={goBack} style={{ width: 34, height: 34, borderRadius: 12, background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-              <ArrowLeft size={17} color={C.head} />
-            </button>
-            <span style={{ fontSize: 11, color: C.inact }}>
-              {phase === "phone" ? "Step 1 of 3" : phase === "otp" ? "Step 2 of 3" : "Step 3 of 3"}
-            </span>
-            <button onClick={() => navigate(-1)} style={{ width: 34, height: 34, borderRadius: 12, background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-              <XIcon size={16} color={C.sub} />
-            </button>
-          </div>
-
-          {/* Progress bar */}
-          <div style={{ display: "flex", gap: 4, padding: "8px 20px 0" }}>
-            {[0, 1, 2].map(i => {
-              const stepIdx = phase === "phone" ? 0 : phase === "otp" ? 1 : 2;
-              return (
-                <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= stepIdx ? C.p600 : C.div, transition: "background 0.4s ease" }} />
-              );
-            })}
-          </div>
-        </>
+      {/* ═══ Top bar (details only — auth has its own, success/curating don't need it) ═══ */}
+      {phase === "details" && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px 0" }}>
+          <button onClick={goBack} style={{ width: 34, height: 34, borderRadius: 12, background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <ArrowLeft size={17} color={C.head} />
+          </button>
+          <span style={{ fontSize: 11, color: C.inact }}>Almost done</span>
+          <button onClick={() => navigate(-1)} style={{ width: 34, height: 34, borderRadius: 12, background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <XIcon size={16} color={C.sub} />
+          </button>
+        </div>
       )}
 
-      {/* ═══ PHONE SCREEN ═══ */}
-      {phase === "phone" && (
-        <>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-            <div style={{ animation: "scaleIn 0.3s ease-out" }}><IlloPhone /></div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.head, marginTop: 16 }}>Let's plan your getaway</h2>
-            <p style={{ fontSize: 13, color: C.sub, marginTop: 6, lineHeight: "19px" }}>
-              Your number helps our travel consultant reach you with a personalised itinerary
-            </p>
-          </div>
-          <div style={{ padding: "0 20px 40px", animation: "fadeUp 0.3s ease-out 0.12s both" }}>
-            <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${phoneValid ? "#027A48" : C.div}`, borderRadius: 14, height: 52, background: "#FAFAFA", transition: "border 0.2s", overflow: "hidden" }}>
-              <button
-                onClick={() => setShowCountryPicker(!showCountryPicker)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 4, padding: "0 10px 0 14px",
-                  height: "100%", background: "none", border: "none", cursor: "pointer",
-                  fontSize: 15, color: C.head, fontFamily: "inherit", flexShrink: 0,
-                }}
-              >
-                <span>{country.flag}</span>
-                <span style={{ fontWeight: 500 }}>{country.code}</span>
-                <ChevronDown size={12} color={C.sub} />
-              </button>
-              <div style={{ width: 1, height: 22, background: C.div, flexShrink: 0 }} />
-              <input
-                type="tel" maxLength={country.digits} placeholder="Mobile number"
-                autoFocus={!showCountryPicker}
-                value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, country.digits))}
-                style={{ flex: 1, fontSize: 15, color: C.head, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: "0 14px" }}
-              />
-              {phoneValid && <Check size={16} color="#027A48" style={{ marginRight: 14 }} />}
-            </div>
-
-            {/* Country picker dropdown with search */}
-            {showCountryPicker && (
-              <div style={{
-                marginTop: 4, borderRadius: 14, border: `1px solid ${C.div}`, background: C.white,
-                boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden",
-              }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 14px", borderBottom: `1px solid ${C.div}`,
-                  background: "#FAFAFA",
-                }}>
-                  <Search size={14} color={C.inact} />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Search country or code..."
-                    value={countrySearch}
-                    onChange={e => setCountrySearch(e.target.value)}
-                    style={{
-                      flex: 1, fontSize: 13, color: C.head, background: "transparent",
-                      border: "none", outline: "none", fontFamily: "inherit",
-                    }}
-                  />
-                  {countrySearch && (
-                    <button onClick={() => setCountrySearch("")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}>
-                      <XIcon size={12} color={C.inact} />
-                    </button>
-                  )}
-                </div>
-                <div style={{ maxHeight: 180, overflowY: "auto" }} className="hide-scrollbar">
-                  {filteredCountries.length === 0 ? (
-                    <div style={{ padding: "16px", textAlign: "center", fontSize: 12, color: C.inact }}>
-                      No countries found
-                    </div>
-                  ) : (
-                    filteredCountries.map((cc) => {
-                      const originalIdx = countryCodes.indexOf(cc);
-                      return (
-                        <button
-                          key={cc.code}
-                          onClick={() => { setCountryIdx(originalIdx); setShowCountryPicker(false); setPhone(""); }}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px",
-                            background: originalIdx === countryIdx ? C.p100 : "none", border: "none", cursor: "pointer",
-                            borderBottom: `1px solid ${C.div}22`,
-                            fontFamily: "inherit",
-                          }}
-                        >
-                          <span style={{ fontSize: 18 }}>{cc.flag}</span>
-                          <span style={{ fontSize: 13, fontWeight: 500, color: C.head, flex: 1, textAlign: "left" }}>{cc.name}</span>
-                          <span style={{ fontSize: 12, color: C.sub, fontWeight: 500 }}>{cc.code}</span>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* CTA */}
-            <button
-              onClick={ctaAction}
-              disabled={!ctaEnabled}
-              style={{
-                width: "100%", marginTop: showCountryPicker ? 12 : 20,
-                padding: "15px 0", borderRadius: 14, border: "none",
-                background: ctaEnabled ? C.p600 : C.inact,
-                color: "#fff", fontSize: 15, fontWeight: 600,
-                cursor: ctaEnabled ? "pointer" : "not-allowed",
-                boxShadow: ctaEnabled ? "0 4px 16px rgba(227,27,83,0.3)" : "none",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                fontFamily: "inherit", transition: "background 0.2s, box-shadow 0.2s",
-              }}
-            >
-              {ctaLabel} <ArrowRight size={16} />
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* ═══ OTP SCREEN ═══ */}
-      {phase === "otp" && (
-        <>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-            <div style={{ animation: "scaleIn 0.3s ease-out" }}><IlloOtp /></div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.head, marginTop: 16 }}>Verify your number</h2>
-            <p style={{ fontSize: 13, color: C.sub, marginTop: 6, lineHeight: "19px" }}>
-              Code sent to {country.code} {phone}
-            </p>
-            <p style={{ fontSize: 12, color: C.p600, fontStyle: "italic", marginTop: 10, lineHeight: "17px" }}>
-              {funLine}
-            </p>
-          </div>
-          <div style={{ padding: "0 20px 40px", animation: "fadeUp 0.3s ease-out 0.12s both" }}>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 8 }}>
-              {[0, 1, 2, 3].map(i => (
-                <input
-                  key={i} type="tel" maxLength={1} autoFocus={i === 0}
-                  ref={el => otpRefs.current[i] = el}
-                  value={otp[i]}
-                  style={{
-                    width: 44, height: 48, borderRadius: 12, textAlign: "center",
-                    fontSize: 18, fontWeight: 600, color: C.head, fontFamily: "inherit",
-                    border: `1.5px solid ${otpError ? "#B42318" : otp[i] ? C.p600 : C.div}`,
-                    background: otpError ? "#FEF3F2" : otp[i] ? "#FFE4E844" : "#FAFAFA",
-                    outline: "none",
-                  }}
-                  onChange={e => {
-                    const val = e.target.value.replace(/\D/g, "");
-                    const next = [...otp]; next[i] = val;
-                    setOtp(next);
-                    setOtpError("");
-                    if (val && otpRefs.current[i + 1]) otpRefs.current[i + 1].focus();
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === "Backspace" && !otp[i] && otpRefs.current[i - 1]) otpRefs.current[i - 1].focus();
-                  }}
-                />
-              ))}
-            </div>
-            {otpError && (
-              <p style={{ textAlign: "center", fontSize: 12, color: "#B42318", marginBottom: 8 }}>{otpError}</p>
-            )}
-            <button
-              onClick={ctaAction}
-              disabled={!ctaEnabled}
-              style={{
-                width: "100%", marginTop: 12,
-                padding: "15px 0", borderRadius: 14, border: "none",
-                background: ctaEnabled ? C.p600 : C.inact,
-                color: "#fff", fontSize: 15, fontWeight: 600,
-                cursor: ctaEnabled ? "pointer" : "not-allowed",
-                boxShadow: ctaEnabled ? "0 4px 16px rgba(227,27,83,0.3)" : "none",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                fontFamily: "inherit", transition: "background 0.2s, box-shadow 0.2s",
-              }}
-            >
-              {ctaLabel} <ArrowRight size={16} />
-            </button>
-            <p style={{ textAlign: "center", marginTop: 12, fontSize: 12, color: C.sub }}>
-              Didn't receive?{" "}
-              {canResend ? (
-                <span onClick={handleResend} style={{ fontWeight: 600, color: C.p600, cursor: "pointer" }}>Resend OTP</span>
-              ) : (
-                <span style={{ fontWeight: 600, color: C.inact }}>Resend in {resendTimer}s</span>
-              )}
-            </p>
-          </div>
-        </>
+      {/* ═══ AUTH (phone + OTP) — handled by LoginV2 ═══ */}
+      {phase === "auth" && (
+        <LoginV2
+          onComplete={handleAuthComplete}
+          onSkip={handleAuthSkip}
+          validateOtp={validateOtp}
+        />
       )}
 
       {/* ═══ TRIP DETAILS SCREEN ═══ */}

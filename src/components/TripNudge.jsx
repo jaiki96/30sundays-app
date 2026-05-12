@@ -115,7 +115,7 @@ export default function TripNudge({ userState }) {
 
   if (!content) return null;
 
-  const linkTo = userState === "lead" ? "/detail/1" : userState === "customer" ? "/detail/10" : "/plan";
+  const linkTo = userState === "lead" ? "/detail/1" : userState === "customer" ? "/trips/trip-3" : "/plan";
   return (
     <Link
       to={linkTo}
