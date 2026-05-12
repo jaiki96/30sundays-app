@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, FileText, Receipt, FolderOpen, Ticket, ChevronRight, ChevronDown, ChevronUp,
   Share2, MapPin, Star, MessageCircle, Plane, Users, PalmtreeIcon,
-  User as UserIcon, Phone, Pencil, Trash2, Plus, Bell,
+  User as UserIcon, Phone, Pencil, Trash2, Plus, Bell, PlayCircle, Send,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
@@ -1060,6 +1060,350 @@ function BeforeYouGo({ data }) {
 }
 
 // ─── Day Wise Tab ───
+// ─── Day-wise tab (Figma redesign) ───
+function getDirectionUrl(query) {
+  return `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+}
+
+function DatePicker({ days, selectedDay, onSelect }) {
+  return (
+    <div className="hs" style={{
+      gap: 8, padding: "12px 20px", background: C.white,
+      position: "sticky", top: 0, zIndex: 5,
+    }}>
+      {days.map((d, i) => {
+        const active = i === selectedDay;
+        const dateObj = new Date(d.date);
+        const dayNum = dateObj.getDate();
+        const monthShort = dateObj.toLocaleDateString("en-US", { month: "short" });
+        return (
+          <button
+            key={i}
+            onClick={() => onSelect(i)}
+            style={{
+              width: 56, height: 54, flexShrink: 0,
+              borderRadius: 12, padding: 8,
+              border: active ? "none" : "1px solid #E0E2EB",
+              background: active ? "#FD014F" : C.white, cursor: "pointer",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              fontFamily: "inherit",
+              transition: "all 0.15s",
+            }}
+          >
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: "22px", color: active ? "#fff" : "#181E4C" }}>{dayNum}</span>
+            <span style={{ fontSize: 12, fontWeight: 400, lineHeight: "16px", color: active ? "#fff" : "#181E4C" }}>{monthShort}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DayHero({ day }) {
+  const hero = day.activities?.[0]?.photo;
+  return (
+    <div style={{ padding: "16px 20px 0" }}>
+      <div style={{
+        width: "100%", aspectRatio: "16/9", borderRadius: 12,
+        background: hero ? `url(${hero}) center/cover no-repeat` : "#F4F2F0",
+        marginBottom: 16,
+      }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", margin: "0 0 4px", lineHeight: "22px" }}>
+            Day {day.dayNumber}, {day.city}
+          </h3>
+          <p style={{ fontSize: 12, fontWeight: 400, color: "#181E4C", margin: 0, lineHeight: "16px" }}>
+            {day.activities?.length || 0} experience{day.activities?.length === 1 ? "" : "s"} planned
+          </p>
+        </div>
+        <a
+          href={getDirectionUrl(`${day.city}`)}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
+            background: C.white, border: "1px solid #E0E2EB", borderRadius: 40,
+            color: "#181E4C", fontSize: 14, fontWeight: 500, textDecoration: "none",
+          }}
+        >
+          <MapPin size={16} color="#181E4C" />
+          Map
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function ActivityCards({ activities, city }) {
+  if (!activities?.length) return null;
+  return (
+    <div style={{
+      background: "#F9F9FB", borderTop: "1px solid #E0E2EB",
+      borderRadius: "16px 16px 0 0",
+      margin: "24px 0 0",
+      padding: "24px 20px",
+    }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {activities.map((act, i) => {
+          const mins = (i + 1) * 30 + 75;
+          const dur = `${Math.floor(mins / 60)}:${(mins % 60).toString().padStart(2, "0")}`;
+          return (
+            <div key={i} style={{ display: "flex", gap: 12 }}>
+              <div style={{
+                position: "relative", width: 175, height: 120, flexShrink: 0,
+                borderRadius: 8, overflow: "hidden",
+                background: act.photo ? `url(${act.photo}) center/cover no-repeat` : "#F4F2F0",
+              }}>
+                <div style={{
+                  position: "absolute", left: 116, top: 90,
+                  display: "flex", alignItems: "center", gap: 4,
+                  padding: "4px 6px", background: "#181E4C",
+                  boxShadow: "inset -1px -1px 4px rgba(255,255,255,0.25)",
+                  borderRadius: 4,
+                }}>
+                  <PlayCircle size={12} color="#fff" strokeWidth={1.8} />
+                  <span style={{ fontSize: 10, fontWeight: 500, color: "#fff", lineHeight: "14px" }}>{dur}</span>
+                </div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 2 }}>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: "0 0 4px", lineHeight: "20px" }}>{act.title}</p>
+                  <p style={{
+                    fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px",
+                    overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+                  }}>{act.description}</p>
+                </div>
+                <a
+                  href={getDirectionUrl(`${act.venue}, ${city}`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: 12, fontWeight: 600, color: "#FD014F", marginTop: 8, textDecoration: "none" }}
+                >
+                  Get direction
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DayHotelCard({ hotel }) {
+  if (!hotel) return null;
+  return (
+    <div style={{ background: C.white, padding: "24px 20px" }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", lineHeight: "28px" }}>Your stay</h4>
+      <div style={{ borderRadius: 12, overflow: "hidden", filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))" }}>
+        <div style={{ position: "relative", padding: 8, background: C.white }}>
+          <div style={{
+            width: "100%", aspectRatio: "16/10", borderRadius: "8px 8px 0 0",
+            background: hotel.photo ? `url(${hotel.photo}) center/cover no-repeat` : "#F4F2F0",
+          }} />
+          <div style={{
+            position: "absolute", left: 16, bottom: 16,
+            display: "flex", alignItems: "center", padding: "0 6px",
+            background: "rgba(255,255,255,0.9)", border: "1px solid #fff",
+            borderRadius: "0 4px", height: 22,
+          }}>
+            <Star size={14} fill="#4EAC7E" color="#4EAC7E" strokeWidth={0} />
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#4EAC7E", marginLeft: 2 }}>{hotel.stars} star hotel</span>
+          </div>
+          <div style={{
+            position: "absolute", right: 16, bottom: 16,
+            display: "flex", alignItems: "center", gap: 4, padding: "0 8px",
+            background: "rgba(255,255,255,0.95)", border: "1px solid #fff",
+            borderRadius: "0 4px", height: 22,
+          }}>
+            <span style={{ fontSize: 9, fontWeight: 700, background: "#003580", color: "#fff", padding: "1px 3px", borderRadius: 2 }}>B</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#181E4C" }}>{hotel.bookingRating} Rated</span>
+          </div>
+        </div>
+        <div style={{ padding: "8px 12px 16px" }}>
+          <h5 style={{ fontSize: 14, fontWeight: 500, color: "#000", margin: "0 0 4px", lineHeight: "20px" }}>{hotel.name}</h5>
+          <p style={{ fontSize: 12, color: "#666C99", margin: "0 0 4px", lineHeight: "16px" }}>{hotel.roomType}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <MapPin size={14} color="#666C99" />
+            <span style={{ fontSize: 12, color: "#666C99", lineHeight: "16px" }}>{hotel.city}</span>
+          </div>
+        </div>
+      </div>
+      <a
+        href={getDirectionUrl(`${hotel.name}, ${hotel.city}`)}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          padding: "8px 24px", marginTop: 16,
+          background: C.white, border: "1px solid #E0E2EB",
+          boxShadow: "0 4px 12px -4px #E0E2EB",
+          borderRadius: 40, color: "#FD014F", textDecoration: "none",
+          fontSize: 14, fontWeight: 500,
+        }}
+      >
+        <MapPin size={20} color="#FD014F" />
+        Get direction
+      </a>
+    </div>
+  );
+}
+
+function HighlightsSubsection({ title, items }) {
+  return (
+    <div>
+      <h5 style={{ fontSize: 16, fontWeight: 500, color: "#181E4C", margin: "0 0 12px", lineHeight: "22px" }}>{title}</h5>
+      <div className="hs" style={{ gap: 16, paddingRight: 16 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ width: 110, flexShrink: 0 }}>
+            <div style={{
+              width: 110, height: 100, borderRadius: 8,
+              background: it.photo ? `url(${it.photo}) center/cover no-repeat` : "#F4F2F0",
+              marginBottom: 8,
+            }} />
+            <p style={{ fontSize: 12, fontWeight: 500, color: "#0F172A", margin: "0 0 2px", lineHeight: "18px" }}>{it.title}</p>
+            <p style={{ fontSize: 10, color: "#666C99", margin: 0, lineHeight: "12px" }}>{it.caption}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HighlightsSection({ day }) {
+  // Mock highlights drawn from activities (cuisine + must-try)
+  const items = day.activities?.map((a, i) => ({
+    title: a.title,
+    caption: a.venue,
+    photo: a.photo,
+  })) || [];
+  const restaurants = day.restaurants?.map(r => ({
+    title: r.name,
+    caption: r.cuisine || r.priceRange || r.city,
+    photo: r.photo,
+  })) || [];
+
+  if (items.length === 0 && restaurants.length === 0) return null;
+
+  return (
+    <div style={{ background: C.white, padding: "24px 20px" }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", lineHeight: "28px" }}>Highlights</h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {items.length > 0 && <HighlightsSubsection title="Must-do today" items={items} />}
+        {restaurants.length > 0 && <HighlightsSubsection title="Where to eat" items={restaurants} />}
+      </div>
+    </div>
+  );
+}
+
+function AIChatbotCard() {
+  return (
+    <div style={{ background: C.white, padding: "16px 20px" }}>
+      <div style={{
+        position: "relative", overflow: "hidden",
+        display: "flex", alignItems: "center", gap: 16,
+        padding: 12, background: "#FFF0F4", borderRadius: 12,
+      }}>
+        <div style={{
+          position: "absolute", width: 80, height: 80, left: 9, top: "calc(50% - 40px)",
+          background: "#F8BACC", opacity: 0.5, borderRadius: "50%", filter: "blur(3px)",
+          pointerEvents: "none",
+        }} />
+        <div style={{
+          width: 72, height: 74, flexShrink: 0, position: "relative", zIndex: 1,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 56,
+        }}>
+          😄
+        </div>
+        <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
+          <h5 style={{ fontSize: 16, fontWeight: 500, color: "#181E4C", margin: "0 0 4px", lineHeight: "22px" }}>AI Chatbot</h5>
+          <p style={{ fontSize: 12, color: "#666C99", margin: "0 0 12px", lineHeight: "16px" }}>
+            Get personalised recommendations for things to do, areas to explore and much more in seconds.
+          </p>
+          <button
+            onClick={() => alert("AI Chatbot — coming soon. Ask anything about your trip.")}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8, padding: "4px 24px",
+              background: "#FD014F", boxShadow: "0 4px 16px -2px rgba(253,1,79,0.25)",
+              border: "none", borderRadius: 40, cursor: "pointer", fontFamily: "inherit",
+              color: "#fff", fontSize: 14, fontWeight: 500,
+            }}
+          >
+            Try now
+            <Send size={14} color="#fff" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const MOCK_REVIEWS = [
+  {
+    name: "Nishant",
+    avatar: "https://i.pravatar.cc/64?img=12",
+    text: "They don't suggest over touristy places like others. Their Jatiluwih terraces + Beach love combination in Bali is a must try for every couple. We had a great time enjoying the sunset sitting on Bean bags from a cliff overlooking an ocean. No other travel agent understands Couples like this!",
+    photos: [
+      "https://cdn.30sundays.club/app_content/bali/bali_swing_experience_1.jpg",
+      "https://cdn.30sundays.club/app_content/bali/tegallalang_rice_fields_4.jpg",
+      "https://cdn.30sundays.club/app_content/bali/banyumala_waterfall_56.jpg",
+    ],
+  },
+  {
+    name: "Ruby",
+    avatar: "https://i.pravatar.cc/64?img=47",
+    text: "Every trip has small hiccups. What we loved about 30 Sundays was that they respond to every request within minutes. When I travel with 30 Sundays, I know they have our back always :)",
+    photos: [
+      "https://cdn.30sundays.club/app_content/thailand/pileh_lagoon_439.jpg",
+      "https://cdn.30sundays.club/app_content/thailand/long_beach_koh_phi_phi_468.jpg",
+      "https://cdn.30sundays.club/app_content/thailand/big_buddha_temple_koh_samui_459.jpg",
+    ],
+  },
+];
+
+function ReviewsSection() {
+  const [expanded, setExpanded] = useState({});
+  return (
+    <div style={{ background: C.white, padding: "24px 20px" }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", lineHeight: "28px" }}>Reviews</h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {MOCK_REVIEWS.map((r, idx) => {
+          const isOpen = expanded[idx];
+          const previewText = isOpen ? r.text : r.text.slice(0, 200) + (r.text.length > 200 ? "…" : "");
+          return (
+            <div key={idx} style={{ paddingBottom: 16, borderBottom: idx < MOCK_REVIEWS.length - 1 ? "1px solid #E0E2EB" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <img src={r.avatar} alt={r.name} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
+                <p style={{ fontSize: 16, fontWeight: 500, color: "#090C10", margin: 0, lineHeight: "22px" }}>{r.name}</p>
+              </div>
+              <p style={{ fontSize: 14, color: "#666C99", margin: "0 0 8px", lineHeight: "20px" }}>{previewText}</p>
+              {r.text.length > 200 && (
+                <button
+                  onClick={() => setExpanded(s => ({ ...s, [idx]: !s[idx] }))}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", color: "#FD014F", fontSize: 14, fontWeight: 500, marginBottom: 16 }}
+                >
+                  {isOpen ? "Show less" : "Read more"}
+                </button>
+              )}
+              <div style={{ display: "flex", gap: 8 }}>
+                {r.photos.map((p, i) => (
+                  <div key={i} style={{
+                    flex: 1, aspectRatio: "1", borderRadius: 8,
+                    background: `url(${p}) center/cover no-repeat`,
+                  }} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function DayWiseTab({ trip }) {
   const days = trip.dayWise;
   const [selectedDay, setSelectedDay] = useState(0);
@@ -1067,7 +1411,7 @@ function DayWiseTab({ trip }) {
   if (!days || days.length === 0) {
     return (
       <div style={{ padding: "48px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: 16, color: C.sub }}>Day-wise details will appear once your itinerary is finalized.</p>
+        <p style={{ fontSize: 16, color: "#666C99" }}>Day-wise details will appear once your itinerary is finalized.</p>
       </div>
     );
   }
@@ -1075,125 +1419,16 @@ function DayWiseTab({ trip }) {
   const day = days[selectedDay] || days[0];
 
   return (
-    <div>
-      {/* Date pill selector */}
-      <div className="hs" style={{
-        gap: 8, padding: "12px 16px", background: C.white,
-        position: "sticky", top: 0, zIndex: 5, borderBottom: `1px solid ${C.div}`,
-      }}>
-        {days.map((d, i) => {
-          const isToday = d.date === new Date().toISOString().split("T")[0];
-          const active = i === selectedDay;
-          return (
-            <button
-              key={i}
-              onClick={() => setSelectedDay(i)}
-              style={{
-                minWidth: 90, flexShrink: 0, padding: "8px 12px", borderRadius: 12,
-                border: active ? "none" : `1px solid ${C.div}`,
-                background: active ? C.p600 : C.white, cursor: "pointer",
-                textAlign: "center", fontFamily: "inherit",
-                transition: "all 0.15s",
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: active ? "#fff" : C.head }}>
-                {d.dateDisplay.split(",")[0] || `Day ${d.dayNumber}`}
-              </div>
-              <div style={{ fontSize: 12, color: active ? "rgba(255,255,255,0.8)" : C.sub, marginTop: 2 }}>
-                📍 {d.city}
-              </div>
-              {isToday && (
-                <div style={{
-                  fontSize: 9, fontWeight: 700, color: active ? C.p600 : "#fff",
-                  background: active ? "#fff" : C.p600, borderRadius: 4,
-                  padding: "1px 5px", marginTop: 3, display: "inline-block",
-                }}>
-                  TODAY
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Day content */}
-      <div style={{ padding: 16 }}>
-        {/* Activities */}
-        {day.activities && day.activities.map((act, i) => (
-          <div key={i} style={{
-            background: C.white, borderRadius: 12, padding: 14, marginBottom: 12,
-            border: `1px solid ${C.div}`,
-          }}>
-            <h5 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: "0 0 10px" }}>{act.title}</h5>
-            <div style={{ display: "flex", gap: 12 }}>
-              <img
-                src={act.photo}
-                alt={act.title}
-                style={{ width: 120, height: 90, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
-              />
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 4px" }}>{act.venue}</p>
-                <p style={{
-                  fontSize: 14, color: C.sub, margin: 0, lineHeight: "20px",
-                  overflow: "hidden", textOverflow: "ellipsis",
-                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                }}>
-                  {act.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Hotel for this day */}
-        {day.hotel && (
-          <div style={{ marginTop: 12, marginBottom: 24 }}>
-            <h5 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: "0 0 10px" }}>Your stay</h5>
-            <div style={{
-              background: C.white, borderRadius: 12, overflow: "hidden",
-              border: `1px solid ${C.div}`,
-            }}>
-              <img
-                src={day.hotel.photo}
-                alt={day.hotel.name}
-                style={{ width: "100%", aspectRatio: "16/10", objectFit: "cover", display: "block" }}
-              />
-              <div style={{ padding: "10px 14px 14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: "#039855", fontWeight: 600 }}>⭐ {day.hotel.stars} star hotel</span>
-                  <span style={{ fontSize: 12, color: "#039855", fontWeight: 600 }}>🅱️ {day.hotel.bookingRating} Rated</span>
-                </div>
-                <h5 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: "0 0 2px" }}>{day.hotel.name}</h5>
-                <p style={{ fontSize: 14, color: C.sub, margin: 0 }}>{day.hotel.roomType}</p>
-                <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>📍 {day.hotel.city}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Restaurants / Discover */}
-        {day.restaurants && day.restaurants.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <h5 style={{ fontSize: 16, fontWeight: 600, color: C.head, margin: 0 }}>Restaurants</h5>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer" }}>View all</span>
-            </div>
-            <div className="hs" style={{ gap: 12 }}>
-              {day.restaurants.map((r, i) => (
-                <div key={i} style={{
-                  minWidth: 160, flexShrink: 0, background: C.white, borderRadius: 12,
-                  overflow: "hidden", border: `1px solid ${C.div}`,
-                }}>
-                  <img src={r.photo} alt={r.name} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />
-                  <div style={{ padding: "8px 10px" }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 2px" }}>{r.name}</p>
-                    <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{r.city}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+    <div style={{ background: C.white }}>
+      <DatePicker days={days} selectedDay={selectedDay} onSelect={setSelectedDay} />
+      <DayHero day={day} />
+      <ActivityCards activities={day.activities} city={day.city} />
+      <DayHotelCard hotel={day.hotel} />
+      <HighlightsSection day={day} />
+      <AIChatbotCard />
+      <ReviewsSection />
+      <div style={{ padding: "0 16px" }}>
+        <JourneyMap cities={trip.journeyMapCities} />
       </div>
     </div>
   );
