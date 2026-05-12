@@ -5,7 +5,7 @@ import { SectionHead, GlassPlay } from "./EduSingleCard";
 // Just a section header + horizontal scroll of lesson cards.
 export default function EduMultiCarousel({ lessons }) {
   return (
-    <div style={{ marginTop: 28 }}>
+    <div style={{ background: C.p100, padding: "22px 0 26px", marginTop: 28 }}>
       <div style={{ padding: "0 16px" }}>
         <SectionHead />
       </div>
