@@ -5,6 +5,7 @@ import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import Home from "./pages/Home";
+import HomeV2 from "./pages/HomeV2";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
 import ResortDetail from "./pages/ResortDetail";
@@ -44,6 +45,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
         <Route path="/" element={<Home userState={userState} />} />
+        <Route path="/v2" element={<HomeV2 />} />
         <Route path="/destination/Maldives" element={<MaldivesDestination />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/destination/:name" element={<Destination />} />
