@@ -288,7 +288,7 @@ export function CrowdBody({ data, dayLabel }) {
         const qLvl = a.queue === "long" ? 2 : a.queue === "moderate" ? 1 : 0;
         const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
         const queueRange = a.queue === "short" ? "< 30 min wait"
-                         : a.queue === "moderate" ? "30 to 60 min"
+                         : a.queue === "moderate" ? "30-60 min wait"
                          : "> 60 min wait";
         return (
           <div key={i} style={{
