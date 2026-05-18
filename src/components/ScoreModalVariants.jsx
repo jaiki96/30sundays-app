@@ -103,11 +103,23 @@ export function PaceBody({ data, dayLabel }) {
         </div>
       ))}
 
-      <Accordion title="Other pace levels">
-        <TagDefList tags={data.otherTags} />
-      </Accordion>
+      <div style={{ marginTop: 22 }}>
+        <p style={{ margin: "0 0 10px", fontSize: 11, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>
+          Pace levels
+        </p>
+        <TagDefList tags={data.allTags || data.otherTags} />
+      </div>
 
-      <TipBlock text={data.tip} />
+      <div style={{ marginTop: 18 }}>
+        <TipBlock text={data.tip} />
+      </div>
+
+      <p style={{
+        margin: "14px 0 0", fontSize: 11, color: "#A4A7AE",
+        fontStyle: "italic", lineHeight: 1.45,
+      }}>
+        Pace is derived from the count of stops and the travel between them. Actual feel may vary based on your energy and how the day unfolds.
+      </p>
     </div>
   );
 }

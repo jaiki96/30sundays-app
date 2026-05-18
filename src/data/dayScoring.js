@@ -235,9 +235,10 @@ const METRIC_EXPLAINERS = {
 
 // Per-level tag definitions - used only inside the "other levels" accordion.
 const PACE_DEFS = {
-  Relaxed: "Just 1 to 2 stops with plenty of downtime to soak in each place.",
-  Neutral: "A balanced mix of stops and breaks. Moves at a comfortable rhythm.",
-  Hectic: "4 or more stops back-to-back, often with a transfer in between.",
+  Relaxed: "1 stop with plenty of downtime to soak in the place.",
+  Balanced: "2 stops with breaks in between. Moves at a comfortable rhythm.",
+  Active: "3 stops with brisk transitions. Plan for a full day out.",
+  "Fast-paced": "4 or more stops back-to-back, often with a transfer in between.",
 };
 
 const CROWD_DEFS = {
@@ -387,7 +388,12 @@ export function getDayScoring(day, dayIdx, allDays) {
       labels: paceLabels,
       summary: paceSummary,
       explainer: METRIC_EXPLAINERS.pace,
-      otherTags: paceLabels.map((l, i) => ({ label: l, level: i, definition: PACE_DEFS[l] })).filter(t => t.level !== paceLevel),
+      allTags: paceLabels.map((l, i) => ({
+        label: l,
+        // Collapse 4 pace tiers (0-3) to 3 palette colors (0-2) so Relaxed=green, Balanced/Active=amber, Fast-paced=red.
+        level: i === 0 ? 0 : i === 3 ? 2 : 1,
+        definition: PACE_DEFS[l],
+      })),
       score: numericScore(paceLevel),
       emoji: paceLevel === 2 ? "🎢" : paceLevel === 1 ? "🌤️" : "🧘",
       quickStats: [
