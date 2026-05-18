@@ -1097,6 +1097,19 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
   const [chooseToast, setChooseToast] = useState(null);
   const touchStart = useRef(null);
 
+  // Mobile fills the viewport; desktop centers a 390x844 phone-sized box.
+  // Use position:fixed so the viewer escapes the tall scrollable parent
+  // (ItineraryDetail's root has position:relative and spans all content).
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const viewerStyle = isMobile
+    ? { position: "fixed", inset: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, borderRadius: 44 };
+
   const currentDay = days[dayIdx];
   const activities = currentDay?.activities || [];
   const currentAct = activities[actIdx] || activities[0];
@@ -1153,7 +1166,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "#000", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div style={{ ...viewerStyle, zIndex: 200, background: "#000", overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* Background image — always present */}
       <img src={currentAct?.img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
 
