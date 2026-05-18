@@ -9,7 +9,7 @@ export default function HeroVideo({
   videoUrl = "", // placeholder until brand video lands
   poster = "https://cdn.30sundays.club/app_content/bali/handara_gate_63.jpg",
   tagline = "Saving relationships,\none vacation at a time.",
-  height = 360,
+  height = 300,
 }) {
   const navigate = useNavigate();
   const ref = useRef(null);

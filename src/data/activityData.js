@@ -105,6 +105,72 @@ function pickReviews(name) {
 
 const VIDEO_SAMPLE = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
+// Hand-authored overrides for specific activity names. When the itinerary
+// sends a generic label (e.g. "Dining"), we swap in a richer real-place record.
+// Photos point at public/ so users only need to drop the files in.
+const ACTIVITY_OVERRIDES = {
+  Temples: {
+    name: "Tandem ATV",
+    primaryType: "Adventure",
+    primaryTypeIcon: "🏔️",
+    description:
+      "Tandem ATV is a 2-up jungle ride through Ubud's bamboo trails, river crossings, and mossy stone tunnels. You and your partner share one ATV (driver and pillion), so neither of you misses the views. Routes wind through rice fields, past small waterfalls, and end at a local warung for lunch. Pickup is from your hotel, safety gear and a guide are included, and the ride lasts about 2 hours.",
+    editorialSummary:
+      "Bali's most-loved couple ride, jungle trails, river splashes, and a Jurassic-style stone tunnel.",
+    photos: ["/atv-1.jpg", "/atv-2.jpg", "/atv-3.jpg"],
+    rating: "4.9",
+    reviewCount: 8420,
+    address: "Kuber Bali ATV Adventure, Tegallalang, Ubud, Bali, Indonesia",
+    shortAddress: "Ubud, Bali",
+    types: ["Adventure", "Couples activity", "Outdoor"],
+    typicalDuration: "~2 hr ride, ~4 hr door to door",
+    weekdayHours: [
+      "Monday: 8:00 AM to 4:00 PM",
+      "Tuesday: 8:00 AM to 4:00 PM",
+      "Wednesday: 8:00 AM to 4:00 PM",
+      "Thursday: 8:00 AM to 4:00 PM",
+      "Friday: 8:00 AM to 4:00 PM",
+      "Saturday: 8:00 AM to 4:00 PM",
+      "Sunday: 8:00 AM to 4:00 PM",
+    ],
+    openNow: true,
+    nextOpenLabel: "Opens 8:00 AM",
+    googleMapsUri: "https://www.google.com/maps/search/Kuber+Bali+ATV+Adventure",
+    website: "https://kuberbali.com/atv",
+    phone: "+62 821-4500-9090",
+  },
+  Dining: {
+    name: "Kelingking Beach",
+    primaryType: "Beach",
+    primaryTypeIcon: "🏖️",
+    description:
+      "Kelingking Beach on Nusa Penida is famous for its T-Rex-shaped limestone cliff that juts into the sea. The viewpoint at the top is one of Bali's most photographed spots, especially at sunrise and sunset. A steep wooden staircase descends roughly 400 metres to the secluded white-sand cove and turquoise water below, with the climb back taking around 30 to 45 minutes.",
+    editorialSummary:
+      "Iconic T-Rex cliff and turquoise cove on Nusa Penida, Bali's most photographed beach.",
+    photos: ["/kelingking-1.jpg", "/kelingking-2.jpg", "/kelingking-1.jpg"],
+    rating: "4.8",
+    reviewCount: 12842,
+    address: "Bunga Mekar, Nusa Penida, Klungkung, Bali, Indonesia",
+    shortAddress: "Nusa Penida, Bali",
+    types: ["Beach", "Viewpoint", "Tourist attraction"],
+    typicalDuration: "~2 hr at viewpoint, +1 hr if you descend",
+    weekdayHours: [
+      "Monday: Open 24 hours",
+      "Tuesday: Open 24 hours",
+      "Wednesday: Open 24 hours",
+      "Thursday: Open 24 hours",
+      "Friday: Open 24 hours",
+      "Saturday: Open 24 hours",
+      "Sunday: Open 24 hours",
+    ],
+    openNow: true,
+    nextOpenLabel: "Open 24 hours",
+    googleMapsUri: "https://www.google.com/maps/place/Kelingking+Beach",
+    website: "https://nusa-penida.id/kelingking-beach",
+    phone: null,
+  },
+};
+
 /**
  * Build a full activity detail record.
  * @param {object} activity - source from trip data or itinerary day
@@ -112,17 +178,23 @@ const VIDEO_SAMPLE = "https://thirtysundays-prod-content.fra1.digitaloceanspaces
  */
 export function buildActivityDetail(activity, opts = {}) {
   const { city = "", isBooked = false, dayDate = "", dayNum = null, country = "" } = opts;
-  const name = activity.title || activity.name || "Activity";
+  const rawName = activity.title || activity.name || "Activity";
+  const override = ACTIVITY_OVERRIDES[rawName];
+  const name = override?.name || rawName;
   const h = hash(name + city);
-  const typeMeta = pickType(name);
+  const typeMeta = override
+    ? { type: override.primaryType, icon: override.primaryTypeIcon }
+    : pickType(name);
   const flags = pickFlags(name);
 
-  // Description: use existing one if rich, else compose
-  const description = activity.description && activity.description.length > 60
-    ? activity.description
-    : `${name} is a beloved stop in ${city}. Plan to spend a couple of hours here soaking in the atmosphere, taking photos, and exploring at your own pace. It's the kind of place that rewards a slower visit — quiet moments, unexpected corners, and views you'll want to remember.`;
+  // Description: prefer override, then activity, else compose
+  const description = override?.description
+    || (activity.description && activity.description.length > 60
+        ? activity.description
+        : `${name} is a beloved stop in ${city}. Plan to spend a couple of hours here soaking in the atmosphere, taking photos, and exploring at your own pace. It's the kind of place that rewards a slower visit, quiet moments, unexpected corners, and views you'll want to remember.`);
 
-  const editorialSummary = activity.editorialSummary
+  const editorialSummary = override?.editorialSummary
+    || activity.editorialSummary
     || `Popular ${typeMeta.type.toLowerCase()} ${city ? `in ${city}` : ""} with strong reviews and great photo spots.`;
 
   return {
@@ -132,28 +204,28 @@ export function buildActivityDetail(activity, opts = {}) {
     primaryTypeIcon: typeMeta.icon,
     description,
     editorialSummary,
-    photos: pickPhotos(activity),
+    photos: override?.photos || pickPhotos(activity),
     // Only booked customers get the curated guide
     videoUrl: isBooked ? VIDEO_SAMPLE : null,
     videoDuration: "1:45",
-    rating: (4.3 + ((h % 7) * 0.1)).toFixed(1),
-    reviewCount: 800 + (h % 50000),
-    address: `${name}, ${city}${country ? `, ${country}` : ""}`,
-    shortAddress: `${city}${country ? `, ${country}` : ""}`,
-    phone: h % 4 === 0 ? null : `+62 821-${(h % 9000) + 1000}-${(h % 9000) + 1000}`,
-    website: h % 3 === 0 ? `https://www.${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.com` : null,
-    googleMapsUri: `https://www.google.com/maps/search/${encodeURIComponent(`${name}, ${city}`)}`,
-    weekdayHours: [
-      "Monday: 6:00 AM – 7:00 PM",
-      "Tuesday: 6:00 AM – 7:00 PM",
-      "Wednesday: 6:00 AM – 7:00 PM",
-      "Thursday: 6:00 AM – 7:00 PM",
-      "Friday: 6:00 AM – 7:00 PM",
-      "Saturday: 6:00 AM – 7:00 PM",
-      "Sunday: 6:00 AM – 7:00 PM",
+    rating: override?.rating || (4.3 + ((h % 7) * 0.1)).toFixed(1),
+    reviewCount: override?.reviewCount || 800 + (h % 50000),
+    address: override?.address || `${name}, ${city}${country ? `, ${country}` : ""}`,
+    shortAddress: override?.shortAddress || `${city}${country ? `, ${country}` : ""}`,
+    phone: override ? override.phone : (h % 4 === 0 ? null : `+62 821-${(h % 9000) + 1000}-${(h % 9000) + 1000}`),
+    website: override?.website || (h % 3 === 0 ? `https://www.${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.com` : null),
+    googleMapsUri: override?.googleMapsUri || `https://www.google.com/maps/search/${encodeURIComponent(`${name}, ${city}`)}`,
+    weekdayHours: override?.weekdayHours || [
+      "Monday: 6:00 AM to 7:00 PM",
+      "Tuesday: 6:00 AM to 7:00 PM",
+      "Wednesday: 6:00 AM to 7:00 PM",
+      "Thursday: 6:00 AM to 7:00 PM",
+      "Friday: 6:00 AM to 7:00 PM",
+      "Saturday: 6:00 AM to 7:00 PM",
+      "Sunday: 6:00 AM to 7:00 PM",
     ],
-    openNow: h % 5 !== 0,
-    nextOpenLabel: "Opens 6:00 AM",
+    openNow: override?.openNow ?? (h % 5 !== 0),
+    nextOpenLabel: override?.nextOpenLabel || "Opens 6:00 AM",
     businessStatus: "OPERATIONAL",
     flags,
     accessibility: {
@@ -162,9 +234,9 @@ export function buildActivityDetail(activity, opts = {}) {
       kidFriendly: h % 4 !== 0,
       parking: h % 3 === 0,
     },
-    types: [typeMeta.type, "Tourist attraction", "Point of interest"].slice(0, 3),
+    types: override?.types || [typeMeta.type, "Tourist attraction", "Point of interest"].slice(0, 3),
     reviews: pickReviews(name),
-    typicalDuration: ["~1 hr typical visit", "~2 hr typical visit", "~3 hr typical visit"][h % 3],
+    typicalDuration: override?.typicalDuration || ["~1 hr typical visit", "~2 hr typical visit", "~3 hr typical visit"][h % 3],
     // Context
     dayDate,
     dayNum,

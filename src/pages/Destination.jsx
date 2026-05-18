@@ -5,7 +5,78 @@ import { C, destData, destinations, getItinerariesForDest, reviews, getCustomerP
 import ItineraryCard from "../components/ItineraryCard";
 import SectionHeader from "../components/SectionHeader";
 import WatchTeaser from "../components/WatchTeaser";
+import EduSingleCard from "../components/home_v2/EduSingleCard";
+import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import { videosForDest } from "../data/watchData";
+
+// Curated category filters per destination. Each activity/region defines a
+// label + list of cities. Itineraries whose `route[].city` contains any of
+// those cities are shown under that strip.
+const popularIdsByDest = {
+  Bali:          [1, 2, 4, 5, 101, 102],
+  Vietnam:       [25, 10, 11, 27, 26, 12],
+  Thailand:      [13, 14, 15],
+  Maldives:      [16, 17, 18],
+  "Sri Lanka":   [19, 20, 21],
+  "New Zealand": [22, 23, 24],
+};
+
+const activityFilters = {
+  Bali: [
+    { label: "Ijen sunrise hike",  cities: ["Amed", "Sidemen", "Lovina"] },
+    { label: "Dolphin watching",   cities: ["Lovina", "Pemuteran"] },
+  ],
+  Vietnam: [
+    { label: "Ha Long Bay cruise", cities: ["Ha Long"] },
+    { label: "Hoi An lantern walk",cities: ["Hoi An"] },
+  ],
+  Thailand: [
+    { label: "Island hopping",     cities: ["Phuket", "Krabi", "Koh Samui"] },
+    { label: "Northern temples",   cities: ["Chiang Mai", "Chiang Rai", "Pai"] },
+  ],
+  Maldives: [
+    { label: "Overwater villa",    cities: ["Addu", "Baa Atoll", "S.Ari"] },
+    { label: "Reef diving",        cities: ["Baa Atoll", "S.Ari", "Fuvahmulah"] },
+  ],
+  "Sri Lanka": [
+    { label: "Train to Ella",      cities: ["Ella", "Kandy"] },
+    { label: "Yala safari",        cities: ["Yala"] },
+  ],
+  "New Zealand": [
+    { label: "Milford Sound",      cities: ["Milford", "Queenstown"] },
+    { label: "Geothermal Rotorua", cities: ["Rotorua"] },
+  ],
+};
+
+const regionFilters = {
+  Bali: [
+    { label: "Nusa Penida",        cities: ["Nusa Penida", "Lembongan"] },
+    { label: "Sidemen",            cities: ["Sidemen", "Munduk"] },
+  ],
+  Vietnam: [
+    { label: "Sapa",               cities: ["Sapa"] },
+    { label: "Hoi An",             cities: ["Hoi An"] },
+  ],
+  Thailand: [
+    { label: "Krabi",              cities: ["Krabi"] },
+    { label: "Chiang Mai",         cities: ["Chiang Mai"] },
+  ],
+  Maldives: [
+    { label: "Baa Atoll",          cities: ["Baa Atoll"] },
+    { label: "South Ari",          cities: ["S.Ari"] },
+  ],
+  "Sri Lanka": [
+    { label: "Ella",               cities: ["Ella"] },
+    { label: "Galle",              cities: ["Galle"] },
+  ],
+  "New Zealand": [
+    { label: "Queenstown",         cities: ["Queenstown"] },
+    { label: "Rotorua",            cities: ["Rotorua"] },
+  ],
+};
+
+const matchByCities = (cities) => (it) =>
+  it.route && it.route.some((r) => cities.includes(r.city));
 
 export default function Destination() {
   const { name } = useParams();
@@ -19,8 +90,17 @@ export default function Destination() {
 
   const itins = getItinerariesForDest(name);
   const relaxed = itins.filter(i => i.vibe === "Relaxed");
-  const explorer = itins.filter(i => i.vibe === "Explorer");
   const offbeat = itins.filter(i => i.vibe === "Offbeat");
+
+  // Popular: hand-picked ids; fall back to first 6 if none configured.
+  const popularIds = popularIdsByDest[name] || [];
+  const popular = popularIds.length
+    ? popularIds.map(id => itins.find(i => i.id === id)).filter(Boolean)
+    : itins.slice(0, 6);
+
+  const acts    = (activityFilters[name] || []).map(f => ({ ...f, items: itins.filter(matchByCities(f.cities)) }));
+  const regions = (regionFilters[name]   || []).map(f => ({ ...f, items: itins.filter(matchByCities(f.cities)) }));
+
   const otherDests = destinations.filter(dd => dd.name !== name);
   const destReviews = reviews.filter(r => r.dest === name).length > 0 ? reviews.filter(r => r.dest === name) : reviews.slice(0, 2);
   const isBali = name === "Bali";
@@ -68,25 +148,63 @@ export default function Destination() {
         </div>
       )}
 
-      {/* Vibe carousels */}
-      {relaxed.length > 0 && (
+      {/* Category carousels — Popular → Offbeat → Relaxed → SS single → activities → SS multi → regions */}
+      {popular.length > 0 && (
         <div style={{ marginTop: 22 }}>
-          <SectionHeader emoji="🧘" title="Relaxed" sub="Slow mornings & sunsets" linkTo={`/listing?vibe=Relaxed&dest=${name}`} linkLabel="View all" />
-          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{relaxed.map((it, i) => <ItineraryCard key={i} it={it} vibe="Relaxed" hideDest />)}</div>
-        </div>
-      )}
-      {explorer.length > 0 && (
-        <div style={{ marginTop: 22 }}>
-          <SectionHeader emoji="🧭" title="Explorer" sub="See more, do more" linkTo={`/listing?vibe=Explorer&dest=${name}`} linkLabel="View all" />
-          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{explorer.map((it, i) => <ItineraryCard key={i} it={it} vibe="Explorer" hideDest />)}</div>
+          <SectionHeader emoji="🔥" title="Popular" linkTo={`/listing?dest=${name}`} linkLabel="View all" />
+          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{popular.map((it, i) => <ItineraryCard key={i} it={it} vibe={it.vibe} hideDest />)}</div>
         </div>
       )}
       {offbeat.length > 0 && (
         <div style={{ marginTop: 22 }}>
-          <SectionHeader emoji="🗺️" title="Offbeat" sub="Skip the crowds" linkTo={`/listing?vibe=Offbeat&dest=${name}`} linkLabel="View all" />
+          <SectionHeader emoji="🗺️" title="Offbeat" linkTo={`/listing?vibe=Offbeat&dest=${name}`} linkLabel="View all" />
           <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{offbeat.map((it, i) => <ItineraryCard key={i} it={it} vibe="Offbeat" hideDest />)}</div>
         </div>
       )}
+      {relaxed.length > 0 && (
+        <div style={{ marginTop: 22 }}>
+          <SectionHeader emoji="🧘" title="Relaxed" linkTo={`/listing?vibe=Relaxed&dest=${name}`} linkLabel="View all" />
+          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{relaxed.map((it, i) => <ItineraryCard key={i} it={it} vibe="Relaxed" hideDest />)}</div>
+        </div>
+      )}
+
+      {/* Sunday School — Where to stay (single video) */}
+      <div style={{ marginTop: 28 }}>
+        <EduSingleCard
+          title={`Where to stay in [${name}]`}
+          poster={d.hero}
+          duration="2:18"
+          videoUrl=""
+        />
+      </div>
+
+      {acts.map((a, ai) => a.items.length > 0 && (
+        <div key={`act-${ai}`} style={{ marginTop: 22 }}>
+          <SectionHeader emoji="🎯" title={`Trips having ${a.label}`} linkTo={`/listing?dest=${name}`} linkLabel="View all" />
+          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{a.items.map((it, i) => <ItineraryCard key={i} it={it} vibe={it.vibe} hideDest />)}</div>
+        </div>
+      ))}
+
+      {/* Sunday School — activity comparisons (multi-video carousel) */}
+      {d.activities && d.activities.length > 0 && (
+        <EduMultiCarousel
+          valueTitle={`${name} [activities], compared`}
+          lessons={d.activities.slice(0, 6).map((act, i) => ({
+            tag: act,
+            hook: act,
+            poster: (d.actImgs && d.actImgs[i]) || d.hero,
+            duration: `${1 + (i % 2)}:${String(20 + i * 7).padStart(2, "0")}`,
+            videoUrl: "",
+          }))}
+        />
+      )}
+
+      {regions.map((rg, ri) => rg.items.length > 0 && (
+        <div key={`reg-${ri}`} style={{ marginTop: 22 }}>
+          <SectionHeader emoji="📍" title={`Trips having ${rg.label}`} linkTo={`/listing?dest=${name}`} linkLabel="View all" />
+          <div className="hs" style={{ gap: 14, paddingLeft: 16, paddingRight: 16 }}>{rg.items.map((it, i) => <ItineraryCard key={i} it={it} vibe={it.vibe} hideDest />)}</div>
+        </div>
+      ))}
 
       {/* Where to Stay (Bali only) */}
       {isBali && d.stayAreas && (

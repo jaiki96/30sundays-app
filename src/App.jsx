@@ -6,6 +6,7 @@ import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import Home from "./pages/Home";
 import HomeV2 from "./pages/HomeV2";
+import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
 import ResortDetail from "./pages/ResortDetail";
@@ -15,6 +16,7 @@ import ItineraryDetail from "./pages/ItineraryDetail";
 import Plan from "./pages/Plan";
 import LoginV2 from "./pages/LoginV2";
 import LogoAnim from "./pages/LogoAnim";
+import MediaLab from "./pages/MediaLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -35,7 +37,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
   const { pathname } = useLocation();
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
-  const hideShell = pathname === "/login-v2" || pathname === "/plan" || pathname === "/logo-anim";
+  const hideShell = pathname === "/login-v2" || pathname === "/plan" || pathname === "/logo-anim" || pathname === "/media-lab";
 
   if (isPrototype) {
     return (
@@ -51,6 +53,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
       <Routes>
         <Route path="/" element={<HomeV2 />} />
         <Route path="/v1" element={<Home userState={userState} />} />
+        <Route path="/chat" element={<ChatScreen />} />
         <Route path="/destination/Maldives" element={<MaldivesDestination />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/destination/:name" element={<Destination />} />
@@ -61,6 +64,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
+        <Route path="/media-lab" element={<MediaLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
