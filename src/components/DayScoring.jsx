@@ -76,19 +76,20 @@ function DurationTile({ scoring, onClick }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: 4, width: "100%" }}>
-        <DurationHalfTile icon={Timer} value={shortH(a.hours)} label="Activity" level={a.level} />
+        <DurationHalfTile icon={Timer} value={shortH(a.hours)} label="Activity time" level={a.level} />
         <span style={{
           fontSize: 18, fontWeight: 600, color: "#A4A7AE",
           alignSelf: "center", marginTop: -10,
         }}>+</span>
-        <DurationHalfTile icon={Plane} value={shortH(t.hours)} label="Travel" level={t.level} />
+        <DurationHalfTile icon={Plane} value={shortH(t.hours)} label="Travel time" level={t.level} />
       </div>
       <span style={{
-        display: "inline-flex", alignItems: "center", gap: 2,
-        fontSize: 11, fontWeight: 600, color: "#666C99", lineHeight: 1.3,
+        display: "inline-flex", alignItems: "center", gap: 3,
+        fontSize: 14, fontWeight: 700, color: "#181E4C", lineHeight: 1.3,
+        marginTop: 2,
       }}>
         ≈ {shortH(d.totalHrs)} day
-        <ChevronRight size={11} color="#A4A7AE" />
+        <ChevronRight size={13} color="#A4A7AE" />
       </span>
     </button>
   );
