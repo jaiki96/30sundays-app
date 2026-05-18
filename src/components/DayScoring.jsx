@@ -1,4 +1,4 @@
-import { Heart, Timer, Plane, Users, ChevronRight, X as XIcon, Lightbulb } from "lucide-react";
+import { Heart, Timer, Plane, Car, MapPin, Users, ChevronRight, X as XIcon, Lightbulb } from "lucide-react";
 import { C } from "../data";
 import { SCORE_PALETTE, LEVEL_KEYS } from "../data/dayScoring";
 import { PaceBody, ActivityBody, TravelBody, CrowdBody } from "./ScoreModalVariants";
@@ -210,65 +210,132 @@ const TITLES = {
   crowd: "Crowd levels",
 };
 
-// Merged Activity + Travel modal: total + breakdown.
-function DurationBody({ data, scoring, dayLabel }) {
+// Build a chronological event list from legs + activities.
+// For a normal day: legs are [Hotel→A1, A1→A2, ..., An→Hotel] and acts are [A1..An].
+// Interleave them so the timeline reads transit → place → transit → place → ... → transit.
+function buildTimeline(scoring) {
+  const events = [];
+  const acts = scoring?.activity?.activities || [];
+  const legs = scoring?.travel?.legs || [];
+  legs.forEach((leg, i) => {
+    events.push({ kind: "transit", ...leg });
+    if (i < acts.length) {
+      events.push({ kind: "dwell", ...acts[i] });
+    }
+  });
+  return events;
+}
+
+// Timeline row — icon column (with continuing vertical line) + content column.
+function TimelineRow({ event, isFirst, isLast }) {
+  const isTransit = event.kind === "transit";
+  const Icon = isTransit ? (event.mode === "flight" ? Plane : Car) : MapPin;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", columnGap: 12 }}>
+      {/* Icon column */}
+      <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
+        {/* Vertical connector — half-line on first/last rows */}
+        <div style={{
+          position: "absolute", top: 0, bottom: 0, width: 2,
+          background: "#E0E2EB",
+          ...(isFirst ? { top: 14 } : {}),
+          ...(isLast ? { bottom: "auto", height: 14 } : {}),
+        }} />
+        {/* Marker */}
+        <div style={{
+          position: "relative", zIndex: 1, marginTop: 4,
+          width: 28, height: 28, borderRadius: "50%",
+          background: isTransit ? "#F5F6FA" : "#FFE6ED",
+          border: `1.5px solid ${isTransit ? "#E0E2EB" : "#FD014F"}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Icon size={13} color={isTransit ? "#666C99" : "#FD014F"} strokeWidth={2.2} />
+        </div>
+      </div>
+
+      {/* Content column */}
+      <div style={{ paddingBottom: 14, paddingTop: 2 }}>
+        {isTransit ? (
+          <>
+            <p style={{ margin: 0, fontSize: 13, color: "#181E4C", lineHeight: 1.4 }}>
+              {event.from} <span style={{ color: "#A4A7AE" }}>→</span> {event.to}
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99" }}>
+              {event.time}{event.km && event.km !== "—" ? ` · ${event.km}` : ""}
+            </p>
+          </>
+        ) : (
+          <>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#181E4C", lineHeight: 1.3 }}>
+              {event.name}
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99" }}>
+              {event.timeAt} at the place
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Merged Activity + Travel modal: total summary + chronological timeline.
+function DurationBody({ data, scoring, dayLabel }) {
+  const timeline = buildTimeline(scoring);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <p style={{ margin: 0, fontSize: 13, color: "#666C99", lineHeight: 1.5 }}>
         {data.explainer}
       </p>
 
-      {/* Total card */}
+      {/* Headline total */}
       <div style={{
         padding: 14, borderRadius: 12,
         background: "#FFF4F7", border: "1px solid #FFE4E8",
       }}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: C.p600 }}>
-          APPROXIMATE TOTAL
+          APPROXIMATE DAY DURATION
         </p>
-        <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 700, color: "#181E4C", letterSpacing: -0.3 }}>
+        <p style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 700, color: "#181E4C", letterSpacing: -0.4 }}>
           ≈ {data.totalText}
         </p>
-        <p style={{ margin: "2px 0 0", fontSize: 13, color: "#666C99" }}>
-          {data.activityText} at activities + {data.travelText} in transit
+        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#666C99" }}>
+          <strong style={{ color: "#181E4C", fontWeight: 600 }}>{data.activityText}</strong> at activities
+          {" + "}
+          <strong style={{ color: "#181E4C", fontWeight: 600 }}>{data.travelText}</strong> in transit
         </p>
       </div>
 
-      {/* Activity legs */}
-      {scoring?.activity?.activities?.length > 0 && (
+      {/* Chronological timeline */}
+      {timeline.length > 0 && (
         <div>
-          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#666C99", letterSpacing: 0.4 }}>
-            ACTIVITY TIME · {data.activityText}
+          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#666C99", letterSpacing: 0.4 }}>
+            YOUR DAY, IN ORDER
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {scoring.activity.activities.map((a, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#181E4C" }}>
-                <span>{a.name}</span>
-                <span style={{ color: "#666C99" }}>{a.timeAt}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Travel legs */}
-      {scoring?.travel?.legs?.length > 0 && (
-        <div>
-          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#666C99", letterSpacing: 0.4 }}>
-            TRAVEL TIME · {data.travelText}
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {scoring.travel.legs.map((l, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#181E4C" }}>
-                <span>{l.from} → {l.to}</span>
-                <span style={{ color: "#666C99" }}>{l.time}</span>
-              </div>
+          <div>
+            {timeline.map((ev, i) => (
+              <TimelineRow
+                key={i}
+                event={ev}
+                isFirst={i === 0}
+                isLast={i === timeline.length - 1}
+              />
             ))}
           </div>
         </div>
       )}
 
       {data.tip && <TipBlock text={data.tip} />}
+
+      {/* Disclaimer */}
+      <p style={{
+        margin: 0, fontSize: 11, color: "#A4A7AE",
+        fontStyle: "italic", lineHeight: 1.45,
+      }}>
+        Average values shown. Actual durations may vary based on season, weather, traffic, and real-time conditions on the day.
+      </p>
     </div>
   );
 }
