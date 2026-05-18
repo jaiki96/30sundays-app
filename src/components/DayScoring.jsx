@@ -1,4 +1,4 @@
-import { Heart, Timer, Users, ChevronRight, X as XIcon, Lightbulb } from "lucide-react";
+import { Heart, Timer, Plane, Users, ChevronRight, X as XIcon, Lightbulb } from "lucide-react";
 import { C } from "../data";
 import { SCORE_PALETTE, LEVEL_KEYS } from "../data/dayScoring";
 import { PaceBody, ActivityBody, TravelBody, CrowdBody } from "./ScoreModalVariants";
@@ -36,13 +36,65 @@ function ScoreTile({ icon: Icon, value, sub, label, level, onClick }) {
   );
 }
 
-// Compact "6.5h" formatter used only inside the row tiles where space is tight.
+// Compact "6.5h" formatter used inside the row.
 const shortH = (h) => (h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`);
 
-export function DayScoreRow({ scoring, onOpen }) {
+// Inner half-tile used inside the merged duration tile. Same icon+value+label
+// rhythm as ScoreTile but without its own button wrapper or chevron.
+function DurationHalfTile({ icon: Icon, value, label, level }) {
+  const colors = SCORE_PALETTE[LEVEL_KEYS[level]];
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: "50%",
+        background: colors.bg, display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Icon size={16} color={colors.icon} strokeWidth={2.2} />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", lineHeight: 1.4 }}>{value}</span>
+        <span style={{ fontSize: 12, color: "#666C99", lineHeight: 1.3 }}>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// Merged Activity + Travel tile: two sub-tiles joined by a "+" with a single
+// "≈ 12.5 hr day" caption centered underneath both.
+function DurationTile({ scoring, onClick }) {
+  const a = scoring.activity;
+  const t = scoring.travel;
   const d = scoring.duration;
-  const valueText = `${shortH(d.activityHrs)} + ${shortH(d.travelHrs)}`;
-  const subText = `≈ ${shortH(d.totalHrs)}`;
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 2, display: "flex", flexDirection: "column", alignItems: "center",
+        gap: 8, padding: "0 4px",
+        background: "transparent", border: "none",
+        cursor: "pointer", fontFamily: "inherit",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 4, width: "100%" }}>
+        <DurationHalfTile icon={Timer} value={shortH(a.hours)} label="Activity" level={a.level} />
+        <span style={{
+          fontSize: 18, fontWeight: 600, color: "#A4A7AE",
+          alignSelf: "center", marginTop: -10,
+        }}>+</span>
+        <DurationHalfTile icon={Plane} value={shortH(t.hours)} label="Travel" level={t.level} />
+      </div>
+      <span style={{
+        display: "inline-flex", alignItems: "center", gap: 2,
+        fontSize: 11, fontWeight: 600, color: "#666C99", lineHeight: 1.3,
+      }}>
+        ≈ {shortH(d.totalHrs)} day
+        <ChevronRight size={11} color="#A4A7AE" />
+      </span>
+    </button>
+  );
+}
+
+export function DayScoreRow({ scoring, onOpen }) {
   return (
     <div style={{
       display: "flex", padding: "12px 0",
@@ -57,14 +109,7 @@ export function DayScoreRow({ scoring, onOpen }) {
         onClick={() => onOpen("pace")}
       />
       <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
-      <ScoreTile
-        icon={Timer}
-        value={valueText}
-        sub={subText}
-        label="Tour duration"
-        level={d.level}
-        onClick={() => onOpen("duration")}
-      />
+      <DurationTile scoring={scoring} onClick={() => onOpen("duration")} />
       <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
       <ScoreTile
         icon={Users}
