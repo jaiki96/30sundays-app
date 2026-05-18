@@ -59,8 +59,11 @@ function TagDefList({ tags }) {
   return (
     <div>
       {tags.map((t, i) => (
-        <div key={t.label} style={{ display: "flex", gap: 10, marginBottom: i < tags.length - 1 ? 10 : 0 }}>
-          <div style={{ flexShrink: 0, paddingTop: 1 }}>
+        <div key={t.label} style={{
+          display: "flex", gap: 10, alignItems: "center",
+          marginBottom: i < tags.length - 1 ? 10 : 0,
+        }}>
+          <div style={{ flexShrink: 0, width: 84 }}>
             <TagChip level={t.level}>{t.label}</TagChip>
           </div>
           <p style={{ margin: 0, fontSize: 12, color: "#666C99", lineHeight: 1.45, flex: 1 }}>{t.definition}</p>
@@ -268,22 +271,9 @@ export function CrowdBody({ data, dayLabel }) {
         <span style={{ fontSize: 12, color: "#666C99" }}>· {dayLabel}</span>
       </div>
 
-      {/* Two-line explainer block */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18, padding: "12px 14px", background: "#F9F9FB", borderRadius: 10 }}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#181E4C", minWidth: 50 }}>Crowd</span>
-          <span style={{ fontSize: 12, color: "#666C99", lineHeight: 1.45 }}>{data.crowdExplainer}</span>
-        </div>
-        <div style={{ height: 1, background: "#E0E2EB" }} />
-        <div style={{ display: "flex", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#181E4C", minWidth: 50 }}>Queue</span>
-          <span style={{ fontSize: 12, color: "#666C99", lineHeight: 1.45 }}>{data.queueExplainer}</span>
-        </div>
-      </div>
-
       {/* Column header */}
       <div style={{
-        display: "grid", gridTemplateColumns: "1fr 70px 70px",
+        display: "grid", gridTemplateColumns: "1fr 84px 84px",
         gap: 8, padding: "8px 0",
         borderBottom: "1px solid #E0E2EB",
       }}>
@@ -294,12 +284,12 @@ export function CrowdBody({ data, dayLabel }) {
 
       {/* Per-stop rows */}
       {data.activities.map((a, i) => {
-        const cLvl = a.crowd === "high" ? 2 : a.crowd === "mixed" ? 1 : 0;
-        const qLvl = a.queue === "long" ? 2 : a.queue === "medium" ? 1 : 0;
+        const cLvl = a.crowd === "high" ? 2 : a.crowd === "moderate" ? 1 : 0;
+        const qLvl = a.queue === "long" ? 2 : a.queue === "moderate" ? 1 : 0;
         const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
         return (
           <div key={i} style={{
-            display: "grid", gridTemplateColumns: "1fr 70px 70px",
+            display: "grid", gridTemplateColumns: "1fr 84px 84px",
             gap: 8, alignItems: "center", padding: "12px 0",
             borderBottom: i < data.activities.length - 1 ? "1px solid #F0F1F5" : "none",
           }}>
@@ -316,19 +306,28 @@ export function CrowdBody({ data, dayLabel }) {
         );
       })}
 
-      <Accordion title="Crowd & queue levels explained">
-        <p style={{ margin: "0 0 8px", fontSize: 11, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 600 }}>
+      {/* Appendix — always-visible definitions */}
+      <div style={{ marginTop: 22 }}>
+        <p style={{ margin: "0 0 10px", fontSize: 11, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>
           Crowd levels
         </p>
         <TagDefList tags={data.crowdLevels} />
-        <div style={{ height: 12 }} />
-        <p style={{ margin: "0 0 8px", fontSize: 11, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 600 }}>
+
+        <p style={{ margin: "18px 0 10px", fontSize: 11, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>
           Queue levels
         </p>
         <TagDefList tags={data.queueLevels} />
-      </Accordion>
+      </div>
 
-      <TipBlock text={data.tip} />
+      {data.tip && <div style={{ marginTop: 18 }}><TipBlock text={data.tip} /></div>}
+
+      {/* Disclaimer */}
+      <p style={{
+        margin: "14px 0 0", fontSize: 11, color: "#A4A7AE",
+        fontStyle: "italic", lineHeight: 1.45,
+      }}>
+        Average values shown. Actual crowd and queue times may vary based on season, weather, events, and real-time conditions on the day.
+      </p>
     </div>
   );
 }
