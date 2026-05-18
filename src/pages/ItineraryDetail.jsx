@@ -1153,7 +1153,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
   };
 
   return (
-    <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, zIndex: 200, background: "#000", borderRadius: 44, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "#000", overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* Background image — always present */}
       <img src={currentAct?.img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
 
