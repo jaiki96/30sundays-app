@@ -579,16 +579,14 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
       {/* ─── OTP phase ─── */}
       {phase === "otp" && (
         <div style={{
-          flex: 1, padding: "72px 16px 16px",
+          flex: 1, padding: "12px 16px 16px",
           display: "flex", flexDirection: "column",
           background: "#fff",
         }}>
-          {/* Top bar */}
+          {/* Top bar — in-flow so the phone frame status bar isn't overlapped */}
           <div style={{
-            position: "absolute", top: 0, left: 0, right: 0,
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "14px 16px",
-            paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)",
+            marginBottom: 24,
           }}>
             <button
               onClick={() => setPhase("phone")}
@@ -618,7 +616,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
             <span style={{ fontWeight: 700, color: T.navy }}>{country.code} {phone}</span>
           </p>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "space-between", maxWidth: 360 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
             {otp.map((d, i) => (
               <input
                 key={i}
