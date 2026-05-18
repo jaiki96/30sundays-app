@@ -4,7 +4,7 @@ import { SCORE_PALETTE, LEVEL_KEYS } from "../data/dayScoring";
 import { PaceBody, ActivityBody, TravelBody, CrowdBody } from "./ScoreModalVariants";
 
 // Match the figma score row: icon-in-circle + value + label, with vertical dividers between tiles.
-function ScoreTile({ icon: Icon, value, label, level, onClick }) {
+function ScoreTile({ icon: Icon, value, sub, label, level, onClick }) {
   const colors = SCORE_PALETTE[LEVEL_KEYS[level]];
   return (
     <button
@@ -27,13 +27,22 @@ function ScoreTile({ icon: Icon, value, label, level, onClick }) {
           {value}
           <ChevronRight size={11} color="#A4A7AE" />
         </span>
+        {sub && (
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#181E4C", lineHeight: 1.3 }}>{sub}</span>
+        )}
         <span style={{ fontSize: 12, color: "#666C99", lineHeight: 1.3 }}>{label}</span>
       </div>
     </button>
   );
 }
 
+// Compact "6.5h" formatter used only inside the row tiles where space is tight.
+const shortH = (h) => (h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`);
+
 export function DayScoreRow({ scoring, onOpen }) {
+  const d = scoring.duration;
+  const valueText = `${shortH(d.activityHrs)} + ${shortH(d.travelHrs)}`;
+  const subText = `≈ ${shortH(d.totalHrs)}`;
   return (
     <div style={{
       display: "flex", padding: "12px 0",
@@ -50,24 +59,17 @@ export function DayScoreRow({ scoring, onOpen }) {
       <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
       <ScoreTile
         icon={Timer}
-        value={scoring.activity.hoursText}
-        label="Activity time"
-        level={scoring.activity.level}
-        onClick={() => onOpen("activity")}
-      />
-      <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
-      <ScoreTile
-        icon={Timer}
-        value={scoring.travel.hoursText}
-        label="Travel time"
-        level={scoring.travel.level}
-        onClick={() => onOpen("travel")}
+        value={valueText}
+        sub={subText}
+        label="Tour duration"
+        level={d.level}
+        onClick={() => onOpen("duration")}
       />
       <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
       <ScoreTile
         icon={Users}
         value={scoring.crowd.label}
-        label="Crowds"
+        label="Crowd levels"
         level={scoring.crowd.level}
         onClick={() => onOpen("crowd")}
       />
@@ -158,12 +160,84 @@ const TITLES = {
   pace: "Pace",
   activity: "Activity time",
   travel: "Travel time",
-  crowd: "Crowds & queues",
+  duration: "Tour duration",
+  crowd: "Crowd levels",
 };
+
+// Merged Activity + Travel modal: total + breakdown.
+function DurationBody({ data, scoring, dayLabel }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <p style={{ margin: 0, fontSize: 13, color: "#666C99", lineHeight: 1.5 }}>
+        {data.explainer}
+      </p>
+
+      {/* Total card */}
+      <div style={{
+        padding: 14, borderRadius: 12,
+        background: "#FFF4F7", border: "1px solid #FFE4E8",
+      }}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: C.p600 }}>
+          APPROXIMATE TOTAL
+        </p>
+        <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 700, color: "#181E4C", letterSpacing: -0.3 }}>
+          ≈ {data.totalText}
+        </p>
+        <p style={{ margin: "2px 0 0", fontSize: 13, color: "#666C99" }}>
+          {data.activityText} at activities + {data.travelText} in transit
+        </p>
+      </div>
+
+      {/* Activity legs */}
+      {scoring?.activity?.activities?.length > 0 && (
+        <div>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#666C99", letterSpacing: 0.4 }}>
+            ACTIVITY TIME · {data.activityText}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {scoring.activity.activities.map((a, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#181E4C" }}>
+                <span>{a.name}</span>
+                <span style={{ color: "#666C99" }}>{a.timeAt}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Travel legs */}
+      {scoring?.travel?.legs?.length > 0 && (
+        <div>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#666C99", letterSpacing: 0.4 }}>
+            TRAVEL TIME · {data.travelText}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {scoring.travel.legs.map((l, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#181E4C" }}>
+                <span>{l.from} → {l.to}</span>
+                <span style={{ color: "#666C99" }}>{l.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.tip && <TipBlock text={data.tip} />}
+    </div>
+  );
+}
 
 export function DayScoreModal({ metric, scoring, dayLabel, onClose }) {
   const data = scoring[metric];
   if (!data) return null;
+
+  if (metric === "duration") {
+    return (
+      <Sheet title={TITLES.duration} scoreText={null} onClose={onClose}>
+        <DurationBody data={data} scoring={scoring} dayLabel={dayLabel} />
+      </Sheet>
+    );
+  }
 
   const Body =
     metric === "pace" ? PaceBody :

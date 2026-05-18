@@ -242,13 +242,13 @@ const PACE_DEFS = {
 
 const CROWD_DEFS = {
   Low: "Quiet stops with minimal queues.",
-  Mixed: "A blend of busy and quiet stops.",
+  Moderate: "A blend of busy and quiet stops.",
   High: "Popular stops with regular queues at peak times.",
 };
 
 const QUEUE_DEFS = {
   Short: "Walk-in or under 10 minutes wait.",
-  Medium: "10 to 30 minutes wait at peak times.",
+  Moderate: "10 to 30 minutes wait at peak times.",
   Long: "30+ minutes. Book skip-the-line where you can.",
 };
 
@@ -273,11 +273,15 @@ export function getDayScoring(day, dayIdx, allDays) {
   const isBeach = BEACH_CITIES.includes(day.city);
   const isCity = CITY_CITIES.includes(day.city);
 
-  // PACE — based on activity count, transitions, beach/city
+  // PACE — 4-tier: Relaxed (0) · Balanced (1) · Active (2) · Fast-paced (3)
   let paceLevel = 1;
-  if (acts.length <= 2 || isBeach) paceLevel = 0;
-  if (acts.length >= 4 || cityChanged || isFirst || isLast) paceLevel = 2;
-  const paceLabels = ["Relaxed", "Neutral", "Hectic"];
+  if (acts.length <= 1 || isBeach) paceLevel = 0;
+  else if (acts.length === 2) paceLevel = 1;
+  else if (acts.length === 3 && !cityChanged && !isFirst && !isLast) paceLevel = 2;
+  else paceLevel = 3;
+  const paceLabels = ["Relaxed", "Balanced", "Active", "Fast-paced"];
+  // Visual level (0-2) reused by SCORE_PALETTE — collapse 4 tiers into 3 colors.
+  const paceVisualLevel = paceLevel === 0 ? 0 : paceLevel === 3 ? 2 : 1;
 
   // ACTIVITY TIME — sum of curated activity durations
   const ACT_DURS = [2, 3, 1.5, 2.5];
@@ -297,16 +301,16 @@ export function getDayScoring(day, dayIdx, allDays) {
   if (travelHrs > 4) travelLevel = 2;
   const travelLabels = ["Low", "Moderate", "High"];
 
-  // CROWDS — by city archetype
+  // CROWDS — by city archetype. Nomenclature: Low · Moderate · High
   let crowdLevel = 1;
   if (isBeach) crowdLevel = 0;
   if (isCity) crowdLevel = 2;
-  const crowdLabels = ["Low", "Mixed", "High"];
+  const crowdLabels = ["Low", "Moderate", "High"];
 
   // Per-activity rows (used by Activity & Crowd modals)
   const IDEAL = ["2 hrs", "3 hrs", "1.5 hrs", "2 hrs"];
-  const CROWD_LEVELS = ["low", "mixed", "high"];
-  const QUEUE_LEVELS = ["short", "medium", "long"];
+  const CROWD_LEVELS = ["low", "moderate", "high"];
+  const QUEUE_LEVELS = ["short", "moderate", "long"];
   const CROWD_NOTES = [
     "Open early; quietest before noon.",
     "Steady through the day; arrive between rushes.",
@@ -369,9 +373,16 @@ export function getDayScoring(day, dayIdx, allDays) {
   // 0-100 numeric scores for the comparison variant.
   const numericScore = (lvl) => lvl === 2 ? 85 : lvl === 1 ? 50 : 20;
 
+  // Combined tour duration (activity + travel) — shown as one merged tile.
+  const totalHrs = actHrs + travelHrs;
+  let durationLevel = 0;
+  if (totalHrs > 8) durationLevel = 2;
+  else if (totalHrs > 5) durationLevel = 1;
+
   return {
     pace: {
-      level: paceLevel,
+      level: paceVisualLevel,                 // 0-2 for palette
+      paceLevel,                              // 0-3 for nomenclature
       label: paceLabels[paceLevel],
       labels: paceLabels,
       summary: paceSummary,
@@ -430,6 +441,18 @@ export function getDayScoring(day, dayIdx, allDays) {
       whyText: "Total time you'll spend in transit — flights, transfers, ferries, and short hops between stops.",
       tip: TIPS.travel[travelLevel],
     },
+    duration: {
+      level: durationLevel,
+      activityHrs: actHrs,
+      travelHrs,
+      totalHrs,
+      activityText: fmtHrs(actHrs),
+      travelText: fmtHrs(travelHrs),
+      totalText: fmtHrs(totalHrs),
+      summary: `${fmtHrs(actHrs)} at activities + ${fmtHrs(travelHrs)} in transit.`,
+      explainer: "Approximate total time your day will take — activity time plus travel time.",
+      tip: TIPS.activity[actLevel],
+    },
     crowd: {
       level: crowdLevel,
       label: crowdLabels[crowdLevel],
@@ -439,7 +462,7 @@ export function getDayScoring(day, dayIdx, allDays) {
       crowdExplainer: METRIC_EXPLAINERS.crowd,
       queueExplainer: METRIC_EXPLAINERS.queue,
       crowdLevels: crowdLabels.map((l, i) => ({ label: l, level: i, definition: CROWD_DEFS[l] })),
-      queueLevels: ["Short", "Medium", "Long"].map((l, i) => ({ label: l, level: i, definition: QUEUE_DEFS[l] })),
+      queueLevels: ["Short", "Moderate", "Long"].map((l, i) => ({ label: l, level: i, definition: QUEUE_DEFS[l] })),
       score: numericScore(crowdLevel),
       emoji: crowdLevel === 2 ? "👥" : crowdLevel === 1 ? "🚶" : "🤫",
       quickStats: [
