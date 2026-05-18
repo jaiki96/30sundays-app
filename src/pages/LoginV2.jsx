@@ -618,7 +618,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
             <span style={{ fontWeight: 700, color: T.navy }}>{country.code} {phone}</span>
           </p>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+          <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "space-between", maxWidth: 360 }}>
             {otp.map((d, i) => (
               <input
                 key={i}
@@ -631,7 +631,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
                 onChange={(e) => handleOtpChange(i, e.target.value)}
                 onKeyDown={(e) => handleOtpKey(i, e)}
                 style={{
-                  flex: 1, height: 60,
+                  width: 64, height: 64, padding: 0, boxSizing: "border-box",
                   background: otpError ? "#FEF3F2" : d ? T.blush : T.surface,
                   border: otpError
                     ? "1.5px solid #B42318"
@@ -639,7 +639,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
                       ? `1.5px solid ${T.coral}`
                       : `0.5px solid ${T.line}`,
                   borderRadius: 16, textAlign: "center",
-                  fontSize: 22, fontWeight: 700, color: T.navy,
+                  fontSize: 24, fontWeight: 700, color: T.navy,
                   outline: "none",
                   transition: "border-color 160ms, background 160ms",
                 }}
@@ -669,12 +669,14 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
             disabled={!otpValid}
             style={{
               marginTop: 28, height: 54, borderRadius: 16,
-              background: otpValid ? T.coral : "#E5E7EB",
-              color: otpValid ? "#fff" : "#9CA3AF",
+              background: T.coral,
+              color: "#fff",
               border: "none", fontSize: 15, fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               cursor: otpValid ? "pointer" : "not-allowed",
-              boxShadow: otpValid ? "0 8px 20px rgba(227,27,83,0.3)" : "none",
+              boxShadow: otpValid ? "0 8px 20px rgba(227,27,83,0.3)" : "0 4px 12px rgba(227,27,83,0.18)",
+              opacity: otpValid ? 1 : 0.5,
+              transition: "opacity 200ms ease, box-shadow 200ms ease",
             }}
           >
             Verify & Continue <ArrowRight size={16} />
