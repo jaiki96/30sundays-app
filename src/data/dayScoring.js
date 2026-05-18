@@ -249,7 +249,7 @@ const CROWD_DEFS = {
 const QUEUE_DEFS = {
   Short: "Under 30 minutes wait - usually walk-in.",
   Moderate: "30 to 60 minutes wait at peak times.",
-  Long: "Over 60 minutes wait - book skip-the-line where you can.",
+  Long: "Over 60 minutes wait at peak times. Visit early or late to skip the rush.",
 };
 
 const BEACH_CITIES = [
