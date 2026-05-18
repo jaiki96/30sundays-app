@@ -26,7 +26,7 @@ function buildBookedHotel(tripHotel, trip) {
   const standIn = generated[hash % generated.length] || generated[0];
   if (!standIn) return null;
 
-  // Use generated images for the gallery — trip photo paths can be broken,
+  // Use generated images for the gallery - trip photo paths can be broken,
   // and the rich record already has reliable hero/category imagery.
   const heroImg = standIn.images;
 
@@ -44,11 +44,11 @@ function buildBookedHotel(tripHotel, trip) {
     images: heroImg,
     room: lockedRoom,
     city: tripHotel.city,
-    // Phone for "Call hotel" — generated stub
+    // Phone for "Call hotel" - generated stub
     phone: tripHotel.phone || "+91 80 4567 1234",
     // Generated stand-ins so action chips have real-feeling content
     website: tripHotel.website || `https://www.${tripHotel.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.com`,
-    // Voucher readiness — alternates per hotel for prototype variety
+    // Voucher readiness - alternates per hotel for prototype variety
     voucherReady: tripHotel.voucherReady ?? (hash % 3 !== 0),
   };
 }
@@ -521,7 +521,7 @@ function GridView({ images, categories, categoryFilter, setCategoryFilter, onPic
         })}
       </div>
 
-      {/* Scrollable image list — Airbnb stacks them at full width */}
+      {/* Scrollable image list - Airbnb stacks them at full width */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: 16 }}>
         {filtered.map((img, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>

@@ -622,7 +622,7 @@ function LockedGuideSheet({ onClose }) {
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#181E4C", margin: 0 }}>Backstage pass</h3>
         </div>
         <p style={{ fontSize: 14, color: "#4A5072", lineHeight: 1.5, margin: "0 0 18px" }}>
-          Book this trip with 30 Sundays and we'll unlock a hand-curated video guide for every stop — local tips, what to skip, and the spots that actually deliver.
+          Book this trip with 30 Sundays and we'll unlock a hand-curated video guide for every stop - local tips, what to skip, and the spots that actually deliver.
         </p>
         <button
           onClick={() => { onClose(); navigate("/plan"); }}

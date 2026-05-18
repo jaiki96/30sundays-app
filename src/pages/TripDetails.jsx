@@ -39,7 +39,7 @@ function TripBottomNav() {
 function ChatFAB() {
   return (
     <button
-      onClick={() => alert("Chat with your travel consultant — opens WhatsApp.")}
+      onClick={() => alert("Chat with your travel consultant - opens WhatsApp.")}
       aria-label="Chat with consultant"
       style={{
         position: "absolute", bottom: 140, right: 16,
@@ -515,7 +515,7 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
         </div>
       </div>
 
-      {/* Get direction button — only on the single Day-wise stay */}
+      {/* Get direction button - only on the single Day-wise stay */}
       {showGetDirection && (
         <a
           href={directionUrl}
@@ -583,10 +583,10 @@ function ThirtySundaysPass({ trip }) {
           30 Sundays Pass
         </h4>
         <p style={{ fontSize: 14, color: "#666C99", margin: "0 0 12px", lineHeight: "20px" }}>
-          Unlock perks on your next trip — priority support, free upgrades, exclusive experiences.
+          Unlock perks on your next trip - priority support, free upgrades, exclusive experiences.
         </p>
         <button
-          onClick={() => alert("30 Sundays Pass — coming soon for early customers.")}
+          onClick={() => alert("30 Sundays Pass - coming soon for early customers.")}
           style={{
             background: "none", border: "none", padding: 0, cursor: "pointer",
             display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
@@ -1236,7 +1236,7 @@ function ActivityCards({ activities, city, tripId, dayIdx }) {
                 borderRadius: 8, overflow: "hidden",
                 background: act.photo ? `url(${act.photo}) center/cover no-repeat` : "#F4F2F0",
               }}>
-                {/* Duration badge — bottom-right glass pill */}
+                {/* Duration badge - bottom-right glass pill */}
                 <div style={{
                   position: "absolute", right: 8, bottom: 8,
                   display: "flex", alignItems: "center", gap: 4,
@@ -1375,7 +1375,7 @@ function AIChatbotCard() {
             Get personalised recommendations for things to do, areas to explore and much more in seconds.
           </p>
           <button
-            onClick={() => alert("AI Chatbot — coming soon. Ask anything about your trip.")}
+            onClick={() => alert("AI Chatbot - coming soon. Ask anything about your trip.")}
             style={{
               display: "inline-flex", alignItems: "center", gap: 8, padding: "4px 24px",
               background: "#FD014F", boxShadow: "0 4px 16px -2px rgba(253,1,79,0.25)",

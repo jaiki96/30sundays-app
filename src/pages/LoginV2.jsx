@@ -116,7 +116,7 @@ const GoogleG = ({ size = 14 }) => (
 // ─── Design tokens ───
 const T = {
   coral: "#E31B53",
-  blush: "#FFE4E8",       // brand light pink — used for filled OTP, dropdown highlight
+  blush: "#FFE4E8",       // brand light pink - used for filled OTP, dropdown highlight
   navy: "#181D27",
   muted: "#6B7280",
   line: "rgba(0,0,0,0.06)",
@@ -222,7 +222,7 @@ function StaticHero({ collapsed, onSkip, onBack }) {
           }}
         />
 
-        {/* 3 value ticks — colored check only, no circle bg */}
+        {/* 3 value ticks - colored check only, no circle bg */}
         <ul style={{
           listStyle: "none", padding: 0,
           margin: 0,
@@ -327,10 +327,10 @@ const Divider = () => (
 );
 
 // ─── Main screen ───
-// Props (all optional — defaults make this work as a standalone /login-v2 page):
-//   onComplete({ country, phone, otp })  — called after OTP verifies successfully
-//   onSkip()                              — called when Skip tapped (default: navigate("/"))
-//   validateOtp(otpString) -> string|null — return error string to keep on OTP screen, or null/undefined to proceed
+// Props (all optional - defaults make this work as a standalone /login-v2 page):
+//   onComplete({ country, phone, otp })  - called after OTP verifies successfully
+//   onSkip()                              - called when Skip tapped (default: navigate("/"))
+//   validateOtp(otpString) -> string|null - return error string to keep on OTP screen, or null/undefined to proceed
 export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp }) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState("phone"); // phone | otp
@@ -367,7 +367,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
     setCanResend(false);
   };
 
-  // visualViewport — collapse when keyboard pushes viewport up
+  // visualViewport - collapse when keyboard pushes viewport up
   useEffect(() => {
     if (!window.visualViewport) return;
     const baseline = window.visualViewport.height;
@@ -583,7 +583,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
           display: "flex", flexDirection: "column",
           background: "#fff",
         }}>
-          {/* Top bar — in-flow so the phone frame status bar isn't overlapped */}
+          {/* Top bar - in-flow so the phone frame status bar isn't overlapped */}
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             marginBottom: 24,

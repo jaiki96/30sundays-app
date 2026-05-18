@@ -6,12 +6,12 @@ import { useSavedVideos } from "../hooks/useSavedVideos";
 
 // Fullscreen reels-style player.
 // Props:
-//   videos      — the visible deck (already filtered by caller)
-//   startId     — id of video to open at
-//   onClose     — close callback
-//   onCategoryChange(id) — caller updates `videos` and `startId` to first of new category
-//   activeCategory — id of currently selected category
-//   showCategorySwitcher — true on Destination + Home (full library); false on itinerary "Before you go"
+//   videos      - the visible deck (already filtered by caller)
+//   startId     - id of video to open at
+//   onClose     - close callback
+//   onCategoryChange(id) - caller updates `videos` and `startId` to first of new category
+//   activeCategory - id of currently selected category
+//   showCategorySwitcher - true on Destination + Home (full library); false on itinerary "Before you go"
 export default function WatchPlayer({
   videos, startId, onClose,
   onCategoryChange, activeCategory = "all", showCategorySwitcher = true,
@@ -102,7 +102,7 @@ export default function WatchPlayer({
         />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 18%, transparent 55%, rgba(0,0,0,0.85) 100%)" }} />
 
-        {/* Top bar — close + category chip + filter trigger */}
+        {/* Top bar - close + category chip + filter trigger */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "14px 14px 0", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 5 }}>
           <button onClick={onClose} aria-label="Close" style={{
             width: 36, height: 36, borderRadius: "50%", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(10px)",
@@ -128,7 +128,7 @@ export default function WatchPlayer({
           <div style={{ width: 36 }} />
         </div>
 
-        {/* Side actions — save, share */}
+        {/* Side actions - save, share */}
         <div style={{ position: "absolute", right: 12, bottom: 130, zIndex: 5, display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
           <ActionButton
             icon={Heart}
@@ -139,7 +139,7 @@ export default function WatchPlayer({
           <ActionButton icon={Share2} label="Share" onClick={handleShare} />
         </div>
 
-        {/* Progress dots — vertical reel position */}
+        {/* Progress dots - vertical reel position */}
         <div style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", zIndex: 5, display: "flex", flexDirection: "column", gap: 4 }}>
           {videos.slice(0, Math.min(total, 8)).map((_, i) => (
             <div key={i} style={{
@@ -149,7 +149,7 @@ export default function WatchPlayer({
           ))}
         </div>
 
-        {/* Bottom — title + meta */}
+        {/* Bottom - title + meta */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 64, padding: "0 16px 30px", zIndex: 5 }}>
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.6px", fontWeight: 700 }}>
             {cat.label}{current.dest ? ` · ${current.dest}` : current.crossDest ? ` · ${current.crossDest.join(" · ")}` : ""}
@@ -162,7 +162,7 @@ export default function WatchPlayer({
           </p>
         </div>
 
-        {/* Filter sheet — slides down from top chip */}
+        {/* Filter sheet - slides down from top chip */}
         {showCategorySwitcher && showFilter && (
           <>
             <div onClick={() => setShowFilter(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 6 }} />

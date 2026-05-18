@@ -6,7 +6,7 @@ import WatchLibrary from "./WatchLibrary";
 import WatchPlayer from "./WatchPlayer";
 
 // Compact preview that lives on Home, Destination, and Itinerary pages.
-// Header → 1 row of split-layout cards → "See all N". No chip rail —
+// Header → 1 row of split-layout cards → "See all N". No chip rail -
 // taxonomy lives inside the library modal, not the teaser.
 export default function WatchTeaser({
   title, subtitle, videos, previewIds, libraryTitle, librarySubtitle, emoji = "📺",
@@ -42,7 +42,7 @@ export default function WatchTeaser({
         </button>
       </div>
 
-      {/* Card row — compact portrait cards. Wider 3/4 aspect so they read
+      {/* Card row - compact portrait cards. Wider 3/4 aspect so they read
           as portrait video without dominating the page height. */}
       <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
         {previewCards.map((v, i) => (
@@ -57,7 +57,7 @@ export default function WatchTeaser({
         ))}
       </div>
 
-      {/* Library modal — opens from "See all" */}
+      {/* Library modal - opens from "See all" */}
       {libraryOpen && (
         <WatchLibrary
           title={libraryTitle || title}
@@ -68,7 +68,7 @@ export default function WatchTeaser({
         />
       )}
 
-      {/* Player — opens from a card tap (skips library entirely) */}
+      {/* Player - opens from a card tap (skips library entirely) */}
       {openId && (
         <WatchPlayer
           videos={previewCards}

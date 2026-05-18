@@ -1,6 +1,6 @@
 import { C } from "../../data";
 
-// "Numbered promises" card — list view without icons.
+// "Numbered promises" card - list view without icons.
 // kicker = small uppercase label, title = bold headline, sub = support line.
 export default function PromiseCard({ kicker, title, sub, items }) {
   return (

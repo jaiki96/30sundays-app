@@ -209,7 +209,7 @@ export const allItineraries = [
   { id: 9, dest: "Bali", vibe: "Offbeat", name: "Dolphin Coast", nights: 7, price: "62,498", route: [{ city: "Munduk", n: 2 }, { city: "Pemuteran", n: 3 }, { city: "Lovina", n: 2 }], veg: false, img: baliImgs[5],
     days: [{ city: "Munduk", n: 2, sub: "Waterfalls · Coffee plantations" }, { city: "Pemuteran", n: 3, sub: "Coral garden · Diving · Temples" }, { city: "Lovina", n: 2, sub: "Dolphin watching · Black sand beach" }],
     pace: "Unhurried", crowds: "Low", vegFood: "Medium" },
-  // Bali — extended set (1 / 5–10 stops) for layout stress
+  // Bali - extended set (1 / 5–10 stops) for layout stress
   { id: 100, dest: "Bali", vibe: "Relaxed", name: "Ubud Retreat", nights: 5, price: "54,998", route: [{ city: "Ubud", n: 5 }], veg: true, img: baliImgs[2],
     days: [{ city: "Ubud", n: 5, sub: "Yoga · Spa · Rice fields · Temples" }],
     pace: "Unhurried", crowds: "Low", vegFood: "High" },

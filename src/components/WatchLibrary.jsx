@@ -75,7 +75,7 @@ export default function WatchLibrary({ title, subtitle, videos, initialCategory 
         </div>
       </div>
 
-      {/* Masonry — CSS columns + cycling portrait aspects so the grid breaks
+      {/* Masonry - CSS columns + cycling portrait aspects so the grid breaks
           out of the uniform 2-col rhythm and clearly reads as portrait video. */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 14px 28px" }}>
         <div style={{ columnCount: 2, columnGap: 10 }}>

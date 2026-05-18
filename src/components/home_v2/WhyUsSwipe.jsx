@@ -1,7 +1,7 @@
 import { C } from "../../data";
 import { matchPromises } from "../../data/homeV2Data";
 
-// "Why we're the perfect match" — clean numbered list, no icons.
+// "Why we're the perfect match" - clean numbered list, no icons.
 // Keeps section short on a single screen while staying readable.
 export default function WhyUsSwipe() {
   return (

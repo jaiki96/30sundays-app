@@ -4,18 +4,18 @@ import { C } from "../data";
 import { WATCH_CATEGORIES } from "../data/watchData";
 import { useSavedVideos } from "../hooks/useSavedVideos";
 
-// Watch card — split layout (portrait poster + white footer panel) so it reads
+// Watch card - split layout (portrait poster + white footer panel) so it reads
 // unmistakably as a vertical video, distinct from the gradient cards used for
 // itineraries / activities elsewhere on the page.
 //
 // Props:
-//   video    — the video object
-//   onOpen   — invoked on tap (opens the player)
-//   live     — when true, the card auto-pans (ken-burns) once it scrolls into
+//   video    - the video object
+//   onOpen   - invoked on tap (opens the player)
+//   live     - when true, the card auto-pans (ken-burns) once it scrolls into
 //              view. Used by the first card in a row / grid only.
-//   width    — explicit pixel width (used by the horizontal teaser).
+//   width    - explicit pixel width (used by the horizontal teaser).
 //              Omit on the library where columns size the card.
-//   aspect   — poster aspect ratio as a CSS aspect-ratio string. Defaults to
+//   aspect   - poster aspect ratio as a CSS aspect-ratio string. Defaults to
 //              "9/16" (tall portrait); the library passes mixed values to
 //              break the monotony of a uniform grid.
 export default function WatchCard({ video, onOpen, live = false, width, aspect = "9/16" }) {
@@ -64,7 +64,7 @@ export default function WatchCard({ video, onOpen, live = false, width, aspect =
         {/* Subtle vignette so chips read on any image */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.35) 100%)" }} />
 
-        {/* Save heart — top-left so the duration pill owns top-right */}
+        {/* Save heart - top-left so the duration pill owns top-right */}
         <button
           onClick={(e) => { e.stopPropagation(); toggle(video.id); }}
           aria-label={isSaved(video.id) ? "Unsave" : "Save"}
@@ -77,7 +77,7 @@ export default function WatchCard({ video, onOpen, live = false, width, aspect =
           <Heart size={13} color={isSaved(video.id) ? C.p600 : "#fff"} fill={isSaved(video.id) ? C.p600 : "transparent"} strokeWidth={2.2} />
         </button>
 
-        {/* Duration pill — strong "this is a video" cue */}
+        {/* Duration pill - strong "this is a video" cue */}
         <div style={{
           position: "absolute", top: 8, right: 8,
           display: "inline-flex", alignItems: "center", gap: 3,
@@ -101,7 +101,7 @@ export default function WatchCard({ video, onOpen, live = false, width, aspect =
         </div>
       </div>
 
-      {/* Info footer — solid white panel cements the "video card" identity */}
+      {/* Info footer - solid white panel cements the "video card" identity */}
       <div style={{ padding: "9px 11px 11px", background: C.white }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />

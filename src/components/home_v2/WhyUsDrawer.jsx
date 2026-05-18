@@ -3,7 +3,7 @@ import { ArrowUpRight, X } from "lucide-react";
 import { C } from "../../data";
 import { matchPromises } from "../../data/homeV2Data";
 
-// Variant 3 — 3 short title chips. Tap any → bottom drawer with all 5 in detail.
+// Variant 3 - 3 short title chips. Tap any → bottom drawer with all 5 in detail.
 const TEASERS = [
   "Made for couples",
   "We flag every flaw",

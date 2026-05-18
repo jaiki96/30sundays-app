@@ -90,7 +90,7 @@ export function PaceBody({ data, dayLabel }) {
         This day's makeup
       </p>
       {[
-        { label: "Activities", value: data.quickStats?.[0]?.value ?? "—" },
+        { label: "Activities", value: data.quickStats?.[0]?.value ?? "-" },
         { label: "Time at activities", value: `${data.breakdown?.[0]?.value ?? 0} hrs` },
         { label: "Time in transit", value: `${data.breakdown?.[1]?.value ?? 0} hrs` },
       ].map((row, i, arr) => (
@@ -246,7 +246,7 @@ export function TravelBody({ data, dayLabel }) {
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#181E4C" }}>{leg.time}</p>
-              {leg.km !== "—" && (
+              {leg.km !== "-" && (
                 <p style={{ margin: "2px 0 0", fontSize: 11, color: "#666C99" }}>{leg.km}</p>
               )}
             </div>
@@ -287,6 +287,9 @@ export function CrowdBody({ data, dayLabel }) {
         const cLvl = a.crowd === "high" ? 2 : a.crowd === "moderate" ? 1 : 0;
         const qLvl = a.queue === "long" ? 2 : a.queue === "moderate" ? 1 : 0;
         const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+        const queueRange = a.queue === "short" ? "< 30 min wait"
+                         : a.queue === "moderate" ? "30 to 60 min"
+                         : "> 60 min wait";
         return (
           <div key={i} style={{
             display: "grid", gridTemplateColumns: "1fr 84px 84px",
@@ -299,14 +302,17 @@ export function CrowdBody({ data, dayLabel }) {
             <div style={{ display: "flex", justifyContent: "center" }}>
               <TagChip level={cLvl}>{cap(a.crowd)}</TagChip>
             </div>
-            <div style={{ display: "flex", justifyContent: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
               <TagChip level={qLvl}>{cap(a.queue)}</TagChip>
+              <span style={{ fontSize: 10, fontStyle: "italic", color: "#A4A7AE", whiteSpace: "nowrap" }}>
+                {queueRange}
+              </span>
             </div>
           </div>
         );
       })}
 
-      {/* Appendix — always-visible definitions */}
+      {/* Appendix - always-visible definitions */}
       <div style={{ marginTop: 22 }}>
         <p style={{ margin: "0 0 10px", fontSize: 11, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>
           Crowd levels

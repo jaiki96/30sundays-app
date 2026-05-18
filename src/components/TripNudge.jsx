@@ -99,7 +99,7 @@ export default function TripNudge({ userState }) {
     );
   }
 
-  // ─── New (anonymous) — nudge to sign in & check for a pending itinerary ───
+  // ─── New (anonymous) - nudge to sign in & check for a pending itinerary ───
   if (userState === "new") {
     content = (
       <>

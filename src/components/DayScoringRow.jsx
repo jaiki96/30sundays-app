@@ -19,7 +19,7 @@ const TRAVEL_LABEL = { long: "Long",       moderate: "Moderate", short: "Short" 
 const CROWD_LABEL  = { high: "High",       medium: "Medium",     low: "Low" };
 
 function fmtHrs(h) {
-  if (h == null) return "—";
+  if (h == null) return "-";
   if (Math.abs(h - Math.round(h)) < 0.05) return `${Math.round(h)} hr`;
   return `${h.toFixed(1)} hrs`;
 }

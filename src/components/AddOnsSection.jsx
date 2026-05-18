@@ -201,7 +201,7 @@ function VisaSheet({ state, onClose }) {
               Your <b>Bali Tourist e-Visa</b> is booked. Single-entry, 30-day stay, issued by Indonesian Immigration. No airport queues, no foreign-currency fees.
             </p>
             <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "19px" }}>
-              We'll email you the visa PDF as soon as it's stamped — usually within 1 business day of departure.
+              We'll email you the visa PDF as soon as it's stamped - usually within 1 business day of departure.
             </p>
           </div>
           <DocumentRow

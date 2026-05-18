@@ -2,7 +2,7 @@ import { GraduationCap, Play } from "lucide-react";
 import { C } from "../../data";
 import SundaySchoolMasthead from "./SundaySchoolMasthead";
 
-// Sunday School — single lesson section.
+// Sunday School - single lesson section.
 // Small "Sunday School" chip + tagline byline at top, big DM Serif value title
 // (the previous card title is promoted to the section headline), then a clean
 // video tile (poster + GlassPlay + duration). No card body anymore.
@@ -23,7 +23,7 @@ export default function EduSingleCard({
     }}>
       <SundaySchoolMasthead valueTitle={title} tagline={tagline} />
 
-      {/* Video tile — poster + GlassPlay + duration. No body. */}
+      {/* Video tile - poster + GlassPlay + duration. No body. */}
       <div style={{
         position: "relative",
         borderRadius: 20,
@@ -60,7 +60,7 @@ export default function EduSingleCard({
   );
 }
 
-// Glassmorphism play button — Apple visionOS / iOS 26 style.
+// Glassmorphism play button - Apple visionOS / iOS 26 style.
 // Translucent white, blurred backdrop, soft inner highlight, deep ambient shadow.
 export function GlassPlay({ onClick, size = 58, iconSize = 22 }) {
   return (

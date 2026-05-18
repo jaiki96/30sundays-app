@@ -87,7 +87,7 @@ export default function HomeV2() {
     duration: compareVideos.maldivesVsMauritius.duration,
   };
 
-  // Multi-carousel comparison lessons (Bali vs Vietnam, etc.) — tagged like a series.
+  // Multi-carousel comparison lessons (Bali vs Vietnam, etc.) - tagged like a series.
   const seriesLessons = compareVideos.carouselA.map((c, i) => ({
     poster: c.poster,
     videoUrl: c.videoUrl,
@@ -126,7 +126,7 @@ export default function HomeV2() {
       {/* ─── Maldives itineraries ─── */}
       <CountryStrip d={HOME_V2_COUNTRIES[3]} />
 
-      {/* ─── Sunday School series — comparison carousel ─── */}
+      {/* ─── Sunday School series - comparison carousel ─── */}
       <EduMultiCarousel
         valueTitle="Pick the right [week], head-to-head"
         lessons={seriesLessons}
@@ -164,7 +164,7 @@ export default function HomeV2() {
         />
       </div>
 
-      {/* ─── Reviews — hero rating block ─── */}
+      {/* ─── Reviews - hero rating block ─── */}
       <div style={{ margin: "30px 16px 0" }}>
         {/* Section kicker */}
         <div style={{ marginBottom: 12 }}>

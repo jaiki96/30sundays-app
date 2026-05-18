@@ -204,7 +204,7 @@ function ActivityPanel({ score }) {
       </div>
 
       <TipBlock>{copy.tip}</TipBlock>
-      <Footer>Ideal times are guidance — your pace and interest may differ.</Footer>
+      <Footer>Ideal times are guidance - your pace and interest may differ.</Footer>
     </div>
   );
 }

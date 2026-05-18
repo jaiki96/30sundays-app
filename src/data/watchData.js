@@ -1,4 +1,4 @@
-// ─── 30 Sundays Watch — video library ───
+// ─── 30 Sundays Watch - video library ───
 // Categories: vs · top-picks · trip-ideas · know-this
 // Cross-destination videos (e.g. Bali vs Thailand) only appear on Home,
 // never on individual destination Watch sections.
@@ -42,7 +42,7 @@ export const WATCH_CATEGORIES = [
 //   id, title, category, dest (or crossDest[]), tags[], poster, duration
 //   crossDest videos are excluded from per-destination Watch sections.
 export const watchVideos = [
-  // ─── Bali — vs ───
+  // ─── Bali - vs ───
   { id: "v01", title: "Nusa Penida vs Seminyak",      category: "vs",         dest: "Bali", tags: ["nusa-penida","seminyak"],          poster: bali[5], duration: "0:48" },
   { id: "v02", title: "Kuta vs Mount Batur",          category: "vs",         dest: "Bali", tags: ["kuta","mount-batur"],               poster: bali[2], duration: "1:12" },
   { id: "v03", title: "Lempuyang vs Jatiluwih",       category: "vs",         dest: "Bali", tags: ["lempuyang","jatiluwih","temples"],  poster: bali[4], duration: "0:56" },
@@ -54,20 +54,20 @@ export const watchVideos = [
   { id: "v09", title: "Hidden Gems vs Famous Spots",  category: "vs",         dest: "Bali", tags: ["hidden-gems"],                      poster: bali[3], duration: "1:15" },
   { id: "v10", title: "Relaxed Bali vs Adventure",    category: "vs",         dest: "Bali", tags: ["relaxed","adventure"],              poster: bali[1], duration: "0:52" },
 
-  // ─── Bali — top-picks ───
+  // ─── Bali - top-picks ───
   { id: "v11", title: "Top 5 Beaches in Bali",        category: "top-picks",  dest: "Bali", tags: ["beaches"],                          poster: bali[5], duration: "1:30" },
   { id: "v12", title: "Top 5 Cafés",                  category: "top-picks",  dest: "Bali", tags: ["cafes","food"],                     poster: bali[0], duration: "1:08" },
   { id: "v13", title: "Top 3 Bali Experiences",       category: "top-picks",  dest: "Bali", tags: ["experiences"],                      poster: bali[2], duration: "0:55" },
   { id: "v14", title: "Beach Club Ranking",           category: "top-picks",  dest: "Bali", tags: ["beach-clubs","seminyak"],           poster: bali[0], duration: "1:18" },
   { id: "v15", title: "Best Places to Stay in Bali",  category: "top-picks",  dest: "Bali", tags: ["stay","places-to-stay"],            poster: bali[1], duration: "1:25" },
 
-  // ─── Bali — trip-ideas ───
+  // ─── Bali - trip-ideas ───
   { id: "v16", title: "Bali for Relaxed Couples",     category: "trip-ideas", dest: "Bali", tags: ["relaxed","couples"],                poster: bali[3], duration: "1:40" },
   { id: "v17", title: "Bali + Lombok: 10 Days",       category: "trip-ideas", dest: "Bali", tags: ["lombok","combo"],                   poster: bali[1], duration: "1:55" },
   { id: "v18", title: "Bali's Twin: Komodo Island",   category: "trip-ideas", dest: "Bali", tags: ["komodo","twin"],                    poster: bali[2], duration: "1:22" },
   { id: "v19", title: "Lombok: Bali's Lesser-Known Twin", category: "trip-ideas", dest: "Bali", tags: ["lombok","twin"],               poster: bali[3], duration: "1:35" },
 
-  // ─── Bali — know-this ───
+  // ─── Bali - know-this ───
   { id: "v20", title: "Things to Do in Ubud",         category: "know-this",  dest: "Bali", tags: ["ubud"],                             poster: bali[2], duration: "1:10" },
   { id: "v21", title: "5 Things to Do in Bali",       category: "know-this",  dest: "Bali", tags: ["things-to-do"],                     poster: bali[0], duration: "1:28" },
   { id: "v22", title: "Mount Ijen Explainer",         category: "know-this",  dest: "Bali", tags: ["mount-ijen"],                       poster: bali[4], duration: "1:05" },
@@ -92,7 +92,7 @@ export function videosForDest(dest) {
   return watchVideos.filter(v => v.dest === dest && !v.crossDest);
 }
 
-// Videos available globally for the Home row — mixes cross-dest comparisons
+// Videos available globally for the Home row - mixes cross-dest comparisons
 // with a few editorial picks per destination. Curated by hand for now.
 export function videosForHome() {
   const ids = ["v25", "v11", "v26", "v28", "v17", "v27", "v29", "v18", "v30", "v22"];

@@ -13,7 +13,7 @@ const BALI = {
     "Kintamani", "Nusa Dua", "Amed", "Sidemen", "Munduk",
     "Nusa Penida", "Lovina", "Pemuteran", "Tabanan", "Jimbaran",
   ],
-  // Concrete nouns — the "what you'll see" bucket.
+  // Concrete nouns - the "what you'll see" bucket.
   nouns: [
     "Paddies", "Swings", "Temples", "Beaches", "Reefs",
     "Cliffs", "Caves", "Waterfalls", "Volcanoes", "Sunsets",
@@ -108,7 +108,7 @@ const TEMPLATES = [
   ({ cities, pick }) => cities.length ? `${cities[0]} ${pick("loveWords")}` : null,
 ];
 
-// Indexes of templates that contain love/romance/honeymoon — gated.
+// Indexes of templates that contain love/romance/honeymoon - gated.
 const LOVE_TEMPLATE_IDX = new Set([16, 17, 18]);
 
 // ─── Hashing ───
@@ -153,7 +153,7 @@ export function generateBaliName(itinerary, usedNames = new Set()) {
     usedNames.add(name);
     return name;
   }
-  // Fallback — should be statistically impossible with our namespace.
+  // Fallback - should be statistically impossible with our namespace.
   return `${dest} ${nights}N`;
 }
 

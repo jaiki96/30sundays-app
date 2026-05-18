@@ -1,7 +1,7 @@
 import { GlassPlay } from "./EduSingleCard";
 import SundaySchoolMasthead from "./SundaySchoolMasthead";
 
-// Sunday School — series carousel (multi-video).
+// Sunday School - series carousel (multi-video).
 // Editorial masthead + horizontal-scroll video tiles. Each tile is the poster
 // only (no white body) with the title overlaid bottom-left in DM Serif white.
 export default function EduMultiCarousel({

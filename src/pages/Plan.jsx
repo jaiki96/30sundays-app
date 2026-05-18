@@ -95,7 +95,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   }, []);
 
   // phase: "auth" | "details" | "curating" | "success"
-  // ("auth" covers what used to be "phone" + "otp" — handled by LoginV2)
+  // ("auth" covers what used to be "phone" + "otp" - handled by LoginV2)
   const [phase, setPhase] = useState(userState === "lead" && leadData ? "success" : "auth");
   const [countryIdx, setCountryIdx] = useState(0);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -214,7 +214,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
     setPhase("details");
   };
 
-  // OTP validation that LoginV2 calls — keep the legacy "0000 = invalid" rule
+  // OTP validation that LoginV2 calls - keep the legacy "0000 = invalid" rule
   const validateOtp = (otpStr) => {
     if (otpStr === "0000") return "Invalid OTP. Please try again.";
     return null;
@@ -471,7 +471,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         </>
       )}
 
-      {/* ═══ Top bar (details only — auth has its own, success/curating don't need it) ═══ */}
+      {/* ═══ Top bar (details only - auth has its own, success/curating don't need it) ═══ */}
       {phase === "details" && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px 0" }}>
           <button onClick={goBack} style={{ width: 34, height: 34, borderRadius: 12, background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -484,7 +484,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         </div>
       )}
 
-      {/* ═══ AUTH (phone + OTP) — handled by LoginV2 ═══ */}
+      {/* ═══ AUTH (phone + OTP) - handled by LoginV2 ═══ */}
       {phase === "auth" && (
         <LoginV2
           onComplete={handleAuthComplete}

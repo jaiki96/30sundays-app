@@ -81,15 +81,18 @@ function DurationTile({ scoring, onClick }) {
           fontSize: 18, fontWeight: 600, color: "#A4A7AE",
           alignSelf: "center", marginTop: -10,
         }}>+</span>
-        <DurationHalfTile icon={Plane} value={shortH(t.hours)} label="Travel time" level={t.level} />
+        <DurationHalfTile icon={Car} value={shortH(t.hours)} label="Travel time" level={t.level} />
       </div>
       <span style={{
-        display: "inline-flex", alignItems: "center", gap: 3,
+        display: "inline-flex", alignItems: "baseline", gap: 4,
         fontSize: 14, fontWeight: 700, color: "#181E4C", lineHeight: 1.3,
         marginTop: 2,
       }}>
-        ≈ {shortH(d.totalHrs)} day
-        <ChevronRight size={13} color="#A4A7AE" />
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#666C99", letterSpacing: 0.2, textTransform: "uppercase" }}>
+          Total Time
+        </span>
+        ≈ {shortH(d.totalHrs)}
+        <ChevronRight size={13} color="#A4A7AE" style={{ alignSelf: "center" }} />
       </span>
     </button>
   );
@@ -226,7 +229,7 @@ function buildTimeline(scoring) {
   return events;
 }
 
-// Timeline row — icon column (with continuing vertical line) + content column.
+// Timeline row - icon column (with continuing vertical line) + content column.
 function TimelineRow({ event, isFirst, isLast }) {
   const isTransit = event.kind === "transit";
   const Icon = isTransit ? (event.mode === "flight" ? Plane : Car) : MapPin;
@@ -235,7 +238,7 @@ function TimelineRow({ event, isFirst, isLast }) {
     <div style={{ display: "grid", gridTemplateColumns: "32px 1fr", columnGap: 12 }}>
       {/* Icon column */}
       <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
-        {/* Vertical connector — half-line on first/last rows */}
+        {/* Vertical connector - half-line on first/last rows */}
         <div style={{
           position: "absolute", top: 0, bottom: 0, width: 2,
           background: "#E0E2EB",
@@ -262,7 +265,7 @@ function TimelineRow({ event, isFirst, isLast }) {
               {event.from} <span style={{ color: "#A4A7AE" }}>→</span> {event.to}
             </p>
             <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666C99" }}>
-              {event.time}{event.km && event.km !== "—" ? ` · ${event.km}` : ""}
+              {event.time}{event.km && event.km !== "-" ? ` · ${event.km}` : ""}
             </p>
           </>
         ) : (

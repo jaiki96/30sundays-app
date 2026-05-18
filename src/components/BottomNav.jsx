@@ -16,7 +16,7 @@ const showOn = new Set(["/", "/trips", "/account"]);
 const INACTIVE = "#9097A4";
 const BAR_HEIGHT = 60;
 const BAR_INSET = 16;
-const PILL_INSET = 5;  // pixel inset inside each tab cell — controls active-pill margin
+const PILL_INSET = 5;  // pixel inset inside each tab cell - controls active-pill margin
 const TAB_COUNT = tabs.length;
 const TAB_PCT = 100 / TAB_COUNT;
 
@@ -39,7 +39,7 @@ export default function BottomNav({ userState }) {
         right: BAR_INSET,
         height: BAR_HEIGHT,
         borderRadius: 999,
-        // Glass surface — slightly more opaque for readability over busy content
+        // Glass surface - slightly more opaque for readability over busy content
         background: "rgba(255, 255, 255, 0.72)",
         backdropFilter: "blur(30px) saturate(180%)",
         WebkitBackdropFilter: "blur(30px) saturate(180%)",
@@ -129,7 +129,7 @@ export default function BottomNav({ userState }) {
         );
       })}
 
-      {/* Press feedback (pseudo-classes — inline can't reach :active) */}
+      {/* Press feedback (pseudo-classes - inline can't reach :active) */}
       <style>{`
         .bn-tab        { transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1); }
         .bn-tab:active { transform: scale(0.93); }

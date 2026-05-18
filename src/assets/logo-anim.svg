@@ -19,11 +19,11 @@
          0.55–1.25s   Rays bloom in sequence (45ms stagger, small overshoot)
          1.40–2.30s   Icon stage shrinks back to composed position
          2.15–2.75s   "30 sundays" wordmark rises softly
-         2.80s+       Living lockup — palms sway, rays orbit slowly
+         2.80s+       Living lockup - palms sway, rays orbit slowly
          ───────────────────────────────────────────────────────────────────── */
 
       /* Icon-stage: zooms in big, holds, then settles to composed position.
-         translate uses % of fill-box width — icon fill-box is ~230 viewBox
+         translate uses % of fill-box width - icon fill-box is ~230 viewBox
          units wide, so 128% ≈ 294 units, which puts icon centre at viewBox
          centre (~531) at scale 1.5. */
       .icon-stage {
@@ -37,14 +37,14 @@
         transform-origin: 50% 100%;
         transform-box: fill-box;
         opacity: 0;
-        /* Sway begins right as arrival ends (0.95s) — so the palm is already
+        /* Sway begins right as arrival ends (0.95s) - so the palm is already
            waving while the icon is still big-and-centered, and keeps waving
            through the shrink + the wordmark reveal. No gap, no jerk. */
         animation:
           spArrive   0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.10s forwards,
           spSwayTeal 4.4s  ease-in-out 0.95s infinite;
       }
-      /* Coral (the "red mountain") — static after arrival, no sway */
+      /* Coral (the "red mountain") - static after arrival, no sway */
       .palm-coral-grp {
         transform-origin: 50% 100%;
         transform-box: fill-box;
@@ -60,7 +60,7 @@
         animation: spSunIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
       }
 
-      /* Sun-rays group: stays put — rays are composed, not symmetrical,
+      /* Sun-rays group: stays put - rays are composed, not symmetrical,
          so rotating them as a group breaks the smiley-sun shape. */
       .sun-rays {
         transform-origin: 50% 50%;
@@ -100,11 +100,11 @@
         0%   { opacity: 0; transform: scale(0.78) rotate(0deg); }
         100% { opacity: 1; transform: scale(1)    rotate(0deg); }
       }
-      /* Tree sway — pendulum timing.
+      /* Tree sway - pendulum timing.
          Per-segment timing so the palm crosses centre at max velocity
          (no pause at 0°) and only briefly slows at each extreme to
          reverse direction. ease-out on each approach to an extreme,
-         ease-in on each return — eliminates the "freeze" at +2.2°. */
+         ease-in on each return - eliminates the "freeze" at +2.2°. */
       @keyframes spSwayTeal {
         0%   { transform: scale(1) rotate(   0deg); animation-timing-function: ease-out; }
         25%  { transform: scale(1) rotate(-2.2deg); animation-timing-function: ease-in;  }
@@ -151,7 +151,7 @@
     <path class="cls-3" d="M488.69,482.27c-6.77,0-12.94-2.08-18.34-6.19-5.28-4.02-9.48-10.12-12.48-18.12-2.92-7.8-4.4-17.44-4.4-28.63s1.48-20.82,4.4-28.63c3-8.01,7.2-14.1,12.48-18.12,5.4-4.11,11.57-6.19,18.34-6.19s12.94,2.08,18.34,6.19c5.28,4.02,9.48,10.12,12.48,18.12,2.92,7.81,4.41,17.44,4.41,28.63s-1.48,20.82-4.41,28.63c-3,8.01-7.2,14.11-12.48,18.12-5.4,4.11-11.57,6.19-18.34,6.19ZM488.69,386.33c-4.7,0-8.77,1.4-12.46,4.27-3.76,2.93-6.8,7.63-9.04,13.99-2.32,6.58-3.5,14.9-3.5,24.74s1.18,18.16,3.5,24.73c2.24,6.36,5.28,11.06,9.04,13.99,3.69,2.87,7.76,4.27,12.46,4.27s8.77-1.4,12.46-4.27h0c3.75-2.93,6.79-7.63,9.04-13.99,2.32-6.58,3.5-14.9,3.5-24.73s-1.18-18.15-3.5-24.74c-2.24-6.35-5.28-11.06-9.04-13.99-3.69-2.87-7.76-4.27-12.46-4.27Z"/>
   </g>
 
-  <!-- ═══ Icon stage (palms + sun) — zooms big then settles ═══ -->
+  <!-- ═══ Icon stage (palms + sun) - zooms big then settles ═══ -->
   <g class="icon-stage">
 
   <!-- ═══ Teal palm tree ═══ -->

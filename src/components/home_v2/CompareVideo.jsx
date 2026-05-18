@@ -1,7 +1,7 @@
 import { C } from "../../data";
 import PortraitVideo from "./PortraitVideo";
 
-// Portrait comparison video card — "Bali vs Thailand" style.
+// Portrait comparison video card - "Bali vs Thailand" style.
 // Two country chips overlay top, hook text bottom.
 export default function CompareVideo({ data, width = 220 }) {
   return (

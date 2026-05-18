@@ -147,14 +147,14 @@ export const PACE_COPY = {
   hectic: {
     label: "Hectic",
     means: "Lots packed in. You'll be moving most of the day with little downtime.",
-    audience: "Most honeymooners prefer Neutral or Relaxed — pick this only if you love a fast pace.",
+    audience: "Most honeymooners prefer Neutral or Relaxed - pick this only if you love a fast pace.",
     tip: "Skip one optional activity to free up an evening for yourselves.",
   },
   neutral: {
     label: "Neutral",
-    means: "A balanced day — a few core experiences with breathing room in between.",
+    means: "A balanced day - a few core experiences with breathing room in between.",
     audience: "A safe default for couples who want to see things without rushing.",
-    tip: "Save the spa or sunset for after your last activity — you'll have time.",
+    tip: "Save the spa or sunset for after your last activity - you'll have time.",
   },
   relaxed: {
     label: "Relaxed",
@@ -166,20 +166,20 @@ export const PACE_COPY = {
 
 export const ACT_TIME_COPY = {
   packed: { label: "Packed",  tip: "Trim 30 min from one activity to enjoy the rest more." },
-  balanced:{ label: "Balanced",tip: "Stick to the plan — the timing is well-spaced." },
+  balanced:{ label: "Balanced",tip: "Stick to the plan - the timing is well-spaced." },
   light:   { label: "Light",   tip: "Add a long lunch or a slow café stop in between." },
 };
 
 export const TRAVEL_COPY = {
-  long:     { label: "Long",     tip: "Big transfer day — pack snacks and pre-load music." },
+  long:     { label: "Long",     tip: "Big transfer day - pack snacks and pre-load music." },
   moderate: { label: "Moderate", tip: "Comfortable transfers. Not draining." },
-  short:    { label: "Short",    tip: "Minimal travel — most time spent at places." },
+  short:    { label: "Short",    tip: "Minimal travel - most time spent at places." },
 };
 
 export const CROWD_COPY = {
   high:   { label: "High",   tip: "Go early or after 4 PM to avoid the worst crowds." },
   medium: { label: "Medium", tip: "Manageable any time of day." },
-  low:    { label: "Low",    tip: "Quiet spots — soak it in." },
+  low:    { label: "Low",    tip: "Quiet spots - soak it in." },
 };
 
 export const QUEUE_COPY = {
@@ -223,7 +223,7 @@ const TIPS = {
   ],
 };
 
-// Static metric explainers — one neutral line per metric, used at the top of every modal.
+// Static metric explainers - one neutral line per metric, used at the top of every modal.
 // Generic by design (not level-specific) so they don't require LLM generation.
 const METRIC_EXPLAINERS = {
   pace: "How packed your day feels overall, balancing activities, transit time, and breaks.",
@@ -233,7 +233,7 @@ const METRIC_EXPLAINERS = {
   queue: "How long you'll typically wait to enter or get tickets.",
 };
 
-// Per-level tag definitions — used only inside the "other levels" accordion.
+// Per-level tag definitions - used only inside the "other levels" accordion.
 const PACE_DEFS = {
   Relaxed: "Just 1 to 2 stops with plenty of downtime to soak in each place.",
   Neutral: "A balanced mix of stops and breaks. Moves at a comfortable rhythm.",
@@ -247,9 +247,9 @@ const CROWD_DEFS = {
 };
 
 const QUEUE_DEFS = {
-  Short: "Under 30 minutes wait — usually walk-in.",
+  Short: "Under 30 minutes wait - usually walk-in.",
   Moderate: "30 to 60 minutes wait at peak times.",
-  Long: "Over 60 minutes wait — book skip-the-line where you can.",
+  Long: "Over 60 minutes wait - book skip-the-line where you can.",
 };
 
 const BEACH_CITIES = [
@@ -273,17 +273,17 @@ export function getDayScoring(day, dayIdx, allDays) {
   const isBeach = BEACH_CITIES.includes(day.city);
   const isCity = CITY_CITIES.includes(day.city);
 
-  // PACE — 4-tier: Relaxed (0) · Balanced (1) · Active (2) · Fast-paced (3)
+  // PACE - 4-tier: Relaxed (0) · Balanced (1) · Active (2) · Fast-paced (3)
   let paceLevel = 1;
   if (acts.length <= 1 || isBeach) paceLevel = 0;
   else if (acts.length === 2) paceLevel = 1;
   else if (acts.length === 3 && !cityChanged && !isFirst && !isLast) paceLevel = 2;
   else paceLevel = 3;
   const paceLabels = ["Relaxed", "Balanced", "Active", "Fast-paced"];
-  // Visual level (0-2) reused by SCORE_PALETTE — collapse 4 tiers into 3 colors.
+  // Visual level (0-2) reused by SCORE_PALETTE - collapse 4 tiers into 3 colors.
   const paceVisualLevel = paceLevel === 0 ? 0 : paceLevel === 3 ? 2 : 1;
 
-  // ACTIVITY TIME — sum of curated activity durations
+  // ACTIVITY TIME - sum of curated activity durations
   const ACT_DURS = [2, 3, 1.5, 2.5];
   const actHrs = acts.reduce((s, _, i) => s + ACT_DURS[i % ACT_DURS.length], 0);
   let actLevel = 1;
@@ -291,7 +291,7 @@ export function getDayScoring(day, dayIdx, allDays) {
   if (actHrs >= 7) actLevel = 2;
   const actLabels = ["Light", "Moderate", "Intense"];
 
-  // TRAVEL TIME — flight days are heavy, normal days light
+  // TRAVEL TIME - flight days are heavy, normal days light
   let travelHrs = 0.5;
   if (cityChanged) travelHrs = 4;
   if (isFirst) travelHrs = 6;
@@ -301,7 +301,7 @@ export function getDayScoring(day, dayIdx, allDays) {
   if (travelHrs > 4) travelLevel = 2;
   const travelLabels = ["Low", "Moderate", "High"];
 
-  // CROWDS — by city archetype. Nomenclature: Low · Moderate · High
+  // CROWDS - by city archetype. Nomenclature: Low · Moderate · High
   let crowdLevel = 1;
   if (isBeach) crowdLevel = 0;
   if (isCity) crowdLevel = 2;
@@ -330,14 +330,14 @@ export function getDayScoring(day, dayIdx, allDays) {
   // Travel legs
   const legs = [];
   if (isFirst) {
-    legs.push({ from: "Mumbai", to: day.city, time: "5 hr 30 min", km: "—", mode: "flight" });
+    legs.push({ from: "Mumbai", to: day.city, time: "5 hr 30 min", km: "-", mode: "flight" });
     legs.push({ from: `${day.city} airport`, to: "Hotel", time: "30 min", km: "12 km", mode: "car" });
   } else if (cityChanged) {
     legs.push({ from: prevCity, to: day.city, time: "3 hr 30 min", km: "180 km", mode: "car" });
     legs.push({ from: `${day.city} arrival`, to: "Hotel", time: "30 min", km: "8 km", mode: "car" });
   } else if (isLast) {
     legs.push({ from: "Hotel", to: `${day.city} airport`, time: "45 min", km: "20 km", mode: "car" });
-    legs.push({ from: day.city, to: "Mumbai", time: "5 hr 30 min", km: "—", mode: "flight" });
+    legs.push({ from: day.city, to: "Mumbai", time: "5 hr 30 min", km: "-", mode: "flight" });
   } else {
     acts.forEach((a, i) => {
       if (i === 0) legs.push({ from: "Hotel", to: a.name, time: "20 min", km: "6 km", mode: "car" });
@@ -351,7 +351,7 @@ export function getDayScoring(day, dayIdx, allDays) {
   const longestLeg = legs.length ? legs.reduce((m, l) => {
     const mins = parseLegMinutes(l.time);
     return mins > m.mins ? { mins, label: l.time } : m;
-  }, { mins: 0, label: "—" }).label : "—";
+  }, { mins: 0, label: "-" }).label : "-";
   const totalKm = legs.reduce((s, l) => s + (parseInt(l.km, 10) || 0), 0);
 
   const paceSummary = paceLevel === 2 ? `${acts.length} stops · ${fmtHrs(travelHrs)} in transit`
@@ -373,7 +373,7 @@ export function getDayScoring(day, dayIdx, allDays) {
   // 0-100 numeric scores for the comparison variant.
   const numericScore = (lvl) => lvl === 2 ? 85 : lvl === 1 ? 50 : 20;
 
-  // Combined tour duration (activity + travel) — shown as one merged tile.
+  // Combined tour duration (activity + travel) - shown as one merged tile.
   const totalHrs = actHrs + travelHrs;
   let durationLevel = 0;
   if (totalHrs > 8) durationLevel = 2;
@@ -398,7 +398,7 @@ export function getDayScoring(day, dayIdx, allDays) {
         { label: "Activity", value: actHrs, max: 10 },
         { label: "Travel", value: travelHrs, max: 10 },
       ],
-      whyText: "How packed your day feels — based on activities, travel time, and downtime between stops.",
+      whyText: "How packed your day feels - based on activities, travel time, and downtime between stops.",
       audienceNote: "Most honeymooners prefer Relaxed or Neutral days.",
       calcText: "Activity hours + travel hours, weighted against daylight time and changeovers.",
       tip: TIPS.pace[paceLevel],
@@ -418,7 +418,7 @@ export function getDayScoring(day, dayIdx, allDays) {
         { label: "Stops", value: String(acts.length) },
         { label: "Total", value: fmtHrs(actHrs) },
       ],
-      whyText: "Total time you'll spend at curated experiences — excluding transit and meals.",
+      whyText: "Total time you'll spend at curated experiences - excluding transit and meals.",
       tip: TIPS.activity[actLevel],
     },
     travel: {
@@ -438,7 +438,7 @@ export function getDayScoring(day, dayIdx, allDays) {
         { label: "Total", value: fmtHrs(travelHrs) },
       ],
       longestLeg,
-      whyText: "Total time you'll spend in transit — flights, transfers, ferries, and short hops between stops.",
+      whyText: "Total time you'll spend in transit - flights, transfers, ferries, and short hops between stops.",
       tip: TIPS.travel[travelLevel],
     },
     duration: {
@@ -450,7 +450,7 @@ export function getDayScoring(day, dayIdx, allDays) {
       travelText: fmtHrs(travelHrs),
       totalText: fmtHrs(totalHrs),
       summary: `${fmtHrs(actHrs)} at activities + ${fmtHrs(travelHrs)} in transit.`,
-      explainer: "Approximate total time your day will take — activity time plus travel time.",
+      explainer: "Approximate total time your day will take - activity time plus travel time.",
       tip: TIPS.activity[actLevel],
     },
     crowd: {
@@ -482,7 +482,7 @@ function parseLegMinutes(s) {
   return (hrMatch ? parseInt(hrMatch[1]) * 60 : 0) + (mnMatch ? parseInt(mnMatch[1]) : 0);
 }
 
-// Get scoring for every day in a trip — used by the comparative variant.
+// Get scoring for every day in a trip - used by the comparative variant.
 export function getAllDaysScoring(days) {
   return days.map((d, i) => getDayScoring(d, i, days));
 }

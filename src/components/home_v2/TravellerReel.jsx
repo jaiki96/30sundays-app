@@ -1,7 +1,7 @@
 import { Play } from "lucide-react";
 import { C } from "../../data";
 
-// Single traveller reel tile — portrait, image or video, with name/country/activity overlay.
+// Single traveller reel tile - portrait, image or video, with name/country/activity overlay.
 export default function TravellerReel({ item, width = 160 }) {
   return (
     <div style={{

@@ -58,7 +58,7 @@ export default function Home({ userState }) {
       {/* Destination carousels, interleaved with traveller moments + USPs to break monotony */}
       {renderDestSections(HOME_DESTS.slice(0, 2), 0)}
 
-      {/* Watch — educational video teaser */}
+      {/* Watch - educational video teaser */}
       <WatchTeaser
         emoji="😵‍💫"
         title="Can't decide where to go?"

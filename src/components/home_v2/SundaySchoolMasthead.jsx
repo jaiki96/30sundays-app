@@ -1,7 +1,7 @@
 import { GraduationCap } from "lucide-react";
 import { C } from "../../data";
 
-// Editorial Sunday School masthead — matches S1 (single) + M1 (multi) designs.
+// Editorial Sunday School masthead - matches S1 (single) + M1 (multi) designs.
 // Wrap the accent word in [brackets] in `valueTitle`: it renders coral italic
 // in DM Serif Display with a thin wavy underline below.
 //   "Where to stay in [Bali]"        →   Where to stay in *Bali*~~

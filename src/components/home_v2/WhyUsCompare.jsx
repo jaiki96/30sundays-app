@@ -1,7 +1,7 @@
 import { X, Check } from "lucide-react";
 import { C } from "../../data";
 
-// Variant 2 — "Typical agency vs 30 Sundays" comparison table.
+// Variant 2 - "Typical agency vs 30 Sundays" comparison table.
 // Each row shows the contrast that defines the brand.
 const ROWS = [
   { bad: "Group tours, mixed groups",   good: "Built only for couples" },

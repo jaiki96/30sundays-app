@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, RotateCw } from "lucide-react";
 import svgMarkup from "../assets/logo-anim.svg?raw";
 
-// Splash animation preview — 30 Sundays logo on Blush canvas.
+// Splash animation preview - 30 Sundays logo on Blush canvas.
 // Sequence: two arrive → spark → Sundays reveals → settle → hold.
 // Total: ~2.2s.
 // Live at: /logo-anim
@@ -23,7 +23,7 @@ export default function LogoAnim() {
         overflow: "hidden",
       }}
     >
-      {/* Back button — subtle glass pill */}
+      {/* Back button - subtle glass pill */}
       <button
         onClick={() => navigate(-1)}
         aria-label="Back"
@@ -49,7 +49,7 @@ export default function LogoAnim() {
         <ArrowLeft size={17} color="#254342" />
       </button>
 
-      {/* Replay button — bottom centre */}
+      {/* Replay button - bottom centre */}
       <button
         onClick={() => setRunId((n) => n + 1)}
         aria-label="Replay"
@@ -80,7 +80,7 @@ export default function LogoAnim() {
         Replay
       </button>
 
-      {/* Logo — re-mounts on replay via key, which restarts the CSS animations */}
+      {/* Logo - re-mounts on replay via key, which restarts the CSS animations */}
       <div
         key={runId}
         style={{

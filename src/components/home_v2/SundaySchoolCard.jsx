@@ -2,7 +2,7 @@ import { GraduationCap } from "lucide-react";
 import { C } from "../../data";
 import PortraitVideo from "./PortraitVideo";
 
-// Distinctive 30 Sundays "lesson card" — warm cream stage with a single portrait video.
+// Distinctive 30 Sundays "lesson card" - warm cream stage with a single portrait video.
 // Used for the seasonal lesson under the hero. Comparison videos use a leaner CompareVideo card.
 export default function SundaySchoolCard({ lesson }) {
   const cream = "#FBF3E7";

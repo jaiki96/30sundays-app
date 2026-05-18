@@ -48,7 +48,7 @@ const POSTER = {
   maldivesVsMauritius: `${CDN}/hotels/maldives/hero-images/13_hero.webp`,
 };
 
-// Seasonal "Sunday School" lesson — June-August picks
+// Seasonal "Sunday School" lesson - June-August picks
 export const seasonalLesson = {
   issue: "01",
   title: "Where to go in June–August",
@@ -67,7 +67,7 @@ export const compareVideos = {
     videoUrl: "", duration: "1:52",
   },
   carouselA: [
-    { a: "Bali", b: "Vietnam", poster: POSTER.baliVsVietnam, hook: "Beaches vs bays — pick your week.", videoUrl: "", duration: "1:44" },
+    { a: "Bali", b: "Vietnam", poster: POSTER.baliVsVietnam, hook: "Beaches vs bays - pick your week.", videoUrl: "", duration: "1:44" },
     { a: "Vietnam", b: "Thailand", poster: POSTER.vietnamVsThailand, hook: "Street food capitals, compared.", videoUrl: "", duration: "2:01" },
     { a: "Vietnam", b: "Maldives", poster: POSTER.vietnamVsMaldives, hook: "City buzz vs island silence.", videoUrl: "", duration: "1:38" },
   ],
@@ -78,7 +78,7 @@ export const compareVideos = {
   },
 };
 
-// Traveller reels — mix of video + image with name/country/activity
+// Traveller reels - mix of video + image with name/country/activity
 export const travellerReels = [
   { type: "video", name: "Aanya & Rohan", country: "Bali", activity: "Ubud swing", poster: `${CDN}/bali/bali_swing_experience_1.jpg`, mediaUrl: "" },
   { type: "image", name: "Priya & Karan", country: "Thailand", activity: "Phi Phi long-tail", poster: `${CDN}/thailand/long_beach_koh_phi_phi_468.jpg`, mediaUrl: "" },
@@ -92,7 +92,7 @@ export const travellerReels = [
 // Why we're the perfect match (mockup 2)
 export const matchPromises = [
   { icon: "heart",   title: "Made for couples",       body: "Built for two. Never group tours, never solo travellers." },
-  { icon: "eye",     title: "The good, the bad, the ugly", body: "Every flaw flagged before you book — even when it costs us the booking." },
+  { icon: "eye",     title: "The good, the bad, the ugly", body: "Every flaw flagged before you book - even when it costs us the booking." },
   { icon: "shield",  title: "Strict standards",       body: "8+ hotels on Booking. 4+ activities on Tripadvisor. Always." },
   { icon: "rupee",   title: "See every rupee",        body: "The only company that splits hotels, flights and activities. No mystery markup." },
   { icon: "cap",     title: "IIT-IIM team",           body: "Engineers and MBAs who chose travel over consulting." },
@@ -101,7 +101,7 @@ export const matchPromises = [
 // We don't ghost after booking (mockup 3)
 export const tripPromises = [
   { icon: "chat",   title: "Always on call",          body: "A human is always reachable, 24/7. Average reply: under 10 minutes." },
-  { icon: "ticket", title: "Every ticket, in your pocket", body: "Flights, transfers, attractions — all in the app. Offline-ready when WiFi isn't." },
+  { icon: "ticket", title: "Every ticket, in your pocket", body: "Flights, transfers, attractions - all in the app. Offline-ready when WiFi isn't." },
   { icon: "play",   title: "Your guide, in two minutes",   body: "Bite-sized videos at every key spot. So you don't miss the story." },
   { icon: "pin",    title: "Real-time picks",         body: "Restaurant and shop suggestions, updated as you move. Tuned to your location and time." },
 ];

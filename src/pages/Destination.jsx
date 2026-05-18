@@ -148,7 +148,7 @@ export default function Destination() {
         </div>
       )}
 
-      {/* Category carousels — Popular → Offbeat → Relaxed → SS single → activities → SS multi → regions */}
+      {/* Category carousels - Popular → Offbeat → Relaxed → SS single → activities → SS multi → regions */}
       {popular.length > 0 && (
         <div style={{ marginTop: 22 }}>
           <SectionHeader emoji="🔥" title="Popular" linkTo={`/listing?dest=${name}`} linkLabel="View all" />
@@ -168,7 +168,7 @@ export default function Destination() {
         </div>
       )}
 
-      {/* Sunday School — Where to stay (single video) */}
+      {/* Sunday School - Where to stay (single video) */}
       <div style={{ marginTop: 28 }}>
         <EduSingleCard
           title={`Where to stay in [${name}]`}
@@ -185,7 +185,7 @@ export default function Destination() {
         </div>
       ))}
 
-      {/* Sunday School — activity comparisons (multi-video carousel) */}
+      {/* Sunday School - activity comparisons (multi-video carousel) */}
       {d.activities && d.activities.length > 0 && (
         <EduMultiCarousel
           valueTitle={`${name} [activities], compared`}
@@ -285,7 +285,7 @@ export default function Destination() {
         </div>
       )}
 
-      {/* Get to know [Destination] — educational videos, after offbeat activities */}
+      {/* Get to know [Destination] - educational videos, after offbeat activities */}
       <WatchTeaser
         title={`Get to know ${name}`}
         subtitle="Compare cities, see top picks, learn what to skip"

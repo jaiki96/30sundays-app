@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, Heart, Sparkles, Volume2, VolumeX, Quote, MapPin, Camera, Award, Star, Film, Instagram, Zap } from "lucide-react";
 import { C } from "../data";
 
-// MediaLab — concept screen for surfacing customer photos / videos / reels.
+// MediaLab - concept screen for surfacing customer photos / videos / reels.
 // Couple-only positioning: every section frames media as "real couples, real moments".
 // Live at: /media-lab
 
@@ -27,7 +27,7 @@ const POSTERS = {
   mald2: `${CDN}/hotels/maldives/hero-images/47_hero.webp`,
 };
 
-// ─── Mood rails — couple-coded categories ───
+// ─── Mood rails - couple-coded categories ───
 const MOOD_RAILS = [
   {
     id: "sunsets",
@@ -71,7 +71,7 @@ const DAY_PEEKS = [
   { day: 7, title: "Couple's spa ritual",            poster: POSTERS.bali3, plays: "1.2k", dur: "0:19" },
 ];
 
-// ─── Photo mosaic — "Wall of us" ───
+// ─── Photo mosaic - "Wall of us" ───
 const MOSAIC = [
   POSTERS.bali1, POSTERS.viet2, POSTERS.mald1,
   POSTERS.bali4, POSTERS.thai1, POSTERS.bali6,
@@ -209,7 +209,7 @@ export default function MediaLab() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// HERO REEL — full-bleed autoplay simulation
+// HERO REEL - full-bleed autoplay simulation
 // ════════════════════════════════════════════════════════════════════
 function HeroReel({ poster, muted, setMuted }) {
   return (
@@ -404,7 +404,7 @@ function StatStrip() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// MOOD RAIL — horizontal scroll of 9:16 reel cards
+// MOOD RAIL - horizontal scroll of 9:16 reel cards
 // ════════════════════════════════════════════════════════════════════
 function MoodRail({ rail }) {
   return (
@@ -503,7 +503,7 @@ function ReelCard({ reel }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// DAY-CARD PEEK — shows how itinerary day cards get video thumbs
+// DAY-CARD PEEK - shows how itinerary day cards get video thumbs
 // ════════════════════════════════════════════════════════════════════
 function DayPeekSection() {
   return (
@@ -614,7 +614,7 @@ function DayPeekSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// MOSAIC — Wall of us
+// MOSAIC - Wall of us
 // ════════════════════════════════════════════════════════════════════
 function MosaicSection() {
   return (
@@ -673,7 +673,7 @@ function MosaicSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// VIDEO TESTIMONIALS — the 50 edited reels shine here
+// VIDEO TESTIMONIALS - the 50 edited reels shine here
 // ════════════════════════════════════════════════════════════════════
 function TestimonialSection() {
   return (
@@ -775,7 +775,7 @@ function TestimonialSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// AWARD BADGE → "AS FEATURED IN" — editorial press wall, type-led
+// AWARD BADGE → "AS FEATURED IN" - editorial press wall, type-led
 // ════════════════════════════════════════════════════════════════════
 const PRESS = [
   { name: "CONDÉ NAST", subtitle: "TRAVELLER",      font: "Georgia, serif", weight: 900, italic: false, tracking: 1 },
@@ -831,11 +831,11 @@ function AwardBadgeSection() {
           "They booked one couple a week.<br />Now it's one couple a day."
         </div>
         <div style={{ marginTop: 12, fontFamily: "Georgia, serif", fontSize: 10, color: "#7A5A40", letterSpacing: 2.5, fontWeight: 600 }}>
-          — CONDÉ NAST TRAVELLER · MAY 2026
+          - CONDÉ NAST TRAVELLER · MAY 2026
         </div>
       </div>
 
-      {/* Masthead strip — horizontal scroll of type-led press wordmarks */}
+      {/* Masthead strip - horizontal scroll of type-led press wordmarks */}
       <div
         className="ml-rail-scroll"
         style={{
@@ -872,7 +872,7 @@ function AwardBadgeSection() {
         ))}
       </div>
 
-      {/* Newspaper-style spec line — single row with hairline dividers */}
+      {/* Newspaper-style spec line - single row with hairline dividers */}
       <div
         style={{
           position: "relative",
@@ -910,7 +910,7 @@ function AwardBadgeSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// LOVE FROM THE GRAM → "DMs we wake up to" — couple messages, chat-style
+// LOVE FROM THE GRAM → "DMs we wake up to" - couple messages, chat-style
 // ════════════════════════════════════════════════════════════════════
 const DMS = [
   {
@@ -931,7 +931,7 @@ const DMS = [
   {
     initials: "M·V", color: "#C4B5FD",
     names: "Megha & Vir",   when: "yesterday",
-    msg: "Send Devika our love — she found moments in our clips we'd already forgotten.",
+    msg: "Send Devika our love - she found moments in our clips we'd already forgotten.",
   },
 ];
 
@@ -949,7 +949,7 @@ function LoveFromTheGramSection() {
       <div style={{ marginBottom: 14, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
         <div>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontStyle: "italic", color: "#7A5A40", letterSpacing: 1 }}>
-            from our inbox —
+            from our inbox -
           </div>
           <h2
             style={{
@@ -989,7 +989,7 @@ function LoveFromTheGramSection() {
 
       {/* Footer line */}
       <div style={{ marginTop: 16, paddingTop: 12, borderTop: "0.5px dashed rgba(61,40,23,0.25)", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: "#7A5A40" }}>
-        — over 10,000 couples have written to us —
+        - over 10,000 couples have written to us -
       </div>
     </div>
   );
@@ -1053,7 +1053,7 @@ function DMCard({ dm }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// LOVED BY THE STARS — celeb couples on pink starry background
+// LOVED BY THE STARS - celeb couples on pink starry background
 // ════════════════════════════════════════════════════════════════════
 const STAR_COUPLES = [
   { name: "Aanya & Rohan",   poster: POSTERS.bali2 },
@@ -1188,7 +1188,7 @@ function FloatingStar({ top, left, size, rotate }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// COUPLE OF THE MONTH — large spotlight card
+// COUPLE OF THE MONTH - large spotlight card
 // ════════════════════════════════════════════════════════════════════
 function CoupleOfMonthSection() {
   return (
@@ -1293,7 +1293,7 @@ function CoupleOfMonthSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// REEL PERK — "Send us your clips, we'll make your reel"
+// REEL PERK - "Send us your clips, we'll make your reel"
 // ════════════════════════════════════════════════════════════════════
 function FilmCrewSection() {
   return (
@@ -1350,7 +1350,7 @@ function FilmCrewSection() {
             You shoot it on your phone.<br />We turn it into a reel.
           </h3>
           <p style={{ margin: "10px 0 16px 0", fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500, lineHeight: 1.4 }}>
-            Drop your trip clips in the app. Our editors stitch the best moments into a 60-second story — yours forever.
+            Drop your trip clips in the app. Our editors stitch the best moments into a 60-second story - yours forever.
           </p>
 
           {/* Mini stat strip */}
@@ -1393,7 +1393,7 @@ function MiniStat({ icon: Icon, value, label }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// MAP OF LOVE — heart-pinned destinations
+// MAP OF LOVE - heart-pinned destinations
 // ════════════════════════════════════════════════════════════════════
 const LOVE_PINS = [
   { x: 18, y: 38, dest: "Maldives", count: "2,800",  color: "#0EA5E9" },
@@ -1538,7 +1538,7 @@ function LovePin({ pin, delay }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N1 — CINEMA MARQUEE — film poster treatment for featured reel
+// ★ N1 - CINEMA MARQUEE - film poster treatment for featured reel
 // ════════════════════════════════════════════════════════════════════
 function CinemaMarqueeSection() {
   return (
@@ -1599,14 +1599,14 @@ function CinemaMarqueeSection() {
       </div>
 
       <div style={{ textAlign: "center", marginTop: 14, color: "rgba(255,255,255,0.55)", fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: 2 }}>
-        — IN COUPLES ONLY —
+        - IN COUPLES ONLY -
       </div>
     </div>
   );
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N2 — WRAPPED-STYLE STATS — Spotify Wrapped-style hero numbers
+// ★ N2 - WRAPPED-STYLE STATS - Spotify Wrapped-style hero numbers
 // ════════════════════════════════════════════════════════════════════
 const WRAPPED_CARDS = [
   { num: "32",    big: "sunsets",      sub: "watched together",  bg: "linear-gradient(135deg, #FF6B35 0%, #E31B53 100%)" },
@@ -1660,7 +1660,7 @@ function WrappedStatsSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N3 — POLAROID SCATTER — tilted polaroids with handwritten captions
+// ★ N3 - POLAROID SCATTER - tilted polaroids with handwritten captions
 // ════════════════════════════════════════════════════════════════════
 const POLAROIDS = [
   { src: POSTERS.bali2, caption: "first time here",   date: "12.03.26", rot: -7,  x: -8 },
@@ -1719,7 +1719,7 @@ function PolaroidScatterSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N4 — MAGAZINE COVER — editorial Vogue-style
+// ★ N4 - MAGAZINE COVER - editorial Vogue-style
 // ════════════════════════════════════════════════════════════════════
 function MagazineCoverSection() {
   return (
@@ -1783,7 +1783,7 @@ function MagazineCoverSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N5 — BOARDING PASS — utility ticket with QR
+// ★ N5 - BOARDING PASS - utility ticket with QR
 // ════════════════════════════════════════════════════════════════════
 function BoardingPassSection() {
   return (
@@ -1889,7 +1889,7 @@ function FakeQR() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N6 — FILM STRIP — horizontal sprocketed negative
+// ★ N6 - FILM STRIP - horizontal sprocketed negative
 // ════════════════════════════════════════════════════════════════════
 const FILM_FRAMES = [POSTERS.bali1, POSTERS.viet2, POSTERS.thai1, POSTERS.mald1, POSTERS.bali3, POSTERS.viet3, POSTERS.bali6];
 
@@ -1937,7 +1937,7 @@ function FilmStripSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N7 — LOVE LETTER — handwritten note on cream paper
+// ★ N7 - LOVE LETTER - handwritten note on cream paper
 // ════════════════════════════════════════════════════════════════════
 function LoveLetterSection() {
   return (
@@ -1978,7 +1978,7 @@ function LoveLetterSection() {
 
         <div style={{ position: "relative" }}>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 11, color: "#9C7B5A", letterSpacing: 1.5, fontStyle: "italic" }}>
-            A note from Aanya, day 6 —
+            A note from Aanya, day 6 -
           </div>
           <div
             style={{
@@ -1990,10 +1990,10 @@ function LoveLetterSection() {
               letterSpacing: 0.2,
             }}
           >
-            We didn't think anyone could plan us this well. The little dinner under the stars, the boat man who knew our names — every detail. We came back different. Thank you, for both of us. ♡
+            We didn't think anyone could plan us this well. The little dinner under the stars, the boat man who knew our names - every detail. We came back different. Thank you, for both of us. ♡
           </div>
           <div style={{ marginTop: 18, fontFamily: "'Bradley Hand', cursive", fontSize: 22, color: C.p600, textAlign: "right", letterSpacing: 0.5 }}>
-            — Aanya &amp; Rohan
+            - Aanya &amp; Rohan
           </div>
         </div>
       </div>
@@ -2002,7 +2002,7 @@ function LoveLetterSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N8 — CONSTELLATION MAP — couples connected as stars
+// ★ N8 - CONSTELLATION MAP - couples connected as stars
 // ════════════════════════════════════════════════════════════════════
 function ConstellationMapSection() {
   return (
@@ -2068,7 +2068,7 @@ function ConstellationMapSection() {
 
         {/* Bottom caption */}
         <div style={{ position: "absolute", left: 12, bottom: 12, color: "rgba(255,255,255,0.7)", fontFamily: "Georgia, serif", fontSize: 10, fontStyle: "italic" }}>
-          — Sextans Amorum, observed May MMXXVI
+          - Sextans Amorum, observed May MMXXVI
         </div>
       </div>
     </div>
@@ -2076,7 +2076,7 @@ function ConstellationMapSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N9 — HEARTBEAT ECG — most-loved moments as pulse line
+// ★ N9 - HEARTBEAT ECG - most-loved moments as pulse line
 // ════════════════════════════════════════════════════════════════════
 function HeartbeatECGSection() {
   return (
@@ -2146,7 +2146,7 @@ function PulseStat({ val, lab }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N10 — CASSETTE MIXTAPE — audio cassette with tracklist
+// ★ N10 - CASSETTE MIXTAPE - audio cassette with tracklist
 // ════════════════════════════════════════════════════════════════════
 function CassetteMixtapeSection() {
   const sideA = ["Sunset at Kelingking",  "Long lunch in Ubud",  "Boat to Nusa Penida"];
@@ -2248,7 +2248,7 @@ function Tracklist({ side, tracks }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N11 — POSTCARD WITH STAMP — vintage travel postcard
+// ★ N11 - POSTCARD WITH STAMP - vintage travel postcard
 // ════════════════════════════════════════════════════════════════════
 function PostcardStampSection() {
   return (
@@ -2311,7 +2311,7 @@ function PostcardStampSection() {
           </svg>
 
           <div style={{ fontFamily: "'Bradley Hand', cursive", fontSize: 12, color: "#3D2817", lineHeight: 1.35, paddingRight: 56 }}>
-            Mom — it rained on day 2 and we still danced. Tell Dad to book ours next.
+            Mom - it rained on day 2 and we still danced. Tell Dad to book ours next.
           </div>
           <div style={{ marginTop: 8, paddingTop: 6, borderTop: "0.5px solid rgba(120,80,40,0.2)", fontFamily: "monospace", fontSize: 9, color: "#7A5A40", lineHeight: 1.4 }}>
             MRS. SHAH<br />
@@ -2325,7 +2325,7 @@ function PostcardStampSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N12 — LIVE COUNTER — animated counter with city ticker
+// ★ N12 - LIVE COUNTER - animated counter with city ticker
 // ════════════════════════════════════════════════════════════════════
 function LiveCounterSection() {
   const [n, setN] = useState(127);
@@ -2384,7 +2384,7 @@ function LiveCounterSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N13 — INSIDE THE EDIT ROOM — meet the team that turns clips → reels
+// ★ N13 - INSIDE THE EDIT ROOM - meet the team that turns clips → reels
 // ════════════════════════════════════════════════════════════════════
 const EDITORS = [
   { name: "Devika R.",   role: "Story editor",     reels: 84,  poster: POSTERS.bali1 },
@@ -2428,7 +2428,7 @@ function BehindCameraSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N14 — REEL ROULETTE — fanned card deck of couples
+// ★ N14 - REEL ROULETTE - fanned card deck of couples
 // ════════════════════════════════════════════════════════════════════
 function ReelRouletteSection() {
   const cards = [
@@ -2490,7 +2490,7 @@ function ReelRouletteSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N15 — ANNIVERSARY TIMELINE — couple trip year-by-year
+// ★ N15 - ANNIVERSARY TIMELINE - couple trip year-by-year
 // ════════════════════════════════════════════════════════════════════
 const ANNIVERSARIES = [
   { year: "2021", dest: "Goa",      label: "First trip",      poster: POSTERS.thai1, color: "#FEA3B4" },
@@ -2542,7 +2542,7 @@ function AnniversaryTimelineSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N16 — QUOTE MAGAZINE SPREAD — giant editorial pull-quote
+// ★ N16 - QUOTE MAGAZINE SPREAD - giant editorial pull-quote
 // ════════════════════════════════════════════════════════════════════
 function QuoteSpreadSection() {
   return (
@@ -2597,7 +2597,7 @@ function QuoteSpreadSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N17 — VINYL RECORD — spinning record with tracklist
+// ★ N17 - VINYL RECORD - spinning record with tracklist
 // ════════════════════════════════════════════════════════════════════
 function VinylRecordSection() {
   return (
@@ -2607,7 +2607,7 @@ function VinylRecordSection() {
           Every trip gets a playlist
         </h2>
         <p style={{ margin: "3px 0 0 0", fontSize: 12, color: C.sub, fontWeight: 500 }}>
-          Our concierge curates one for every couple — to set the mood before they fly
+          Our concierge curates one for every couple - to set the mood before they fly
         </p>
       </div>
 
@@ -2652,7 +2652,7 @@ function VinylRecordSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N18 — CONFETTI FRAME — celebration moment
+// ★ N18 - CONFETTI FRAME - celebration moment
 // ════════════════════════════════════════════════════════════════════
 function ConfettiFrameSection() {
   const confetti = Array.from({ length: 22 }).map((_, i) => ({
@@ -2710,7 +2710,7 @@ function ConfettiFrameSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N19 — TRIP INFOGRAPHIC — bold icon grid of trip metrics
+// ★ N19 - TRIP INFOGRAPHIC - bold icon grid of trip metrics
 // ════════════════════════════════════════════════════════════════════
 function TripInfographicSection() {
   const items = [
@@ -2762,7 +2762,7 @@ function TripInfographicSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ★ N20 — COUPLE CARD DECK — face-down playing cards, tap to flip
+// ★ N20 - COUPLE CARD DECK - face-down playing cards, tap to flip
 // ════════════════════════════════════════════════════════════════════
 const DECK = [
   { back: POSTERS.bali2, couple: "T & I", dest: "BALI" },
@@ -2863,7 +2863,7 @@ function CoupleCardDeckSection() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// CTA — plan your couple trip
+// CTA - plan your couple trip
 // ════════════════════════════════════════════════════════════════════
 function CTASection({ navigate }) {
   return (

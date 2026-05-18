@@ -307,7 +307,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
               </button>
             ))}
           </div>
-          {/* Video thumbnails — Highlights or active day */}
+          {/* Video thumbnails - Highlights or active day */}
           <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
             {activeDay === -1
               ? highlights.map((h, i) => (
@@ -714,7 +714,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
-      {/* ═══ 5a. Trip briefings — educational videos for this trip ═══ */}
+      {/* ═══ 5a. Trip briefings - educational videos for this trip ═══ */}
       {(() => {
         const deck = videosForDest(it.dest);
         if (!deck.length) return null;
@@ -1167,23 +1167,23 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
 
   return (
     <div style={{ ...viewerStyle, zIndex: 200, background: "#000", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      {/* Background image — always present */}
+      {/* Background image - always present */}
       <img src={currentAct?.img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
 
-      {/* Top dark gradient — always */}
+      {/* Top dark gradient - always */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 100, background: "linear-gradient(180deg, rgba(0,0,0,0.8) 10%, rgba(0,0,0,0) 100%)", zIndex: 2 }} />
 
-      {/* Bottom gradient — only when sheet hidden */}
+      {/* Bottom gradient - only when sheet hidden */}
       {sheetState === "hidden" && (
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 220, background: "linear-gradient(transparent, rgba(0,0,0,0.85))", zIndex: 2 }} />
       )}
 
-      {/* Tap zone (left/right nav) — only when sheet hidden */}
+      {/* Tap zone (left/right nav) - only when sheet hidden */}
       {sheetState === "hidden" && (
         <div onClick={handleTap} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "absolute", inset: 0, zIndex: 1 }} />
       )}
 
-      {/* TOP — progress bars + activity title + close (always visible) */}
+      {/* TOP - progress bars + activity title + close (always visible) */}
       <div style={{ position: "relative", zIndex: 5, padding: "50px 16px 0" }}>
         <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
           {activities.map((_, i) => (
@@ -1202,7 +1202,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
         </div>
       </div>
 
-      {/* Customer photos pill — only when sheet hidden */}
+      {/* Customer photos pill - only when sheet hidden */}
       {sheetState === "hidden" && dest && customerPhotos[dest] && (
         <div style={{ position: "absolute", bottom: 200, right: 16, zIndex: 5, display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 20, padding: "6px 12px 6px 6px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.15)" }}>
           <div style={{ display: "flex" }}>
@@ -1216,7 +1216,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
         </div>
       )}
 
-      {/* BOTTOM — title + Choose pill (Stage 1) */}
+      {/* BOTTOM - title + Choose pill (Stage 1) */}
       {sheetState === "hidden" && (
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 16px 28px", zIndex: 5 }}>
           <div onClick={() => setSheetState("peek")} style={{ cursor: "pointer" }}>
@@ -1296,7 +1296,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
   );
 }
 
-// Day-detail bottom sheet — Stage 2 (peek) and Stage 3 (full).
+// Day-detail bottom sheet - Stage 2 (peek) and Stage 3 (full).
 function DaySheet({ state, setState, day, dayNum, dayIdx, dest, itineraryId, scoring, tours, price, strikePrice, optionNum, totalOptions, description, onMetricOpen, onChoose }) {
   const sheetHeight = state === "peek" ? "62%" : "calc(100% - 38px)";
   const photos = dest && customerPhotos[dest] ? customerPhotos[dest] : [];
@@ -1689,25 +1689,25 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
 
   // Activity description bank
   const ACT_DESC = {
-    "Old Quarter":      "Maze of 36 narrow streets — each named after the trade once practiced there. Walk past silk shops, herbal apothecaries, and pho stalls older than your grandparents.",
+    "Old Quarter":      "Maze of 36 narrow streets - each named after the trade once practiced there. Walk past silk shops, herbal apothecaries, and pho stalls older than your grandparents.",
     "Street food":      "Hanoi on a plate: bun cha smoke, egg coffee crema, banh cuon steamed fresh. A local guide takes you to spots tourists never find.",
-    "Temple":           "Tran Quoc Pagoda on West Lake — Vietnam's oldest, set on a quiet island. Incense, lotus ponds, and a six-tiered tower glowing at dusk.",
+    "Temple":           "Tran Quoc Pagoda on West Lake - Vietnam's oldest, set on a quiet island. Incense, lotus ponds, and a six-tiered tower glowing at dusk.",
     "Bay cruise":       "Overnight on a luxury junk among 1,600 limestone islets. Sunset kayaking, fresh seafood, and stargazing from the upper deck.",
     "Kayaking":         "Paddle into hidden lagoons reachable only at low tide. Pass floating fishing villages and emerald grottos.",
-    "Caves":            "Sung Sot ('Surprise Cave') — three vast chambers filled with stalactites lit by carefully placed warm lights.",
+    "Caves":            "Sung Sot ('Surprise Cave') - three vast chambers filled with stalactites lit by carefully placed warm lights.",
     "Cu Chi":           "Crawl through a section of the 250 km tunnel network used during the war. Above ground: a glimpse of village life that never stopped.",
     "Markets":          "Ben Thanh by day, Ben Thanh Night by dusk. Sip sugarcane juice, haggle for silk, eat banh xeo at a plastic-stool counter.",
     "Rooftop bars":     "Watch District 1 light up from 50 floors above. Saigon classic cocktails with a side of city skyline.",
     "Golden Bridge":    "The 150 m bridge held aloft by giant stone hands. Cloud-walking is the unofficial sport here.",
-    "Beach":            "An Bang or My Khe — soft white sand, gentle surf, palm-thatched cabanas, and the sweet kick of a co-co coconut.",
+    "Beach":            "An Bang or My Khe - soft white sand, gentle surf, palm-thatched cabanas, and the sweet kick of a co-co coconut.",
     "Spa":              "Vietnamese herbal compress massage. 90 minutes of warm oils, lemongrass steam, and quiet.",
     "Lanterns":         "After sundown, Hoi An's old town turns into a river of color. Float a candle on the Thu Bon for good luck.",
     "Tailoring":        "Pick your fabric in the morning, pick up your custom-fitted suit or ao dai by evening. A Hoi An rite of passage.",
-    "Cooking":          "Market shop with a chef, then cook 4 dishes in a riverside class — pho, fresh spring rolls, banh xeo, mango sticky rice.",
+    "Cooking":          "Market shop with a chef, then cook 4 dishes in a riverside class - pho, fresh spring rolls, banh xeo, mango sticky rice.",
     "Island beach":     "Sao Beach's sugar-fine sand stretches a kilometer. Hammocks, calm water, and grilled prawns delivered to your towel.",
-    "Snorkeling":       "Reefs around An Thoi archipelago — clownfish, parrotfish, and the occasional reef shark in 5 m water.",
+    "Snorkeling":       "Reefs around An Thoi archipelago - clownfish, parrotfish, and the occasional reef shark in 5 m water.",
     "Boat rides":       "Bamboo sampans through the Tam Coc waterway, paddled by women who use their feet to row.",
-    "Pagodas":          "Bai Dinh — Southeast Asia's largest pagoda complex. 500 stone arhat statues line the corridor.",
+    "Pagodas":          "Bai Dinh - Southeast Asia's largest pagoda complex. 500 stone arhat statues line the corridor.",
     "Paradise Cave":    "31 km of cathedral-scale formations. Wooden walkways take you a kilometer in.",
     "Dark Cave":        "Zipline in, mud-bath inside, then swim back out through a cave river. Gear and guide included.",
     "Jungle":           "Phong Nha National Park trek with a former cave explorer. Birds, butterflies, and a hidden waterfall lunch spot.",
@@ -1836,7 +1836,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
           ))}
         </div>
 
-        {/* Hotel card — internal design language */}
+        {/* Hotel card - internal design language */}
         {dayHotel && (() => {
           const NEIGHBORHOODS = {
             Hanoi: "Hoan Kiem · Old Quarter",
@@ -1911,7 +1911,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
                     <span style={{ fontSize: 12, color: C.sub }}>{neighborhood}, {dayHotel.city}</span>
                   </div>
 
-                  {/* Two CTAs — text links */}
+                  {/* Two CTAs - text links */}
                   <div style={{
                     display: "flex", alignItems: "center", gap: 16,
                     paddingTop: 10, borderTop: `1px solid ${C.div}`,
@@ -1941,7 +1941,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
           );
         })()}
 
-        {/* Traveller moments — marquee, same as destination page */}
+        {/* Traveller moments - marquee, same as destination page */}
         {dest && customerPhotos[dest] && (
           <div style={{ marginTop: 24 }}>
             <div style={{ padding: "0 16px", marginBottom: 12 }}>
@@ -1979,7 +1979,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
           </div>
         )}
 
-        {/* Reviews — same Google-card design as destination page */}
+        {/* Reviews - same Google-card design as destination page */}
         {destReviewsForDest.length > 0 && (
           <div style={{ margin: "26px 16px 0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>

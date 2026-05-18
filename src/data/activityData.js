@@ -1,4 +1,4 @@
-// Activity detail data generator — stubs Google Places shape from minimal input.
+// Activity detail data generator - stubs Google Places shape from minimal input.
 // Used by ActivityDetail page for both booked customer and planning user.
 
 const CDN = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com";
@@ -24,7 +24,7 @@ const REVIEW_TEMPLATES = [
     avatar: "https://lh3.googleusercontent.com/a-/ALV-UjXBOwUp1KbZqa13irGLOGDkEel8DB1OHi6oL_cLQM0RGNkJg-dt=s64",
     rating: 4,
     date: "a month ago",
-    text: "Beautiful and well maintained. Try coming in the morning for a calmer experience — peak hours get crowded but the view is worth it.",
+    text: "Beautiful and well maintained. Try coming in the morning for a calmer experience - peak hours get crowded but the view is worth it.",
   },
   {
     author: "Deepak",

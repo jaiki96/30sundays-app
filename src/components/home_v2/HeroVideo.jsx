@@ -58,7 +58,7 @@ export default function HeroVideo({
         </button>
       )}
 
-      {/* Tagline + CTA — centered stack */}
+      {/* Tagline + CTA - centered stack */}
       <div style={{
         position: "absolute", left: 18, right: 18, bottom: 26,
         display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
