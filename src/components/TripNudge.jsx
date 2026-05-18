@@ -42,9 +42,9 @@ export default function TripNudge({ userState }) {
       <>
         <img src={destImg} alt="Bali" style={{ width: 44, height: 44, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Your Bali itinerary is ready</p>
-          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>20 May – 27 May, 2026</p>
-          <p style={{ fontSize: 11, fontWeight: 600, color: C.p600, margin: "3px 0 0" }}>View Itinerary →</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Your Bali itinerary is ready</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>20 May – 27 May, 2026</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: C.p600, margin: "4px 0 0" }}>View Itinerary →</p>
         </div>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(227,27,83,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <ChevronRight size={16} color={C.p600} />
@@ -75,10 +75,10 @@ export default function TripNudge({ userState }) {
           </div>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0 }}>
             Vietnam awaits you both! ✨
           </p>
-          <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>20 Jun – 27 Jun, 2026</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>20 Jun – 27 Jun, 2026</p>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
             <div style={{
               flex: 1, height: 4, borderRadius: 2, background: "rgba(3,152,85,0.15)", overflow: "hidden",
@@ -115,9 +115,9 @@ export default function TripNudge({ userState }) {
           <Sparkles size={22} color={NEW_ACCENT} className="tn-sparkle" />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>Already in touch with our team?</p>
-          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>Sign in to see your itinerary</p>
-          <p style={{ fontSize: 11, fontWeight: 600, color: NEW_ACCENT, margin: "3px 0 0" }}>Sign in →</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Already in touch with our team?</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>Sign in to see your itinerary</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: NEW_ACCENT, margin: "4px 0 0" }}>Sign in →</p>
         </div>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(245,184,28,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <ChevronRight size={16} color={NEW_ACCENT} />
@@ -158,9 +158,9 @@ export default function TripNudge({ userState }) {
           <Heart size={22} color="#6938EF" />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>How was Vietnam?</p>
-          <p style={{ fontSize: 11, color: C.sub, margin: "1px 0 0" }}>Share your experience, help other couples</p>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "#6938EF", margin: "3px 0 0" }}>Leave a review →</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>How was Vietnam?</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>Share your experience, help other couples</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#6938EF", margin: "4px 0 0" }}>Leave a review →</p>
         </div>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(105,56,239,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Star size={16} color="#6938EF" />

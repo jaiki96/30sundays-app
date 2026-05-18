@@ -1,6 +1,107 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronDown, MapPin, Sparkles, Ticket } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, Check, Loader2, Heart, GraduationCap } from "lucide-react";
+
+// Animate a number from 0 to target over `duration`. Used in trust card.
+function useCountUp(target, duration = 1400, start = true) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    const t0 = Date.now();
+    const id = setInterval(() => {
+      const t = Math.min((Date.now() - t0) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(target * eased);
+      if (t >= 1) clearInterval(id);
+    }, 24);
+    return () => clearInterval(id);
+  }, [target, duration, start]);
+  return value;
+}
+
+// Official WhatsApp logo asset.
+const WhatsAppIcon = ({ size = 20 }) => (
+  <img
+    src="/whatsapp.webp"
+    alt=""
+    width={size}
+    height={size}
+    style={{ display: "block", flexShrink: 0 }}
+  />
+);
+
+
+// ─── Brand illustrations ───
+// Each is ~240x160, brand-coloured, scene-style. Reads as a value vignette,
+// not a floating icon.
+
+const IlloCustomise = () => (
+  <svg width="240" height="160" viewBox="0 0 240 160" fill="none" aria-hidden="true">
+    {/* soft blush halo */}
+    <ellipse cx="120" cy="100" rx="105" ry="48" fill="#FFE4E8" opacity="0.6" />
+    {/* back card */}
+    <rect x="32" y="34" width="148" height="86" rx="14" fill="#FFD4DC" />
+    {/* front card */}
+    <rect x="48" y="46" width="148" height="86" rx="14" fill="#fff" stroke="#FFE4E8" strokeWidth="1.5" />
+    {/* day rows */}
+    <rect x="62" y="62" width="58" height="6" rx="3" fill="#E31B53" />
+    <rect x="62" y="76" width="100" height="4" rx="2" fill="#FFE4E8" />
+    <rect x="62" y="86" width="80" height="4" rx="2" fill="#FFE4E8" />
+    <rect x="62" y="100" width="46" height="14" rx="7" fill="#FFE4E8" />
+    {/* drag/pencil action */}
+    <circle cx="180" cy="56" r="14" fill="#E31B53" />
+    <path d="M174 60l4-8h2l-4 8h-2zm8-8l2 1 4-1 1-2-3-1-2 1-2 2z" fill="#fff" />
+  </svg>
+);
+
+const IlloDiscover = () => (
+  <svg width="240" height="160" viewBox="0 0 240 160" fill="none" aria-hidden="true">
+    {/* soft blush halo */}
+    <ellipse cx="120" cy="100" rx="110" ry="50" fill="#FFE4E8" opacity="0.6" />
+    {/* globe / ocean ring */}
+    <circle cx="120" cy="86" r="50" fill="#fff" stroke="#FFE4E8" strokeWidth="2" />
+    <path d="M80 70c12 16 60 16 80 0M80 102c12-12 60-12 80 0M120 36c-16 20-16 80 0 100M120 36c16 20 16 80 0 100" stroke="#FFC4CF" strokeWidth="1.4" fill="none" />
+    {/* pins */}
+    <g transform="translate(90 64)">
+      <path d="M0 0c0-6 5-11 11-11s11 5 11 11c0 9-11 18-11 18S0 9 0 0z" fill="#E31B53" />
+      <circle cx="11" cy="0" r="4" fill="#fff" />
+    </g>
+    <g transform="translate(132 50)">
+      <path d="M0 0c0-6 5-11 11-11s11 5 11 11c0 9-11 18-11 18S0 9 0 0z" fill="#E31B53" />
+      <circle cx="11" cy="0" r="4" fill="#fff" />
+    </g>
+    <g transform="translate(118 96)">
+      <path d="M0 0c0-6 5-11 11-11s11 5 11 11c0 9-11 18-11 18S0 9 0 0z" fill="#E31B53" />
+      <circle cx="11" cy="0" r="4" fill="#fff" />
+    </g>
+    {/* sparkles */}
+    <path d="M52 50l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z" fill="#FEA3B4" />
+    <path d="M194 110l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5 1.5-4z" fill="#FEA3B4" />
+  </svg>
+);
+
+const IlloManage = () => (
+  <svg width="240" height="160" viewBox="0 0 240 160" fill="none" aria-hidden="true">
+    {/* soft blush halo */}
+    <ellipse cx="120" cy="100" rx="105" ry="50" fill="#FFE4E8" opacity="0.6" />
+    {/* phone frame */}
+    <rect x="84" y="22" width="72" height="118" rx="14" fill="#fff" stroke="#FFE4E8" strokeWidth="2" />
+    <rect x="100" y="28" width="40" height="4" rx="2" fill="#FFE4E8" />
+    {/* ticket inside */}
+    <rect x="92" y="44" width="56" height="32" rx="6" fill="#E31B53" />
+    <circle cx="92" cy="60" r="4" fill="#fff" />
+    <circle cx="148" cy="60" r="4" fill="#fff" />
+    <rect x="100" y="52" width="34" height="4" rx="2" fill="#fff" opacity="0.9" />
+    <rect x="100" y="62" width="22" height="3" rx="1.5" fill="#fff" opacity="0.7" />
+    {/* day card below */}
+    <rect x="92" y="82" width="56" height="22" rx="6" fill="#FFE4E8" />
+    <rect x="100" y="89" width="22" height="3" rx="1.5" fill="#E31B53" />
+    <rect x="100" y="96" width="38" height="3" rx="1.5" fill="#FEA3B4" />
+    {/* check badge */}
+    <circle cx="156" cy="48" r="14" fill="#E31B53" />
+    <path d="M150 48l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </svg>
+);
 
 // Google "G" logo
 const GoogleG = ({ size = 14 }) => (
@@ -32,57 +133,11 @@ const countryCodes = [
   { code: "+971", country: "AE", name: "UAE", flag: "🇦🇪", digits: 9 },
 ];
 
-// ─── Carousel slides ───
-// Slide 1 — Lead: itinerary card mockup over destination photo
-const SLIDE_1_BG = "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1200&q=80&auto=format&fit=crop"; // Bali rice terrace
-// Slide 2 — Exploration: couple-on-trip / destination collage
-const SLIDE_2_BG = "https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&q=80&auto=format&fit=crop"; // couple on viewpoint
-// Slide 3 — Booked: Maldives overwater villas
-const SLIDE_3_BG = "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=1200&q=80&auto=format&fit=crop"; // Maldives villas
-
-// Fixed palette for adaptive Skip text — pick whichever reads best on each slide's top area
-const SKIP_PALETTE = {
-  navy:  "#181D27",   // on bright skies / light backgrounds
-  white: "#FFFFFF",   // on dark/colorful areas
-  cream: "#F5E6D3",   // on muted earth tones
-  ink:   "#0F2533",   // on hazy bluish skies (better than pure black)
-};
-
-const slides = [
-  {
-    key: "lead",
-    img: SLIDE_1_BG,
-    Icon: MapPin,
-    eyebrow: "Your itinerary, in progress",
-    title: "Your consultant is\nputting it together",
-    sub: "Sign in to see what we're planning for you two",
-    highlights: ["consultant"],
-    showItineraryMock: true,
-    skipColor: SKIP_PALETTE.navy,   // bright sky over rice terraces
-    logoColor: SKIP_PALETTE.navy,
-  },
-  {
-    key: "explore",
-    img: SLIDE_2_BG,
-    Icon: Sparkles,
-    eyebrow: "Curated for couples",
-    title: "6 destinations,\nhand-picked for two",
-    sub: "Bali, Vietnam, New Zealand and more. Tweak any trip you like.",
-    highlights: ["hand-picked"],
-    skipColor: SKIP_PALETTE.ink,    // hazy bluish karst sky
-    logoColor: SKIP_PALETTE.ink,
-  },
-  {
-    key: "customer",
-    img: SLIDE_3_BG,
-    Icon: Ticket,
-    eyebrow: "Your trip, in your pocket",
-    title: "Vouchers, day plans,\n24/7 support",
-    sub: "Everything you booked, ready offline when you land",
-    highlights: ["Vouchers"],
-    skipColor: SKIP_PALETTE.navy,   // bright Maldives sky
-    logoColor: SKIP_PALETTE.navy,
-  },
+// Value props shown as a checklist in the hero
+const VALUE_PROPS = [
+  "See and customise your itinerary",
+  "Explore all destinations we offer",
+  "Vouchers, day plans & 24/7 support",
 ];
 
 // Wrap any word in `highlights` with a coral span; preserves \n line breaks
@@ -98,216 +153,178 @@ function renderWithHighlights(text, highlights, color) {
   );
 }
 
-// ─── Carousel (state isolated locally — DO NOT lift) ───
-function HeroCarousel({ collapsed, onSkip }) {
-  const [slide, setSlide] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const touchX = useRef(null);
 
-  // Auto-advance every 5s (paused on touch / when collapsed)
-  useEffect(() => {
-    if (paused || collapsed) return;
-    const t = setInterval(() => setSlide((s) => (s + 1) % slides.length), 5000);
-    return () => clearInterval(t);
-  }, [paused, collapsed]);
-
-  const onTouchStart = useCallback((e) => {
-    setPaused(true);
-    touchX.current = e.touches[0].clientX;
-  }, []);
-  const onTouchEnd = useCallback((e) => {
-    if (touchX.current == null) { setPaused(false); return; }
-    const dx = e.changedTouches[0].clientX - touchX.current;
-    if (dx < -40) setSlide((s) => (s + 1) % slides.length);
-    else if (dx > 40) setSlide((s) => (s - 1 + slides.length) % slides.length);
-    touchX.current = null;
-    setTimeout(() => setPaused(false), 800);
-  }, []);
-
+// ─── Static hero: logo + 3 value ticks (no title, no circle bg on tick) ───
+function StaticHero({ collapsed, onSkip, onBack }) {
   return (
-    <div
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      style={{ position: "absolute", inset: 0, overflow: "hidden" }}
-    >
-      {/* Layered background slides */}
-      {slides.map((s, i) => (
-        <div
-          key={s.key}
-          style={{
-            position: "absolute", inset: 0,
-            opacity: i === slide ? 1 : 0,
-            transition: "opacity 700ms ease",
-            backgroundImage: `url(${s.img})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-      ))}
-
-      {/* Floating itinerary card mockup (slide 1 only) */}
+    <div style={{
+      position: "absolute", inset: 0, overflow: "hidden",
+      background: `radial-gradient(circle at 50% 28%, ${T.blush}DD 0%, ${T.blush}55 30%, #fff 70%)`,
+    }}>
+      {/* Top bar */}
       <div style={{
-        position: "absolute",
-        top: collapsed ? "10%" : "14%",
-        right: 18,
-        opacity: slides[slide].showItineraryMock && !collapsed ? 1 : 0,
-        transform: slides[slide].showItineraryMock && !collapsed ? "translateY(0) rotate(-3deg)" : "translateY(-8px) rotate(-3deg)",
-        transition: "opacity 500ms ease, transform 500ms ease, top 320ms ease",
-        pointerEvents: "none",
-        width: 180,
-        background: "#fff",
-        borderRadius: 14,
-        padding: "10px 12px",
-        boxShadow: "0 12px 32px rgba(0,0,0,0.22)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.coral }} />
-          <span style={{ fontSize: 9, fontWeight: 700, color: T.coral, letterSpacing: 0.5, textTransform: "uppercase" }}>Day 3 · Ubud</span>
-        </div>
-        <p style={{ fontSize: 11, fontWeight: 700, color: T.navy, margin: 0, lineHeight: 1.3 }}>
-          Sunrise at Mt Batur
-        </p>
-        <p style={{ fontSize: 10, color: T.muted, margin: "2px 0 8px", lineHeight: 1.3 }}>
-          Pickup 3:00 AM · Private guide
-        </p>
-        <div style={{ display: "flex", gap: 4 }}>
-          <div style={{ flex: 1, height: 4, borderRadius: 2, background: T.coral }} />
-          <div style={{ flex: 1, height: 4, borderRadius: 2, background: T.coral }} />
-          <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(227,27,83,0.18)" }} />
-          <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(227,27,83,0.18)" }} />
-        </div>
-      </div>
-
-      {/* Bottom-up dark gradient — gives text legibility */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0.4) 92%, rgba(0,0,0,0) 100%)",
-        pointerEvents: "none",
-      }} />
-      {/* Long white fade — gracefully dissolves the hero into the form area */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 80,
-        background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 55%, rgba(255,255,255,0.92) 90%, #fff 100%)",
-        pointerEvents: "none",
-      }} />
-
-      {/* Top bar — logo + skip, adaptive text colour, no pill */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, zIndex: 5,
+        position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 18px",
         paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)",
+      }}>
+        <button
+          onClick={onBack}
+          aria-label="Back"
+          style={{
+            width: 36, height: 36, borderRadius: "50%",
+            background: "#fff", border: `1px solid ${T.line}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", padding: 0,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            animation: "lv2FadeIn 0.5s ease-out both",
+          }}
+        >
+          <ArrowLeft size={18} color={T.navy} />
+        </button>
+        <button
+          onClick={onSkip}
+          className="lv2-skip-link"
+          style={{
+            background: "transparent", border: "none", padding: "6px 2px",
+            fontSize: 14, fontWeight: 700, letterSpacing: 0.1,
+            color: T.muted, cursor: "pointer",
+            opacity: collapsed ? 0 : 1,
+            pointerEvents: collapsed ? "none" : "auto",
+            transition: "opacity 200ms ease, color 200ms ease",
+            display: "inline-flex", alignItems: "center", gap: 4,
+            animation: "lv2FadeIn 0.5s ease-out 80ms both",
+          }}
+        >
+          <span>Skip</span>
+          <ArrowRight size={14} className="lv2-skip-arrow" />
+        </button>
+      </div>
+
+      {/* Centered content: logo + 3 ticks */}
+      <div style={{
+        position: "absolute",
+        left: 24, right: 24,
+        top: "50%", transform: "translateY(-50%)",
+        color: T.navy,
+        textAlign: "center",
       }}>
         <img
           src="/logo.png"
           alt="30 Sundays"
           style={{
-            height: 40,
+            height: collapsed ? 52 : 64,
             width: "auto",
             display: "block",
-            // logo has its own colours; drop a subtle shadow so it reads on busy hero areas
-            filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.18))",
+            margin: collapsed ? "0 auto 28px" : "0 auto 44px",
+            transition: "height 280ms ease, margin 280ms ease",
+            animation: "lv2Up 0.7s cubic-bezier(0.4,0,0.2,1) 60ms both",
           }}
         />
-        <button
-          onClick={onSkip}
-          style={{
-            background: "transparent",
-            border: "none",
-            padding: "6px 4px",
-            fontSize: 14, fontWeight: 700,
-            letterSpacing: 0.1,
-            color: slides[slide].skipColor,
-            cursor: "pointer",
-            opacity: collapsed ? 0 : 1,
-            pointerEvents: collapsed ? "none" : "auto",
-            transition: "color 400ms ease, opacity 200ms ease",
-          }}
-        >
-          Skip →
-        </button>
-      </div>
 
-      {/* Slide content — sits on the gradient, no grey box (positioned above the long white-fade band) */}
-      <div style={{
-        position: "absolute",
-        left: 16, right: 16,
-        bottom: collapsed ? 28 : 56,
-        color: "#fff",
-        transition: "bottom 320ms ease",
-      }}>
-        {slides.map((s, i) => (
-          <div key={s.key} style={{
-            display: i === slide ? "block" : "none",
-            animation: "lv2SlideUp 0.55s ease-out",
-          }}>
-            {/* Eyebrow chip */}
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(255,255,255,0.18)",
-              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-              border: "0.5px solid rgba(255,255,255,0.3)",
-              borderRadius: 999,
-              padding: "5px 11px 5px 9px",
-              fontSize: 11,
-              fontWeight: 600, letterSpacing: 0.2,
-              marginBottom: collapsed ? 10 : 12,
-              transition: "margin-bottom 280ms ease",
-            }}>
-              <s.Icon size={12} />
-              {s.eyebrow}
-            </div>
-
-            {/* Headline */}
-            <h2 style={{
-              fontSize: collapsed ? 28 : 32,
-              fontWeight: 800, lineHeight: 1.1, margin: 0,
-              whiteSpace: "pre-line",
-              letterSpacing: -0.4,
-              textShadow: "0 2px 14px rgba(0,0,0,0.32)",
-              transition: "font-size 280ms ease",
-            }}>
-              {renderWithHighlights(s.title, s.highlights, T.coral)}
-            </h2>
-
-            {/* Sub */}
-            <p style={{
-              fontSize: collapsed ? 14 : 15,
-              opacity: 0.94,
-              margin: collapsed ? "9px 0 0" : "10px 0 0",
-              lineHeight: 1.4,
-              textShadow: "0 1px 6px rgba(0,0,0,0.3)",
-              transition: "all 280ms ease",
-            }}>
-              {s.sub}
-            </p>
-          </div>
-        ))}
-
-        {/* Dots */}
-        <div style={{
-          display: "flex", gap: 6,
-          marginTop: collapsed ? 10 : 16,
-          transition: "margin-top 280ms ease",
+        {/* 3 value ticks — colored check only, no circle bg */}
+        <ul style={{
+          listStyle: "none", padding: 0,
+          margin: 0,
+          display: "flex", flexDirection: "column", gap: 12,
+          textAlign: "left", maxWidth: 320, marginLeft: "auto", marginRight: "auto",
         }}>
-          {slides.map((_, i) => (
-            <button
+          {VALUE_PROPS.map((line, i) => (
+            <li
               key={i}
-              onClick={() => setSlide(i)}
-              aria-label={`Go to slide ${i + 1}`}
               style={{
-                width: i === slide ? 22 : 6, height: 6, borderRadius: 999,
-                background: i === slide ? "#fff" : "rgba(255,255,255,0.45)",
-                border: "none", cursor: "pointer", padding: 0,
-                transition: "width 300ms ease, background 300ms ease",
+                display: "flex", alignItems: "center", gap: 12,
+                fontSize: 15, color: T.navy, lineHeight: 1.4, fontWeight: 500,
+                animation: `lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) ${180 + i * 90}ms both`,
               }}
-            />
+            >
+              <Check size={22} color={T.coral} strokeWidth={3.2} style={{ flexShrink: 0 }} />
+              <span>{line}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );
 }
+
+// ─── Trust card: 3 stats with inline icons + animated count-up ───
+function TrustCard() {
+  const rating = useCountUp(4.6, 1400);
+  const trips  = useCountUp(10000, 1600);
+
+  return (
+    <div style={{
+      margin: "0 16px 12px",
+      background: "#fff",
+      border: `0.5px solid ${T.line}`,
+      borderRadius: 16,
+      padding: "12px 4px",
+      display: "flex", alignItems: "stretch",
+      boxShadow: "0 4px 14px rgba(227,27,83,0.06)",
+      animation: "lv2Up 0.6s cubic-bezier(0.4,0,0.2,1) 460ms both",
+    }}>
+      <Stat>
+        <StatRow>
+          <GoogleG size={14} />
+          <StatTitle>{rating.toFixed(1)} / 5</StatTitle>
+        </StatRow>
+        <StatSub>Google reviews</StatSub>
+      </Stat>
+      <Divider />
+      <Stat>
+        <StatRow>
+          <Heart size={13} color={T.coral} fill={T.coral} strokeWidth={0} />
+          <StatTitle>{Math.round(trips).toLocaleString()}+</StatTitle>
+        </StatRow>
+        <StatSub>Trips planned</StatSub>
+      </Stat>
+      <Divider />
+      <Stat>
+        <StatRow>
+          <GraduationCap size={14} color={T.coral} strokeWidth={2.4} />
+          <StatTitle>IIT-IIM</StatTitle>
+        </StatRow>
+        <StatSub>Founders</StatSub>
+      </Stat>
+    </div>
+  );
+}
+
+const Stat = ({ children }) => (
+  <div style={{
+    flex: 1, display: "flex", flexDirection: "column",
+    alignItems: "center", gap: 3, padding: "4px 6px",
+  }}>
+    {children}
+  </div>
+);
+
+const StatRow = ({ children }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 5, lineHeight: 1.2 }}>
+    {children}
+  </div>
+);
+
+const StatTitle = ({ children }) => (
+  <div style={{
+    fontSize: 14, fontWeight: 800, color: T.navy,
+    letterSpacing: -0.2, lineHeight: 1.2,
+    fontVariantNumeric: "tabular-nums",
+  }}>
+    {children}
+  </div>
+);
+
+const StatSub = ({ children }) => (
+  <div style={{ fontSize: 10, color: T.muted, fontWeight: 600, letterSpacing: 0.1 }}>
+    {children}
+  </div>
+);
+
+const Divider = () => (
+  <div style={{ width: 0.5, background: T.line }} />
+);
 
 // ─── Main screen ───
 // Props (all optional — defaults make this work as a standalone /login-v2 page):
@@ -325,6 +342,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
   const [resendTimer, setResendTimer] = useState(28);
   const [canResend, setCanResend] = useState(false);
   const [collapsed, setCollapsed] = useState(false); // hero shrinks when input focused
+  const [sending, setSending] = useState(false);     // Send OTP loading state
   const otpRefs = useRef([]);
 
   // Resend countdown
@@ -379,8 +397,13 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
   };
 
   const onPrimary = () => {
-    if (phase === "phone" && phoneValid) {
-      setPhase("otp");
+    if (phase === "phone" && phoneValid && !sending) {
+      setSending(true);
+      // Brief loading state so the moment of commitment feels real.
+      setTimeout(() => {
+        setSending(false);
+        setPhase("otp");
+      }, 2400);
     } else if (phase === "otp" && otpValid) {
       const otpStr = otp.join("");
       if (validateOtp) {
@@ -405,37 +428,32 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
       overflow: "hidden",
       color: T.navy,
     }}>
-      {/* ─── Hero area (60% by default, shrinks to 42% when keyboard up) ─── */}
+      {/* ─── Static hero (logo + headline + 3 value ticks) ─── */}
       {phase === "phone" && (
         <div style={{
           position: "relative",
-          height: collapsed ? "42%" : "60%",
+          height: collapsed ? "44%" : "60%",
           transition: "height 320ms cubic-bezier(0.4,0,0.2,1)",
           flexShrink: 0,
         }}>
-          <HeroCarousel collapsed={collapsed} onSkip={skip} />
+          <StaticHero
+            collapsed={collapsed}
+            onSkip={skip}
+            onBack={() => navigate(-1)}
+          />
         </div>
       )}
 
-      {/* ─── Social proof strip ─── */}
+      {/* ─── Trust card above the form ─── */}
       {phase === "phone" && (
         <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          padding: "10px 16px",
-          background: "#fff",
-          borderBottom: `0.5px solid ${T.line}`,
           opacity: collapsed ? 0 : 1,
-          maxHeight: collapsed ? 0 : 40,
+          maxHeight: collapsed ? 0 : 100,
           overflow: "hidden",
-          transition: "opacity 200ms ease, max-height 280ms ease, padding 280ms ease",
-          paddingTop: collapsed ? 0 : 10,
-          paddingBottom: collapsed ? 0 : 10,
+          transition: "opacity 200ms ease, max-height 280ms ease",
           flexShrink: 0,
         }}>
-          <GoogleG size={14} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: T.navy }}>4.6 on Google</span>
-          <span style={{ fontSize: 12, color: "#D1D5DB" }}>·</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: T.navy }}>10,000+ trips planned</span>
+          <TrustCard />
         </div>
       )}
 
@@ -471,6 +489,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
               maxLength={country.digits}
               placeholder="Mobile number"
               value={phone}
+              disabled={sending}
               onChange={(e) => handlePhone(e.target.value)}
               onFocus={() => setCollapsed(true)}
               onBlur={() => setTimeout(() => setCollapsed(false), 120)}
@@ -481,6 +500,7 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
                 borderRadius: 16,
                 fontSize: 15, fontWeight: 500, color: T.navy,
                 outline: "none",
+                opacity: sending ? 0.6 : 1,
               }}
             />
           </div>
@@ -513,32 +533,45 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
             </div>
           )}
 
-          {/* CTA */}
+          {/* CTA: Send OTP with WhatsApp signal + loading state */}
           <button
             onClick={onPrimary}
-            disabled={!phoneValid}
+            disabled={!phoneValid || sending}
+            className={phoneValid && !sending ? "lv2-cta-pulse" : ""}
             style={{
-              marginTop: 12, height: 54, borderRadius: 16,
-              background: phoneValid ? T.coral : "#E5E7EB",
-              color: phoneValid ? "#fff" : "#9CA3AF",
+              marginTop: 12, height: 52, borderRadius: 16,
+              // Brand pink primary CTA in all states; opacity signals disabled
+              background: T.coral,
+              color: "#fff",
               border: "none", fontSize: 15, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              cursor: phoneValid ? "pointer" : "not-allowed",
-              boxShadow: phoneValid ? "0 8px 20px rgba(227,27,83,0.3)" : "none",
-              transition: "background 200ms ease",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              cursor: phoneValid && !sending ? "pointer" : (sending ? "default" : "not-allowed"),
+              boxShadow: (phoneValid || sending) ? "0 8px 20px rgba(227,27,83,0.3)" : "0 4px 12px rgba(227,27,83,0.18)",
+              transition: "opacity 200ms ease, box-shadow 200ms ease, transform 120ms ease",
+              opacity: (phoneValid || sending) ? 1 : 0.5,
             }}
           >
-            Send OTP <ArrowRight size={16} />
+            {sending ? (
+              <>
+                <Loader2 size={16} className="lv2-spin" />
+                Sending OTP...
+              </>
+            ) : (
+              <>
+                <WhatsAppIcon size={18} />
+                Send OTP
+              </>
+            )}
           </button>
 
-          {/* Footer */}
+          {/* Footer: legal microcopy */}
           <p style={{
             fontSize: 11, color: T.muted, textAlign: "center",
             margin: "auto 0 4px", lineHeight: 1.5,
           }}>
-            By continuing you agree to our{" "}
+            By continuing, you agree to our{" "}
             <span style={{ color: T.coral, fontWeight: 600 }}>Terms</span> &{" "}
-            <span style={{ color: T.coral, fontWeight: 600 }}>Privacy</span>
+            <span style={{ color: T.coral, fontWeight: 600 }}>Privacy Policy</span>.
           </p>
         </div>
       )}
@@ -654,6 +687,29 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp })
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes lv2Up {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lv2FadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes lv2Spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes lv2CtaPulse {
+          0%, 100% { box-shadow: 0 8px 20px rgba(227,27,83,0.30); }
+          50%      { box-shadow: 0 8px 28px rgba(227,27,83,0.55); }
+        }
+        .lv2-spin { animation: lv2Spin 0.9s linear infinite; }
+        .lv2-cta-pulse { animation: lv2CtaPulse 2.2s ease-in-out infinite; }
+        .lv2-cta-pulse:active { transform: scale(0.98); }
+        .lv2-skip-link { transition: color 200ms ease; }
+        .lv2-skip-link:hover { color: ${T.coral} !important; }
+        .lv2-skip-arrow { transition: transform 200ms ease; }
+        .lv2-skip-link:hover .lv2-skip-arrow { transform: translateX(3px); }
       `}</style>
     </div>
   );

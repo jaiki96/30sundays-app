@@ -68,7 +68,7 @@ export default function HomeV2() {
     tag: "Compare",
     topic: "Bali vs Thailand",
     topicIcon: "compare",
-    title: "Bali or Thailand for your honeymoon?",
+    title: "Bali or [Thailand] for your honeymoon?",
     subtitle: "Same budget, very different week. Two minutes to decide.",
     outcome: "Vibe, food, budget",
     poster: compareVideos.baliVsThailand.poster,
@@ -128,8 +128,7 @@ export default function HomeV2() {
 
       {/* ─── Sunday School series — comparison carousel ─── */}
       <EduMultiCarousel
-        tag="Compare"
-        title="Pick the right week"
+        valueTitle="Pick the right [week], head-to-head"
         lessons={seriesLessons}
       />
 

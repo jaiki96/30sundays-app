@@ -1,90 +1,60 @@
-import { GraduationCap, ChevronRight, Play } from "lucide-react";
+import { GraduationCap, Play } from "lucide-react";
 import { C } from "../../data";
+import SundaySchoolMasthead from "./SundaySchoolMasthead";
 
-// Sunday School — single lesson card.
-// Section header (Sunday School + tag) sits OUTSIDE the card.
-// Card body has title, then a subtitle row where "Watch ›" sits on the right.
+// Sunday School — single lesson section.
+// Small "Sunday School" chip + tagline byline at top, big DM Serif value title
+// (the previous card title is promoted to the section headline), then a clean
+// video tile (poster + GlassPlay + duration). No card body anymore.
 export default function EduSingleCard({
   title,
-  subtitle,
   poster,
   videoUrl,
   duration,
   onPlay,
+  tagline,            // pass "" to suppress the byline on repeat SS sections
 }) {
   return (
-    <div style={{ background: C.p100, padding: "22px 16px 26px" }}>
-      <SectionHead />
+    <div style={{
+      background: "#FCF4CC",
+      padding: "26px 16px 28px",
+      borderTop: "1px solid rgba(180,130,30,0.22)",
+      borderBottom: "1px solid rgba(180,130,30,0.22)",
+    }}>
+      <SundaySchoolMasthead valueTitle={title} tagline={tagline} />
 
+      {/* Video tile — poster + GlassPlay + duration. No body. */}
       <div style={{
-        background: "#fff",
+        position: "relative",
         borderRadius: 20,
         overflow: "hidden",
         border: "0.5px solid rgba(24,29,39,0.06)",
         boxShadow: "0 2px 8px rgba(24,29,39,0.04)",
+        height: 220,
+        background: "#E89A7C",
       }}>
-        {/* Hero */}
-        <div style={{ position: "relative", height: 210, overflow: "hidden", background: "#E89A7C" }}>
-          {poster && <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        {poster && <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.04) 0%, transparent 30%, transparent 60%, rgba(0,0,0,0.18) 100%)",
+          pointerEvents: "none",
+        }} />
+
+        <GlassPlay onClick={onPlay} size={64} iconSize={26} />
+
+        {duration && (
           <div style={{
-            position: "absolute", inset: 0,
-            background: "linear-gradient(180deg, rgba(0,0,0,0.04) 0%, transparent 30%, transparent 60%, rgba(0,0,0,0.18) 100%)",
-            pointerEvents: "none",
-          }} />
-
-          {/* Glassmorphism play */}
-          <GlassPlay onClick={onPlay} size={64} iconSize={26} />
-
-          {/* Duration bottom-right */}
-          {duration && (
-            <div style={{
-              position: "absolute", bottom: 12, right: 12,
-              background: "rgba(24,29,39,0.78)",
-              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-              color: "#fff",
-              padding: "4px 8px", borderRadius: 5,
-              fontSize: 11, fontWeight: 600,
-              zIndex: 2,
-            }}>
-              {duration}
-            </div>
-          )}
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: "15px 17px 16px" }}>
-          <div style={{
-            fontSize: 18, fontWeight: 600, color: C.head,
-            lineHeight: 1.3, letterSpacing: "-0.2px",
-            marginBottom: 6,
+            position: "absolute", bottom: 12, right: 12,
+            background: "rgba(24,29,39,0.78)",
+            backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+            color: "#fff",
+            padding: "4px 8px", borderRadius: 5,
+            fontSize: 11, fontWeight: 600,
+            zIndex: 2,
           }}>
-            {title}
+            {duration}
           </div>
-
-          {/* Subtitle + Watch › inline */}
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
-            {subtitle && (
-              <p style={{
-                flex: 1, margin: 0,
-                fontSize: 13.5, color: "#5F5E5A", lineHeight: 1.5,
-              }}>
-                {subtitle}
-              </p>
-            )}
-            <button
-              onClick={onPlay}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 1,
-                background: "transparent", border: "none", padding: 0, cursor: "pointer",
-                fontSize: 12.5, fontWeight: 600, color: C.p600,
-                whiteSpace: "nowrap", flexShrink: 0,
-              }}
-            >
-              Watch
-              <ChevronRight size={14} strokeWidth={2.5} />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
