@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hotel Swap - Variants</title>
+<link rel="stylesheet" href="./shared.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">30 Sundays <small>· Hotel swap UX variants</small></div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-v="v1"><span class="num">V1</span>Current (live)</button>
+    <button class="tab" data-v="v2"><span class="num">V2</span>Ghost chip + sheet</button>
+    <button class="tab" data-v="v3"><span class="num">V3</span>Sheet · See all</button>
+    <button class="tab" data-v="v4"><span class="num">V4</span>Global Edit mode</button>
+    <button class="tab" data-v="v5"><span class="num">V5</span>Side-by-side compare</button>
+  </div>
+</div>
+<div class="note" id="note">V1 baseline: the loud pink "Change Hotel" button shipped today. Note how it competes with "Plan My Trip".</div>
+
+<div class="stage" id="stage"></div>
+
+<script>
+/* ============ Variant copy ============ */
+const NOTES = {
+  v1: 'V1 baseline: the loud pink "Change Hotel" button shipped today. Note how it competes with "Plan My Trip".',
+  v2: 'V2 recommended: small grey "Change" chip top-right of each hotel card. Tap opens a bottom sheet with the original pinned + 3 curated picks.',
+  v3: 'V3: same sheet, expanded to full screen via the "See all hotels in Ubud" link. Filter chips appear. Real Booking-style inventory.',
+  v4: 'V4 rejected alternative: single "Edit hotels" pencil in the section header. Tap toggles an edit mode on every card. Shown to compare against V2.',
+  v5: 'V5 stretch: side-by-side compare. User picks 2-3 from the sheet, taps Compare, sees a small spec table. Useful if data warrants it; heavy to build.',
+};
+
+/* ============ Render utilities ============ */
+const $ = sel => document.querySelector(sel);
+const stage = $('#stage');
+
+function statusBar(){
+  return `<div class="status"><span>9:41</span><span class="icons"><span>•••</span><span>📶</span><span>🔋</span></span></div>`;
+}
+
+function headerImg(){
+  return `<div class="headerimg bali">
+    <div>
+      <p class="title">Bali Honeymoon - 7 nights</p>
+      <p class="sub">Ubud · Seminyak · Sanur</p>
+    </div>
+  </div>`;
+}
+
+function hotelCardCurrent(city, name, room, opts={}){
+  return `<div class="hcard">
+    <div class="meta">Day ${opts.days} · ${city}</div>
+    <div class="img ${opts.imgClass||''}">${name}</div>
+    <div class="body">
+      <div class="stars"><span class="star">★</span><span>${opts.rating}</span><span class="source">· Booking.com</span></div>
+      <p class="name">${name}</p>
+      <p class="room">${room}</p>
+      <p class="loc">📍 ${city}</p>
+      <button class="btn-pink" onclick="alert('Current loud CTA · no sheet wired in V1')">⇄ Change Hotel</button>
+    </div>
+    <div class="upstrip">
+      <span class="lhs"><span class="badge">A+</span>Upgrade to 5★</span>
+      <span style="color:var(--brand);font-weight:600">See details</span>
+    </div>
+  </div>`;
+}
+
+function hotelCardDemoted(city, name, room, opts={}){
+  return `<div class="hcard">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px 0">
+      <div class="meta" style="padding:0">Day ${opts.days} · ${city}</div>
+      <button class="btn-ghost" onclick="openSheet('${opts.imgClass||'ubud'}','${city}','${name}','${opts.rating}','${room}')">⇄ Change</button>
+    </div>
+    <div class="img ${opts.imgClass||''}">${name}</div>
+    <div class="body">
+      <div class="stars"><span class="star">★</span><span>${opts.rating}</span><span class="source">· Booking.com</span></div>
+      <p class="name">${name}</p>
+      <p class="room">${room}</p>
+      <p class="loc">📍 ${city}</p>
+    </div>
+    <div class="upstrip">
+      <span class="lhs"><span class="badge">A+</span>Upgrade to 5★ · +₹6,800 / person</span>
+      <span style="color:var(--brand);font-weight:600">See</span>
+    </div>
+  </div>`;
+}
+
+function hotelCardEditMode(city, name, room, opts={}, editing){
+  if(!editing){
+    return `<div class="hcard">
+      <div class="meta">Day ${opts.days} · ${city}</div>
+      <div class="img ${opts.imgClass||''}">${name}</div>
+      <div class="body">
+        <div class="stars"><span class="star">★</span><span>${opts.rating}</span><span class="source">· Booking.com</span></div>
+        <p class="name">${name}</p>
+        <p class="room">${room}</p>
+        <p class="loc">📍 ${city}</p>
+      </div>
+    </div>`;
+  }
+  return `<div class="hcard" style="border:2px dashed var(--brand)">
+    <div class="meta">Day ${opts.days} · ${city}</div>
+    <div class="img ${opts.imgClass||''}">${name}</div>
+    <div class="body">
+      <div class="stars"><span class="star">★</span><span>${opts.rating}</span><span class="source">· Booking.com</span></div>
+      <p class="name">${name}</p>
+      <p class="room">${room}</p>
+      <p class="loc">📍 ${city}</p>
+      <button class="btn-pink" onclick="openSheet('${opts.imgClass||'ubud'}','${city}','${name}','${opts.rating}','${room}')">⇄ Change Hotel</button>
+    </div>
+  </div>`;
+}
+
+function compareCard(city, name, room, opts={}, picked){
+  return `<div class="hcard" style="${picked?'outline:2px solid var(--brand);outline-offset:-2px':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px 0">
+      <div class="meta" style="padding:0">Day ${opts.days} · ${city}</div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;cursor:pointer">
+        <input type="checkbox" ${picked?'checked':''} onclick="this.checked && this.closest('.hcard').setAttribute('style', 'outline:2px solid var(--brand);outline-offset:-2px')"/>
+        Compare
+      </label>
+    </div>
+    <div class="img ${opts.imgClass||''}">${name}</div>
+    <div class="body">
+      <div class="stars"><span class="star">★</span><span>${opts.rating}</span><span class="source">· Booking.com</span></div>
+      <p class="name">${name}</p>
+      <p class="room">${room}</p>
+      <p class="loc">📍 ${city}</p>
+      <button class="btn-ghost" style="width:100%;justify-content:center" onclick="openSheet('${opts.imgClass||'ubud'}','${city}','${name}','${opts.rating}','${room}')">⇄ Change</button>
+    </div>
+  </div>`;
+}
+
+function hotelsSection(cardRender){
+  const cards = [
+    cardRender('Ubud','Ubud Grand Resort','Deluxe Room · Breakfast',{days:'1-2',rating:'4.1',imgClass:'ubud'}),
+    cardRender('Seminyak','Seminyak Grand Reserve','Deluxe Room · Breakfast',{days:'3-4',rating:'4.4',imgClass:'seminyak'}),
+    cardRender('Sanur','Sanur Beach Hotel','Deluxe Room · Breakfast',{days:'5-7',rating:'4.2',imgClass:'ubud'}),
+  ].join('');
+  return `<div class="section"><h2>Hotels</h2></div><div class="hsection">${cards}</div>`;
+}
+
+function compareSection(){
+  const cards = [
+    compareCard('Ubud','Komaneka at Bisma','Deluxe Pool View',{days:'1-2',rating:'4.6',imgClass:'komaneka'}, true),
+    compareCard('Ubud','Adiwana Bisma','Premier Suite',{days:'1-2',rating:'4.7',imgClass:'adiwana'}, true),
+    compareCard('Ubud','Viceroy Bali','Vista Villa',{days:'1-2',rating:'4.9',imgClass:'viceroy'}, false),
+  ].join('');
+  return `<div class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 style="margin:0">Compare hotels</h2>
+      <button class="btn-ghost">Done</button>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Pick up to 3 to compare side-by-side.</p>
+  </div>
+  <div class="hsection">${cards}</div>
+  <div class="section" style="margin-top:8px">
+    <button class="btn-primary" style="width:100%;box-shadow:none;background:var(--ink)">Compare 2 hotels →</button>
+  </div>`;
+}
+
+function v4Header(editing){
+  return `<div class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Hotels</h2>
+      <button class="btn-ghost" id="globalEdit">${editing?'Done':'✎ Edit hotels'}</button>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin:8px 0 0">${editing?'Tap Change on any hotel to swap.':'Three nights across three properties.'}</p>
+  </div>`;
+}
+
+function footerCTA(delta){
+  let deltaHtml = '';
+  if(delta){
+    if(delta>0) deltaHtml = `<span class="delta up">+₹${delta.toLocaleString('en-IN')} / person</span>`;
+    else if(delta<0) deltaHtml = `<span class="delta dn">-₹${Math.abs(delta).toLocaleString('en-IN')} / person</span>`;
+  }
+  const newTotal = 62498 + (delta||0);
+  return `<div class="footer-cta">
+    <div class="price">From <b>₹${newTotal.toLocaleString('en-IN')}</b> /person ${deltaHtml}<br/>Price incl. GST & TCS</div>
+    <button class="btn-primary">Plan My Trip →</button>
+  </div>`;
+}
+
+function basePhone(content, footerDelta){
+  return `<div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      ${statusBar()}
+      <div class="scroll" id="scroll">
+        ${headerImg()}
+        ${content}
+        <div style="height:120px"></div>
+      </div>
+      ${footerCTA(footerDelta)}
+    </div>
+  </div>`;
+}
+
+/* ============ Variant renders ============ */
+function renderV1(){
+  return basePhone(hotelsSection(hotelCardCurrent), 0);
+}
+function renderV2(){
+  return basePhone(hotelsSection(hotelCardDemoted), 0);
+}
+function renderV3(){
+  // sheet opens immediately in "See all" expanded state
+  return basePhone(hotelsSection(hotelCardDemoted), 0) + ''; // sheet rendered separately
+}
+function renderV4(){
+  const editing = window.__v4Edit === true;
+  const cards = [
+    hotelCardEditMode('Ubud','Ubud Grand Resort','Deluxe Room · Breakfast',{days:'1-2',rating:'4.1',imgClass:'ubud'}, editing),
+    hotelCardEditMode('Seminyak','Seminyak Grand Reserve','Deluxe Room · Breakfast',{days:'3-4',rating:'4.4',imgClass:'seminyak'}, editing),
+    hotelCardEditMode('Sanur','Sanur Beach Hotel','Deluxe Room · Breakfast',{days:'5-7',rating:'4.2',imgClass:'ubud'}, editing),
+  ].join('');
+  return basePhone(v4Header(editing) + `<div class="hsection">${cards}</div>`, 0);
+}
+function renderV5(){
+  return basePhone(compareSection(), 0);
+}
+
+/* ============ Sheet renderer ============ */
+function sheetMarkup(city, name, rating, room, expanded){
+  return `<div class="sheet-back" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet ${expanded?'full':''}">
+      <div class="handle"></div>
+      ${expanded ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <button class="btn-ghost" onclick="closeSheet()">←</button>
+        <strong style="font-size:14px">All hotels in ${city}</strong>
+      </div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px">
+        <button class="btn-ghost">Price ⌄</button>
+        <button class="btn-ghost">Star ⌄</button>
+        <button class="btn-ghost">Area ⌄</button>
+        <button class="btn-ghost">Amenities ⌄</button>
+      </div>` : `<h3>Day 1-2 · ${city} · 2 nights</h3><p class="context">Pick a replacement or keep your current.</p>`}
+
+      ${!expanded ? `<h4>Currently selected</h4>
+      <div class="opt pinned">
+        <div class="thumb original"></div>
+        <div class="grow">
+          <p class="opt-name">${name}</p>
+          <p class="opt-meta">★ ${rating} · ${room}</p>
+        </div>
+        <span class="opt-badge gray">Selected</span>
+      </div>
+
+      <h4>Our picks for you</h4>
+      <div class="opt">
+        <div class="thumb komaneka"></div>
+        <div class="grow">
+          <p class="opt-name">Komaneka at Bisma</p>
+          <p class="opt-meta">★ 4.6 · Deluxe · <span class="opt-badge">Loved by couples</span></p>
+          <p class="opt-price">Same price</p>
+        </div>
+        <button class="chip-select" onclick="select('Komaneka at Bisma', 0)">Select</button>
+      </div>
+
+      <div class="opt">
+        <div class="thumb adiwana"></div>
+        <div class="grow">
+          <p class="opt-name">Adiwana Resort Jungle</p>
+          <p class="opt-meta">★ 4.7 · Pool villa · <span class="opt-badge" style="background:var(--cream);color:var(--olive)">Private pool villa</span></p>
+          <p class="opt-price up">+₹1,800 / person</p>
+        </div>
+        <button class="chip-select" onclick="select('Adiwana Resort Jungle', 1800)">Select</button>
+      </div>
+
+      <div class="opt">
+        <div class="thumb viceroy"></div>
+        <div class="grow">
+          <p class="opt-name">Viceroy Bali</p>
+          <p class="opt-meta">★ 4.9 · Vista Villa · <span class="opt-badge" style="background:#FEF0C7;color:#A6760D">Upgrade to 5★</span></p>
+          <p class="opt-price up">+₹6,800 / person</p>
+        </div>
+        <button class="chip-select" onclick="select('Viceroy Bali', 6800)">Select</button>
+      </div>
+
+      <div class="see-all" onclick="openSeeAll()">— See all Ubud hotels —</div>` : ''}
+
+      ${expanded ? Array.from({length:8}).map((_,i)=>{
+        const names = ['Pramana Watu Kurung','Tanah Gajah','Capella Ubud','Bisma Eight','The Udaya','Hanging Gardens of Bali','Como Shambhala','Mandapa, a Ritz-Carlton'];
+        const badges = ['Riverside spa','Quieter area','Tented villa','Rooftop pool','Adults only','Iconic infinity pool','Wellness retreat','Riverside spa'];
+        const stars = [4.3,4.5,4.8,4.6,4.4,4.7,4.9,4.9];
+        const deltas = [-1200, 400, 2200, 800, -400, 3200, 5400, 4800];
+        const delta = deltas[i];
+        return `
+        <div class="opt">
+          <div class="thumb ${['komaneka','adiwana','viceroy','original'][i%4]}"></div>
+          <div class="grow">
+            <p class="opt-name">${names[i]}</p>
+            <p class="opt-meta">★ ${stars[i]} · <span class="opt-badge">${badges[i]}</span></p>
+            <p class="opt-price ${delta<0?'dn':'up'}">${delta<0?'-':'+'}₹${Math.abs(delta).toLocaleString('en-IN')} / person</p>
+          </div>
+          <button class="chip-select" onclick="select('${names[i]}', ${delta})">Select</button>
+        </div>
+      `;}).join('') : ''}
+    </div>
+  </div>`;
+}
+
+/* ============ Interaction layer ============ */
+let __sheetOpen = false;
+let __delta = 0;
+let __toastTimer = null;
+
+function openSheet(imgClass, city, name, rating, room){
+  __sheetOpen = true;
+  const screen = stage.querySelector('.screen');
+  const existing = screen.querySelector('.sheet-back');
+  if(existing) existing.remove();
+  screen.insertAdjacentHTML('beforeend', sheetMarkup(city, name, rating, room, false));
+}
+function closeSheet(){
+  __sheetOpen = false;
+  const back = stage.querySelector('.sheet-back');
+  if(back) back.remove();
+}
+function openSeeAll(){
+  const back = stage.querySelector('.sheet-back');
+  if(back) back.remove();
+  const screen = stage.querySelector('.screen');
+  screen.insertAdjacentHTML('beforeend', sheetMarkup('Ubud','','','',true));
+}
+function select(name, delta){
+  __delta = delta;
+  closeSheet();
+  // refresh footer with new delta
+  const footer = stage.querySelector('.footer-cta');
+  if(footer){
+    footer.outerHTML = footerCTA(delta);
+  }
+  // toast
+  const screen = stage.querySelector('.screen');
+  let existingToast = screen.querySelector('.toast');
+  if(existingToast) existingToast.remove();
+  screen.insertAdjacentHTML('beforeend', `<div class="toast">Swapped to ${name}<button onclick="undoSwap()">Undo</button></div>`);
+  if(__toastTimer) clearTimeout(__toastTimer);
+  __toastTimer = setTimeout(()=>{
+    const t = stage.querySelector('.toast'); if(t) t.remove();
+  }, 5000);
+}
+function undoSwap(){
+  __delta = 0;
+  const footer = stage.querySelector('.footer-cta');
+  if(footer) footer.outerHTML = footerCTA(0);
+  const t = stage.querySelector('.toast'); if(t) t.remove();
+}
+
+/* ============ Tab switching ============ */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const v = t.dataset.v;
+    document.getElementById('note').textContent = NOTES[v];
+    renderVariant(v);
+  });
+});
+
+function renderVariant(v){
+  __sheetOpen = false; __delta = 0;
+  let html = '';
+  let extras = '';
+  switch(v){
+    case 'v1': html = renderV1(); extras = `<div class="caption">Today's live experience. <b>Issue:</b> the pink-outlined "Change Hotel" button competes with "Plan My Trip" and gets repeated on every card.</div>`; break;
+    case 'v2': html = renderV2(); extras = `<div class="caption"><b>Recommended.</b> Quiet "Change" chip top-right of each card. Tap any card's <b>Change</b> chip to see the curated swap sheet open in place.</div>`; break;
+    case 'v3': html = renderV2(); extras = `<div class="caption">"See all" expanded view. Filter chips at top. Same option card shape. Tap any card's <b>Change</b> then <b>See all Ubud hotels</b>.</div>`; break;
+    case 'v4': html = renderV4(); extras = `<div class="caption"><b>Rejected alternative.</b> Single "Edit hotels" in section header. Tap it to enter edit mode. The chip is invisible after the user scrolls past it.</div>`; break;
+    case 'v5': html = renderV5(); extras = `<div class="caption"><b>Stretch goal.</b> Multi-select Compare. Useful when alternates differ on many specs. Cost: heavy to build, niche use.</div>`; break;
+  }
+  stage.innerHTML = `<div class="stage-col">${html}${extras}</div>`;
+  if(v === 'v4'){
+    setTimeout(()=>{
+      const btn = document.getElementById('globalEdit');
+      if(btn) btn.addEventListener('click', ()=>{ window.__v4Edit = !window.__v4Edit; renderVariant('v4'); });
+    },0);
+  }
+  if(v === 'v3'){
+    setTimeout(()=>{
+      openSheet('ubud','Ubud','Ubud Grand Resort','4.1','Deluxe Room · Breakfast');
+      setTimeout(()=>openSeeAll(),50);
+    },50);
+  }
+}
+
+renderVariant('v1');
+</script>
+</body>
+</html>

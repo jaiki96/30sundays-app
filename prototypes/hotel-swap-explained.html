@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hotel swap - plain-English walkthrough</title>
+<link rel="stylesheet" href="./explained.css" />
+</head>
+<body>
+
+<div class="top">
+  <a class="home" href="./index.html">← Prototypes home</a>
+  <span class="title">Hotel swap <small>· plain-English walkthrough</small></span>
+  <div class="switch">
+    <a href="./hotel-swap-explained.html" class="active">Hotels</a>
+    <a href="./day-swap-explained.html">Days</a>
+    <a href="./hotel-swap.html">See variants ↗</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <nav class="toc" id="toc">
+    <h4>Walkthrough</h4>
+    <a href="#decisions">Decisions confirmed</a>
+    <a href="#tldr">TL;DR in one screen</a>
+    <a href="#why">Why this matters</a>
+    <a href="#feelings">What the user feels</a>
+    <a href="#q1">Q1. Button on every card?</a>
+    <a href="#q2">Q2. How many alternatives?</a>
+    <a href="#edge">Edge cases by starting tier</a>
+    <a href="#q3">Q3. Same screen or new page?</a>
+    <a href="#q4">Q4. Show price changes live?</a>
+    <a href="#q5">Q5. "Change" vs "Upgrade"</a>
+    <a href="#q6">Q6. Confirm or instant?</a>
+    <a href="#q7">Q7. Two doors: see vs swap</a>
+    <a href="#bench">What others do</a>
+    <a href="#recap">My recommendation</a>
+    <a href="#next">What I'll build</a>
+  </nav>
+
+  <main>
+
+  <!-- DECISIONS CONFIRMED -->
+  <section id="decisions" style="border-color:var(--green);background:linear-gradient(180deg,#fff,#F0FDF4)">
+    <div class="kicker" style="color:var(--green)">Confirmed by you</div>
+    <h2>Decisions locked in</h2>
+    <p class="lead">Your answers to the open questions. Everything below this section is consistent with these.</p>
+    <ul class="picks">
+      <li class="yes"><div><b>Alternative variety.</b> The 3 picks should be visibly different from each other - not three slightly different 4-star deluxe rooms. Show distinct types: upgrade to 5★, beachfront stay, private pool villa, romantic boutique, etc.</div></li>
+      <li class="yes"><div><b>Badges in brand voice.</b> Use traveler-emotional labels like "Loved by couples", "Beachfront", "Private pool villa", "Quieter area", "Upgrade to 5★". Not generic descriptors like "Best value".</div></li>
+      <li class="yes"><div><b>Demote the pink "Change Hotel" button.</b> Confirmed. Small grey "Change" pill replaces it on each card.</div></li>
+      <li class="yes"><div><b>Data.</b> I'll stub JSON for the prototype (curated 3 + a fake "see all" list). Real Booking inventory wires in later.</div></li>
+      <li class="yes"><div><b>Price deltas.</b> Faked for the prototype with sane ranges (-₹2,500 to +₹8,000 per person). Real math wires in later.</div></li>
+    </ul>
+  </section>
+
+  <!-- ============== TL;DR ============== -->
+  <section id="tldr">
+    <div class="kicker">Start here</div>
+    <h2>The summary in one screen</h2>
+    <p class="lead">Today's "Change Hotel" button is loud, repeated on every card, and competes with "Plan My Trip". Here's the proposal at a glance, then we'll walk through why.</p>
+
+    <div class="split">
+      <div>
+        <h3>What changes</h3>
+        <ul class="picks">
+          <li class="yes"><div><b>Replace the pink button with a small grey "Change" pill</b> on the top-right of each hotel card.</div></li>
+          <li class="yes"><div><b>Tapping it opens a popup that slides up from the bottom</b> (like Apple Maps or Uber).</div></li>
+          <li class="yes"><div>The popup shows the current hotel pinned on top, then <b>3 alternatives we hand-picked</b>, then a "See all hotels" link.</div></li>
+          <li class="yes"><div>Each alternative shows the <b>exact price change</b> ("+₹4,500 / person") so there's no surprise.</div></li>
+          <li class="yes"><div>Picking one swaps instantly. A small toast at the bottom says <b>"Swapped to X · Undo"</b> for 5 seconds.</div></li>
+          <li class="no"><div>We do <b>not</b> add a "are you sure?" popup. It would slow down the 60% of users who are just looking, not actually changing.</div></li>
+        </ul>
+      </div>
+
+      <div class="vis">
+        <div class="vis-pair">
+          <div>
+            <div class="mini">
+              <div class="screen">
+                <div class="status"><span>9:41</span><span>•••</span></div>
+                <div class="content">
+                  <h5>Hotels</h5>
+                  <div class="card">
+                    <div class="img">Ubud Grand Resort</div>
+                    <p style="margin:0 0 4px;font-weight:600;font-size:11px">Ubud Grand Resort</p>
+                    <button class="pill-loud" style="width:100%;justify-content:center"><span class="swap-ic"></span>Change Hotel</button>
+                  </div>
+                </div>
+                <div class="footer"><div class="price">From <b>₹62,498</b></div><button class="cta">Plan My Trip</button></div>
+              </div>
+            </div>
+            <div class="vis-cap"><b>Today.</b> Pink "Change Hotel" fights for attention with the pink "Plan My Trip" CTA.</div>
+          </div>
+          <div>
+            <div class="mini">
+              <div class="screen">
+                <div class="status"><span>9:41</span><span>•••</span></div>
+                <div class="content">
+                  <h5>Hotels</h5>
+                  <div class="card">
+                    <div class="row" style="margin-bottom:6px">
+                      <span style="font-size:10px;color:var(--muted);font-weight:600">Day 1-2 · Ubud</span>
+                      <button class="pill-quiet"><span class="swap-ic"></span>Change</button>
+                    </div>
+                    <div class="img">Ubud Grand Resort</div>
+                    <p style="margin:0;font-weight:600;font-size:11px">Ubud Grand Resort</p>
+                  </div>
+                </div>
+                <div class="footer"><div class="price">From <b>₹62,498</b></div><button class="cta">Plan My Trip</button></div>
+              </div>
+            </div>
+            <div class="vis-cap"><b>Proposed.</b> Quiet grey "Change" pill, top-right. Only "Plan My Trip" is pink now.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== WHY ============== -->
+  <section id="why">
+    <div class="kicker">The situation</div>
+    <h2>Why we're changing this</h2>
+    <p>The user is on the itinerary page, just before paying. This is the <b>highest drop-off moment</b> in any travel app. Industry data (Booking, Expedia, Phocuswright) puts the drop between "view itinerary" and "checkout" at 40-60%.</p>
+    <p>People drop off because something feels off and they don't know how to fix it. The hotel swap feature exists to <b>discharge doubt</b> so the user feels in control and ready to pay.</p>
+    <div class="callout"><b>The key insight.</b> Most people who tap "Change Hotel" don't actually change anything. They just want to <i>look</i> and reassure themselves the recommendation is good. The job of this UX is to make that "looking" feel cheap and quick.</div>
+  </section>
+
+  <!-- ============== FEELINGS ============== -->
+  <section id="feelings">
+    <div class="kicker">User psychology</div>
+    <h2>What's actually going through their head</h2>
+    <div class="split">
+      <div>
+        <p>Three feelings at once:</p>
+        <ul class="picks">
+          <li class="neutral"><div><b>Excitement.</b> "This is real, I can see my trip." We protect this by not adding pop-ups or scary warnings.</div></li>
+          <li class="neutral"><div><b>Doubt.</b> "Is this hotel actually good? Should I check?" We address this by letting them see alternatives without commitment.</div></li>
+          <li class="neutral"><div><b>Fear of missing out.</b> "If I commit and there was a better deal, I lose." We address this by always showing the price difference upfront so there are no surprises.</div></li>
+        </ul>
+        <p>What they want to do, ranked by how often:</p>
+        <ol style="padding-left:20px">
+          <li><b>60-70%</b> · Just look at alternatives, then keep the original.</li>
+          <li><b>15-20%</b> · Upgrade to something nicer (the "Upgrade to 5★" strip).</li>
+          <li><b>5-10%</b> · Downgrade to save money.</li>
+          <li><b>5-10%</b> · Switch to a different area of the city.</li>
+        </ol>
+      </div>
+      <div class="vis">
+        <div style="max-width:280px;padding:8px">
+          <p style="font-size:13px;margin:0 0 12px;color:var(--muted)">If the looker (60-70%) gets a clean, quick way to peek, they leave reassured. If they have to fight the UI, they leave anxious and abandon.</p>
+          <div style="padding:14px;border-radius:12px;background:#fff;border:1px solid var(--hair);text-align:center">
+            <div style="font-size:32px;line-height:1;margin-bottom:8px">👀</div>
+            <div style="font-size:13px;font-weight:700">"Just looking"</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Design for this person first.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== Q1 ============== -->
+  <section id="q1">
+    <div class="kicker">Question 1</div>
+    <h2><span class="qnum">1</span>Should every hotel card have its own "Change" button?</h2>
+    <p>This is the most-asked question in the management meeting. Three options:</p>
+
+    <div class="split">
+      <div>
+        <h3>Option A · Button on every card</h3>
+        <p>What we have today. A "Change" affordance on every hotel.</p>
+        <ul class="picks">
+          <li class="yes"><div>Always findable.</div></li>
+          <li class="yes"><div>Matches what Booking, Airbnb, MakeMyTrip do.</div></li>
+          <li class="no"><div>Looks repetitive if the button is loud (today's pink version).</div></li>
+        </ul>
+      </div>
+      <div class="vis">
+        <div class="mini">
+          <div class="screen">
+            <div class="status"><span>9:41</span><span>•••</span></div>
+            <div class="content">
+              <h5>Hotels</h5>
+              <div class="card"><div class="row" style="margin-bottom:4px"><span style="font-size:10px;color:var(--muted)">Ubud</span><button class="pill-quiet"><span class="swap-ic"></span>Change</button></div><div class="img" style="height:40px">Ubud Grand</div></div>
+              <div class="card"><div class="row" style="margin-bottom:4px"><span style="font-size:10px;color:var(--muted)">Seminyak</span><button class="pill-quiet"><span class="swap-ic"></span>Change</button></div><div class="img" style="height:40px;background:linear-gradient(135deg,#0277BD,#01579B)">Seminyak Grand</div></div>
+              <div class="card"><div class="row" style="margin-bottom:4px"><span style="font-size:10px;color:var(--muted)">Sanur</span><button class="pill-quiet"><span class="swap-ic"></span>Change</button></div><div class="img" style="height:40px">Sanur Beach</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div>
+        <h3>Option B · One "Edit hotels" button at the top</h3>
+        <p>A single pencil icon in the section header. Tap it to enter an edit mode for all hotels at once.</p>
+        <ul class="picks">
+          <li class="yes"><div>No repetition. Cleaner first view.</div></li>
+          <li class="no"><div>Invisible. Users scrolling sideways past the first hotel never see it again.</div></li>
+          <li class="no"><div>"Edit mode" is a heavier mental model than "tap to swap one thing".</div></li>
+        </ul>
+      </div>
+      <div class="vis">
+        <div class="mini">
+          <div class="screen">
+            <div class="status"><span>9:41</span><span>•••</span></div>
+            <div class="content">
+              <div class="row" style="margin-bottom:8px"><h5 style="margin:0">Hotels</h5><button class="pill-quiet">✎ Edit hotels</button></div>
+              <div class="card"><span style="font-size:10px;color:var(--muted)">Ubud</span><div class="img" style="height:40px">Ubud Grand</div></div>
+              <div class="card"><span style="font-size:10px;color:var(--muted)">Seminyak</span><div class="img" style="height:40px;background:linear-gradient(135deg,#0277BD,#01579B)">Seminyak Grand</div></div>
+              <div class="card"><span style="font-size:10px;color:var(--muted)">Sanur</span><div class="img" style="height:40px">Sanur Beach</div></div>
+              <p style="text-align:center;font-size:10px;color:#B42318;margin-top:6px">⚠ "Edit" is up top - users scrolling sideways forget it exists</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>My recommendation: Option A, but make the button quieter.</h3>
+    <p>Keep one "Change" on every card so it's always findable when the user is scrolling sideways. But shrink it to a small grey pill in the top-right, not a loud pink button. The pink colour is reserved for "Plan My Trip" only - that's the action that makes us money.</p>
+    <div class="callout good"><b>The trick:</b> the button stays where users expect it, but stops fighting for attention. It's like the "..." menu on an Instagram post. Always there, never shouts.</div>
+  </section>
+
+  <!-- ============== Q2 ============== -->
+  <section id="q2">
+    <div class="kicker">Question 2</div>
+    <h2><span class="qnum">2</span>What hotels can the user swap with?</h2>
+    <p>You already decided: <b>3 hand-picked options + an "See all" link</b> for power users. Here's why this is right.</p>
+
+    <div class="compare">
+      <div class="h">Approach</div>
+      <div class="h">Pros</div>
+      <div class="h">Cons</div>
+
+      <div>Only 3 curated picks</div>
+      <div>Fast decisions. Feels like a concierge.</div>
+      <div>Power users feel boxed in.</div>
+
+      <div>Full Booking-style search</div>
+      <div>Maximum flexibility.</div>
+      <div>Overwhelming. Feels like we're just a search engine.</div>
+
+      <div class="rec">3 curated + "See all" link</div>
+      <div class="rec">Best of both. Most people pick from the 3, power users get an escape hatch.</div>
+      <div class="rec">Slightly more to build, but worth it.</div>
+    </div>
+
+    <h3>The trick: each pick needs a reason</h3>
+    <p>Just showing 3 hotels with no explanation feels random. Each pick should have a small label saying <i>why</i> we picked it:</p>
+
+    <div class="vis-pair" style="margin-top:14px">
+      <div>
+        <div class="mini" style="width:260px"><div class="screen">
+          <div class="content">
+            <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:8px;display:flex;gap:8px">
+              <div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#3E7C17,#1B3A0A);flex-shrink:0"></div>
+              <div style="flex:1">
+                <p style="margin:0;font-size:11px;font-weight:700">Komaneka at Bisma</p>
+                <p style="margin:2px 0;font-size:9px;color:var(--muted)">★ 4.6 · Deluxe</p>
+                <span class="tag" style="font-size:8px">Loved by couples</span>
+              </div>
+            </div>
+            <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:8px;display:flex;gap:8px">
+              <div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#7B5E3C,#3B2A18);flex-shrink:0"></div>
+              <div style="flex:1">
+                <p style="margin:0;font-size:11px;font-weight:700">Adiwana Resort Jungle</p>
+                <p style="margin:2px 0;font-size:9px;color:var(--muted)">★ 4.7 · Pool villa</p>
+                <span class="tag olive" style="font-size:8px">Private pool villa</span>
+              </div>
+            </div>
+            <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:8px;display:flex;gap:8px">
+              <div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#8B6914,#3F2C08);flex-shrink:0"></div>
+              <div style="flex:1">
+                <p style="margin:0;font-size:11px;font-weight:700">Viceroy Bali</p>
+                <p style="margin:2px 0;font-size:9px;color:var(--muted)">★ 4.9 · Vista Villa</p>
+                <span class="tag" style="font-size:8px;background:#FEF0C7;color:#A6760D">Upgrade to 5★</span>
+              </div>
+            </div>
+            <p style="text-align:center;font-size:10px;color:var(--brand);font-weight:700;margin-top:6px">— See all Ubud hotels —</p>
+          </div>
+        </div></div>
+        <div class="vis-cap">Each pick has a <b>reason badge</b>: Best value, Quieter area, Upgrade. This is the difference between a curated list and a random list.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== EDGE CASES ============== -->
+  <section id="edge">
+    <div class="kicker">How the 3 picks adapt</div>
+    <h2>What alternatives we show, by starting hotel tier</h2>
+    <p>The 3 alternatives aren't a fixed list. They flex based on what the user already has. If they're starting at a 3-star, we show upgrades. If they're already at a 5-star, an "upgrade" pick makes no sense - we show side-grades instead.</p>
+
+    <div class="callout"><b>The rule.</b> The 3 picks must each open a <i>different door</i>. Same tier = waste. Always offer (a) something nicer, (b) something different in character, (c) something cheaper - filtered by what's actually possible from the user's current state.</div>
+
+    <h3>Case A · User is on a 3-star or budget hotel</h3>
+    <div class="vis-pair">
+      <div>
+        <div class="mini" style="width:260px"><div class="screen"><div class="content">
+          <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:0 0 6px">Current: Ubud Budget Inn · ★3.2</p>
+          <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:8px 0 4px">Our picks</p>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:6px">
+            <p style="margin:0;font-weight:700;font-size:11px">Komaneka at Bisma</p>
+            <span class="tag" style="font-size:9px">Loved by couples</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--brand);font-weight:700">+₹2,400 / person</p>
+          </div>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:6px">
+            <p style="margin:0;font-weight:700;font-size:11px">Adiwana Resort Jungle</p>
+            <span class="tag olive" style="font-size:9px">Private pool villa</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--brand);font-weight:700">+₹4,800 / person</p>
+          </div>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px">
+            <p style="margin:0;font-weight:700;font-size:11px">Viceroy Bali</p>
+            <span class="tag" style="font-size:9px;background:#FEF0C7;color:#A6760D">Upgrade to 5★</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--brand);font-weight:700">+₹7,200 / person</p>
+          </div>
+        </div></div></div>
+        <div class="vis-cap"><b>3-star start.</b> All three picks are upgrades, but each opens a different door: romantic, premium with pool, luxury 5★.</div>
+      </div>
+    </div>
+
+    <h3>Case B · User is on a 4-star deluxe (today's default)</h3>
+    <div class="vis-pair">
+      <div>
+        <div class="mini" style="width:260px"><div class="screen"><div class="content">
+          <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:0 0 6px">Current: Ubud Grand Resort · ★4.1</p>
+          <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:8px 0 4px">Our picks</p>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:6px">
+            <p style="margin:0;font-weight:700;font-size:11px">Komaneka at Bisma</p>
+            <span class="tag" style="font-size:9px">Loved by couples</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--green);font-weight:700">Same price</p>
+          </div>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:6px">
+            <p style="margin:0;font-weight:700;font-size:11px">Adiwana Resort Jungle</p>
+            <span class="tag olive" style="font-size:9px">Private pool villa</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--brand);font-weight:700">+₹1,800 / person</p>
+          </div>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px">
+            <p style="margin:0;font-weight:700;font-size:11px">Viceroy Bali</p>
+            <span class="tag" style="font-size:9px;background:#FEF0C7;color:#A6760D">Upgrade to 5★</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--brand);font-weight:700">+₹6,800 / person</p>
+          </div>
+        </div></div></div>
+        <div class="vis-cap"><b>4-star start.</b> One lateral (same price, different character), one mid-upgrade with private pool, one 5★ upgrade. The default mix.</div>
+      </div>
+    </div>
+
+    <h3>Case C · User is already on a 5-star</h3>
+    <div class="vis-pair">
+      <div>
+        <div class="mini" style="width:260px"><div class="screen"><div class="content">
+          <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:0 0 6px">Current: Viceroy Bali · ★4.9</p>
+          <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:8px 0 4px">Our picks</p>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:6px">
+            <p style="margin:0;font-weight:700;font-size:11px">Capella Ubud</p>
+            <span class="tag olive" style="font-size:9px">Tented villa</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--brand);font-weight:700">+₹2,200 / person</p>
+          </div>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px;margin-bottom:6px">
+            <p style="margin:0;font-weight:700;font-size:11px">Mandapa, a Ritz-Carlton</p>
+            <span class="tag" style="font-size:9px">Riverside spa</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--green);font-weight:700">Same price</p>
+          </div>
+          <div style="border:1px solid var(--hair);border-radius:10px;padding:8px">
+            <p style="margin:0;font-weight:700;font-size:11px">Komaneka at Bisma</p>
+            <span class="tag green" style="font-size:9px">Save ₹3,800</span>
+            <p style="margin:4px 0 0;font-size:10px;color:var(--green);font-weight:700">-₹3,800 / person</p>
+          </div>
+        </div></div></div>
+        <div class="vis-cap"><b>5-star start.</b> No "upgrade" pick - it would be silly. Instead: side-grade to a different 5★ character, lateral with a unique spa, and a cheaper 4★ for the budget-conscious 5★ user.</div>
+      </div>
+    </div>
+
+    <h3>Case D · Beach destination (Seminyak / Sanur)</h3>
+    <p>Here we layer in destination-specific picks. For Ubud the categories are jungle / temple / rice fields. For Seminyak they are beachfront / poolside / nightlife.</p>
+    <ul class="picks">
+      <li class="yes"><div><b>Always include a "Beachfront" pick</b> if the user is not currently on one - the most-asked-for swap on coastal stays.</div></li>
+      <li class="yes"><div><b>Always include a "Adults only" or "Quieter" pick</b> for couples (we know they're couples from the funnel).</div></li>
+      <li class="yes"><div><b>Always include a stretch upgrade</b> unless they're already maxed out.</div></li>
+    </ul>
+
+    <div class="callout warn"><b>Edge case: nothing valid to show.</b> Rare, but possible (e.g. user is on the only 5★ in a small town). Then the sheet shows the original pinned + a single line: "We couldn't find better matches for these dates. Try changing days from the itinerary header." No empty list. No filler picks.</div>
+  </section>
+
+  <!-- ============== Q3 ============== -->
+  <section id="q3">
+    <div class="kicker">Question 3</div>
+    <h2><span class="qnum">3</span>Should the swap happen on the same screen or a new page?</h2>
+    <p>Three options for where the swap UI lives:</p>
+
+    <ul class="picks">
+      <li class="no"><div><b>Inline expand on the card.</b> The card itself grows downward to show alternatives. Looks janky on small phones.</div></li>
+      <li class="no"><div><b>Push a brand new full-screen page.</b> User loses their place in the itinerary. Going back is friction.</div></li>
+      <li class="yes"><div><b>Popup that slides up from the bottom</b> (called a "bottom sheet"). The itinerary stays visible behind it. Dragging up makes it full screen if the user wants to dig deep.</div></li>
+    </ul>
+
+    <p>This is the pattern Apple Maps, Uber, and Airbnb all use. The user keeps their context, and one closing gesture sends them back to exactly where they were.</p>
+
+    <div class="vis" style="margin-top:14px">
+      <div class="mini" style="width:320px">
+        <div class="screen" style="min-height:520px">
+          <div class="status"><span>9:41</span><span>•••</span></div>
+          <div class="content" style="filter:blur(1px);opacity:.6">
+            <h5>Hotels</h5>
+            <div class="card"><div class="img" style="height:40px">Ubud Grand</div></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:10px 12px;box-shadow:0 -8px 24px rgba(0,0,0,.12);height:65%">
+            <div style="width:32px;height:3px;background:#E9EAEB;border-radius:2px;margin:0 auto 10px"></div>
+            <p style="margin:0;font-size:11px;font-weight:700">Day 1-2 · Ubud</p>
+            <p style="margin:2px 0 10px;font-size:9px;color:var(--muted)">Pick a replacement or keep current.</p>
+            <div style="border:1px solid var(--hair);border-radius:8px;padding:6px;margin-bottom:6px;display:flex;gap:6px;align-items:center;background:#F7F8FA"><div style="width:32px;height:32px;border-radius:6px;background:linear-gradient(135deg,#558B2F,#1B5E20)"></div><div style="flex:1"><p style="margin:0;font-size:10px;font-weight:700">Ubud Grand Resort</p><span style="font-size:8px;color:var(--muted)">★ 4.1 · Selected</span></div></div>
+            <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:8px 0 4px">Our picks for you</p>
+            <div style="border:1px solid var(--hair);border-radius:8px;padding:6px;margin-bottom:6px;display:flex;gap:6px;align-items:center"><div style="width:32px;height:32px;border-radius:6px;background:linear-gradient(135deg,#3E7C17,#1B3A0A)"></div><div style="flex:1"><p style="margin:0;font-size:10px;font-weight:700">Komaneka at Bisma</p><span style="font-size:8px;color:var(--green)">Same price</span></div><button class="pill-quiet" style="font-size:9px">Select</button></div>
+            <div style="border:1px solid var(--hair);border-radius:8px;padding:6px;display:flex;gap:6px;align-items:center"><div style="width:32px;height:32px;border-radius:6px;background:linear-gradient(135deg,#7B5E3C,#3B2A18)"></div><div style="flex:1"><p style="margin:0;font-size:10px;font-weight:700">Adiwana Bisma</p><span style="font-size:8px;color:var(--brand)">+₹1,200</span></div><button class="pill-quiet" style="font-size:9px">Select</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="vis-cap" style="margin:8px auto 0">The popup covers ~70% of the screen. The itinerary is still visible at the top. Drag up to expand to full screen when browsing all hotels.</div>
+  </section>
+
+  <!-- ============== Q4 ============== -->
+  <section id="q4">
+    <div class="kicker">Question 4</div>
+    <h2><span class="qnum">4</span>Should the price update live as the user picks?</h2>
+    <p>Already decided: <b>yes, live</b>. But where and how matters.</p>
+    <ul class="picks">
+      <li class="yes"><div><b>Show the price difference on each alternative</b> ("+₹1,200 / person") <i>before</i> the user picks. No surprises after they Select.</div></li>
+      <li class="yes"><div><b>The total in the footer updates with a small animation</b> when they pick. So they see the change land.</div></li>
+      <li class="yes"><div><b>Cheaper options show "-₹2,000" in green.</b> But don't celebrate it - users get suspicious of dramatic discounts.</div></li>
+      <li class="no"><div>Don't show a struck-through original price. It feels like discount/sales language and isn't what we are.</div></li>
+    </ul>
+
+    <div class="split">
+      <div class="vis">
+        <div class="mini">
+          <div class="screen">
+            <div class="content">
+              <p style="font-size:9px;text-transform:uppercase;color:var(--muted);margin:0 0 4px">Our picks</p>
+              <div style="border:1px solid var(--hair);border-radius:8px;padding:8px;margin-bottom:6px"><p style="margin:0;font-size:11px;font-weight:700">Komaneka at Bisma</p><p style="margin:2px 0;font-size:9px;color:var(--green);font-weight:700">Same price</p></div>
+              <div style="border:1px solid var(--hair);border-radius:8px;padding:8px;margin-bottom:6px"><p style="margin:0;font-size:11px;font-weight:700">Adiwana Bisma</p><p style="margin:2px 0;font-size:9px;color:var(--brand);font-weight:700">+₹1,200 / person</p></div>
+              <div style="border:1px solid var(--hair);border-radius:8px;padding:8px"><p style="margin:0;font-size:11px;font-weight:700">Viceroy Bali</p><p style="margin:2px 0;font-size:9px;color:var(--brand);font-weight:700">+₹6,800 / person</p></div>
+            </div>
+            <div class="footer"><div class="price">From <b style="color:var(--brand)">₹63,698</b><span style="font-size:9px;color:var(--brand)">+₹1,200</span></div><button class="cta">Plan My Trip</button></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Why this works</h3>
+        <p>Price uncertainty is the single biggest source of cart abandonment in travel apps. Showing the delta on every option turns the price from a hidden threat into a clear trade-off the user can reason about.</p>
+        <p>Showing it on the footer too means even if the user goes back to the itinerary, they remember the total updated.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== Q5 ============== -->
+  <section id="q5">
+    <div class="kicker">Question 5</div>
+    <h2><span class="qnum">5</span>Should "Change" and "Upgrade" be the same thing?</h2>
+    <p>Today the card has both: a pink "Change Hotel" button and an "Upgrade to 5★" strip. Are these one thing or two?</p>
+    <div class="callout"><b>My answer:</b> two different things. Keep them separate.</div>
+    <p>Reason:</p>
+    <ul class="picks">
+      <li class="neutral"><div><b>"Change" is sideways.</b> Try a similar hotel. Low commitment, no extra money usually. The 60% just-looking crowd lives here.</div></li>
+      <li class="neutral"><div><b>"Upgrade" is selling.</b> Adds money. The 15% who want nicer rooms live here. This is where we make margin.</div></li>
+    </ul>
+    <p>If we mix them, every "just looking" tap becomes a sales conversation, which scares off the casual user. Keep them as two separate paths.</p>
+
+    <div class="vis-pair" style="margin-top:14px">
+      <div>
+        <div class="mini" style="width:260px"><div class="screen"><div class="content">
+          <div style="border:1px solid var(--hair);border-radius:10px;overflow:hidden">
+            <div style="padding:8px;display:flex;justify-content:space-between"><span style="font-size:10px;color:var(--muted);font-weight:600">Day 1-2 · Ubud</span><button class="pill-quiet"><span class="swap-ic"></span>Change</button></div>
+            <div style="margin:0 8px;height:50px;border-radius:6px;background:linear-gradient(135deg,#558B2F,#1B5E20);color:#fff;font-style:italic;font-size:10px;padding:6px;display:flex;align-items:flex-end">Ubud Grand Resort</div>
+            <p style="margin:6px 8px;font-size:11px;font-weight:700">Ubud Grand Resort</p>
+            <div style="background:var(--cream);padding:8px;border-top:1px dashed #E6DCA6;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:10px;color:var(--olive);font-weight:600">⬆ Upgrade to 5★ · +₹6,800</span>
+              <span style="font-size:10px;color:var(--olive);font-weight:700">See</span>
+            </div>
+          </div>
+        </div></div></div>
+        <div class="vis-cap"><b>Two distinct actions.</b> "Change" up top is a quiet sideways swap. "Upgrade" at the bottom is a selling strip with the price shown.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== Q6 ============== -->
+  <section id="q6">
+    <div class="kicker">Question 6</div>
+    <h2><span class="qnum">6</span>Confirm before swap, or instant + undo?</h2>
+    <ul class="picks">
+      <li class="no"><div><b>"Are you sure?" pop-up</b> after every swap. Slows everyone. Trains users to dismiss dialogs without reading.</div></li>
+      <li class="yes"><div><b>Instant swap + a "Swapped · Undo" toast for 5 seconds.</b> This is the Gmail pattern. Fast, forgiving.</div></li>
+    </ul>
+    <p>Why this is safe: swapping is reversible. You can swap again. There's nothing to "confirm" because nothing bad happens.</p>
+
+    <div class="vis" style="margin-top:14px">
+      <div class="mini" style="width:300px">
+        <div class="screen" style="min-height:380px;background:#FAFBFC">
+          <div class="content"><h5>Hotels</h5><p style="font-size:11px;color:var(--muted)">Card just updated...</p></div>
+          <div style="position:absolute;left:8px;right:8px;bottom:60px;background:#181D27;color:#fff;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;font-size:11px">
+            <span>Swapped to Komaneka at Bisma</span>
+            <button style="background:none;border:none;color:#FF9CB7;font-weight:700;font-size:11px">Undo</button>
+          </div>
+          <div class="footer"><div class="price">From <b>₹62,498</b></div><button class="cta">Plan My Trip</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="vis-cap" style="margin:8px auto 0">The toast disappears after 5 seconds. If the user wanted the old one back, one tap restores it.</div>
+  </section>
+
+  <!-- ============== Q7 ============== -->
+  <section id="q7">
+    <div class="kicker">Question 7</div>
+    <h2><span class="qnum">7</span>Two doors: "see this hotel" vs "swap this hotel"</h2>
+    <p>A subtle but important split. Each hotel card should have <b>two different actions</b> with two different meanings:</p>
+    <ul class="picks">
+      <li class="yes"><div><b>Tap the hotel image, title, or body</b> → go to the hotel's detail page. This is "I want to learn more about <i>this</i> hotel".</div></li>
+      <li class="yes"><div><b>Tap the small "Change" pill</b> → open the swap popup. This is "I want to consider alternatives".</div></li>
+    </ul>
+    <p>Mixing these two (e.g. "tap Change → see hotel details") is the most common mistake in travel apps. Expedia historically conflated them and saw measured drops in actual swap rates.</p>
+    <div class="callout good"><b>If they tap an alternative inside the swap popup,</b> we open <i>that</i> hotel's detail page on top of the popup. Closing it brings them back to the popup with their place saved. Two doors, both clearly labeled.</div>
+  </section>
+
+  <!-- ============== BENCHMARK ============== -->
+  <section id="bench">
+    <div class="kicker">What others do</div>
+    <h2>Borrowing from the best</h2>
+    <div class="compare">
+      <div class="h">App</div>
+      <div class="h">What we steal</div>
+      <div class="h">What we reject</div>
+
+      <div><b>Booking.com</b></div>
+      <div>Inventory depth, "Genius pick" badge concept.</div>
+      <div>The naked search-engine feeling. We're a curator.</div>
+
+      <div><b>Airbnb</b></div>
+      <div>"Guest favourite" badge per option. Big image cards.</div>
+      <div>Map-first approach. Our user isn't there yet.</div>
+
+      <div><b>Apple Maps / Uber</b></div>
+      <div>The slide-up popup pattern. The whole shell.</div>
+      <div>Nothing.</div>
+
+      <div><b>Hopper</b></div>
+      <div>The green/coral price emotion language.</div>
+      <div>Game-y, casino-style price prediction tone.</div>
+
+      <div><b>MakeMyTrip Holidays</b></div>
+      <div>The "Change" button per bundle component - matches Indian user expectations.</div>
+      <div>The visual clutter, stacked upsell strips.</div>
+
+      <div><b>Gmail</b></div>
+      <div>The "Undo" toast pattern for reversible actions.</div>
+      <div>Nothing.</div>
+    </div>
+    <p class="muted" style="margin-top:14px">Pattern in one sentence: <b>Booking-style depth + Airbnb-style cards + Apple Maps popup + Hopper price colours + Gmail undo.</b></p>
+  </section>
+
+  <!-- ============== RECAP ============== -->
+  <section id="recap">
+    <div class="kicker">Recommendation</div>
+    <h2>Putting it all together</h2>
+    <div class="split">
+      <div>
+        <ol style="padding-left:20px;font-size:14px;line-height:1.8">
+          <li>Replace the loud pink "Change Hotel" button with a small grey "Change" pill, top-right of each card.</li>
+          <li>Tap = popup slides up from bottom. Current hotel pinned, then 3 hand-picked alternatives with reason badges.</li>
+          <li>Each alternative shows price change ("+₹1,200" / "Same price" / "-₹500").</li>
+          <li>A "See all Ubud hotels" link at the bottom expands the popup to full screen.</li>
+          <li>Picking is instant. A "Swapped · Undo" toast appears for 5 seconds.</li>
+          <li>Footer price updates with a small animation.</li>
+          <li>"Upgrade to 5★" stays a separate strip with its own price label.</li>
+        </ol>
+      </div>
+      <div class="vis fill" style="min-height:580px">
+        <iframe src="./hotel-swap.html" loading="lazy" title="Live variants"></iframe>
+      </div>
+    </div>
+    <div class="vis-cap" style="text-align:left;max-width:none">Live variants embedded above. Switch tabs in the iframe to see Current vs Proposed vs other options. <a href="./hotel-swap.html" target="_blank">Open in its own tab</a></div>
+  </section>
+
+  <!-- ============== NEXT ============== -->
+  <section id="next">
+    <div class="kicker">If you approve</div>
+    <h2>What I'll build</h2>
+    <p>Phased so each step is shippable on its own:</p>
+    <ol style="padding-left:20px;font-size:14px;line-height:1.8">
+      <li><b>Phase 1.</b> Replace the pink button with the quiet "Change" pill on each card. Wire the popup with the 3 curated alternatives. No price math yet.</li>
+      <li><b>Phase 2.</b> Add live price recalculation, animate the footer, show the delta on each alternative.</li>
+      <li><b>Phase 3.</b> Add the "See all hotels" expanded view with filter chips.</li>
+      <li><b>Phase 4.</b> Add the Undo toast.</li>
+      <li><b>Phase 5.</b> Reuse the popup shell for day swaps and flight swaps.</li>
+    </ol>
+    <div class="cta-strip">
+      <div class="lhs"><b>Ready to start Phase 1?</b><br/><span style="color:#A0A4AD">Or read the day-swap walkthrough next.</span></div>
+      <a href="./day-swap-explained.html">Day swap walkthrough →</a>
+      <a href="./hotel-swap.html" style="background:#fff;color:var(--ink)">See live variants</a>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+// TOC active-state on scroll
+const tocLinks = document.querySelectorAll('#toc a');
+const sections = [...document.querySelectorAll('section[id]')];
+const obs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      tocLinks.forEach(l=>l.classList.toggle('active', l.getAttribute('href')==='#'+e.target.id));
+    }
+  });
+},{rootMargin:'-50% 0px -50% 0px'});
+sections.forEach(s=>obs.observe(s));
+</script>
+</body>
+</html>

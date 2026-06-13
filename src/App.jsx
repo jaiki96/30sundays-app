@@ -32,12 +32,14 @@ import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
 import WatchDeepLink from "./pages/WatchDeepLink";
+import { DealsProvider } from "./data/deals";
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
-  const hideShell = pathname === "/login-v2" || pathname === "/plan" || pathname === "/logo-anim" || pathname === "/media-lab";
+  // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -93,17 +95,19 @@ export default function App() {
   const [selectedHotels, setSelectedHotels] = useState({});
 
   return (
-    <BrowserRouter>
-      <AppContent
-        userState={userState}
-        setUserState={setUserState}
-        leadData={leadData}
-        setLeadData={setLeadData}
-        selectedFlights={selectedFlights}
-        setSelectedFlights={setSelectedFlights}
-        selectedHotels={selectedHotels}
-        setSelectedHotels={setSelectedHotels}
-      />
-    </BrowserRouter>
+    <DealsProvider>
+      <BrowserRouter>
+        <AppContent
+          userState={userState}
+          setUserState={setUserState}
+          leadData={leadData}
+          setLeadData={setLeadData}
+          selectedFlights={selectedFlights}
+          setSelectedFlights={setSelectedFlights}
+          selectedHotels={selectedHotels}
+          setSelectedHotels={setSelectedHotels}
+        />
+      </BrowserRouter>
+    </DealsProvider>
   );
 }

@@ -290,7 +290,7 @@ function getContextLine(dayType, itinerary, dayIndex) {
 
   switch (dayType) {
     case "arrival":
-      return "Your airport transfer is in the morning, here are options for the rest of your day";
+      return "Choose from our curated day plans below";
     case "departure":
       return "You'll head to the airport in the afternoon, pick how you'd like to spend your morning";
     case "inter_hotel_transfer":
@@ -333,13 +333,16 @@ export function generateDayOptions(itinerary, dayIndex, daysWithActivities) {
     isCurrent: true,
   };
 
-  // Generate 2 alternate options from city vibes
+  // Generate up to 3 alternate options from city vibes (current + 3 fills the 2×2 "Our picks" grid)
   const priceSeed = (dayIndex * 17 + itinerary.id * 31) % 100;
-  const alternates = vibes.slice(0, 2).map((vibe, vi) => {
+  const alternates = vibes.slice(0, 3).map((vibe, vi) => {
     const imgIdx = (dayIndex * 3 + vi * 5 + itinerary.id) % (actImgs.length || 1);
-    let priceDelta = 0;
-    if (priceSeed > 60 && vi === 0) priceDelta = (Math.floor(priceSeed / 10) + 1) * 500;
-    if (priceSeed > 80 && vi === 1) priceDelta = -((Math.floor(priceSeed / 15) + 1) * 500);
+    // Distinct per-person deltas: pricier, cheaper, then a small bump.
+    const priceDelta = [
+      (Math.floor(priceSeed / 10) + 2) * 500,
+      -((Math.floor(priceSeed / 15) + 1) * 500),
+      (Math.floor(priceSeed / 20) + 1) * 500,
+    ][vi] ?? 0;
 
     return {
       id: `opt_${dayIndex}_${vi}`,
@@ -392,4 +395,66 @@ export function generateDayOptions(itinerary, dayIndex, daysWithActivities) {
     options: [currentOption, ...alternates],
     fixedElements,
   };
+}
+
+// ─── Full combination pool for the "see all" browse screen ───
+// The carousel shows a curated few; this expands the city's 3 vibes into a
+// larger, deterministically-recombined pool so the filters are meaningful.
+export function getAllDayCombinations(itinerary, dayIndex, daysWithActivities) {
+  const day = daysWithActivities[dayIndex];
+  if (!day) return null;
+
+  const city = day.city;
+  const vibes = cityVibes[city];
+  if (!vibes || vibes.length === 0) return null;
+
+  const destImgs = destData[itinerary.dest];
+  const actImgs = destImgs?.actImgs || [];
+  const paces = ["relaxed", "balanced", "active"];
+
+  // Activity pool, each tagged with its source vibe's pace.
+  const pool = vibes.flatMap(v => v.activities.map(name => ({ name, pace: v.pace })));
+  const N = pool.length;
+  const ACT_DURS = [2, 3, 1.5, 2.5];
+
+  const seen = new Set();
+  const combos = [];
+
+  const pushCombo = (activities, pace) => {
+    const key = activities.slice().sort().join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    const i = combos.length;
+    const imgIdx = (dayIndex * 3 + i * 4 + itinerary.id) % (actImgs.length || 1);
+    const activityHours = Math.round(activities.reduce((s, _, k) => s + ACT_DURS[k % 4], 0) * 2) / 2;
+    const travelHours = pace === "active" ? 2 : pace === "balanced" ? 1 : 0.5;
+    const crowdLevel = ["low", "moderate", "high"][(dayIndex + i) % 3];
+    const priceSeed = (dayIndex * 17 + itinerary.id * 31 + i * 13) % 100;
+    const priceDelta = i % 3 === 2
+      ? 0
+      : i % 2 === 0
+        ? (Math.floor(priceSeed / 12) + 1) * 500
+        : -((Math.floor(priceSeed / 14) + 1) * 500);
+    combos.push({
+      id: `combo_${dayIndex}_${i}`,
+      vibeLabel: "",
+      heroImage: actImgs[imgIdx] || itinerary.img,
+      activities,
+      scoring: { pace, activityHours, travelHours, crowdLevel },
+      priceDelta,
+      isCurrent: false,
+    });
+  };
+
+  // 1. The curated vibes, as-is.
+  vibes.forEach(v => pushCombo(v.activities.slice(), v.pace));
+
+  // 2. Recombinations - vary the triple + pace to expand the pool.
+  for (let i = 0; i < N * 2 && combos.length < 14; i++) {
+    const names = [...new Set([pool[i % N].name, pool[(i + 2) % N].name, pool[(i + 5) % N].name])];
+    if (names.length < 2) continue;
+    pushCombo(names, paces[i % 3]);
+  }
+
+  return { dayNumber: day.dayNum, city, combinations: combos };
 }

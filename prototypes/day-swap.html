@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Day Swap - Variants</title>
+<link rel="stylesheet" href="./shared.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">30 Sundays <small>· Day swap UX variants</small></div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-v="v1"><span class="num">V1</span>Current (live)</button>
+    <button class="tab" data-v="v2"><span class="num">V2</span>Demoted chip (scan)</button>
+    <button class="tab" data-v="v3"><span class="num">V3</span>Day-detail entry</button>
+    <button class="tab" data-v="v4"><span class="num">V4</span>Video viewer pill</button>
+    <button class="tab" data-v="v5"><span class="num">V5</span>Sheet + cascade warn</button>
+  </div>
+</div>
+<div class="note" id="note">V1 baseline: the loud pink "Change day plan" link shipped today. Repeated on every day.</div>
+
+<div class="stage" id="stage"></div>
+
+<script>
+const NOTES = {
+  v1: 'V1 baseline: the loud pink "Change day plan" link, repeated on every day row, competing visually with "Plan My Trip".',
+  v2: 'V2 recommended scan entry: small grey "Change day" chip aligned right of the day title. Drag handles on stay days; "Transfer" tag on Day 3 (Ubud → Seminyak).',
+  v3: 'V3 study entry: day-detail page header offers Photos / Videos / Change day as three equally weighted chips.',
+  v4: 'V4 experience entry: Instagram-style. Refresh icon in the right action rail (primary) + labelled "Change day" chip next to the title (backup). Bottom is reserved for captions.',
+  v5: 'V5 sheet detail: editorial naming ("Up before dawn", "Pulse of the jungle"), cascade warning on the Adventure option, one-tap Rebalance toast.',
+};
+
+const $ = sel=>document.querySelector(sel);
+const stage = $('#stage');
+
+function statusBar(){
+  return `<div class="status"><span>9:41</span><span class="icons"><span>•••</span><span>📶</span><span>🔋</span></span></div>`;
+}
+
+function topbarInPhone(title){
+  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 16px 14px">
+    <button class="btn-ghost" style="border:none;padding:6px">←</button>
+    <strong style="font-size:14px;flex:1">${title||'Itinerary'}</strong>
+    <button class="btn-ghost" style="border:none;padding:6px">⌕</button>
+  </div>`;
+}
+
+function dayRowCurrent(num, city, chips, activeDot){
+  return `<div class="day-row">
+    <div class="dot ${activeDot?'':'inactive'}"></div>
+    <p class="name">Day ${num}: ${city}</p>
+    <div class="chips">${chips.map(c=>'• '+c).join(' ')}</div>
+    <button class="loud-link" onclick="alert('Current loud link · no sheet wired in V1')">⟳ Change day plan</button>
+    <div class="photoslabel">📷 Day ${num} photos from travelers</div>
+    <div class="photos"><div class="ph">ATV Ride</div><div class="ph b">Rice Terrace</div><div class="ph c">Swing</div></div>
+    <div class="see-link">▶ See how 847+ couples experienced this</div>
+  </div>`;
+}
+
+function dayRowDemoted(num, city, chips, activeDot, isStayDay){
+  const handle = isStayDay
+    ? `<span style="color:#9CA3AF;cursor:grab;font-size:14px;margin-right:6px;user-select:none">⋮⋮</span>`
+    : `<span style="color:#D0D5DD;font-size:14px;margin-right:6px;user-select:none">⋮⋮</span>`;
+  const transferTag = !isStayDay
+    ? `<span style="font-size:9px;background:#FEF0C7;color:#A6760D;padding:2px 7px;border-radius:999px;font-weight:700;margin-left:6px">Transfer</span>`
+    : '';
+  const photos = isStayDay
+    ? `<div class="ph">ATV Ride</div><div class="ph b">Rice Terrace</div><div class="ph c">Swing</div>`
+    : `<div class="ph c">Drive</div><div class="ph">Check-in</div><div class="ph b">Beach</div>`;
+  return `<div class="day-row">
+    <div class="dot ${activeDot?'':'inactive'}"></div>
+    <div class="head">
+      <p class="name" style="display:flex;align-items:center">${handle}Day ${num}: ${city}${transferTag}</p>
+      <button class="btn-ghost" onclick="openDaySheet(${num},'${city}')">⟳ Change day</button>
+    </div>
+    <div class="chips">${chips.map(c=>'• '+c).join(' ')}</div>
+    <div class="photoslabel">📷 Day ${num} photos from travelers</div>
+    <div class="photos">${photos}</div>
+    <div class="see-link" onclick="renderVariant('v3')">▶ Tap to see Day ${num} detail (V3 entry)</div>
+  </div>`;
+}
+
+function footerCTA(delta){
+  let deltaHtml = '';
+  if(delta){
+    if(delta>0) deltaHtml = `<span class="delta up">+₹${delta.toLocaleString('en-IN')} / person</span>`;
+    else if(delta<0) deltaHtml = `<span class="delta dn">-₹${Math.abs(delta).toLocaleString('en-IN')} / person</span>`;
+  }
+  const newTotal = 62498 + (delta||0);
+  return `<div class="footer-cta">
+    <div class="price">From <b>₹${newTotal.toLocaleString('en-IN')}</b> /person ${deltaHtml}<br/>Price incl. GST & TCS</div>
+    <button class="btn-primary">Plan My Trip →</button>
+  </div>`;
+}
+
+function basePhone(content, delta){
+  return `<div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      ${statusBar()}
+      <div class="scroll">
+        ${topbarInPhone('Bali · 7 nights')}
+        <div class="section"><h2>Itinerary at a glance</h2></div>
+        <div class="section" style="padding-top:0">
+          <div class="timeline">
+            ${content}
+          </div>
+        </div>
+        <div style="height:140px"></div>
+      </div>
+      ${footerCTA(delta)}
+    </div>
+  </div>`;
+}
+
+/* ============ V1 / V2 ============ */
+function renderV1(){
+  const rows = [
+    dayRowCurrent(1,'Ubud',['Lempuyang','Tirta Gangga'], true),
+    dayRowCurrent(2,'Ubud',['Monkey Forest','Tegallalang terraces'], false),
+    dayRowCurrent(3,'Ubud → Seminyak',['Transfer day','Sunset at Potato Head'], false),
+    dayRowCurrent(4,'Seminyak',['Beach clubs','Shopping','Dining'], false),
+  ].join('');
+  return basePhone(rows, 0);
+}
+function renderV2(){
+  const rows = [
+    dayRowDemoted(1,'Ubud',['Lempuyang','Tirta Gangga'], true, true),
+    dayRowDemoted(2,'Ubud',['Monkey Forest','Tegallalang terraces'], false, true),
+    dayRowDemoted(3,'Ubud → Seminyak',['Hotel change','Drive to coast'], false, false),
+    dayRowDemoted(4,'Seminyak',['Beach clubs','Shopping','Dining'], false, true),
+  ].join('');
+  return basePhone(rows, 0);
+}
+
+/* ============ V3 Day detail page ============ */
+function renderV3(){
+  return `<div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      ${statusBar()}
+      <div class="scroll">
+        ${topbarInPhone('Day 1 · Ubud')}
+        <div style="height:200px;background:linear-gradient(135deg,#558B2F 0%,#1B5E20 100%);position:relative;color:#fff;padding:16px;display:flex;align-items:flex-end">
+          <div>
+            <p style="font-family:var(--serif);font-size:24px;margin:0">Slow Ubud</p>
+            <p style="font-size:13px;opacity:.85;margin:4px 0 0">Day 1 · Pace · Relaxed</p>
+          </div>
+        </div>
+        <div class="section">
+          <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap">
+            <button class="btn-ghost">📷 Photos</button>
+            <button class="btn-ghost">▶ Videos</button>
+            <button class="btn-ghost" onclick="openDaySheet(1,'Ubud')">⟳ Change day</button>
+          </div>
+          <h2 style="font-size:15px">What's planned</h2>
+          <div style="font-size:13px;color:var(--ink);line-height:1.7">
+            <p>🌅 <b>09:00</b> · Sunrise yoga at Karsa Spa</p>
+            <p>🍌 <b>11:00</b> · Breakfast at Sayuri Healing Food</p>
+            <p>🏛️ <b>13:00</b> · Tirta Empul water temple</p>
+            <p>🌾 <b>15:30</b> · Tegallalang rice terraces walk</p>
+            <p>🌆 <b>18:00</b> · Sunset cocktails, Bambu Indah</p>
+          </div>
+          <h2 style="font-size:15px;margin-top:20px">Day 1 photos from travelers</h2>
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <div style="flex:1;height:100px;border-radius:8px;background:linear-gradient(135deg,#558B2F,#1B5E20)"></div>
+            <div style="flex:1;height:100px;border-radius:8px;background:linear-gradient(135deg,#827717,#33691E)"></div>
+            <div style="flex:1;height:100px;border-radius:8px;background:linear-gradient(135deg,#3E2723,#5D4037)"></div>
+          </div>
+        </div>
+        <div style="height:140px"></div>
+      </div>
+      ${footerCTA(0)}
+    </div>
+  </div>`;
+}
+
+/* ============ V4 Video viewer ============ */
+function renderV4(){
+  return `<div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="viewer bg1">
+        <button class="topx" onclick="alert('Close player')">×</button>
+
+        <!-- Top chip next to title (Option B, labelled backup) -->
+        <div style="position:absolute;top:60px;left:60px;right:70px;display:flex;align-items:center;gap:8px">
+          <div style="flex:1;color:#fff">
+            <p style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;opacity:.7;margin:0">Day 1 · Ubud</p>
+            <p style="font-family:var(--serif);font-size:18px;margin:2px 0 0">Lempuyang at first light</p>
+          </div>
+          <button onclick="openDaySheet(1,'Ubud',true)" style="background:rgba(255,255,255,.92);color:#181D27;font-size:11px;font-weight:700;padding:7px 12px;border-radius:999px;border:none;white-space:nowrap;cursor:pointer">⟳ Change day</button>
+        </div>
+
+        <!-- Right action rail (Option A, primary) -->
+        <div style="position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:18px;align-items:center;color:#fff">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">♡</div>
+            <span style="font-size:10px;font-weight:600">3.2k</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer">💬</div>
+            <span style="font-size:10px;font-weight:600">128</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer">↗</div>
+            <span style="font-size:10px;font-weight:600">Share</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px" onclick="openDaySheet(1,'Ubud',true)">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);color:#181D27;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)">⟳</div>
+            <span style="font-size:10px;font-weight:600">Change</span>
+          </div>
+        </div>
+
+        <!-- Caption (bottom, untouched) -->
+        <div style="position:absolute;left:14px;right:80px;bottom:24px;color:#fff;font-size:12px;line-height:1.5">
+          <p style="margin:0;font-weight:600;font-size:11px;opacity:.85">@traveler_anna · 12k views</p>
+          <p style="margin:4px 0 0;opacity:.92">Worth the 3am wake-up. Get to the gates before the day-trippers and you'll have the heaven on earth shot all to yourself. ✨</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============ V5 Sheet detail ============ */
+function renderV5(){
+  // open sheet pre-rendered
+  return basePhone([dayRowDemoted(1,'Ubud',['Temples','Rice terraces','Yoga'], true), dayRowDemoted(2,'Ubud',['Temples','Rice terraces','Yoga'], false)].join(''), 0);
+}
+
+/* ============ Day sheet ============ */
+function daySheetMarkup(num, city, withWarning){
+  return `<div class="sheet-back" onclick="if(event.target===this)closeDaySheet()">
+    <div class="sheet">
+      <div class="handle"></div>
+      <h3>Day ${num} · ${city}</h3>
+      <p class="context">Pick a different vibe or keep your current.</p>
+
+      <h4>Currently selected</h4>
+      <div class="day-opt pinned">
+        <h5>Temples of east Bali</h5>
+        <div class="acts">Lempuyang gates · Tirta Gangga water palace</div>
+        <span class="pace balanced">Balanced</span>
+        <div class="row"><span style="font-size:11px;color:var(--muted)">Selected</span></div>
+      </div>
+
+      <h4>Alternatives for Day ${num}</h4>
+
+      <div class="day-opt">
+        <h5>Up before dawn</h5>
+        <div class="acts">Mount Batur sunrise jeep · breakfast at the crater</div>
+        <span class="pace active">Active · early start</span>
+        ${withWarning ? `<div class="warn">⚠️ Makes Days 1-3 all high-energy. We'll suggest a balanced Day 2 after.</div>` : ''}
+        <div class="row">
+          <span class="opt-price up" style="color:var(--coral);font-weight:700;font-size:13px">+₹1,200 / person</span>
+          <button class="chip-select" onclick="selectDay('Up before dawn', 1200, true)">Select</button>
+        </div>
+      </div>
+
+      <div class="day-opt">
+        <h5>Pulse of the jungle</h5>
+        <div class="acts">ATV through Pertenu · white-water rafting on Ayung</div>
+        <span class="pace active">Active</span>
+        <div class="row">
+          <span class="opt-price up" style="color:var(--coral);font-weight:700;font-size:13px">+₹2,400 / person</span>
+          <button class="chip-select" onclick="selectDay('Pulse of the jungle', 2400, true)">Select</button>
+        </div>
+      </div>
+
+      <div class="day-opt">
+        <h5>Hidden rice fields, hidden beach</h5>
+        <div class="acts">Jatiluwih terraces walk · sunset at Pasut Love Beach</div>
+        <span class="pace balanced">Balanced</span>
+        <div class="row">
+          <span class="opt-price" style="color:var(--green);font-weight:600;font-size:13px">Same price</span>
+          <button class="chip-select" onclick="selectDay('Hidden rice fields, hidden beach', 0, false)">Select</button>
+        </div>
+      </div>
+
+      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:18px">
+        ⓘ Want to move this day elsewhere? Drag the handle on the itinerary (same city only).
+      </p>
+    </div>
+  </div>`;
+}
+
+let __overViewer = false;
+function openDaySheet(num, city, overViewer){
+  __overViewer = !!overViewer;
+  const screen = stage.querySelector('.screen');
+  const existing = screen.querySelector('.sheet-back');
+  if(existing) existing.remove();
+  // For V5, always show with warning by default. For V2/V3/V4, default no warning.
+  const variant = document.querySelector('.tab.active').dataset.v;
+  const withWarn = variant === 'v5';
+  screen.insertAdjacentHTML('beforeend', daySheetMarkup(num, city, withWarn));
+}
+function closeDaySheet(){
+  const back = stage.querySelector('.sheet-back');
+  if(back) back.remove();
+}
+function selectDay(name, delta, showRebalance){
+  closeDaySheet();
+  const footer = stage.querySelector('.footer-cta');
+  if(footer) footer.outerHTML = footerCTA(delta);
+  const screen = stage.querySelector('.screen');
+  let existingToast = screen.querySelector('.toast');
+  if(existingToast) existingToast.remove();
+  const toastInner = showRebalance
+    ? `Swapped Day 1 to ${name}. Days 1-3 now active. <button onclick="rebalance()">Rebalance</button> <button onclick="undoDay()">Undo</button>`
+    : `Swapped Day 1 to ${name} <button onclick="undoDay()">Undo</button>`;
+  screen.insertAdjacentHTML('beforeend', `<div class="toast">${toastInner}</div>`);
+  setTimeout(()=>{ const t = stage.querySelector('.toast'); if(t) t.remove(); }, 6000);
+}
+function rebalance(){
+  const t = stage.querySelector('.toast'); if(t) t.remove();
+  const screen = stage.querySelector('.screen');
+  screen.insertAdjacentHTML('beforeend', `<div class="toast">Day 2 set to <b style="color:#fff">Slow Ubud</b> for balance. <button onclick="undoDay()">Undo</button></div>`);
+  setTimeout(()=>{ const t = stage.querySelector('.toast'); if(t) t.remove(); }, 5000);
+}
+function undoDay(){
+  const footer = stage.querySelector('.footer-cta');
+  if(footer) footer.outerHTML = footerCTA(0);
+  const t = stage.querySelector('.toast'); if(t) t.remove();
+}
+
+/* ============ Tab switching ============ */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const v = t.dataset.v;
+    document.getElementById('note').textContent = NOTES[v];
+    renderVariant(v);
+  });
+});
+
+function renderVariant(v){
+  let html = '', extras = '';
+  switch(v){
+    case 'v1': html = renderV1(); extras = `<div class="caption">Today's live experience. <b>Issue:</b> repeated bright pink links pull attention from "Plan My Trip".</div>`; break;
+    case 'v2': html = renderV2(); extras = `<div class="caption"><b>Recommended scanning entry.</b> Quiet "Change day" chip. Tap it to open the swap sheet. Tap the "Tap to see Day detail" link to jump to V3.</div>`; break;
+    case 'v3': html = renderV3(); extras = `<div class="caption"><b>Studying entry.</b> Three equally weighted chips: Photos / Videos / Change day. No pink. Tap Change day to open the sheet.</div>`; break;
+    case 'v4': html = renderV4(); extras = `<div class="caption"><b>Experiencing entry.</b> Floating "Change day" pill at the bottom. The most informed swap moment: user just watched the day's vibe. Tap to open the sheet over the paused video.</div>`; break;
+    case 'v5': html = renderV5(); extras = `<div class="caption"><b>Cascade warning + rebalance.</b> Sheet opens with the warning on the Adventure option. Tap Select to see the rebalance toast.</div>`; break;
+  }
+  stage.innerHTML = `<div class="stage-col">${html}${extras}</div>`;
+  if(v === 'v5'){
+    setTimeout(()=>openDaySheet(1,'Ubud'),80);
+  }
+}
+
+renderVariant('v1');
+</script>
+</body>
+</html>

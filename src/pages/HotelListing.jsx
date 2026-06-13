@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown } from "lucide-react";
+import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown, ChevronUp, Search, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
 
-// ─── Quick filter chips (top bar) ───
+// ─── Quick filter chips (floating bar) ───
 const quickFilters = [
-  "Private pool", "Hot tub", "Sea view", "Mountain view", "9+ rated", "5 star",
+  "5 star", "Free cancellation", "9+ rated", "Swimming pool", "Breakfast included",
 ];
 
 // ─── Sort options ───
@@ -27,10 +27,19 @@ export default function HotelListing() {
 
   // Filter/sort state
   const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
-  const [showFilterSheet, setShowFilterSheet] = useState(false);
-  const [showSortSheet, setShowSortSheet] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
+  const [sheetTab, setSheetTab] = useState("Filters");
   const [sortIdx, setSortIdx] = useState(0);
-  const [filters, setFilters] = useState({ stars: new Set(), minRating: 0, amenities: new Set() });
+  const [filters, setFilters] = useState({
+    budget: null, // [lo, hi] per night; null = untouched
+    stars: new Set(),
+    minRating: 0,
+    meals: new Set(),
+    landmarks: new Set(),
+    amenities: new Set(),
+    roomFacilities: new Set(),
+    freeCancellation: false,
+  });
 
   if (!itinerary || !stayInfo) {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Stay not found</div>;
@@ -52,10 +61,17 @@ export default function HotelListing() {
         for (const f of activeQuickFilters) {
           if (f === "5 star" && h.stars !== 5) return false;
           if (f === "9+ rated" && h.bookingScore < 9) return false;
-          if (["Private pool", "Hot tub", "Sea view", "Mountain view"].includes(f) && !h.viewTags.includes(f)) return false;
+          if (f === "Free cancellation" && !h.freeCancellation) return false;
+          if (f === "Swimming pool" && !h.amenities.includes("Swimming pool")) return false;
+          if (f === "Breakfast included" && !h.amenities.includes("Breakfast")) return false;
         }
         return true;
       });
+    }
+
+    // Budget filter (per-night price range)
+    if (filters.budget) {
+      result = result.filter(h => h.pricePerNight >= filters.budget[0] && h.pricePerNight <= filters.budget[1]);
     }
 
     // Star filter
@@ -68,7 +84,17 @@ export default function HotelListing() {
       result = result.filter(h => h.bookingScore >= filters.minRating);
     }
 
-    // Amenity filter
+    // Meals filter (any room offers a selected plan)
+    if (filters.meals.size > 0) {
+      result = result.filter(h => h.rooms.some(r => filters.meals.has(r.mealPlan)));
+    }
+
+    // Nearby landmark filter
+    if (filters.landmarks.size > 0) {
+      result = result.filter(h => filters.landmarks.has(h.neighbourhood));
+    }
+
+    // Hotel facilities filter
     if (filters.amenities.size > 0) {
       result = result.filter(h => {
         for (const a of filters.amenities) {
@@ -76,6 +102,16 @@ export default function HotelListing() {
         }
         return true;
       });
+    }
+
+    // Room facilities filter (every selected facility offered by some room)
+    if (filters.roomFacilities.size > 0) {
+      result = result.filter(h => [...filters.roomFacilities].every(f => h.rooms.some(r => r.amenities.includes(f))));
+    }
+
+    // Free cancellation
+    if (filters.freeCancellation) {
+      result = result.filter(h => h.freeCancellation);
     }
 
     // Sort, always put current hotel first
@@ -106,11 +142,32 @@ export default function HotelListing() {
   };
 
   const filterAmenityOptions = ["Breakfast", "Spa", "Swimming pool", "Gym", "Airport Transfer", "Free WiFi", "Beachfront", "Restaurant", "Bar", "Parking"];
+  const roomFacilityOptions = ["Jacuzzi", "Balcony", "Sea View", "Private Pool", "Minibar", "Butler Service"];
+  const mealOptions = ["Only Room", "Breakfast included", "Breakfast + Dinner", "All Inclusive"];
+  const landmarkOptions = [...new Set(allHotels.map(h => h.neighbourhood))];
+
+  // Budget slider bounds from the city's actual prices, rounded to ₹500
+  const priceBounds = [
+    Math.floor(Math.min(...allHotels.map(h => h.pricePerNight)) / 500) * 500,
+    Math.ceil(Math.max(...allHotels.map(h => h.pricePerNight)) / 500) * 500,
+  ];
+  const budgetValue = filters.budget || priceBounds;
+
+  // Count of sheet filters in effect (drives the badge on the sliders button)
+  const activeFilterCount =
+    (filters.budget ? 1 : 0) + filters.stars.size + (filters.minRating > 0 ? 1 : 0) +
+    filters.meals.size + filters.landmarks.size + filters.amenities.size +
+    filters.roomFacilities.size + (filters.freeCancellation ? 1 : 0);
+
+  const clearAllFilters = () => setFilters({
+    budget: null, stars: new Set(), minRating: 0, meals: new Set(),
+    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), freeCancellation: false,
+  });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.white }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.white, position: "relative" }}>
       {/* ═══ Full scrollable content ═══ */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
 
         {/* ═══ Header (scrolls with content) ═══ */}
         <div style={{ background: "linear-gradient(180deg, #FFEBF1 0%, #FFFFFF 100%)", padding: "10px 16px 12px" }}>
@@ -127,41 +184,7 @@ export default function HotelListing() {
                 {stayInfo.checkIn} – {stayInfo.checkOut} &bull; 1 Room &bull; 👤 2
               </p>
             </div>
-            {/* Sort button */}
-            <button onClick={() => setShowSortSheet(true)} style={{
-              display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${C.div}`,
-              borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontFamily: "inherit",
-            }}>
-              <SlidersHorizontal size={14} color={C.sub} />
-              <span style={{ fontSize: 11, color: C.sub }}>Sort</span>
-            </button>
           </div>
-        </div>
-
-        {/* ═══ Quick filter chips ═══ */}
-        <div className="hs" style={{ gap: 8, padding: "8px 16px 12px", borderBottom: `1px solid ${C.div}` }}>
-          {/* Filter button */}
-          <button onClick={() => setShowFilterSheet(true)} style={{
-            display: "flex", alignItems: "center", gap: 4, background: "none", border: `1.5px solid ${C.div}`,
-            borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-          }}>
-            <SlidersHorizontal size={13} color={C.head} />
-            <span style={{ fontSize: 12, fontWeight: 500, color: C.head }}>Filters</span>
-          </button>
-          {quickFilters.map(f => (
-            <button
-              key={f}
-              onClick={() => toggleQuickFilter(f)}
-              style={{
-                flexShrink: 0, border: activeQuickFilters.has(f) ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
-                borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
-                background: activeQuickFilters.has(f) ? "#FFEBF1" : "none",
-                fontSize: 12, fontWeight: 500, color: activeQuickFilters.has(f) ? "#FD014F" : C.head,
-              }}
-            >
-              {f}
-            </button>
-          ))}
         </div>
 
         {/* ═══ Hotel List ═══ */}
@@ -207,18 +230,20 @@ export default function HotelListing() {
                       {hotel.name}
                     </p>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 3 }}>
-                      <Star size={11} fill="#FBBC05" color="#FBBC05" />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#FD014F" }}>{hotel.stars} star hotel</span>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
-                        fontSize: 9, fontWeight: 700,
-                      }}>B</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{hotel.bookingScore} Rated</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {Array.from({ length: hotel.stars }).map((_, s) => (
+                          <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
+                          fontSize: 9, fontWeight: 700,
+                        }}>B</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{hotel.bookingScore} Rated</span>
+                      </div>
                     </div>
 
                     <p style={{ fontSize: 12, color: C.sub, margin: "0 0 4px" }}>{hotel.roomType} : {hotel.bedSummary}</p>
@@ -251,63 +276,112 @@ export default function HotelListing() {
         </div>
       </div>
 
-      {/* ═══ Sort Bottom Sheet ═══ */}
-      {showSortSheet && (
+      {/* ═══ Floating Filter Bar at Bottom (same pattern as trip Listing) ═══ */}
+      <div style={{
+        position: "absolute", bottom: 12, left: 12, right: 12, zIndex: 10,
+        background: "rgba(255,255,255,0.92)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        borderRadius: 16, padding: "8px 10px",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
+        {/* Scrollable quick chips */}
+        <div className="hs" style={{ flex: 1, gap: 6, paddingBottom: 0, minWidth: 0 }}>
+          {quickFilters.map(f => (
+            <button
+              key={f}
+              onClick={() => toggleQuickFilter(f)}
+              style={{
+                flexShrink: 0, border: activeQuickFilters.has(f) ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
+                borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
+                background: activeQuickFilters.has(f) ? "#FFEBF1" : C.white,
+                fontSize: 12, fontWeight: 500, color: activeQuickFilters.has(f) ? "#FD014F" : C.head,
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        {/* Fixed separator + filter icon */}
+        <div style={{ width: 1, height: 24, background: C.div, flexShrink: 0 }} />
+        <button onClick={() => { setSheetTab("Filters"); setShowSheet(true); }} style={{
+          position: "relative", width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+          background: activeFilterCount > 0 ? "#FFEBF1" : "transparent", border: activeFilterCount > 0 ? "1.5px solid #FD014F" : `1px solid ${C.div}`,
+          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+        }}>
+          <SlidersHorizontal size={14} color={activeFilterCount > 0 ? "#FD014F" : C.sub} />
+          {activeFilterCount > 0 && (
+            <div style={{ position: "absolute", top: -6, right: -6, width: 16, height: 16, borderRadius: "50%", background: "#FD014F", color: "#fff", fontSize: 8, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeFilterCount}</div>
+          )}
+        </button>
+      </div>
+
+      {/* ═══ Filters / Sort Bottom Sheet (tabbed, same pattern as trip Listing) ═══ */}
+      {showSheet && (
         <div style={{ position: "absolute", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={() => setShowSortSheet(false)} />
-          <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", padding: "20px 16px 24px", zIndex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Sort by</p>
-              <button onClick={() => setShowSortSheet(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <XIcon size={18} color={C.sub} />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowSheet(false)} />
+          <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", zIndex: 1, height: "70%", display: "flex", flexDirection: "column" }}>
+            {/* Sticky header with 50-50 tabs */}
+            <div style={{ flexShrink: 0, padding: "14px 20px 0", display: "flex", alignItems: "flex-start" }}>
+              <div style={{ flex: 1, display: "flex" }}>
+                {["Filters", "Sort"].map(tab => (
+                  <button key={tab} onClick={() => setSheetTab(tab)} style={{
+                    flex: 1, fontSize: 15, fontWeight: sheetTab === tab ? 600 : 500, color: sheetTab === tab ? C.head : C.inact,
+                    background: "none", border: "none", cursor: "pointer", padding: "0 0 12px", fontFamily: "inherit",
+                    borderBottom: sheetTab === tab ? "2px solid #FD014F" : "2px solid transparent",
+                    textAlign: "center",
+                  }}>{tab}</button>
+                ))}
+              </div>
+              <button onClick={() => setShowSheet(false)} style={{ width: 28, height: 28, borderRadius: "50%", background: C.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginLeft: 4 }}>
+                <XIcon size={14} color={C.sub} />
               </button>
             </div>
-            {sortOptions.map((opt, i) => (
-              <button
-                key={opt.label}
-                onClick={() => { setSortIdx(i); setShowSortSheet(false); }}
-                style={{
-                  display: "block", width: "100%", textAlign: "left", padding: "12px 0",
-                  background: "none", border: "none", borderBottom: i < sortOptions.length - 1 ? `1px solid ${C.div}` : "none",
-                  fontSize: 14, color: i === sortIdx ? "#FD014F" : C.head, fontWeight: i === sortIdx ? 600 : 400,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}
-              >
-                {opt.label} {i === sortIdx && "✓"}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* ═══ Filter Bottom Sheet ═══ */}
-      {showFilterSheet && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={() => setShowFilterSheet(false)} />
-          <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", padding: "20px 16px 24px", zIndex: 1, maxHeight: "70%", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Filters</p>
-              <button onClick={() => setShowFilterSheet(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-                <XIcon size={18} color={C.sub} />
-              </button>
+            {/* Sort tab */}
+            {sheetTab === "Sort" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 24px" }} className="hide-scrollbar">
+              {sortOptions.map((opt, i) => (
+                <button
+                  key={opt.label}
+                  onClick={() => { setSortIdx(i); setShowSheet(false); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", padding: "12px 0",
+                    background: "none", border: "none", borderBottom: i < sortOptions.length - 1 ? `1px solid ${C.div}` : "none",
+                    fontSize: 14, color: i === sortIdx ? "#FD014F" : C.head, fontWeight: i === sortIdx ? 600 : 400,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  {opt.label} {i === sortIdx && "✓"}
+                </button>
+              ))}
+            </div>
+            )}
+
+            {/* Filters tab */}
+            {sheetTab === "Filters" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }} className="hide-scrollbar">
+
+            {/* Budget */}
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 4px" }}>
+              Budget <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>per night</span>
+            </p>
+            <DualRange
+              min={priceBounds[0]}
+              max={priceBounds[1]}
+              step={500}
+              value={budgetValue}
+              onChange={(v) => setFilters(prev => ({ ...prev, budget: v }))}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>₹{formatHotelPrice(budgetValue[0])}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>₹{formatHotelPrice(budgetValue[1])}</span>
             </div>
 
             {/* Star category */}
             <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Star Category</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               {[3, 4, 5].map(s => (
-                <button
-                  key={s}
-                  onClick={() => toggleFilter("stars", s)}
-                  style={{
-                    border: filters.stars.has(s) ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
-                    borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit",
-                    background: filters.stars.has(s) ? "#FFEBF1" : "none",
-                    fontSize: 13, fontWeight: 500, color: filters.stars.has(s) ? "#FD014F" : C.head,
-                  }}
-                >
-                  {s} ★
-                </button>
+                <FilterChip key={s} label={`${s} ★`} on={filters.stars.has(s)} onClick={() => toggleFilter("stars", s)} />
               ))}
             </div>
 
@@ -315,43 +389,54 @@ export default function HotelListing() {
             <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Booking.com Rating</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               {[8, 8.5, 9].map(r => (
-                <button
-                  key={r}
-                  onClick={() => setFilters(prev => ({ ...prev, minRating: prev.minRating === r ? 0 : r }))}
-                  style={{
-                    border: filters.minRating === r ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
-                    borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit",
-                    background: filters.minRating === r ? "#FFEBF1" : "none",
-                    fontSize: 13, fontWeight: 500, color: filters.minRating === r ? "#FD014F" : C.head,
-                  }}
-                >
-                  {r}+
-                </button>
+                <FilterChip key={r} label={`${r}+`} on={filters.minRating === r} onClick={() => setFilters(prev => ({ ...prev, minRating: prev.minRating === r ? 0 : r }))} />
               ))}
             </div>
 
-            {/* Amenities */}
-            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Amenities</p>
+            {/* Meals */}
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Meals</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {filterAmenityOptions.map(a => (
-                <button
-                  key={a}
-                  onClick={() => toggleFilter("amenities", a)}
-                  style={{
-                    border: filters.amenities.has(a) ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
-                    borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
-                    background: filters.amenities.has(a) ? "#FFEBF1" : "none",
-                    fontSize: 12, fontWeight: 500, color: filters.amenities.has(a) ? "#FD014F" : C.head,
-                  }}
-                >
-                  {a}
-                </button>
+              {mealOptions.map(m => (
+                <FilterChip key={m} label={m} on={filters.meals.has(m)} onClick={() => toggleFilter("meals", m)} />
               ))}
+            </div>
+
+            {/* Nearby landmarks */}
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Nearby Landmarks</p>
+            <SearchableCheckList
+              options={landmarkOptions}
+              selected={filters.landmarks}
+              onToggle={(l) => toggleFilter("landmarks", l)}
+              placeholder="Search landmarks"
+            />
+
+            {/* Hotel facilities */}
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Hotel Facilities</p>
+            <SearchableCheckList
+              options={filterAmenityOptions}
+              selected={filters.amenities}
+              onToggle={(a) => toggleFilter("amenities", a)}
+              placeholder="Search hotel facilities"
+            />
+
+            {/* Room facilities */}
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Room Facilities</p>
+            <SearchableCheckList
+              options={roomFacilityOptions}
+              selected={filters.roomFacilities}
+              onToggle={(f) => toggleFilter("roomFacilities", f)}
+              placeholder="Search room facilities"
+            />
+
+            {/* Free cancellation */}
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Cancellation</p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              <FilterChip label="Free cancellation" on={filters.freeCancellation} onClick={() => setFilters(prev => ({ ...prev, freeCancellation: !prev.freeCancellation }))} />
             </div>
 
             {/* Apply */}
             <button
-              onClick={() => setShowFilterSheet(false)}
+              onClick={() => setShowSheet(false)}
               style={{
                 width: "100%", height: 48, borderRadius: 9999, border: "none",
                 background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700,
@@ -360,9 +445,132 @@ export default function HotelListing() {
             >
               Apply Filters
             </button>
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearAllFilters}
+                style={{
+                  width: "100%", padding: "12px 0", background: "none", border: "none",
+                  fontSize: 13, fontWeight: 600, color: C.sub, cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                Clear all filters
+              </button>
+            )}
+            </div>
+            )}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Pink pill chip used across the filter sheet ───
+function FilterChip({ label, on, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        border: on ? "1.5px solid #FD014F" : "1.5px solid #E9EAEB",
+        borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
+        background: on ? "#FFEBF1" : "none",
+        fontSize: 12, fontWeight: 500, color: on ? "#FD014F" : "#181D27",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ─── Searchable checkbox list: one option per row, 5 visible, rest behind "Show more" ───
+function SearchableCheckList({ options, selected, onToggle, placeholder }) {
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const q = query.trim().toLowerCase();
+  const matches = q ? options.filter(o => o.toLowerCase().includes(q)) : options;
+  const visible = expanded ? matches : matches.slice(0, 5);
+  const hiddenCount = matches.length - 5;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {/* Search box */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", height: 36, borderRadius: 10, border: "1.5px solid #E9EAEB", marginBottom: 6 }}>
+        <Search size={14} color="#A4A7AE" style={{ flexShrink: 0 }} />
+        <input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setExpanded(false); }}
+          placeholder={placeholder}
+          style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#181D27", fontFamily: "inherit", background: "transparent", minWidth: 0 }}
+        />
+        {query && (
+          <button onClick={() => setQuery("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+            <XIcon size={13} color="#A4A7AE" />
+          </button>
+        )}
+      </div>
+
+      {/* Rows */}
+      {visible.map(o => {
+        const on = selected.has(o);
+        return (
+          <button
+            key={o}
+            onClick={() => onToggle(o)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%",
+              padding: "9px 2px", background: "none", border: "none",
+              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+            }}
+          >
+            <span style={{
+              width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+              background: on ? "#FD014F" : "#fff", border: on ? "1.5px solid #FD014F" : "1.5px solid #D5D7DA",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {on && <Check size={12} color="#fff" strokeWidth={3} />}
+            </span>
+            <span style={{ fontSize: 13, color: "#181D27", fontWeight: on ? 600 : 400 }}>{o}</span>
+          </button>
+        );
+      })}
+
+      {matches.length === 0 && (
+        <p style={{ fontSize: 12, color: "#A4A7AE", margin: "6px 2px" }}>No matches</p>
+      )}
+
+      {/* Show more / less */}
+      {hiddenCount > 0 && !expanded && (
+        <button onClick={() => setExpanded(true)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: "#FD014F", padding: "6px 2px" }}>
+          Show {hiddenCount} more <ChevronDown size={14} />
+        </button>
+      )}
+      {expanded && matches.length > 5 && (
+        <button onClick={() => setExpanded(false)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: "#FD014F", padding: "6px 2px" }}>
+          Show less <ChevronUp size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Dual-thumb budget slider (thumb styles in index.css under .dual-range) ───
+function DualRange({ min, max, step, value, onChange }) {
+  const [lo, hi] = value;
+  const pct = (v) => ((v - min) / (max - min || 1)) * 100;
+  return (
+    <div className="dual-range" style={{ position: "relative", height: 28, margin: "6px 0 2px" }}>
+      <div style={{ position: "absolute", top: 12, left: 0, right: 0, height: 4, borderRadius: 4, background: "#E9EAEB" }} />
+      <div style={{ position: "absolute", top: 12, left: `${pct(lo)}%`, width: `${pct(hi) - pct(lo)}%`, height: 4, borderRadius: 4, background: "#FD014F" }} />
+      <input
+        type="range" min={min} max={max} step={step} value={lo}
+        onChange={(e) => onChange([Math.min(Number(e.target.value), hi - step), hi])}
+        aria-label="Minimum budget"
+      />
+      <input
+        type="range" min={min} max={max} step={step} value={hi}
+        onChange={(e) => onChange([lo, Math.max(Number(e.target.value), lo + step)])}
+        aria-label="Maximum budget"
+      />
     </div>
   );
 }

@@ -98,12 +98,12 @@ function DurationTile({ scoring, onClick }) {
   );
 }
 
-export function DayScoreRow({ scoring, onOpen }) {
+export function DayScoreRow({ scoring, onOpen, bg = "#F9F9FB", borderColor = "#E0E2EB", divider = "#E0E2EB" }) {
   return (
     <div style={{
       display: "flex", padding: "12px 0",
-      background: "#F9F9FB",
-      borderTop: "1px solid #E0E2EB", borderBottom: "1px solid #E0E2EB",
+      background: bg,
+      borderTop: `1px solid ${borderColor}`, borderBottom: `1px solid ${borderColor}`,
     }}>
       <ScoreTile
         icon={Heart}
@@ -112,9 +112,9 @@ export function DayScoreRow({ scoring, onOpen }) {
         level={scoring.pace.level}
         onClick={() => onOpen("pace")}
       />
-      <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
+      <div style={{ width: 1, background: divider, margin: "8px 0" }} />
       <DurationTile scoring={scoring} onClick={() => onOpen("duration")} />
-      <div style={{ width: 1, background: "#E0E2EB", margin: "8px 0" }} />
+      <div style={{ width: 1, background: divider, margin: "8px 0" }} />
       <ScoreTile
         icon={Users}
         value={scoring.crowd.label}

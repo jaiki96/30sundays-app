@@ -536,7 +536,7 @@ export const travellerMoments = [
 ];
 
 // Photo tags per destination (mapped to photo indices)
-const photoTags = {
+export const photoTags = {
   Bali: ["ATV Ride", "Rice Terrace", "Swing", "Temple Visit", "Beach Club", "Waterfall", "Monkey Forest", "Ubud Market", "Snorkeling", "Sunset", "Mt Batur", "Cooking Class", "Yoga", "Surfing", "Spa Day"],
   Maldives: ["Overwater Villa", "Snorkeling", "Sunset Cruise", "Beach Dinner", "Dolphin Watch", "Kayaking", "Sandbank", "Spa", "Diving", "Fishing", "Water Sports", "Island Hop", "Coral Reef", "Sunrise", "Yoga"],
   Vietnam: ["Ha Long Bay", "Old Quarter", "Hoi An", "Cooking Class", "Mekong Delta", "Lantern Night", "Street Food", "Sapa Trek", "Cyclo Ride", "Temple", "Beach", "Market", "Boat Ride", "Pagoda", "Coffee"],

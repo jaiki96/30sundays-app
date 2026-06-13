@@ -129,25 +129,6 @@ export default function Destination() {
         </div>
       </div>
 
-      {/* Couples count bar */}
-      {couplesCount[name] && customerPhotos[name] && (
-        <div style={{ padding: "12px 16px 0" }}>
-          <div onClick={() => { setShowTravellersGallery(true); setTravGalleryIdx(0); }} style={{ display: "flex", alignItems: "center", gap: 12, background: C.p100, borderRadius: 14, padding: "10px 16px", cursor: "pointer" }}>
-            <div style={{ display: "flex", marginLeft: 0 }}>
-              {customerPhotos[name].slice(0, 5).map((img, i) => (
-                <div key={i} style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", border: "2px solid #fff", marginLeft: i > 0 ? -8 : 0, position: "relative", zIndex: 5 - i }}>
-                  <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-              ))}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: 0 }}>{couplesCount[name]}+ couples explored {name}</p>
-              <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>with 30 Sundays</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Category carousels - Popular → Offbeat → Relaxed → SS single → activities → SS multi → regions */}
       {popular.length > 0 && (
         <div style={{ marginTop: 22 }}>

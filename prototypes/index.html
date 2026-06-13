@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>30 Sundays - Swap UX Prototypes</title>
+<style>
+  :root{
+    --ink:#181D27; --muted:#535862; --hair:#E9EAEB; --bg:#F7F8FA;
+    --brand:#E31B53; --brand-soft:#FFE6EE; --olive:#7A6420; --cream:#FCF4CC;
+    --green:#027A48;
+    --r:14px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 24px}
+  h1{font-family:Georgia, "Times New Roman", serif;font-size:36px;margin:0 0 8px}
+  p.lead{margin:0 0 36px;color:var(--muted);max-width:680px;text-align:center;font-size:15px;line-height:1.6}
+  .group{width:100%;max-width:980px;margin-bottom:36px}
+  .group h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 14px;font-weight:700}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  a.card{display:block;padding:22px;background:#fff;border:1px solid var(--hair);border-radius:var(--r);text-decoration:none;color:inherit;transition:transform .15s, box-shadow .15s;position:relative;overflow:hidden}
+  a.card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.08)}
+  a.card.featured{border-color:var(--brand);background:linear-gradient(180deg,#fff,#FFF8FB)}
+  a.card h3{margin:0 0 6px;font-size:18px}
+  a.card p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-size:11px;font-weight:700;margin-bottom:12px;letter-spacing:.4px}
+  .pill.green{background:#ECFDF3;color:var(--green)}
+  .pill.olive{background:var(--cream);color:var(--olive)}
+  .badge-new{position:absolute;top:14px;right:14px;background:var(--brand);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.4px}
+  footer{margin-top:auto;padding-top:48px;color:var(--muted);font-size:12px;text-align:center}
+  footer code{background:#fff;border:1px solid var(--hair);padding:2px 6px;border-radius:4px}
+</style>
+</head>
+<body>
+  <h1>Swap UX Prototypes</h1>
+  <p class="lead">Standalone HTML mocks. Works offline. No edits to the live app.<br/>Start with the <b>plain-English walkthroughs</b> if you want the design story; the <b>variant playgrounds</b> let you click through each option.</p>
+
+  <div class="group">
+    <h2>Plain-English walkthroughs · read alongside the docs</h2>
+    <div class="cards">
+      <a class="card featured" href="./hotel-swap-explained.html">
+        <span class="badge-new">NEW</span>
+        <span class="pill">Hotels · walkthrough</span>
+        <h3>Hotel swap, explained</h3>
+        <p>Why we're changing it, how the user feels, 7 design questions answered side-by-side with mini mock-ups. No jargon. Embedded live variants at the end.</p>
+      </a>
+      <a class="card featured" href="./day-swap-explained.html">
+        <span class="badge-new">NEW</span>
+        <span class="pill olive">Days · walkthrough</span>
+        <h3>Day swap, explained</h3>
+        <p>Where the button should live (the scan / study / experience trio), how to name alternatives, knock-on effect warnings, the swap-while-watching pattern. Mini mock-ups throughout.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Variant playgrounds · click through every option</h2>
+    <div class="cards">
+      <a class="card" href="./hotel-swap.html">
+        <span class="pill green">Hotels · playground</span>
+        <h3>Hotel swap variants</h3>
+        <p>5 variants: current, ghost chip + sheet, sheet expanded with See all, global Edit mode, side-by-side compare. Tab switcher at the top.</p>
+      </a>
+      <a class="card" href="./day-swap.html">
+        <span class="pill green">Days · playground</span>
+        <h3>Day swap variants</h3>
+        <p>5 variants: current, demoted chip, day-detail entry, video-viewer floating pill, sheet open with cascade warning.</p>
+      </a>
+    </div>
+  </div>
+
+  <footer>Open with a double-click, or run <code>open prototypes/index.html</code>. Everything works without internet.</footer>
+</body>
+</html>

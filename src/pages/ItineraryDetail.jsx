@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight } from "lucide-react";
-import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames } from "../data";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search } from "lucide-react";
+import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
-import { generateDayOptions } from "../data/dayOptions";
-import { Camera } from "lucide-react";
+import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
+import { Camera, Volume2, VolumeX, FileText, ChevronLeft } from "lucide-react";
 import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
@@ -15,6 +15,8 @@ import { getDayScore } from "../data/dayScoring";
 import { videosForDest } from "../data/watchData";
 import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
+import { ActivityDetailScroll } from "./ActivityDetail";
+import { buildActivityDetail } from "../data/activityData";
 
 const PREBOOKING_CONSULTANTS = [
   { name: "Riya Shah", phone: "+919876500011" },
@@ -23,6 +25,7 @@ const PREBOOKING_CONSULTANTS = [
   { name: "Sana Kapoor", phone: "+919876500044" },
 ];
 import { getUpgradeInfo } from "../data/upgradeData";
+import { useDeals, computePrice, effectiveStatus, isExpired, QUOTE_VALID_DAYS, STATUS_LABEL } from "../data/deals";
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
 
@@ -47,26 +50,42 @@ function getDayActivities(it) {
 }
 
 // Sample hotels per city
+// Hotel-property photos for the stub (resorts/rooms, not activities)
+const HOTEL_STUB_IMGS = [
+  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80&auto=format&fit=crop",
+];
+
 function getHotels(it) {
   return it.days.map((day, i) => ({
     city: day.city,
     dayRange: `Day ${it.days.slice(0, i).reduce((a, d) => a + d.n, 0) + 1}–${it.days.slice(0, i + 1).reduce((a, d) => a + d.n, 0)}`,
     name: `${day.city} Grand Resort`,
     type: "Deluxe Room · Breakfast included",
-    rating: (4 + Math.random() * 0.8).toFixed(1),
-    img: destData[it.dest]?.actImgs?.[(i * 2) % (destData[it.dest]?.actImgs?.length || 1)] || it.img,
+    stars: [4, 5, 4, 5][i % 4],
+    rating: [8.4, 8.9, 8.1, 8.7][i % 4], // Booking.com 10-point scale
+    img: HOTEL_STUB_IMGS[i % HOTEL_STUB_IMGS.length],
   }));
 }
 
 export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const dealId = params.get("dealId");
+  const versionId = params.get("versionId");
+  const dealsCtx = useDeals();
   const it = allItineraries.find(i => i.id === Number(id));
   const [expanded, setExpanded] = useState(false);
   const [activeDay, setActiveDay] = useState(-1); // -1 = Highlights tab
   const [showViewer, setShowViewer] = useState(null); // { day, activity }
   const [saved, setSaved] = useState(false);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
+  const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
+  const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
+  const [allCombosIndex, setAllCombosIndex] = useState(null); // dayIndex for the full "see all" browse screen
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
   const [toast, setToast] = useState(null); // { message, undoData } or null
   const toastTimerRef = useRef(null);
@@ -77,6 +96,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [showDayPhotos, setShowDayPhotos] = useState(null); // { dayNum, photoIdx }
   const [showDayWiseDrawer, setShowDayWiseDrawer] = useState(false);
   const [drawerActiveDay, setDrawerActiveDay] = useState(0);
+
+  // ─── Versioned-deal context ───
+  // When opened with ?dealId&versionId, this screen edits a specific version.
+  // Draft = editable; Quote/Expired = locked (read-only, edits fork a new version).
+  const version = dealId && versionId ? dealsCtx.getVersion(dealId, versionId) : null;
+  const dealStatus = version ? effectiveStatus(version) : null;
+  const inDeal = !!version;
+  const isDraft = inDeal && dealStatus === "draft";
+  const locked = inDeal && (dealStatus === "quote" || dealStatus === "expired");
+  const editable = !inDeal || isDraft;
+  const hydratedRef = useRef(false);
+
+  // Load the opened version's customizations into the editor (once per version).
+  useEffect(() => {
+    if (!version) { hydratedRef.current = false; return; }
+    setSelectedDayOptions(version.customizations?.selectedDayOptions || {});
+    setTravelDates(version.customizations?.travelDates || null);
+    hydratedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [versionId]);
+
+  // Persist edits back into the Draft as they happen.
+  useEffect(() => {
+    if (!it || !isDraft || !hydratedRef.current) return;
+    dealsCtx.updateDraft(dealId, versionId, {
+      customizations: { selectedDayOptions, travelDates },
+      indicativePrice: computePrice(it.price, selectedDayOptions),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDayOptions, travelDates, isDraft]);
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
@@ -133,11 +182,27 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         type: savedHotel.roomName,
         img: savedHotel.image || h.img,
         rating: savedHotel.bookingScore || h.rating,
+        stars: savedHotel.stars || h.stars,
         hotelId: savedHotel.hotelId,
       };
     }
     return { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
   });
+
+  // Upgrade drawer must show the SAME current hotels as the Hotels cards above it,
+  // not the stub's own "current" entries.
+  const upgradeInfoDisplay = {
+    ...upgradeInfo,
+    upgrades: upgradeInfo.upgrades.map(u => {
+      const shown = hotels[u.cityIndex];
+      if (!shown) return u;
+      return {
+        ...u,
+        current: { ...u.current, name: shown.name, stars: shown.stars, type: shown.type, rating: shown.rating, img: shown.img },
+      };
+    }),
+  };
+
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
   const visibleDays = expanded ? daysWithActivities : daysWithActivities.slice(0, 3);
 
@@ -195,14 +260,72 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       })()
     : null;
 
-  // Check if a day has alternate options available
+  // Check if a day has alternate options available (locked versions cannot edit)
   const dayHasOptions = (dayIndex) => {
+    if (!editable) return false;
     const data = generateDayOptions(it, dayIndex, daysWithActivities);
     return data && data.options.length > 1;
   };
 
+  // ─── Deal actions ───
+  const handleSaveToPlans = () => {
+    const { dealId: nd, versionId: nv } = dealsCtx.createDeal({
+      itineraryId: it.id,
+      dest: it.dest,
+      title: it.name || `${it.dest} trip`,
+      img: it.img,
+      customizations: { selectedDayOptions, travelDates },
+      indicativePrice: computePrice(it.price, selectedDayOptions),
+    });
+    navigate(`/itinerary/${it.id}?dealId=${nd}&versionId=${nv}`);
+    showToast("Saved to My Plans as a draft");
+  };
+  const handleRequestPricing = () => {
+    const live = computePrice(it.price, selectedDayOptions);
+    dealsCtx.requestPricing(dealId, versionId, live);
+    showToast(`Live price locked · ₹${live.toLocaleString("en-IN")}/person`);
+  };
+  const handleEditQuote = () => {
+    const { versionId: nv } = dealsCtx.forkVersion(dealId, versionId);
+    navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${nv}`);
+    showToast("New version created · edit freely");
+  };
+
   return (
     <div style={{ position: "relative" }}>
+      {/* ═══ 0. Version status bar (deal context only) ═══ */}
+      {inDeal && (
+        <div style={{
+          position: "sticky", top: 0, zIndex: 30,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+          padding: "10px 16px",
+          background: isDraft ? C.p100 : dealStatus === "expired" ? "#FEF3E0" : "#F2F4F7",
+          borderBottom: `1px solid ${C.div}`,
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isDraft ? C.p600 : dealStatus === "expired" ? "#B54708" : C.head }}>
+              {isDraft ? `Draft · v${version.num}` : dealStatus === "expired" ? `Quote expired · v${version.num}` : `Locked quote · v${version.num}`}
+            </p>
+            <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {isDraft
+                ? `Editing · indicative ₹${(version.indicativePrice || 0).toLocaleString("en-IN")}/person`
+                : dealStatus === "expired"
+                  ? "Prices may have changed since this quote"
+                  : `₹${(version.livePrice || 0).toLocaleString("en-IN")}/person · valid till ${new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+            </p>
+          </div>
+          {isDraft ? (
+            <button data-testid="request-pricing" onClick={handleRequestPricing} style={{ flexShrink: 0, padding: "9px 14px", borderRadius: 999, border: "none", background: C.p600, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+              Request live pricing
+            </button>
+          ) : (
+            <button data-testid="edit-version" onClick={handleEditQuote} style={{ flexShrink: 0, padding: "9px 14px", borderRadius: 999, border: `1.5px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+              {dealStatus === "expired" ? "Refresh & edit" : "Edit"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ═══ 1. Hero Image ═══ */}
       <div style={{ position: "relative", height: 240 }}>
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -362,89 +485,121 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
               ? swapped.activities
               : day.sub.split(" · ");
             const hasOptions = dayHasOptions(globalDayIndex);
+            // Whole-card clickable variant for standard day rows; Vietnam keeps its thumbnail strip.
+            const cardVariant = !isVietnam;
 
             return (
               <div key={i} style={{ position: "relative", marginBottom: i < visibleDays.length - 1 ? (isVietnam ? 14 : 20) : 0 }}>
                 <div style={{ position: "absolute", left: -20, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${i === 0 ? "#027A48" : C.inact}` }} />
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
-                      {swapped && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 600, color: C.p600, background: C.p100,
-                          borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap",
-                        }}>
-                          {swapped.vibeLabel}
-                        </span>
+                <div
+                  {...(cardVariant ? {
+                    "data-testid": `day-details-${globalDayIndex}`,
+                    onClick: () => setDayDetailIndex(globalDayIndex),
+                    role: "button",
+                    "aria-label": `Day ${day.dayNum} details`,
+                  } : {})}
+                  style={cardVariant ? {
+                    cursor: "pointer", borderRadius: 12, border: `1px solid ${C.div}`,
+                    background: C.white, padding: "10px 12px", boxShadow: "0 1px 4px rgba(24,30,76,0.04)",
+                  } : undefined}
+                >
+                  {cardVariant ? (
+                    <>
+                      {/* Condensed tappable day card: title + one activity line, chevron cue, inline change link */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
+                        <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 3 }}>
+                        {displayActivities.map((a, j) => (
+                          <span key={j} style={{ fontSize: 12, color: C.sub, lineHeight: "17px" }}>• {a}</span>
+                        ))}
+                      </div>
+                      {hasOptions && (
+                        <button
+                          data-testid={`change-day-${globalDayIndex}`}
+                          onClick={(e) => { e.stopPropagation(); setChangeDayIndex(globalDayIndex); }}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8,
+                            padding: 0, background: "none", border: "none",
+                            fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit",
+                          }}
+                          aria-label="Change day plan"
+                        >
+                          <RefreshCw size={12} color={C.sub} />
+                          Change day plan
+                        </button>
                       )}
-                    </div>
-                    {isVietnam && hasOptions && (
-                      <button
-                        onClick={() => setChangeDayIndex(globalDayIndex)}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 4,
-                          padding: 0, background: "none", border: "none",
-                          fontSize: 12, fontWeight: 600, color: C.p600, cursor: "pointer",
-                          fontFamily: "inherit", flexShrink: 0,
-                        }}
-                        aria-label="Change day plan"
-                      >
-                        <RefreshCw size={12} color={C.p600} />
-                        Change
-                      </button>
-                    )}
-                  </div>
-                  {isVietnam ? (
-                    <div className="hs" style={{ gap: 10, marginTop: 8, paddingBottom: 2, marginRight: -16 }}>
-                      {displayActivities.map((a, j) => {
-                        const thumb = day.activities[j]?.img || it.img;
-                        return (
-                          <div
-                            key={j}
-                            onClick={() => setShowViewer({ day: globalDayIndex, activity: j })}
-                            style={{ width: 76, minWidth: 76, flexShrink: 0, cursor: "pointer" }}
-                          >
-                            <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", background: C.div }}>
-                              <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                            </div>
-                            <p style={{ fontSize: 11, color: C.head, fontWeight: 500, margin: "6px 0 0", lineHeight: "13px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                              {a}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    </>
                   ) : (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                      {displayActivities.map((a, j) => (
-                        <span key={j} style={{ fontSize: 12, color: C.sub }}>• {a}</span>
-                      ))}
-                    </div>
-                  )}
-                  {!isVietnam && hasOptions && (
-                    <button
-                      onClick={() => setChangeDayIndex(globalDayIndex)}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        marginTop: 6, padding: 0, background: "none", border: "none",
-                        fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      <RefreshCw size={12} color={C.p600} />
-                      Change day plan
-                    </button>
-                  )}
-                  {/* Day traveler photos */}
-                  {!isVietnam && customerPhotos[it.dest] && (
-                    <DayTravellerPhotos
-                      dest={it.dest}
-                      dayNum={day.dayNum}
-                      dayIndex={globalDayIndex}
-                      totalDays={daysWithActivities.length}
-                      onPhotoClick={(photoIdx) => setShowDayPhotos({ dayNum: day.dayNum, photoIdx })}
-                    />
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Day {day.dayNum}: {day.city}</p>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                          <button
+                            data-testid={`day-details-${globalDayIndex}`}
+                            onClick={() => setDayDetailIndex(globalDayIndex)}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              padding: "4px 10px", background: C.white,
+                              border: `1px solid ${C.div}`, borderRadius: 999,
+                              fontSize: 11, fontWeight: 600, color: C.head, cursor: "pointer",
+                              fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
+                            }}
+                            aria-label="Day details"
+                          >
+                            <FileText size={11} color={C.sub} />
+                            Details
+                          </button>
+                          {hasOptions && (
+                            <button
+                              data-testid={`change-day-${globalDayIndex}`}
+                              onClick={() => setChangeDayIndex(globalDayIndex)}
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                                padding: "4px 10px", background: C.white,
+                                border: `1px solid ${C.div}`, borderRadius: 999,
+                                fontSize: 11, fontWeight: 600, color: C.head, cursor: "pointer",
+                                fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
+                              }}
+                              aria-label="Change day plan"
+                            >
+                              <RefreshCw size={11} color={C.sub} />
+                              Change day
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {isVietnam ? (
+                        <div className="hs" style={{ gap: 10, marginTop: 8, paddingBottom: 2, marginRight: -16 }}>
+                          {displayActivities.map((a, j) => {
+                            const thumb = day.activities[j]?.img || it.img;
+                            return (
+                              <div
+                                key={j}
+                                onClick={() => setShowViewer({ day: globalDayIndex, activity: j })}
+                                style={{ width: 76, minWidth: 76, flexShrink: 0, cursor: "pointer" }}
+                              >
+                                <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", background: C.div }}>
+                                  <img src={thumb} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                </div>
+                                <p style={{ fontSize: 11, color: C.head, fontWeight: 500, margin: "6px 0 0", lineHeight: "13px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                                  {a}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
+                          {displayActivities.map((a, j) => (
+                            <span key={j} style={{ fontSize: 12, color: C.sub, lineHeight: "18px" }}>• {a}</span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -483,12 +638,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
         <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
           {hotels.map((h, i) => {
-            // Check if this hotel has an upgrade available
-            const upgradeForHotel = upgradeInfo.upgrades.find(u => u.cityIndex === i);
             return (
             <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
             <Link to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
-              style={{ borderRadius: upgradeForHotel ? "14px 14px 0 0" : 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
+              style={{ borderRadius: 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ padding: "10px 10px 0" }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
               </div>
@@ -496,90 +649,73 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
               <div style={{ padding: "0 12px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                  <Star size={12} fill="#FBBC05" color="#FBBC05" />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{h.rating}</span>
-                  <span style={{ fontSize: 10, color: C.sub }}>· Booking.com</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 2 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</p>
+                  <ChevronRight size={16} color={C.sub} style={{ flexShrink: 0 }} />
                 </div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 2px" }}>{h.name}</p>
-                <p style={{ fontSize: 11, color: C.sub, margin: "0 0 4px" }}>{h.type}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 10 }}>
-                  <MapPin size={10} color={C.inact} />
-                  <span style={{ fontSize: 11, color: C.inact }}>{h.city}</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 3 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    {Array.from({ length: h.stars }).map((_, s) => (
+                      <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
+                      fontSize: 9, fontWeight: 700,
+                    }}>B</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.head }}>{h.rating}</span>
+                  </div>
                 </div>
-                <span
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/hotels/${it.id}/${i}?current=${encodeURIComponent(h.hotelId || "")}`; }}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    border: "1.5px solid #FD014F", borderRadius: 20,
-                    padding: "7px 14px", cursor: "pointer",
-                    fontSize: 12, fontWeight: 600, color: "#FD014F",
-                    background: "none", minHeight: 36,
-                  }}
-                >
-                  <ArrowLeftRight size={13} color="#FD014F" />
-                  Change Hotel
-                </span>
+                <p style={{ fontSize: 11, color: C.sub, margin: "0 0 10px" }}>{h.type}</p>
+                {editable && (
+                  <span
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/hotels/${it.id}/${i}?current=${encodeURIComponent(h.hotelId || "")}`; }}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      cursor: "pointer", padding: 0, background: "none", border: "none",
+                      fontSize: 12, fontWeight: 600, color: C.head,
+                    }}
+                  >
+                    <ArrowLeftRight size={13} color={C.sub} />
+                    Change hotel
+                  </span>
+                )}
               </div>
             </Link>
-            {/* upgrade row under hotel card */}
-            {upgradeForHotel && (
-              <div onClick={() => setShowUpgradeDrawer(true)} style={{
-                marginTop: -1, background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)",
-                border: "1px solid #E8D5A3", borderTop: "none", borderRadius: "0 0 14px 14px",
-                padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%", background: "rgba(184,134,11,0.12)",
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>
-                  <Sparkles size={14} color="#B8860B" strokeWidth={2.2} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 2, lineHeight: "14px" }}>
-                    <span style={{ fontSize: 10, color: "#6B4F1D", fontWeight: 500 }}>Upgrade to 5</span>
-                    <Star size={8} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} />
-                  </div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: C.head, lineHeight: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {upgradeForHotel.upgrade.name}
-                  </p>
-                </div>
-                <span style={{ fontSize: 11, color: "#B8860B", fontWeight: 600, whiteSpace: "nowrap" }}>See details</span>
-              </div>
-            )}
             </div>
             );
           })}
         </div>
 
-        {/* "Upgrade all hotels" banner */}
-        {upgradeInfo.upgradeCount >= 2 && (
+        {/* Single hotel-upgrade banner (per-card chips removed) */}
+        {upgradeInfo.upgradeCount >= 1 && (
           <div onClick={() => setShowUpgradeDrawer(true)} style={{
-            margin: "16px 16px 0", background: C.p100, border: `1.5px solid ${C.p300}`,
+            margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
             borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
           }}>
             <div style={{
               width: 32, height: 32, borderRadius: "50%", background: C.white,
               display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             }}>
-              <Sparkles size={16} color={C.p600} strokeWidth={2.5} />
+              <Sparkles size={16} color="#B8860B" strokeWidth={2.5} />
             </div>
             <div style={{ flex: 1 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.head, display: "flex", alignItems: "center", gap: 2, lineHeight: "18px" }}>
-                Upgrade all hotels to 5<Star size={10} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} />
+                Hotel upgrades available
               </span>
-              <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, lineHeight: "16px", marginTop: 2, display: "block" }}>
-                {upgradeInfo.upgradeCount} hotels · <span style={{ color: C.p600, fontWeight: 600 }}>+₹{upgradeInfo.totalAdditional.toLocaleString("en-IN")} total</span>
+              <span style={{ fontSize: 12, color: C.sub, fontWeight: 500, lineHeight: "16px", marginTop: 2, display: "flex", alignItems: "center", gap: 2 }}>
+                Upgrade to 5<Star size={9} fill="#F5A623" stroke="#F5A623" strokeWidth={1.5} /> from <span style={{ color: "#B8860B", fontWeight: 600 }}>+₹{Math.min(...upgradeInfo.upgrades.map(u => u.totalDelta)).toLocaleString("en-IN")}</span>
               </span>
             </div>
-            <span style={{ fontSize: 12, color: C.p600, fontWeight: 600, whiteSpace: "nowrap" }}>View details</span>
+            <span style={{ fontSize: 12, color: "#B8860B", fontWeight: 600, whiteSpace: "nowrap" }}>View upgrade</span>
           </div>
         )}
       </div>
 
-      <Divider />
-
-      {/* ═══ 4b. Pricing & Availability ═══ */}
+      {/* ═══ 4b. Pricing & Availability — hidden for now ═══ */}
+      {false && (
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Pricing & Availability</p>
 
@@ -624,24 +760,37 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           )}
 
           {/* CTA */}
-          <div style={{ padding: "0 16px 14px" }}>
-            <button onClick={() => setShowPricingSheet(true)} style={{
-              width: "100%", padding: "11px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-              fontSize: 13, fontWeight: 600,
-              background: travelDates ? C.white : C.p100, color: travelDates ? C.p600 : C.p600,
-              border: `1.5px solid ${travelDates ? C.p300 : C.p600}`,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            }}>
-              <Zap size={13} color={C.p600} />
-              {travelDates ? "Update travel details" : "Get real-time pricing"}
-            </button>
-          </div>
+          {editable && (
+            <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <button onClick={() => setShowPricingSheet(true)} style={{
+                width: "100%", padding: "11px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: 600,
+                background: travelDates ? C.white : C.p100, color: travelDates ? C.p600 : C.p600,
+                border: `1.5px solid ${travelDates ? C.p300 : C.p600}`,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              }}>
+                <Zap size={13} color={C.p600} />
+                {travelDates ? "Update travel details" : "Get real-time pricing"}
+              </button>
+              {!inDeal && (
+                <button data-testid="save-to-plans" onClick={handleSaveToPlans} style={{
+                  width: "100%", padding: "11px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 13, fontWeight: 700, background: C.p600, color: "#fff", border: "none",
+                }}>
+                  Save to My Plans
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
+      )}
 
+      {/* ═══ 4c. Book your trip / Payment — hidden for now ═══ */}
+      {false && (
+      <>
       <Divider />
 
-      {/* ═══ 4c. Book your trip, Payment Card ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Book your trip</p>
         {(() => {
@@ -681,6 +830,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           );
         })()}
       </div>
+      </>
+      )}
 
       <Divider />
 
@@ -836,7 +987,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           itineraryId={it.id}
           initialDay={showViewer.day}
           initialActivity={showViewer.activity}
+          onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
           onClose={() => setShowViewer(null)}
+        />
+      )}
+
+      {/* ═══ Day Detail (full-screen, from "Details" pill) ═══ */}
+      {dayDetailIndex !== null && (
+        <DayDetailScreen
+          days={daysWithActivities}
+          dayIndex={dayDetailIndex}
+          setDayIndex={setDayDetailIndex}
+          dest={it.dest}
+          itineraryId={it.id}
+          canChangeDay={dayHasOptions(dayDetailIndex)}
+          onChangeDay={(i) => { setDayDetailIndex(null); setChangeDayIndex(i); }}
+          onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
+          onClose={() => setDayDetailIndex(null)}
         />
       )}
 
@@ -852,6 +1019,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           onPlay={(day, activity) => setShowViewer({ day, activity })}
           onChangeDay={(globalDayIndex) => setChangeDayIndex(globalDayIndex)}
           onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
+          dayHasOptions={dayHasOptions}
           onClose={() => setShowDayWiseDrawer(false)}
         />
       )}
@@ -875,8 +1043,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       {changeDayData && (
         <ChangeDaySheet
           dayData={changeDayData}
+          combinations={getAllDayCombinations(it, changeDayIndex, daysWithActivities)?.combinations || []}
           onSelect={(option) => handleChangeDaySelect(changeDayIndex, option)}
+          onPreview={(option) => setPreviewDay({ dayIndex: changeDayIndex, option })}
           onClose={() => setChangeDayIndex(null)}
+        />
+      )}
+
+      {/* Day preview overlay (above the tray) - visualise an option before finalising */}
+      {previewDay && (
+        <DayPreviewViewer
+          option={previewDay.option}
+          dest={it.dest}
+          days={daysWithActivities}
+          dayIndex={previewDay.dayIndex}
+          dayNumber={daysWithActivities[previewDay.dayIndex]?.dayNum}
+          city={daysWithActivities[previewDay.dayIndex]?.city}
+          itineraryId={it.id}
+          onChoose={() => { handleChangeDaySelect(previewDay.dayIndex, previewDay.option); setPreviewDay(null); setAllCombosIndex(null); }}
+          onBack={() => setPreviewDay(null)}
+          onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
         />
       )}
 
@@ -894,7 +1080,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         }}>
           <div style={{
             position: "absolute",
-            bottom: 120, left: 16, right: 16,
+            bottom: 84, left: 16, right: 16,
             background: "rgba(24,29,39,0.95)",
             color: "#fff",
             borderRadius: 12,
@@ -908,17 +1094,19 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             fontWeight: 500,
           }}>
             <span>{toast.message}</span>
-            <button
-              onClick={handleUndo}
-              style={{
-                background: "none", border: "none",
-                color: C.p300, fontSize: 13, fontWeight: 600,
-                cursor: "pointer", textDecoration: "underline",
-                fontFamily: "inherit", flexShrink: 0, marginLeft: 8,
-              }}
-            >
-              Undo
-            </button>
+            {toast.undoData && (
+              <button
+                onClick={handleUndo}
+                style={{
+                  background: "none", border: "none",
+                  color: C.p300, fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", textDecoration: "underline",
+                  fontFamily: "inherit", flexShrink: 0, marginLeft: 8,
+                }}
+              >
+                Undo
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -926,8 +1114,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       {/* ═══ Hotel Upgrade Drawer ═══ */}
       {showUpgradeDrawer && upgradeInfo.upgradeCount > 0 && (
         <HotelUpgradeDrawer
-          upgrades={upgradeInfo.upgrades}
-          totalAdditional={upgradeInfo.totalAdditional}
+          upgrades={upgradeInfoDisplay.upgrades}
+          totalAdditional={upgradeInfoDisplay.totalAdditional}
           onClose={() => setShowUpgradeDrawer(false)}
         />
       )}
@@ -986,13 +1174,35 @@ function DayTravellerPhotos({ dest, dayNum, dayIndex, totalDays, onPhotoClick })
 
 // ═══ Day Photos Fullscreen Gallery ═══
 function DayPhotosGallery({ dest, dayNum, startIdx, onClose }) {
-  const [idx, setIdx] = useState(startIdx);
-  const touchRef = useRef(null);
-  const photos = customerPhotos[dest];
-  const tags = getCustomerPhotos(dest);
+  // Full list with per-photo tag + couple name
+  const urls = customerPhotos[dest] || [];
+  const tags = photoTags[dest] || [];
   const names = couplePhotoNames[dest] || [];
-  const total = photos.length;
+  const allItems = urls.map((img, i) => ({ img, tag: tags[i] || dest, name: names[i] || dest }));
 
+  // Filter chips: All + unique tags
+  const uniqueTags = [...new Set(allItems.map(p => p.tag))];
+  const [filter, setFilter] = useState("All");
+  const items = filter === "All" ? allItems : allItems.filter(p => p.tag === filter);
+
+  const [idx, setIdx] = useState(Math.min(startIdx || 0, allItems.length - 1));
+  const touchRef = useRef(null);
+  const railRef = useRef(null);
+  const total = items.length;
+  const current = items[idx] || items[0];
+
+  // Mobile fills the viewport; desktop centers a phone-sized box (mirrors VideoViewer).
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const frameStyle = isMobile
+    ? { position: "fixed", inset: 0, borderRadius: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, borderRadius: 44 };
+
+  const pickFilter = (f) => { setFilter(f); setIdx(0); };
   const handleTouchStart = (e) => { touchRef.current = e.touches[0].clientX; };
   const handleTouchEnd = (e) => {
     if (touchRef.current === null) return;
@@ -1005,30 +1215,456 @@ function DayPhotosGallery({ dest, dayNum, startIdx, onClose }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#000", display: "flex", flexDirection: "column", maxWidth: 390, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", zIndex: 2 }}>
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>{names[idx] || dest}</p>
-          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>{dest} · {tags[idx]?.tag || "Day " + dayNum}</p>
-        </div>
-        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+    <div style={{ ...frameStyle, zIndex: 450, background: "#000", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      {/* Top bar: counter + close */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "50px 16px 10px", zIndex: 2, flexShrink: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>{idx + 1}/{total}</span>
+        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <XIcon size={18} color="#fff" />
         </button>
       </div>
-      <div style={{ textAlign: "center", padding: "0 0 8px", zIndex: 2 }}>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{idx + 1} / {total}</span>
+
+      {/* Filter chips */}
+      <div className="hs hide-scrollbar" style={{ gap: 8, padding: "4px 16px 12px", flexShrink: 0 }}>
+        {["All", ...uniqueTags].map((f) => (
+          <button
+            key={f}
+            onClick={() => pickFilter(f)}
+            style={{
+              flexShrink: 0, padding: "9px 16px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+              fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: filter === f ? C.p600 : "rgba(255,255,255,0.12)",
+              color: "#fff", border: filter === f ? "none" : "1px solid rgba(255,255,255,0.25)",
+            }}
+          >
+            {filter === f && f === "All" && <span style={{ fontWeight: 700 }}>✓</span>}
+            {f}
+          </button>
+        ))}
       </div>
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <img src={photos[idx]} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+
+      {/* Main image */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <img src={current?.img} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         {idx > 0 && <div onClick={() => setIdx(idx - 1)} style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />}
         {idx < total - 1 && <div onClick={() => setIdx(idx + 1)} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "30%", cursor: "pointer" }} />}
       </div>
-      <div style={{ display: "flex", justifyContent: "center", gap: 4, padding: "10px 0", flexWrap: "wrap", maxWidth: "90%", margin: "0 auto" }}>
-        {photos.slice(0, 15).map((_, i) => (
-          <div key={i} onClick={() => setIdx(i)} style={{ width: i === idx ? 18 : 6, height: 6, borderRadius: 3, background: i === idx ? C.p600 : "rgba(255,255,255,0.3)", transition: "all 0.2s", cursor: "pointer" }} />
+
+      {/* Caption */}
+      <div style={{ textAlign: "center", padding: "14px 16px 10px", flexShrink: 0 }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>{current?.tag}</span>
+        <span style={{ fontSize: 18, fontWeight: 400, color: "rgba(255,255,255,0.5)" }}> · {dest}</span>
+      </div>
+
+      {/* Thumbnail rail */}
+      <div ref={railRef} className="hs hide-scrollbar" style={{ gap: 8, padding: "0 16px 28px", flexShrink: 0 }}>
+        {items.map((p, i) => (
+          <div
+            key={i}
+            onClick={() => setIdx(i)}
+            style={{
+              width: 64, height: 64, minWidth: 64, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+              border: i === idx ? `2px solid ${C.p600}` : "2px solid transparent",
+              opacity: i === idx ? 1 : 0.85,
+            }}
+          >
+            <img src={p.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
         ))}
       </div>
-      <div style={{ height: 24 }} />
+    </div>
+  );
+}
+
+// ═══ All Combinations browse screen (full-screen list + filters) ═══
+const PACE_LABELS = { relaxed: "Relaxed", balanced: "Balanced", active: "Active" };
+function AllDayCombinationsScreen({ data, onPreview, onBack }) {
+  const [paceFilter, setPaceFilter] = useState([]);
+  const [actFilter, setActFilter] = useState([]);
+  const [openFilter, setOpenFilter] = useState(null); // null | "pace" | "activities"
+  const [actSearch, setActSearch] = useState("");
+
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const frameStyle = isMobile
+    ? { position: "fixed", inset: 0, borderRadius: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, borderRadius: 44 };
+
+  if (!data) return null;
+  const { dayNumber, city, combinations } = data;
+
+  // Filter facets
+  const paceOpts = [...new Set(combinations.map(c => c.scoring.pace))];
+  const actOpts = [...new Set(combinations.flatMap(c => c.activities))];
+
+  const toggle = (list, setList, val) =>
+    setList(list.includes(val) ? list.filter(v => v !== val) : [...list, val]);
+
+  const filtered = combinations.filter(c => {
+    const paceOk = paceFilter.length === 0 || paceFilter.includes(c.scoring.pace);
+    const actOk = actFilter.length === 0 || c.activities.some(a => actFilter.includes(a));
+    return paceOk && actOk;
+  });
+
+  const totalActive = paceFilter.length + actFilter.length;
+
+  const sheetChip = (label, active, onClick) => (
+    <button
+      key={label}
+      onClick={onClick}
+      style={{
+        padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+        fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+        border: `1px solid ${active ? C.p600 : C.div}`,
+        background: active ? C.p600 : C.white,
+        color: active ? "#fff" : C.head,
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  // Floating filter button
+  const filterPill = (label, count, key) => (
+    <button
+      data-testid={`filter-${key}`}
+      onClick={() => { setActSearch(""); setOpenFilter(key); }}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "10px 16px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+        fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+        border: `1px solid ${count > 0 ? C.p600 : C.div}`,
+        background: count > 0 ? C.p100 : C.white,
+        color: count > 0 ? C.p600 : C.head,
+      }}
+    >
+      <SlidersHorizontal size={14} color={count > 0 ? C.p600 : C.sub} />
+      {label}{count > 0 ? ` · ${count}` : ""}
+    </button>
+  );
+
+  const visibleActOpts = actOpts.filter(a => a.toLowerCase().includes(actSearch.trim().toLowerCase()));
+
+  return (
+    <div style={{ ...frameStyle, zIndex: 350, background: C.white, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <div style={{ padding: "50px 16px 12px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${C.div}`, flexShrink: 0 }}>
+        <button onClick={onBack} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <ArrowLeft size={18} color={C.head} />
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head }}>All day plans</p>
+          <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub }}>Day {dayNumber} · {city}</p>
+        </div>
+      </div>
+
+      {/* Result list */}
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "12px 16px 84px" }}>
+        <p style={{ margin: "0 0 10px", fontSize: 12, color: C.sub }}>
+          {filtered.length} {filtered.length === 1 ? "plan" : "plans"}
+        </p>
+        {filtered.map((c, ci) => (
+          <div
+            key={c.id}
+            data-testid={`combo-card-${ci}`}
+            onClick={() => onPreview(c)}
+            style={{
+              display: "flex", alignItems: "center", gap: 12, padding: 10, marginBottom: 10,
+              border: `1px solid ${C.div}`, borderRadius: 14, background: C.white, cursor: "pointer",
+            }}
+          >
+            <img src={c.heroImage} alt="" style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>
+                {c.activities.join(", ")}
+              </p>
+              <p style={{ margin: "5px 0 0", fontSize: 11, color: C.sub }}>
+                {PACE_LABELS[c.scoring.pace]}
+                {c.priceDelta !== 0 && (
+                  <span style={{ color: c.priceDelta > 0 ? "#D92D20" : "#039855", fontWeight: 600 }}>
+                    {"  ·  "}{c.priceDelta > 0 ? "+" : "−"}₹{Math.abs(c.priceDelta).toLocaleString("en-IN")}
+                  </span>
+                )}
+              </p>
+            </div>
+            <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p style={{ textAlign: "center", color: C.sub, fontSize: 13, marginTop: 40 }}>
+            No plans match these filters.
+          </p>
+        )}
+      </div>
+
+      {/* Floating filter row */}
+      <div style={{
+        position: "absolute", bottom: "calc(16px + env(safe-area-inset-bottom))", left: 0, right: 0,
+        display: "flex", justifyContent: "center", gap: 10, zIndex: 6, pointerEvents: "none",
+      }}>
+        <div style={{ display: "inline-flex", gap: 10, pointerEvents: "auto", filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.18))" }}>
+          {filterPill("Pace", paceFilter.length, "pace")}
+          {filterPill("Activities", actFilter.length, "activities")}
+          {totalActive > 0 && (
+            <button
+              onClick={() => { setPaceFilter([]); setActFilter([]); }}
+              style={{
+                display: "inline-flex", alignItems: "center", padding: "10px 14px", borderRadius: 999,
+                border: `1px solid ${C.div}`, background: C.white, color: C.sub,
+                fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter sheet */}
+      {openFilter && (
+        <>
+          <div onClick={() => setOpenFilter(null)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 10 }} />
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 11,
+            background: C.white, borderRadius: "20px 20px 0 0",
+            display: "flex", flexDirection: "column", maxHeight: "72%",
+            animation: "sheetSlideUp 0.28s ease-out forwards",
+          }}>
+            {/* Sheet header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 12px", flexShrink: 0 }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head }}>
+                {openFilter === "pace" ? "Pace" : "Activities"}
+              </p>
+              <button onClick={() => setOpenFilter(null)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <XIcon size={16} color={C.sub} />
+              </button>
+            </div>
+
+            {/* Activities search */}
+            {openFilter === "activities" && (
+              <div style={{ padding: "0 16px 12px", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: C.bg, border: `1px solid ${C.div}` }}>
+                  <Search size={16} color={C.inact} />
+                  <input
+                    data-testid="activity-search"
+                    value={actSearch}
+                    onChange={(e) => setActSearch(e.target.value)}
+                    placeholder="Search activities"
+                    autoFocus
+                    style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: C.head, fontFamily: "inherit" }}
+                  />
+                  {actSearch && (
+                    <button onClick={() => setActSearch("")} style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", padding: 0 }}>
+                      <XIcon size={15} color={C.inact} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Options */}
+            <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 16px 12px", display: "flex", flexWrap: "wrap", gap: 8, alignContent: "flex-start" }}>
+              {openFilter === "pace"
+                ? paceOpts.map(p => sheetChip(PACE_LABELS[p] || p, paceFilter.includes(p), () => toggle(paceFilter, setPaceFilter, p)))
+                : visibleActOpts.length > 0
+                  ? visibleActOpts.map(a => sheetChip(a, actFilter.includes(a), () => toggle(actFilter, setActFilter, a)))
+                  : <p style={{ width: "100%", textAlign: "center", color: C.sub, fontSize: 13, margin: "24px 0" }}>No activities match "{actSearch}".</p>
+              }
+            </div>
+
+            {/* Sheet footer */}
+            <div style={{ display: "flex", gap: 10, padding: "12px 16px calc(16px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.div}`, flexShrink: 0 }}>
+              <button
+                onClick={() => (openFilter === "pace" ? setPaceFilter([]) : setActFilter([]))}
+                style={{ flex: "0 0 auto", padding: "13px 18px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setOpenFilter(null)}
+                style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Show {filtered.length} {filtered.length === 1 ? "plan" : "plans"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══ Day Preview (visualise an option before finalising) ═══
+function DayPreviewViewer({ option, dest, days, dayIndex, dayNumber, city, itineraryId, onChoose, onBack, onPhotoOpen }) {
+  const actImgs = destData[dest]?.actImgs || [];
+  const cards = (option.activities || []).map((name, i) => ({
+    name,
+    img: actImgs[(i * 3 + 2) % (actImgs.length || 1)] || option.heroImage,
+  }));
+  const [idx, setIdx] = useState(0);
+  const [sheetState, setSheetState] = useState("hidden"); // "hidden" | "peek" | "full"
+  const [activeMetric, setActiveMetric] = useState(null);
+  const touchStart = useRef(null);
+  const total = cards.length;
+  const cur = cards[idx] || cards[0];
+
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const frameStyle = isMobile
+    ? { position: "fixed", inset: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, borderRadius: 44 };
+
+  // Day-detail scoring/tours for THIS option (real city/travel context, option's activities).
+  const synthDay = { city, activities: cards.map(c => ({ name: c.name, img: c.img })) };
+  const daysForScoring = (days && days.length)
+    ? days.map((d, i) => (i === dayIndex ? synthDay : d))
+    : [synthDay];
+  const scoreIdx = (days && days.length) ? dayIndex : 0;
+  const scoring = getDayScoring(synthDay, scoreIdx, daysForScoring);
+  const tours = getDayTours(synthDay, scoreIdx, daysForScoring);
+  const allDaysScoring = getAllDaysScoring(daysForScoring);
+  const description = `Curated experiences in ${city}, with guided activities, transfers, and tasting stops included.`;
+
+  const next = () => idx < total - 1 && setIdx(idx + 1);
+  const prev = () => idx > 0 && setIdx(idx - 1);
+  const handleTap = (e) => {
+    if (sheetState !== "hidden") return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    (e.clientX - rect.left > rect.width * 0.5) ? next() : prev();
+  };
+  const onTS = (e) => { touchStart.current = e.touches[0].clientX; };
+  const onTE = (e) => {
+    if (touchStart.current === null || sheetState !== "hidden") { touchStart.current = null; return; }
+    const d = touchStart.current - e.changedTouches[0].clientX;
+    if (d > 50) next(); else if (d < -50) prev();
+    touchStart.current = null;
+  };
+
+  return (
+    <div style={{ ...frameStyle, zIndex: 400, background: "#000", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <img src={cur?.img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 120, background: "linear-gradient(180deg, rgba(0,0,0,0.7), transparent)", zIndex: 2 }} />
+      {sheetState === "hidden" && (
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 320, background: "linear-gradient(transparent, rgba(0,0,0,0.9))", zIndex: 2 }} />
+      )}
+      {sheetState === "hidden" && (
+        <div onClick={handleTap} onTouchStart={onTS} onTouchEnd={onTE} style={{ position: "absolute", inset: 0, zIndex: 1 }} />
+      )}
+
+      {/* Top - progress + back + preview badge */}
+      <div style={{ position: "relative", zIndex: 5, padding: "50px 16px 0" }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+          {cards.map((_, i) => (
+            <div key={i} style={{ flex: 1, height: 4, borderRadius: 8, background: "rgba(255,255,255,0.4)", overflow: "hidden" }}>
+              <div style={{ width: i <= idx ? "100%" : "0%", height: "100%", background: "#fff" }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={onBack} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <ArrowLeft size={16} color="#fff" />
+          </button>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Preview · not selected yet
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom - day/city, activity, customer photos, caption, day-details, choose CTA */}
+      {sheetState === "hidden" && (
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 16px 28px", zIndex: 5 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)", letterSpacing: 0.2, textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
+              Day {dayNumber} · {city}
+            </span>
+            {option.isCurrent ? (
+              <button data-testid="preview-current-day" onClick={onBack} style={{ flexShrink: 0, padding: "8px 16px", borderRadius: 999, border: "1.5px solid rgba(255,255,255,0.6)", background: "rgba(0,0,0,0.25)", color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
+                Current day
+              </button>
+            ) : (
+              <button data-testid="preview-choose-day" onClick={onChoose} style={{ flexShrink: 0, padding: "8px 18px", borderRadius: 999, border: "none", background: C.p600, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", boxShadow: "0 4px 14px rgba(227,27,83,0.45)" }}>
+                Choose this day
+              </button>
+            )}
+          </div>
+          <p onClick={() => setSheetState("peek")} style={{ margin: "4px 0 8px", fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1.2, textShadow: "0 1px 12px rgba(0,0,0,0.5)", cursor: "pointer", width: "fit-content" }}>
+            {cur?.name}
+          </p>
+
+          {/* Customer photos - social proof, opens the gallery */}
+          {dest && customerPhotos[dest] && (
+            <div
+              onClick={() => onPhotoOpen && onPhotoOpen(dayNumber, 0)}
+              style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer", width: "fit-content" }}
+            >
+              <div style={{ display: "flex", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }}>
+                {customerPhotos[dest].slice(0, 3).map((img, i) => (
+                  <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", border: "1.5px solid #fff", marginLeft: i > 0 ? -8 : 0 }}>
+                    <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+              <span style={{ fontSize: 12, color: "#fff", fontWeight: 600, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+                See {customerPhotos[dest].length} traveller photos
+              </span>
+            </div>
+          )}
+
+          {/* Caption - tap opens the day plan */}
+          <p onClick={() => setSheetState("peek")} style={{ margin: 0, fontSize: 12, color: "#F9F9FB", lineHeight: 1.4, opacity: 0.92, textShadow: "0 1px 6px rgba(0,0,0,0.5)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", cursor: "pointer" }}>
+            {description}
+          </p>
+
+          {/* View details indicator - opens the day plan */}
+          <div
+            onClick={() => setSheetState("peek")}
+            style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 12, cursor: "pointer", width: "fit-content", opacity: 0.85 }}
+          >
+            <ChevronUp size={14} color="#fff" />
+            <span style={{ fontSize: 11, color: "#fff", fontWeight: 500, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>Tap to see day details</span>
+          </div>
+        </div>
+      )}
+
+      {/* Day-detail sheet (same component as the live video flow) */}
+      {sheetState !== "hidden" && (
+        <DaySheet
+          state={sheetState}
+          setState={setSheetState}
+          day={synthDay}
+          dayNum={dayNumber}
+          dayIdx={scoreIdx}
+          dest={dest}
+          itineraryId={itineraryId}
+          scoring={scoring}
+          tours={tours}
+          description={description}
+          canChangeDay={false}
+          onMetricOpen={setActiveMetric}
+          onChangeDay={() => {}}
+          onPhotoOpen={onPhotoOpen}
+        />
+      )}
+
+      {activeMetric && (
+        <DayScoreModal
+          metric={activeMetric}
+          scoring={scoring}
+          allDaysScoring={allDaysScoring}
+          currentDayIdx={scoreIdx}
+          dayLabel={`Day ${dayNumber} · ${city}`}
+          onClose={() => setActiveMetric(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1089,13 +1725,14 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
 }
 
 // ═══ Full-Screen Video/Stories Viewer ═══
-function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onClose }) {
+function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onPhotoOpen, onClose }) {
+  const navigate = useNavigate();
   const [dayIdx, setDayIdx] = useState(initialDay);
   const [actIdx, setActIdx] = useState(initialActivity);
-  const [sheetState, setSheetState] = useState("hidden"); // "hidden" | "peek" | "full"
-  const [activeMetric, setActiveMetric] = useState(null);
-  const [chooseToast, setChooseToast] = useState(null);
+  const [muted, setMuted] = useState(false);
   const touchStart = useRef(null);
+  const [showActivityDetail, setShowActivityDetail] = useState(false);
+  const openActivityDetail = () => setShowActivityDetail(true);
 
   // Mobile fills the viewport; desktop centers a 390x844 phone-sized box.
   // Use position:fixed so the viewer escapes the tall scrollable parent
@@ -1115,15 +1752,10 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
   const currentAct = activities[actIdx] || activities[0];
   const dayNum = days.slice(0, dayIdx).reduce((a, d) => a + d.n, 0) + 1;
 
-  const scoring = useMemo(() => getDayScoring(currentDay, dayIdx, days), [currentDay, dayIdx, days]);
-  const tours = useMemo(() => getDayTours(currentDay, dayIdx, days), [currentDay, dayIdx, days]);
-  const allDaysScoring = useMemo(() => getAllDaysScoring(days), [days]);
-
-  // Mock price + option
-  const optionNum = 1, totalOptions = 3;
-  const price = 23450 + dayIdx * 250;
-  const strikePrice = Math.round(price / 0.8);
   const description = `Curated experiences in ${currentDay?.city}, with guided activities, transfers, and tasting stops included.`;
+  const actDescription = currentAct?.name
+    ? `${currentAct.name} in ${currentDay?.city} - a hand-picked highlight with private transfers, a local guide, and time to truly soak it in.`
+    : description;
 
   const goNext = useCallback(() => {
     if (actIdx < activities.length - 1) {
@@ -1144,7 +1776,6 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
   }, [actIdx, dayIdx, days]);
 
   const handleTap = (e) => {
-    if (sheetState !== "hidden") return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x > rect.width * 0.55) goNext();
@@ -1153,16 +1784,11 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
 
   const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientY; };
   const handleTouchEnd = (e) => {
-    if (!touchStart.current || sheetState !== "hidden") { touchStart.current = null; return; }
+    if (!touchStart.current) { touchStart.current = null; return; }
     const diff = touchStart.current - e.changedTouches[0].clientY;
     if (diff > 60 && dayIdx < days.length - 1) { setDayIdx(d => d + 1); setActIdx(0); }
     else if (diff < -60 && dayIdx > 0) { setDayIdx(d => d - 1); setActIdx(0); }
     touchStart.current = null;
-  };
-
-  const handleChoose = () => {
-    setChooseToast(`Day ${dayNum} · ${currentDay?.city} chosen ✓`);
-    setTimeout(() => setChooseToast(null), 1800);
   };
 
   return (
@@ -1173,15 +1799,11 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
       {/* Top dark gradient - always */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 100, background: "linear-gradient(180deg, rgba(0,0,0,0.8) 10%, rgba(0,0,0,0) 100%)", zIndex: 2 }} />
 
-      {/* Bottom gradient - only when sheet hidden */}
-      {sheetState === "hidden" && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 220, background: "linear-gradient(transparent, rgba(0,0,0,0.85))", zIndex: 2 }} />
-      )}
+      {/* Bottom gradient */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 220, background: "linear-gradient(transparent, rgba(0,0,0,0.85))", zIndex: 2 }} />
 
-      {/* Tap zone (left/right nav) - only when sheet hidden */}
-      {sheetState === "hidden" && (
-        <div onClick={handleTap} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "absolute", inset: 0, zIndex: 1 }} />
-      )}
+      {/* Tap zone (left/right nav) */}
+      <div onClick={handleTap} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ position: "absolute", inset: 0, zIndex: 1 }} />
 
       {/* TOP - progress bars + activity title + close (always visible) */}
       <div style={{ position: "relative", zIndex: 5, padding: "50px 16px 0" }}>
@@ -1193,82 +1815,240 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 400, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
-            {currentAct?.name}
-          </span>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.4)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <button onClick={(e) => { e.stopPropagation(); setMuted(m => !m); }} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            {muted ? <VolumeX size={16} color="#fff" /> : <Volume2 size={16} color="#fff" />}
+          </button>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
             <XIcon size={16} color="#fff" />
           </button>
         </div>
       </div>
 
-      {/* Customer photos pill - only when sheet hidden */}
-      {sheetState === "hidden" && dest && customerPhotos[dest] && (
-        <div style={{ position: "absolute", bottom: 200, right: 16, zIndex: 5, display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: 20, padding: "6px 12px 6px 6px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.15)" }}>
-          <div style={{ display: "flex" }}>
-            {customerPhotos[dest].slice(0, 2).map((img, i) => (
-              <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.4)", marginLeft: i > 0 ? -6 : 0 }}>
-                <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-            ))}
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>{customerPhotos[dest].length} photos</span>
-        </div>
-      )}
+      {/* BOTTOM - activity only (Instagram style); opens the activity detail page */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 16px 28px", zIndex: 5 }}>
+        {/* Day context kicker - plain label, not interactive */}
+        <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)", letterSpacing: 0.2, textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
+          Day {dayNum} · {currentDay?.city}
+        </span>
+        <p onClick={openActivityDetail} style={{ margin: "4px 0 8px", fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1.2, textShadow: "0 1px 12px rgba(0,0,0,0.5)", cursor: "pointer", width: "fit-content" }}>
+          {currentAct?.name}
+        </p>
 
-      {/* BOTTOM - title + Choose pill (Stage 1) */}
-      {sheetState === "hidden" && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 16px 28px", zIndex: 5 }}>
-          <div onClick={() => setSheetState("peek")} style={{ cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", lineHeight: 1.4 }}>
-                Day {dayNum} - {currentDay?.city}
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleChoose(); }}
-                style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  padding: "6px 14px", background: C.p600, color: "#fff",
-                  border: "none", borderRadius: 999,
-                  fontSize: 12, fontWeight: 500, fontFamily: "inherit", cursor: "pointer",
-                  boxShadow: "0 4px 16px -2px rgba(253,1,79,0.25)",
-                }}
-              >
-                Choose
-              </button>
+        {/* Customer photos - social proof, opens couples' photo gallery */}
+        {dest && customerPhotos[dest] && (
+          <div
+            onClick={(e) => { e.stopPropagation(); if (onPhotoOpen) onPhotoOpen(dayNum, 0); }}
+            style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer", width: "fit-content" }}
+          >
+            <div style={{ display: "flex", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" }}>
+              {customerPhotos[dest].slice(0, 3).map((img, i) => (
+                <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", border: "1.5px solid #fff", marginLeft: i > 0 ? -8 : 0 }}>
+                  <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              ))}
             </div>
-            <p style={{ margin: "0 0 6px", fontSize: 14, color: "#F9F9FB" }}>Option {optionNum} of {totalOptions}</p>
-            <p style={{ margin: 0, fontSize: 12, color: "#F9F9FB", lineHeight: 1.35, opacity: 0.9 }}>
-              {description}
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, opacity: 0.85 }}>
-              <ChevronUp size={14} color="#fff" />
-              <span style={{ fontSize: 11, color: "#fff", fontWeight: 500 }}>Tap to see day details</span>
-            </div>
+            <span style={{ fontSize: 12, color: "#fff", fontWeight: 600, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+              See {customerPhotos[dest].length} traveller photos
+            </span>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* SHEET (Stage 2 / 3) */}
-      {sheetState !== "hidden" && (
-        <DaySheet
-          state={sheetState}
-          setState={setSheetState}
-          day={currentDay}
-          dayNum={dayNum}
-          dayIdx={dayIdx}
-          dest={dest}
-          itineraryId={itineraryId}
-          scoring={scoring}
-          tours={tours}
-          price={price}
-          strikePrice={strikePrice}
-          optionNum={optionNum}
-          totalOptions={totalOptions}
-          description={description}
-          onMetricOpen={setActiveMetric}
-          onChoose={handleChoose}
+        {/* Caption - tap opens the activity detail page */}
+        <p onClick={openActivityDetail} style={{ margin: 0, fontSize: 12, color: "#F9F9FB", lineHeight: 1.4, opacity: 0.92, textShadow: "0 1px 6px rgba(0,0,0,0.5)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", cursor: "pointer" }}>
+          {actDescription}
+        </p>
+
+        {/* View activity details indicator */}
+        <div
+          onClick={openActivityDetail}
+          style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 12, cursor: "pointer", width: "fit-content", opacity: 0.9 }}
+        >
+          <ChevronRight size={14} color="#fff" />
+          <span style={{ fontSize: 11, color: "#fff", fontWeight: 500, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>View activity details</span>
+        </div>
+      </div>
+
+      {/* Activity detail — bottom drawer over the reel (keeps video in context) */}
+      {showActivityDetail && currentAct && (
+        <ActivityDetailSheet
+          detail={buildActivityDetail(currentAct, { city: currentDay?.city, country: dest, isBooked: false, dayNum })}
+          onClose={() => setShowActivityDetail(false)}
         />
+      )}
+    </div>
+  );
+}
+
+// ═══ Activity detail — draggable bottom drawer (opens at 50%, snaps 50% ↔ 92%) ═══
+const SHEET_SNAPS = [0.5, 0.92];
+function ActivityDetailSheet({ detail, onClose }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const frameStyle = isMobile
+    ? { position: "fixed", inset: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, borderRadius: 44 };
+
+  const frameRef = useRef(null);
+  const dragRef = useRef(null);
+  const [heightPct, setHeightPct] = useState(0.5);
+  const [dragging, setDragging] = useState(false);
+
+  const onHandleDown = (e) => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    dragRef.current = { rect: frame.getBoundingClientRect() };
+    setDragging(true);
+  };
+  const onHandleMove = (e) => {
+    if (!dragRef.current) return;
+    const { rect } = dragRef.current;
+    const pct = (rect.bottom - e.clientY) / rect.height;
+    setHeightPct(Math.max(0.28, Math.min(0.96, pct)));
+  };
+  const onHandleUp = () => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    setDragging(false);
+    setHeightPct(h => {
+      if (h < 0.36) { onClose(); return h; }          // dragged down far enough → dismiss
+      return SHEET_SNAPS.reduce((a, b) => (Math.abs(b - h) < Math.abs(a - h) ? b : a));
+    });
+  };
+
+  return (
+    <div ref={frameRef} style={{ ...frameStyle, zIndex: 210, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      {/* Scrim — tap to dismiss, keeps the video peeking above */}
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", animation: "fadeInBg 0.2s ease-out" }} />
+
+      {/* Sheet */}
+      <div style={{ position: "relative", height: `${heightPct * 100}%`, background: "#fff", borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", overflow: "hidden", animation: "sheetSlideUp 0.28s cubic-bezier(0.32,0.72,0,1)", transition: dragging ? "none" : "height 0.28s cubic-bezier(0.32,0.72,0,1)" }}>
+        {/* Drag handle + close */}
+        <div
+          onPointerDown={onHandleDown}
+          onPointerMove={onHandleMove}
+          onPointerUp={onHandleUp}
+          onPointerCancel={onHandleUp}
+          style={{ position: "relative", flexShrink: 0, paddingTop: 10, paddingBottom: 8, cursor: "row-resize", touchAction: "none" }}
+        >
+          <div style={{ width: 40, height: 5, borderRadius: 4, background: "#D5D7E0", margin: "0 auto" }} />
+          <button onClick={onClose} onPointerDown={(e) => e.stopPropagation()} style={{ position: "absolute", top: 8, right: 14, width: 30, height: 30, borderRadius: "50%", background: "#F4F5F8", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+            <XIcon size={16} color="#181E4C" />
+          </button>
+        </div>
+        {/* Scrollable detail body */}
+        <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 24 }}>
+          <ActivityDetailScroll detail={detail} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══ Day Detail — full-screen page with prev/next day switcher ═══
+function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canChangeDay, onChangeDay, onPhotoOpen, onClose }) {
+  const [activeMetric, setActiveMetric] = useState(null);
+  const day = days[dayIndex];
+
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const frameStyle = isMobile
+    ? { position: "fixed", inset: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 390, height: 844, borderRadius: 44 };
+
+  const scoring = useMemo(() => getDayScoring(day, dayIndex, days), [day, dayIndex, days]);
+  const tours = useMemo(() => getDayTours(day, dayIndex, days), [day, dayIndex, days]);
+  const allDaysScoring = useMemo(() => getAllDaysScoring(days), [days]);
+
+  const photos = dest && customerPhotos[dest] ? customerPhotos[dest] : [];
+  const galleryItems = photos.length >= 6 ? photos.slice(0, 6) : [...photos, ...(day?.activities || [])].slice(0, 6);
+  const activityNames = (day?.activities || []).map(a => a.name).filter(Boolean).join(", ");
+
+  const hasPrev = dayIndex > 0;
+  const hasNext = dayIndex < days.length - 1;
+  const navBtn = (enabled) => ({
+    width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white,
+    display: "flex", alignItems: "center", justifyContent: "center", cursor: enabled ? "pointer" : "default",
+    opacity: enabled ? 1 : 0.35, flexShrink: 0,
+  });
+
+  return (
+    <div style={{ ...frameStyle, zIndex: 120, background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      {/* Top bar: back + prev/next day switcher — sits on the brand hero tint */}
+      <div style={{ flexShrink: 0, padding: "16px 12px 12px", background: "#FFF1F4", display: "flex", alignItems: "center", gap: 8 }}>
+        <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <ArrowLeft size={18} color={C.head} />
+        </button>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, minWidth: 0 }}>
+          <button onClick={() => hasPrev && setDayIndex(dayIndex - 1)} style={navBtn(hasPrev)} aria-label="Previous day">
+            <ChevronLeft size={16} color={C.head} />
+          </button>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>Day {day?.dayNum} · {day?.city}</p>
+          <button onClick={() => hasNext && setDayIndex(dayIndex + 1)} style={navBtn(hasNext)} aria-label="Next day">
+            <ChevronRight size={16} color={C.head} />
+          </button>
+        </div>
+        <div style={{ width: 34, flexShrink: 0 }} />
+      </div>
+
+      {/* Body */}
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 24 }}>
+        {/* Brand hero — title + scoring bonded on one soft-pink surface */}
+        <div style={{ background: "linear-gradient(180deg, #FFF1F4 0%, #FFF6F8 100%)", padding: "4px 0 16px", borderBottom: `1px solid ${C.div}` }}>
+          <div style={{ padding: "8px 20px 14px" }}>
+            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#181E4C", lineHeight: 1.25 }}>{activityNames}</h2>
+          </div>
+          <div style={{ padding: "0 16px" }}>
+            <div style={{ borderRadius: 16, overflow: "hidden", background: "#fff", border: "1px solid #FFE0E7", boxShadow: "0 2px 10px rgba(253,1,79,0.06)" }}>
+              <DayScoreRow scoring={scoring} onOpen={setActiveMetric} bg="#fff" borderColor="transparent" divider="#FFE0E7" />
+            </div>
+          </div>
+        </div>
+
+        {/* Your day will cover */}
+        <div style={{ padding: "16px 20px 8px" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Your day will cover:</h3>
+          {tours.map((tour, ti) => (
+            <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIndex} />
+          ))}
+        </div>
+
+        <div style={{ height: 1, background: "#E0E2EB", margin: "8px 0" }} />
+
+        {/* Traveller stories grid */}
+        {galleryItems.length >= 3 && (
+          <div style={{ padding: "8px 20px 24px" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Traveller stories</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {galleryItems.map((p, i) => {
+                const src = p.img || p;
+                return (
+                  <div key={i} onClick={() => onPhotoOpen && onPhotoOpen(day?.dayNum, i)} style={{ aspectRatio: "1 / 1", borderRadius: 8, overflow: "hidden", background: "#F5F5F5", cursor: "pointer" }}>
+                    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Floating CTA — opens the day-selection drawer */}
+      {canChangeDay && (
+        <div style={{ flexShrink: 0, padding: "12px 16px calc(12px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.div}`, background: "#fff", boxShadow: "0 -2px 12px rgba(0,0,0,0.06)" }}>
+          <button onClick={() => onChangeDay(dayIndex)} style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 16px", background: C.head, border: "none", borderRadius: 14, fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
+            <RefreshCw size={16} color="#fff" />
+            Change this day
+          </button>
+        </div>
       )}
 
       {/* Metric drill-in modal */}
@@ -1277,135 +2057,12 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onC
           metric={activeMetric}
           scoring={scoring}
           allDaysScoring={allDaysScoring}
-          currentDayIdx={dayIdx}
-          dayLabel={`Day ${dayNum} · ${currentDay?.city}`}
+          currentDayIdx={dayIndex}
+          dayLabel={`Day ${day?.dayNum} · ${day?.city}`}
           onClose={() => setActiveMetric(null)}
         />
       )}
-
-      {/* Choose toast */}
-      {chooseToast && (
-        <div style={{
-          position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)", zIndex: 50,
-          padding: "10px 18px", borderRadius: 999, background: "rgba(20,20,22,0.95)",
-          color: "#fff", fontSize: 13, fontWeight: 500, letterSpacing: 0.2,
-          boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-        }}>{chooseToast}</div>
-      )}
     </div>
-  );
-}
-
-// Day-detail bottom sheet - Stage 2 (peek) and Stage 3 (full).
-function DaySheet({ state, setState, day, dayNum, dayIdx, dest, itineraryId, scoring, tours, price, strikePrice, optionNum, totalOptions, description, onMetricOpen, onChoose }) {
-  const sheetHeight = state === "peek" ? "62%" : "calc(100% - 38px)";
-  const photos = dest && customerPhotos[dest] ? customerPhotos[dest] : [];
-  const galleryItems = photos.length >= 6 ? photos.slice(0, 6) : [...photos, ...(day?.activities || [])].slice(0, 6);
-
-  return (
-    <>
-      {/* Backdrop above image, below sheet */}
-      <div onClick={() => setState("hidden")} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 8 }} />
-
-      <div className="animate-slide-up" style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: sheetHeight,
-        background: "#fff", borderRadius: "16px 16px 0 0", zIndex: 9,
-        display: "flex", flexDirection: "column", overflow: "hidden",
-        transition: "height 0.3s ease",
-      }}>
-        {/* Drag handle (toggles peek <-> full) */}
-        <div
-          onClick={() => setState(state === "peek" ? "full" : "peek")}
-          style={{ padding: "8px 0 4px", cursor: "pointer", flexShrink: 0 }}
-        >
-          <div style={{ width: 72, height: 4, borderRadius: 999, background: "#E0E2EB", margin: "0 auto" }} />
-        </div>
-
-        <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
-          {/* Day title row */}
-          <div style={{ padding: "12px 20px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <h2 style={{ margin: 0, flex: 1, fontSize: 18, fontWeight: 600, color: "#181E4C", lineHeight: 1.4 }}>
-                Day {dayNum} - {day?.city}
-              </h2>
-              <span style={{ fontSize: 14, color: "#666C99" }}>Option {optionNum} of {totalOptions}</span>
-            </div>
-            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#666C99", lineHeight: 1.35 }}>
-              {description}
-            </p>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 18, fontWeight: 600, color: "#181E4C" }}>Rs.{price.toLocaleString("en-IN")}</span>
-              <span style={{ fontSize: 14, color: "#666C99", textDecoration: "line-through" }}>Rs.{strikePrice.toLocaleString("en-IN")}</span>
-              <span style={{ fontSize: 14, color: "#666C99" }}>(-20%)</span>
-            </div>
-          </div>
-
-          {/* SCORE ROW */}
-          <DayScoreRow scoring={scoring} onOpen={onMetricOpen} />
-
-          {/* Your day will cover */}
-          <div style={{ padding: "16px 20px 8px" }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>
-              Your day will cover:
-            </h3>
-            {tours.map((tour, ti) => (
-              <TourBlock key={ti} tour={tour} itineraryId={itineraryId} dayIdx={dayIdx} />
-            ))}
-          </div>
-
-          <div style={{ height: 1, background: "#E0E2EB", margin: "8px 0" }} />
-
-          {/* Reviewer */}
-          <div style={{ padding: "16px 20px 16px" }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Our customer says</h3>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.p100, color: C.p600, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>N</div>
-              <span style={{ fontSize: 16, fontWeight: 500, color: "#090C10" }}>Nishant</span>
-            </div>
-            <div style={{ display: "flex", gap: 2, marginBottom: 8 }}>
-              {[1,2,3,4,5].map(s => <Star key={s} size={16} color="#FBBC05" fill="#FBBC05" strokeWidth={0} />)}
-            </div>
-            <p style={{ margin: "0 0 4px", fontSize: 14, color: "#666C99", lineHeight: 1.45 }}>
-              They don't suggest over touristy places like others. Their Jatiluwih terraces + Beach love combination in Bali is a must try for every couple. We had a great time enjoying the sunset sitting on Bean bags from a cliff overlooking an ocean. No other travel agent understands Couples like this!
-            </p>
-            <span style={{ fontSize: 14, color: "#181E4C", fontWeight: 500, cursor: "pointer" }}>Read more</span>
-          </div>
-
-          {/* Traveller stories grid */}
-          {galleryItems.length >= 3 && (
-            <div style={{ padding: "8px 20px 24px" }}>
-              <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 500, color: "#181E4C" }}>Traveller stories</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {galleryItems.map((p, i) => {
-                  const src = p.img || p;
-                  return (
-                    <div key={i} style={{ aspectRatio: "1 / 1", borderRadius: 8, overflow: "hidden", background: "#F5F5F5" }}>
-                      <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sticky CTA */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          padding: "12px 16px", background: "#fff",
-          borderTop: "1px solid #E0E2EB", boxShadow: "0 -2px 11px rgba(0,0,0,0.06)",
-        }}>
-          <button onClick={onChoose} style={{
-            width: "100%", padding: "12px 24px", borderRadius: 999,
-            background: C.p600, color: "#fff", border: "none",
-            fontSize: 16, fontWeight: 500, fontFamily: "inherit", cursor: "pointer",
-            boxShadow: "0 4px 16px -2px rgba(253,1,79,0.25)",
-          }}>
-            Choose this day
-          </button>
-        </div>
-      </div>
-    </>
   );
 }
 
@@ -1655,7 +2312,7 @@ function getDayPlan(day, dayIdx, daysWithActivities) {
   return { narrative, transfer, hotelName, roomType, meals, groups, ICONS, cityDayIdx };
 }
 
-function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDay, onPlay, onChangeDay, onPhotoOpen, onClose }) {
+function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDay, onPlay, onChangeDay, onPhotoOpen, dayHasOptions, onClose }) {
   const [closing, setClosing] = useState(false);
   const handleClose = () => { setClosing(true); setTimeout(onClose, 280); };
   const day = days[activeDay];
@@ -1763,6 +2420,53 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
           <p style={{ fontSize: 20, fontWeight: 700, color: C.head, margin: 0 }}>{plan?.narrative.t}</p>
           <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 8px" }}>{totalActs} activities · ~{totalDuration} hrs</p>
           <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "19px" }}>{plan?.narrative.s}</p>
+
+          {/* Equally-weighted action chips: Photos · Videos · Change day */}
+          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <button
+              onClick={() => onPlay(activeDay, 0)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "8px 14px", background: C.white,
+                border: `1px solid ${C.div}`, borderRadius: 999,
+                fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer",
+                fontFamily: "inherit", lineHeight: 1,
+              }}
+            >
+              <Play size={12} color={C.sub} fill={C.sub} />
+              Videos
+            </button>
+            {dest && customerPhotos[dest] && (
+              <button
+                onClick={() => onPhotoOpen(day?.dayNum, 0)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "8px 14px", background: C.white,
+                  border: `1px solid ${C.div}`, borderRadius: 999,
+                  fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer",
+                  fontFamily: "inherit", lineHeight: 1,
+                }}
+              >
+                <Camera size={12} color={C.sub} />
+                Photos
+              </button>
+            )}
+            {dayHasOptions && dayHasOptions(activeDay) && (
+              <button
+                onClick={() => onChangeDay(activeDay)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "8px 14px", background: C.white,
+                  border: `1px solid ${C.div}`, borderRadius: 999,
+                  fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer",
+                  fontFamily: "inherit", lineHeight: 1,
+                }}
+              >
+                <RefreshCw size={12} color={C.sub} />
+                Change day
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Portrait thumbnails: transfer + activities */}
@@ -2008,21 +2712,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
           </div>
         )}
 
-        {/* Change day CTA */}
-        <div style={{ padding: "20px 16px 28px" }}>
-          <button
-            onClick={() => onChangeDay(activeDay)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              width: "100%", padding: "14px 16px",
-              background: "#fff", border: `1.5px solid ${C.p600}`, borderRadius: 12,
-              fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <RefreshCw size={14} color={C.p600} />
-            Change this day
-          </button>
-        </div>
+        <div style={{ height: 28 }} />
       </div>
     </div>
   );

@@ -350,6 +350,7 @@ export function generateHotelsForCity(city, destination, checkIn, checkOut, nigh
       id: `${city}-hotel-${i}`,
       name,
       stars,
+      freeCancellation: stars >= 4 || hotelSeed() > 0.5,
       bookingScore: Math.min(bookingScore, 9.8),
       reviewCount,
       neighbourhood,

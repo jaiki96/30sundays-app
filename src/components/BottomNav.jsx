@@ -23,8 +23,9 @@ const TAB_PCT = 100 / TAB_COUNT;
 export default function BottomNav({ userState }) {
   const { pathname } = useLocation();
 
-  // Show nav on main tabs + Plan page for lead users (showing itineraries)
-  const visible = showOn.has(pathname) || (pathname === "/plan" && userState === "lead");
+  // Show nav on main tabs + Plan page for returning users (showing their plans).
+  // New users see the full-screen login on /plan, so the nav stays hidden there.
+  const visible = showOn.has(pathname) || (pathname === "/plan" && userState !== "new");
   if (!visible) return null;
 
   const isOn = (to) => (to === "/" ? pathname === "/" : pathname.startsWith(to));

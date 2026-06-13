@@ -5,6 +5,7 @@ import { C, destinations, allItineraries } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
 import DatePicker from "../components/DatePicker";
 import LoginV2 from "./LoginV2";
+import { useDeals, effectiveStatus, STATUS_LABEL, QUOTE_VALID_DAYS } from "../data/deals";
 
 const funLines = [
   "Meanwhile, your dream beach is warming up the sand for you...",
@@ -71,24 +72,30 @@ const IlloOtp = () => (
 );
 
 const destNames = ["Thailand", "Vietnam", "Bali", "Maldives", "Sri Lanka", "New Zealand"];
+// Returning users without a fresh lead inquiry still land on a populated plan list.
+const DEFAULT_PLAN_DESTS = ["Bali", "Thailand", "Vietnam"];
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
 const adultOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function Plan({ userState, setUserState, leadData, setLeadData }) {
   const navigate = useNavigate();
+  const { deals } = useDeals();
   const [params] = useSearchParams();
   const preselectedDest = params.get("dest") || "";
   const returnTo = params.get("return") || "";
 
-  // If already a lead with data, skip to appropriate page
+  // Returning users (lead / customer / trip done) go straight to their plans.
+  // Only a brand-new user is asked to log in first.
+  const isReturning = userState !== "new";
+
   useEffect(() => {
-    if (userState === "lead" && leadData) {
+    if (isReturning) {
       if (returnTo === "trips") {
         navigate("/trips", { replace: true });
       } else if (returnTo === "account") {
         navigate("/account", { replace: true });
       } else {
-        // Already a lead, show the success screen
+        // Already known to us, show the plans directly
         setPhase("success");
       }
     }
@@ -96,7 +103,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
 
   // phase: "auth" | "details" | "curating" | "success"
   // ("auth" covers what used to be "phone" + "otp" - handled by LoginV2)
-  const [phase, setPhase] = useState(userState === "lead" && leadData ? "success" : "auth");
+  const [phase, setPhase] = useState(isReturning ? "success" : "auth");
   const [countryIdx, setCountryIdx] = useState(0);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
@@ -129,7 +136,11 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
 
   // Get recommended itineraries for selected destinations
   const recommendedItineraries = useMemo(() => {
-    const selectedDests = phase === "success" && leadData ? leadData.dests : dests;
+    let selectedDests = phase === "success" && leadData ? leadData.dests : dests;
+    // Returning user without a fresh inquiry: fall back to a default curated set.
+    if (phase === "success" && (!selectedDests || selectedDests.length === 0)) {
+      selectedDests = DEFAULT_PLAN_DESTS;
+    }
     if (!selectedDests || selectedDests.length === 0) return [];
     // Pick 1 recommended itinerary per destination
     const recs = [];
@@ -263,7 +274,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   };
 
   const successName = leadData?.name || name.trim() || "traveller";
-  const successDests = leadData?.dests || dests;
+  const successDests = (leadData?.dests?.length ? leadData.dests : (dests.length ? dests : DEFAULT_PLAN_DESTS));
 
   // ─── RENDER ───
   return (
@@ -310,6 +321,57 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
 
           {/* Content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 80px" }} className="hide-scrollbar">
+            {/* Saved plans (versioned deals) */}
+            {deals.length > 0 && (
+              <div style={{ margin: "8px 0 20px" }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: "0 0 10px" }}>Saved plans</p>
+                {deals.map(deal => {
+                  const sorted = [...deal.versions].sort((a, b) => b.num - a.num);
+                  return (
+                    <div key={deal.id} style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", marginBottom: 12, background: C.white }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 10, borderBottom: `1px solid ${C.div}` }}>
+                        <img src={deal.img} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{deal.title}</p>
+                          <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub }}>{deal.dest} · {deal.versions.length} version{deal.versions.length !== 1 ? "s" : ""}</p>
+                        </div>
+                      </div>
+                      {sorted.map(v => {
+                        const st = effectiveStatus(v);
+                        const tint = st === "draft" ? { bg: C.p100, fg: C.p600 }
+                          : st === "expired" ? { bg: "#FEF3E0", fg: "#B54708" }
+                          : { bg: "#ECFDF3", fg: "#027A48" };
+                        const price = st === "draft" ? v.indicativePrice : v.livePrice;
+                        return (
+                          <div
+                            key={v.id}
+                            data-testid={`deal-version-${st}-v${v.num}`}
+                            onClick={() => navigate(`/itinerary/${deal.itineraryId}?dealId=${deal.id}&versionId=${v.id}`)}
+                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", cursor: "pointer", borderTop: `1px solid ${C.bg}` }}
+                          >
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: tint.bg, color: tint.fg, flexShrink: 0 }}>
+                              {STATUS_LABEL[st]}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.head }}>
+                                v{v.num}
+                                {price != null && <span style={{ fontWeight: 700 }}> · ₹{price.toLocaleString("en-IN")}</span>}
+                                {price != null && <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>/person</span>}
+                              </p>
+                              <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub }}>
+                                {st === "draft" ? "Editing · indicative" : st === "expired" ? "Expired · refresh to re-quote" : `Locked · valid till ${new Date(v.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                              </p>
+                            </div>
+                            <ArrowRight size={16} color={C.inact} style={{ flexShrink: 0 }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Welcome banner */}
             {showWelcome && (
               <div style={{
@@ -347,103 +409,6 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                       A travel consultant will also reach out shortly to personalise further.
                     </p>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Dates-missing prompt, shown when user skipped startDate / nights */}
-            {(!leadData?.startDate || !leadData?.nights) && (
-              <div style={{
-                margin: "4px 0 16px", borderRadius: 16, padding: "16px",
-                background: `linear-gradient(135deg, ${C.p100} 0%, #FFF5F0 100%)`,
-                border: `1px solid ${C.p300}66`,
-                position: "relative", zIndex: 30,
-              }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 14 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Sparkles size={18} color={C.p600} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: C.p900, margin: "0 0 2px" }}>
-                      Unlock your exact itinerary
-                    </p>
-                    <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
-                      Add your travel dates and nights and we'll lock in prices + availability for you.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ position: "relative", zIndex: 15 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>Trip start date</label>
-                    <DatePicker value={startDate} onChange={setStartDate} />
-                  </div>
-
-                  <div style={{ position: "relative", zIndex: 10 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 4, display: "block" }}>How many nights?</label>
-                    <button
-                      onClick={() => setShowNightsDropdown(!showNightsDropdown)}
-                      style={{
-                        width: "100%", boxSizing: "border-box",
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "11px 14px", borderRadius: 12,
-                        background: C.white,
-                        border: `1.5px solid ${nights ? "#027A48" : C.div}`,
-                        cursor: "pointer", fontFamily: "inherit",
-                      }}
-                    >
-                      <span style={{ fontSize: 14, fontWeight: nights ? 600 : 500, color: nights ? C.head : C.sub }}>
-                        {nights ? (nights === 0 ? "Flexible" : `${nights} Nights`) : "Select number of nights"}
-                      </span>
-                      <ChevronDown size={16} color={C.sub} style={{ transition: "transform 0.2s", transform: showNightsDropdown ? "rotate(180deg)" : "none" }} />
-                    </button>
-                    {showNightsDropdown && (
-                      <div style={{
-                        position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50,
-                        background: C.white, borderRadius: 12, border: `1px solid ${C.div}`,
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden",
-                        maxHeight: 240, overflowY: "auto",
-                      }}>
-                        {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0].map((n, idx, arr) => {
-                          const sel = nights === n;
-                          const label = n === 0 ? "Flexible" : `${n} Nights`;
-                          return (
-                            <button
-                              key={n}
-                              onClick={() => { setNights(n); setShowNightsDropdown(false); }}
-                              style={{
-                                display: "flex", alignItems: "center",
-                                width: "100%", padding: "11px 16px",
-                                background: sel ? C.p100 : "none",
-                                border: "none", cursor: "pointer", fontFamily: "inherit",
-                                borderBottom: idx < arr.length - 1 ? `1px solid ${C.div}` : "none",
-                                fontSize: 14, fontWeight: sel ? 700 : 500,
-                                color: sel ? C.p600 : C.head, textAlign: "left",
-                              }}
-                            >{label}</button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (!startDate || !nights) return;
-                      setLeadData({ ...leadData, startDate, nights });
-                    }}
-                    disabled={!startDate || !nights}
-                    style={{
-                      marginTop: 4, padding: "12px 0", borderRadius: 12, border: "none",
-                      background: (startDate && nights) ? C.p600 : C.inact,
-                      color: "#fff", fontSize: 14, fontWeight: 700,
-                      cursor: (startDate && nights) ? "pointer" : "not-allowed",
-                      fontFamily: "inherit",
-                      boxShadow: (startDate && nights) ? "0 4px 12px rgba(227,27,83,0.3)" : "none",
-                    }}
-                  >
-                    Save & see my itinerary
-                  </button>
                 </div>
               </div>
             )}

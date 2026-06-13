@@ -24,6 +24,7 @@ export default function UserToggle({ userState, setUserState }) {
     <>
       {/* Floating action button */}
       <button
+        data-testid="demo-state-fab"
         onClick={() => setOpen(v => !v)}
         aria-label="Demo state switcher"
         style={{
@@ -63,6 +64,7 @@ export default function UserToggle({ userState, setUserState }) {
               return (
                 <button
                   key={s.key}
+                  data-testid={`demo-state-${s.key}`}
                   onClick={() => { setUserState(s.key); setOpen(false); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 10,

@@ -76,12 +76,6 @@ export default function ActivityDetail() {
     ? resolveBooked(params.tripId, params.dayIdx, params.actIdx)
     : resolvePlanning(params.id, params.dayIdx, params.actIdx);
 
-  const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryIdx, setGalleryIdx] = useState(0);
-  const [aboutExpanded, setAboutExpanded] = useState(false);
-  const [hoursExpanded, setHoursExpanded] = useState(false);
-  const [showLockedSheet, setShowLockedSheet] = useState(false);
-
   if (!source) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
@@ -94,7 +88,6 @@ export default function ActivityDetail() {
   }
 
   const { detail, backUrl } = source;
-  const { isBooked } = detail;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: C.white, position: "relative" }}>
@@ -115,50 +108,65 @@ export default function ActivityDetail() {
           </button>
         </div>
 
-        {/* Hero gallery */}
-        <HeroGallery
-          detail={detail}
-          onOpenGallery={(i) => { setGalleryIdx(i); setGalleryOpen(true); }}
-          onLockedTap={() => setShowLockedSheet(true)}
-        />
-
-        {/* Title block */}
-        <div style={{ padding: "16px 16px 0" }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#181E4C", margin: 0, lineHeight: 1.25 }}>{detail.name}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <Star size={13} fill="#FBBC05" color="#FBBC05" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{detail.rating}</span>
-              <span style={{ fontSize: 12, color: C.sub }}>({detail.reviewCount.toLocaleString()})</span>
-            </div>
-            <span style={{ color: "#E0E2EB" }}>·</span>
-            <span style={{ fontSize: 13, color: "#4A5072" }}>{detail.primaryTypeIcon} {detail.primaryType}</span>
-            <OpenStatus detail={detail} />
-          </div>
-
-          {/* Flags */}
-          <FlagChips flags={detail.flags} />
-        </div>
-
-        {/* Action chips */}
-        <ActionChipsRow detail={detail} />
-
-        {/* About */}
-        <AboutBlock detail={detail} expanded={aboutExpanded} setExpanded={setAboutExpanded} />
-
-        {/* Map preview */}
-        <MapPreview detail={detail} />
-
-        {/* Opening hours */}
-        <HoursBlock detail={detail} expanded={hoursExpanded} setExpanded={setHoursExpanded} />
-
-        {/* Reviews */}
-        <ReviewsBlock detail={detail} />
-
-        {/* Good to know */}
-        <GoodToKnowBlock detail={detail} />
+        <ActivityDetailScroll detail={detail} />
 
       </div>
+    </div>
+  );
+}
+
+// ─── Reusable activity-detail content (used by the page AND the in-reel bottom sheet) ───
+export function ActivityDetailScroll({ detail }) {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIdx, setGalleryIdx] = useState(0);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [hoursExpanded, setHoursExpanded] = useState(false);
+  const [showLockedSheet, setShowLockedSheet] = useState(false);
+
+  return (
+    <>
+      {/* Hero gallery */}
+      <HeroGallery
+        detail={detail}
+        onOpenGallery={(i) => { setGalleryIdx(i); setGalleryOpen(true); }}
+        onLockedTap={() => setShowLockedSheet(true)}
+      />
+
+      {/* Title block */}
+      <div style={{ padding: "16px 16px 0" }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#181E4C", margin: 0, lineHeight: 1.25 }}>{detail.name}</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <Star size={13} fill="#FBBC05" color="#FBBC05" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{detail.rating}</span>
+            <span style={{ fontSize: 12, color: C.sub }}>({detail.reviewCount.toLocaleString()})</span>
+          </div>
+          <span style={{ color: "#E0E2EB" }}>·</span>
+          <span style={{ fontSize: 13, color: "#4A5072" }}>{detail.primaryTypeIcon} {detail.primaryType}</span>
+          <OpenStatus detail={detail} />
+        </div>
+
+        {/* Flags */}
+        <FlagChips flags={detail.flags} />
+      </div>
+
+      {/* Action chips */}
+      <ActionChipsRow detail={detail} />
+
+      {/* About */}
+      <AboutBlock detail={detail} expanded={aboutExpanded} setExpanded={setAboutExpanded} />
+
+      {/* Map preview */}
+      <MapPreview detail={detail} />
+
+      {/* Opening hours */}
+      <HoursBlock detail={detail} expanded={hoursExpanded} setExpanded={setHoursExpanded} />
+
+      {/* Reviews */}
+      <ReviewsBlock detail={detail} />
+
+      {/* Good to know */}
+      <GoodToKnowBlock detail={detail} />
 
       {/* Gallery overlay */}
       {galleryOpen && (
@@ -172,7 +180,7 @@ export default function ActivityDetail() {
 
       {/* Locked guide sheet (planning user) */}
       {showLockedSheet && <LockedGuideSheet onClose={() => setShowLockedSheet(false)} />}
-    </div>
+    </>
   );
 }
 
@@ -217,7 +225,6 @@ function HeroGallery({ detail, onOpenGallery, onLockedTap }) {
           <img src={photos[2]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         </div>
       </div>
-      <LockedGuideBanner onTap={onLockedTap} />
     </div>
   );
 }
@@ -569,7 +576,7 @@ function GalleryOverlay({ images, idx, setIdx, onClose }) {
 
   const overlay = (
     <div style={{
-      position: "absolute", inset: 0, zIndex: 200, background: "#000",
+      position: "absolute", inset: 0, zIndex: 320, background: "#000",
       display: "flex", flexDirection: "column", animation: "fadeIn 0.18s ease-out",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px" }}>
@@ -611,7 +618,7 @@ function GalleryOverlay({ images, idx, setIdx, onClose }) {
 function LockedGuideSheet({ onClose }) {
   const navigate = useNavigate();
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 220, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+    <div style={{ position: "absolute", inset: 0, zIndex: 330, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", animation: "fadeInBg 0.2s ease-out" }} />
       <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", padding: "24px 20px 28px", animation: "sheetSlideUp 0.25s ease-out" }}>
         <div style={{ width: 40, height: 4, borderRadius: 4, background: "#E0E2EB", margin: "0 auto 18px" }} />

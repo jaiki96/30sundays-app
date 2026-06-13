@@ -85,9 +85,10 @@ export default function HotelPDP() {
                 {hotel.name}
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  <Star size={11} fill="#FBBC05" color="#FBBC05" />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#FD014F" }}>{hotel.stars} star hotel</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {Array.from({ length: hotel.stars }).map((_, s) => (
+                    <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                  ))}
                 </div>
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -127,21 +128,12 @@ export default function HotelPDP() {
           </div>
         </div>
 
-        {/* ═══ Location Card ═══ */}
-        <div style={{ margin: "16px 16px 0", borderRadius: 16, border: `1px solid ${C.div}`, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
-          <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FFEBF1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <MapPin size={18} color="#FD014F" />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: 0 }}>{stayInfo.city}</p>
-              <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{hotel.address}</p>
-            </div>
-            <Navigation size={20} color="#FD014F" style={{ flexShrink: 0 }} />
-          </div>
-          <div style={{ borderTop: `1px solid ${C.div}`, padding: "10px 16px" }}>
-            <span style={{ fontSize: 12, color: C.sub }}>Check-In: {hotel.checkInTime} &bull; Check-Out: {hotel.checkOutTime}</span>
-          </div>
+        {/* ═══ Stay summary ═══ */}
+        <div style={{ margin: "16px 16px 0", borderRadius: 16, border: `1px solid ${C.div}`, padding: "10px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#181E4C", margin: "0 0 2px" }}>
+            {stayInfo.checkIn} – {stayInfo.checkOut} &bull; {stayInfo.nights} {stayInfo.nights === 1 ? "night" : "nights"} &bull; 👤 2 travellers
+          </p>
+          <span style={{ fontSize: 12, color: C.sub }}>Check-In: {hotel.checkInTime} &bull; Check-Out: {hotel.checkOutTime}</span>
         </div>
 
         {/* ═══ Property Highlights ═══ */}
@@ -160,6 +152,37 @@ export default function HotelPDP() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ═══ Location — tappable map, opens Google Maps ═══ */}
+        <div style={{ margin: "24px 16px 0", borderRadius: 16, border: `1px solid ${C.div}`, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${hotel.name}, ${hotel.address}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: "block", textDecoration: "none", color: "inherit" }}
+          >
+            <div style={{ position: "relative", height: 120, background: "url(https://images.unsplash.com/photo-1524661135-423995f22d0b?w=900&q=80&auto=format&fit=crop) center/cover no-repeat, #E8ECEF" }}>
+              <div style={{
+                position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -100%)",
+                width: 32, height: 32, borderRadius: "50%", background: "#FD014F",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 4px 10px rgba(253,1,79,0.45), 0 0 0 4px rgba(253,1,79,0.18)",
+              }}>
+                <MapPin size={16} color="#fff" fill="#fff" />
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: 0 }}>{stayInfo.city}</p>
+                <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{hotel.address}</p>
+              </div>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#FD014F", whiteSpace: "nowrap", flexShrink: 0 }}>
+                <Navigation size={12} color="#FD014F" />
+                Open in Maps
+              </span>
+            </div>
+          </a>
         </div>
 
         {/* ═══ Room Selection ═══ */}

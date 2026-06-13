@@ -15,14 +15,14 @@ const upgradeData = {
         stars: 4,
         type: "Deluxe Room · Breakfast included",
         rating: 8.4,
-        img: "https://picsum.photos/seed/padma/400/240",
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
         name: "Viceroy Bali",
         stars: 5,
         type: "Pool Villa · All meals included",
         rating: 9.2,
-        img: "https://picsum.photos/seed/viceroy/400/240",
+        img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80&auto=format&fit=crop",
         delta: 4200, // per night additional
         perks: [
           "Private infinity pool",
@@ -40,14 +40,14 @@ const upgradeData = {
         stars: 4,
         type: "Garden Room · Breakfast included",
         rating: 8.1,
-        img: "https://picsum.photos/seed/como/400/240",
+        img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
         name: "Four Seasons Sayan",
         stars: 5,
         type: "Riverfront Villa · Half board",
         rating: 9.4,
-        img: "https://picsum.photos/seed/fssayan/400/240",
+        img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=80&auto=format&fit=crop",
         delta: 3800,
         perks: [
           "Valley-view private terrace",
@@ -68,14 +68,14 @@ const upgradeData = {
         stars: 4,
         type: "Deluxe Room · Breakfast included",
         rating: 8.3,
-        img: "https://picsum.photos/seed/hilton/400/240",
+        img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
         name: "The Ritz-Carlton Bali",
         stars: 5,
         type: "Cliff Villa · All meals included",
         rating: 9.3,
-        img: "https://picsum.photos/seed/ritz/400/240",
+        img: "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=600&q=80&auto=format&fit=crop",
         delta: 4200,
         perks: [
           "Private beach access",
@@ -96,14 +96,14 @@ const upgradeData = {
         stars: 4,
         type: "Garden Suite · Breakfast included",
         rating: 8.0,
-        img: "https://picsum.photos/seed/canggu/400/240",
+        img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop",
       },
       upgrade: {
         name: "Como Uma Canggu",
         stars: 5,
         type: "Penthouse Suite · All meals included",
         rating: 9.1,
-        img: "https://picsum.photos/seed/comocanggu/400/240",
+        img: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80&auto=format&fit=crop",
         delta: 3600,
         perks: [
           "Rooftop infinity pool",
