@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, ChevronRight, Search, Heart, MapPin, Sparkles } from "lucide-react";
 import { C, destinations, allItineraries } from "../data";
 import ItineraryCard from "../components/ItineraryCard";
 import DatePicker from "../components/DatePicker";
@@ -329,12 +329,16 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                   const sorted = [...deal.versions].sort((a, b) => b.num - a.num);
                   return (
                     <div key={deal.id} style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", marginBottom: 12, background: C.white }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 10, borderBottom: `1px solid ${C.div}` }}>
+                      <div
+                        onClick={() => navigate(`/itinerary/${deal.itineraryId}?dealId=${deal.id}&versionId=${sorted[0].id}`)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: 10, borderBottom: `1px solid ${C.div}`, cursor: "pointer" }}
+                      >
                         <img src={deal.img} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{deal.title}</p>
                           <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub }}>{deal.dest} · {deal.versions.length} version{deal.versions.length !== 1 ? "s" : ""}</p>
                         </div>
+                        <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
                       </div>
                       {sorted.map(v => {
                         const st = effectiveStatus(v);

@@ -307,11 +307,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         indicativePrice: computePrice(it.price, next, selectedHotelOptions),
       });
       navigate(`/itinerary/${it.id}?dealId=${nd}&versionId=${nv}`);
-      showToast("Personalising your own copy ✦");
+      showToast(`Day ${daysWithActivities[dayIndex]?.dayNum} updated ✓ · your copy started ✦`);
       return;
     }
 
-    const incremental = (option.priceDelta || 0) - (previousOption?.priceDelta || 0);
+    const incremental = ((option.priceDelta || 0) - (previousOption?.priceDelta || 0)) * travellers;
     const pricePart = incremental !== 0
       ? ` · Trip total ${incremental > 0 ? "+" : "−"}₹${Math.abs(incremental).toLocaleString("en-IN")}`
       : "";
@@ -1075,10 +1075,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             <div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
                 <span style={{ fontSize: 11, color: C.sub }}>From</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{it.price}</span>
-                <span style={{ fontSize: 11, color: C.sub }}>/person</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{((Number(String(it.price).replace(/,/g, "")) || 0) * travellers).toLocaleString("en-IN")}</span>
               </div>
-              <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Price incl. GST & TCS</p>
+              <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Total for {travellers} · incl. GST & TCS</p>
             </div>
             <Link to={`/plan?dest=${it.dest}`} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
@@ -1093,13 +1092,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         <div style={{ minWidth: 0 }}>
           {quoted && !quoteStale ? (
             <>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.livePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(version.livePrice || 0).toLocaleString("en-IN")}/person)</span></p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.livePrice || 0) * travellers).toLocaleString("en-IN")}</p>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
             </>
           ) : (
             <>
-              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Indicative</p>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.indicativePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(version.indicativePrice || 0).toLocaleString("en-IN")}/person)</span></p>
+              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Indicative total</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.indicativePrice || 0) * travellers).toLocaleString("en-IN")}</p>
             </>
           )}
         </div>
@@ -1243,7 +1242,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
                 <span style={{ fontSize: 13, color: C.sub }}>Price difference</span>
                 <span style={{ fontSize: 15, fontWeight: 700, color: incremental === 0 ? C.sub : incremental > 0 ? C.head : "#027A48" }}>
-                  {incremental === 0 ? "No change" : `${incremental > 0 ? "+" : "−"}₹${Math.abs(incremental).toLocaleString("en-IN")} /person`}
+                  {incremental === 0 ? "No change" : `${incremental > 0 ? "+" : "−"}₹${Math.abs(incremental * travellers).toLocaleString("en-IN")}`}
                 </span>
               </div>
 
