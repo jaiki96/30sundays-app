@@ -115,13 +115,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const inDeal = !!version;
   const isDraft = inDeal && dealStatus === "draft";
   const editable = true; // no gate; we reconcile at our end
-  // A base itinerary (no deal yet) is shown as an already-generated v1 quote.
-  const [baseQuoteAt] = useState(() => Date.now());
-  // Quoted = a PDF exists. Base itineraries default to quoted; a deal copy is
-  // quoted once priced. Otherwise it's a draft being edited.
-  const quoted = inDeal ? !!version.pricedAt : true;
-  // A quoted deal copy whose price drifted from the PDF (edited since / expired).
-  const quoteStale = inDeal && !!version.pricedAt && (dealStatus === "expired" ||
+  // The quote/PDF bar applies only to plans opened from the Plan tab (a deal).
+  // Explore itineraries (no deal) show no version/PDF until the first edit
+  // creates one. Quoted = a PDF exists; a deal copy is quoted once priced.
+  const quoted = inDeal && !!version.pricedAt;
+  // A quoted copy whose price drifted from the PDF (edited since / expired).
+  const quoteStale = quoted && (dealStatus === "expired" ||
     (version.indicativePrice != null && version.indicativePrice !== version.livePrice));
   const hydratedRef = useRef(false);
 
@@ -153,18 +152,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
-  // Unified display copy: a real deal version, or a synthetic v1 quote for a
-  // base itinerary so the version line + PDF always show.
-  const baseLivePrice = computePrice(it.price, selectedDayOptions);
   const travellers = 2 + (it.veg ? 0 : 1);
-  const displayVersion = version || {
-    num: 1,
-    status: "quote",
-    indicativePrice: baseLivePrice,
-    livePrice: baseLivePrice,
-    pricedAt: baseQuoteAt,
-    createdAt: baseQuoteAt,
-  };
 
   const upgradeInfo = getUpgradeInfo(it.id, it.days);
 
@@ -396,23 +384,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
       </div>
 
-      {/* ═══ 1b. Subtle version line (always shown — quote or editing) ═══ */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: `1px solid ${C.div}` }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flexShrink: 0 }}>V{displayVersion.num}</span>
-        <span style={{ fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          · {new Date(quoted ? (displayVersion.pricedAt || displayVersion.createdAt) : displayVersion.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
-        </span>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          {quoted && (
-            <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", color: "#027A48", fontSize: 12.5, fontWeight: 700 }}>
-              <Download size={14} /> PDF
-            </button>
-          )}
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999 }}>
-            {stateChip.label}
+      {/* ═══ 1b. Subtle version line — only for plans from the Plan tab (a deal) ═══ */}
+      {inDeal && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: `1px solid ${C.div}` }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flexShrink: 0 }}>V{version.num}</span>
+          <span style={{ fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            · {new Date(quoted ? (version.pricedAt || version.createdAt) : version.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
           </span>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {quoted && (
+              <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", color: "#027A48", fontSize: 12.5, fontWeight: 700 }}>
+                <Download size={14} /> PDF
+              </button>
+            )}
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999 }}>
+              {stateChip.label}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
       {isVietnam ? (
@@ -1027,23 +1017,42 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
               <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>{FETCH_MSGS[fetchMsgIdx % FETCH_MSGS.length]}</p>
             </div>
           </div>
+        ) : !inDeal ? (
+          /* Explore itinerary — no quote/PDF; just start planning. */
+          <>
+            <div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+                <span style={{ fontSize: 11, color: C.sub }}>From</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{it.price}</span>
+                <span style={{ fontSize: 11, color: C.sub }}>/person</span>
+              </div>
+              <p style={{ fontSize: 9, color: C.inact, margin: 0 }}>Price incl. GST & TCS</p>
+            </div>
+            <Link to={`/plan?dest=${it.dest}`} style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
+              background: C.p600, color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
+              boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
+            }}>
+              Plan My Trip <ArrowRight size={14} />
+            </Link>
+          </>
         ) : (
         <>
         <div style={{ minWidth: 0 }}>
           {quoted && !quoteStale ? (
             <>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((displayVersion.livePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(displayVersion.livePrice || 0).toLocaleString("en-IN")}/person)</span></p>
-              <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Quote valid till {new Date(displayVersion.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.livePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(version.livePrice || 0).toLocaleString("en-IN")}/person)</span></p>
+              <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
             </>
           ) : (
             <>
               <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Indicative</p>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((displayVersion.indicativePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(displayVersion.indicativePrice || 0).toLocaleString("en-IN")}/person)</span></p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.indicativePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(version.indicativePrice || 0).toLocaleString("en-IN")}/person)</span></p>
             </>
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          {inDeal && !(quoted && !quoteStale) && (
+          {!(quoted && !quoteStale) && (
             <button data-testid="discard-copy" onClick={handleDiscardCopy} style={{ padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.sub, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               Discard
             </button>
