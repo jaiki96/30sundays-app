@@ -28,7 +28,7 @@ export default function UserToggle({ userState, setUserState }) {
         onClick={() => setOpen(v => !v)}
         aria-label="Demo state switcher"
         style={{
-          position: "absolute", bottom: 84, right: 16, zIndex: 90,
+          position: "absolute", bottom: 160, right: 16, zIndex: 90,
           width: 44, height: 44, borderRadius: "50%",
           background: C.p600, color: "#fff", border: "none", padding: 0,
           display: "grid", placeItems: "center",
@@ -50,7 +50,7 @@ export default function UserToggle({ userState, setUserState }) {
           />
           {/* Menu */}
           <div style={{
-            position: "absolute", bottom: 136, right: 16, zIndex: 95,
+            position: "absolute", bottom: 212, right: 16, zIndex: 95,
             width: 220, background: C.white, borderRadius: 14,
             boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
             border: `1px solid ${C.div}`, overflow: "hidden",
