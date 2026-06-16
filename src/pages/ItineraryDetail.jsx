@@ -442,15 +442,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     showToast("Changes discarded · back to the original");
   };
 
-  // Subtle state chip shown next to the version name (under the hero).
-  const stateChip = hasChanges
-    ? { label: "Editing", bg: C.p100, fg: C.p600 }
-    : (quoted && isExpired(version))
-      ? { label: "Expired", bg: "#FEF3E0", fg: "#B54708" }
-      : quoted
-        ? { label: "Quote", bg: "#ECFDF3", fg: "#027A48" }
-        : { label: "Draft", bg: C.p100, fg: C.p600 };
-
   return (
     <div style={{ position: "relative" }}>
 
@@ -471,9 +462,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "26px" }}>
               🌴 Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span>
             </p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: "4px 0 0" }}>
-              Mar 31 – Apr 6 · {2 + (it.veg ? 0 : 1)} travellers
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "5px 0 0" }}>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: 0 }}>
+                Mar 31 – Apr 6 · {travellers} travellers
+              </p>
+              {inDeal && (
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4, flexShrink: 0 }}>
+                  V{version.num}
+                </span>
+              )}
+            </div>
           </div>
           {/* Watch the trip button */}
           <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
@@ -487,18 +485,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
       </div>
 
-      {/* ═══ 1b. Subtle version line — only for plans from the Plan tab (a deal) ═══ */}
-      {inDeal && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: `1px solid ${C.div}` }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flexShrink: 0 }}>V{version.num}</span>
-          <span style={{ fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            · {new Date(quoted ? (version.pricedAt || version.createdAt) : version.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
-          </span>
-          <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999, flexShrink: 0 }}>
-            {stateChip.label}
-          </span>
-        </div>
-      )}
 
       {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
       {isVietnam ? (
