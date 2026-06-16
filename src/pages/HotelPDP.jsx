@@ -95,7 +95,7 @@ export default function HotelPDP() {
     } else {
       const created = dealsCtx.createDeal({
         itineraryId: itinerary.id, dest: itinerary.dest,
-        title: itinerary.name || `${itinerary.dest} trip`, img: itinerary.img,
+        title: itinerary.route?.map(r => r.city).join(" · ") || `${itinerary.dest} trip`, img: itinerary.img,
         createdBy: "customer",
         customizations: { selectedDayOptions: {}, selectedHotels: { [stayIndex]: stay }, travelDates: null },
         indicativePrice: computePrice(itinerary.price, {}, { [stayIndex]: stay }),

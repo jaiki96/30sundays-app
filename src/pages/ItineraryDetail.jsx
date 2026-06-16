@@ -300,7 +300,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       const { dealId: nd, versionId: nv } = dealsCtx.createDeal({
         itineraryId: it.id,
         dest: it.dest,
-        title: it.name || `${it.dest} trip`,
+        title: it.route?.map(r => r.city).join(" · ") || `${it.dest} trip`,
         img: it.img,
         createdBy: "customer",
         customizations: { selectedDayOptions: next, selectedHotels: selectedHotelOptions, travelDates },
@@ -365,7 +365,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     const { dealId: nd, versionId: nv } = dealsCtx.createDeal({
       itineraryId: it.id,
       dest: it.dest,
-      title: it.name || `${it.dest} trip`,
+      title: it.route?.map(r => r.city).join(" · ") || `${it.dest} trip`,
       img: it.img,
       customizations: { selectedDayOptions, travelDates },
       indicativePrice: computePrice(it.price, selectedDayOptions),
