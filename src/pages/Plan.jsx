@@ -353,13 +353,14 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                               {STATUS_LABEL[st]}
                             </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.head }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                 v{v.num}
                                 {price != null && <span style={{ fontWeight: 700 }}> · ₹{price.toLocaleString("en-IN")}</span>}
                                 {price != null && <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>/person</span>}
                               </p>
                               <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub }}>
-                                {st === "draft" ? "Editing · indicative" : st === "expired" ? "Expired · refresh to re-quote" : `Locked · valid till ${new Date(v.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                                {v.createdBy === "customer" ? "Created by you · " : ""}
+                                {new Date(v.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {st === "draft" ? "Editing" : st === "expired" ? "Expired" : "Quote"}
                               </p>
                             </div>
                             <ArrowRight size={16} color={C.inact} style={{ flexShrink: 0 }} />

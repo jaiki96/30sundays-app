@@ -71,8 +71,8 @@ function PlanCard({ opt, onSelect, onPreview }) {
           <Metric label="Crowd levels" value={crowdLabels[opt.scoring.crowdLevel]} />
         </div>
 
-        {/* CTA */}
-        <div style={{ marginTop: 10 }}>
+        {/* CTA — pinned to the card bottom so it aligns across the row */}
+        <div style={{ marginTop: "auto", paddingTop: 10 }}>
           {opt.isCurrent ? (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 5,

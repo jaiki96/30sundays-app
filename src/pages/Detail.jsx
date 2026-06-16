@@ -1,9 +1,10 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { C, VS, allItineraries, destData } from "../data";
 
 export default function Detail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const it = allItineraries.find(i => i.id === Number(id));
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
@@ -16,9 +17,9 @@ export default function Detail() {
       <div style={{ position: "relative", height: 240 }}>
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 20%, rgba(0,0,0,0.7))" }} />
-        <Link to={-1} style={{ position: "absolute", top: 14, left: 14, width: 34, height: 34, borderRadius: 12, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <button onClick={() => navigate(-1)} style={{ position: "absolute", top: 14, left: 14, width: 34, height: 34, borderRadius: 12, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <ArrowLeft size={18} color="#fff" />
-        </Link>
+        </button>
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <span style={{ fontSize: 20 }}>{d?.flag}</span>

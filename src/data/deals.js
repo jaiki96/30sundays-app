@@ -50,6 +50,7 @@ export function DealsProvider({ children }) {
       num: 1,
       status: "draft",
       parentId: null,
+      createdBy: init.createdBy || "customer",
       customizations: init.customizations || {},
       indicativePrice: init.indicativePrice ?? null,
       livePrice: null,
@@ -69,12 +70,14 @@ export function DealsProvider({ children }) {
     return { dealId, versionId };
   }, []);
 
-  // Patch an editable Draft's customizations / indicative price in place.
+  // Patch a copy's customizations / indicative price in place. Works on any
+  // copy (draft or quote) — changes are allowed from anywhere; we reconcile a
+  // quote's price/PDF on the next "Update quote".
   const updateDraft = useCallback((dealId, versionId, patch) => {
     setDeals(prev => prev.map(d => d.id !== dealId ? d : {
       ...d,
       versions: d.versions.map(v => {
-        if (v.id !== versionId || v.status !== "draft") return v;
+        if (v.id !== versionId) return v;
         return {
           ...v,
           customizations: patch.customizations ?? v.customizations,
@@ -110,6 +113,7 @@ export function DealsProvider({ children }) {
         num: maxNum + 1,
         status: "draft",
         parentId: versionId,
+        createdBy: "customer",
         customizations: JSON.parse(JSON.stringify(parent.customizations || {})),
         indicativePrice: parent.livePrice ?? parent.indicativePrice ?? null,
         livePrice: null,
@@ -125,6 +129,15 @@ export function DealsProvider({ children }) {
     setDeals(prev => prev.filter(d => d.id !== dealId));
   }, []);
 
+  // Drop a single version; remove the whole deal if it was the last one.
+  const discardVersion = useCallback((dealId, versionId) => {
+    setDeals(prev => prev.flatMap(d => {
+      if (d.id !== dealId) return [d];
+      const remaining = d.versions.filter(v => v.id !== versionId);
+      return remaining.length ? [{ ...d, versions: remaining }] : [];
+    }));
+  }, []);
+
   const getDeal = useCallback((dealId) => deals.find(d => d.id === dealId) || null, [deals]);
   const getVersion = useCallback((dealId, versionId) => {
     const d = deals.find(x => x.id === dealId);
@@ -133,7 +146,7 @@ export function DealsProvider({ children }) {
 
   const value = {
     deals, createDeal, updateDraft, requestPricing, forkVersion,
-    deleteDeal, getDeal, getVersion,
+    deleteDeal, discardVersion, getDeal, getVersion,
   };
   return createElement(DealsContext.Provider, { value }, children);
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -28,6 +28,13 @@ import { getUpgradeInfo } from "../data/upgradeData";
 import { useDeals, computePrice, effectiveStatus, isExpired, QUOTE_VALID_DAYS, STATUS_LABEL } from "../data/deals";
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
+
+// Rotating reassurance copy shown in the bottom bar while we fetch live pricing.
+const FETCH_MSGS = [
+  "Pulling live rates from our partners…",
+  "Finding you the best price…",
+  "Almost there, locking it in…",
+];
 
 // Expand each city stay into individual days for video section + tabs
 function getDayActivities(it) {
@@ -96,16 +103,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [showDayPhotos, setShowDayPhotos] = useState(null); // { dayNum, photoIdx }
   const [showDayWiseDrawer, setShowDayWiseDrawer] = useState(false);
   const [drawerActiveDay, setDrawerActiveDay] = useState(0);
+  const [fetchingPrice, setFetchingPrice] = useState(false); // bottom-bar loader while pricing
+  const [fetchMsgIdx, setFetchMsgIdx] = useState(0); // rotating reassurance copy
 
   // ─── Versioned-deal context ───
-  // When opened with ?dealId&versionId, this screen edits a specific version.
-  // Draft = editable; Quote/Expired = locked (read-only, edits fork a new version).
+  // When opened with ?dealId&versionId, this screen edits a specific copy.
+  // Every copy is always editable — changes are allowed from anywhere and
+  // auto-save. A quoted copy that's edited just needs an "Update quote".
   const version = dealId && versionId ? dealsCtx.getVersion(dealId, versionId) : null;
   const dealStatus = version ? effectiveStatus(version) : null;
   const inDeal = !!version;
   const isDraft = inDeal && dealStatus === "draft";
-  const locked = inDeal && (dealStatus === "quote" || dealStatus === "expired");
-  const editable = !inDeal || isDraft;
+  const editable = true; // no gate; we reconcile at our end
+  // A base itinerary (no deal yet) is shown as an already-generated v1 quote.
+  const [baseQuoteAt] = useState(() => Date.now());
+  // Quoted = a PDF exists. Base itineraries default to quoted; a deal copy is
+  // quoted once priced. Otherwise it's a draft being edited.
+  const quoted = inDeal ? !!version.pricedAt : true;
+  // A quoted deal copy whose price drifted from the PDF (edited since / expired).
+  const quoteStale = inDeal && !!version.pricedAt && (dealStatus === "expired" ||
+    (version.indicativePrice != null && version.indicativePrice !== version.livePrice));
   const hydratedRef = useRef(false);
 
   // Load the opened version's customizations into the editor (once per version).
@@ -117,17 +134,37 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [versionId]);
 
-  // Persist edits back into the Draft as they happen.
+  // Persist edits back into the copy as they happen (draft or quote).
   useEffect(() => {
-    if (!it || !isDraft || !hydratedRef.current) return;
+    if (!it || !inDeal || !hydratedRef.current) return;
     dealsCtx.updateDraft(dealId, versionId, {
       customizations: { selectedDayOptions, travelDates },
       indicativePrice: computePrice(it.price, selectedDayOptions),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDayOptions, travelDates, isDraft]);
+  }, [selectedDayOptions, travelDates, inDeal]);
+
+  // Cycle reassurance copy while the price is being fetched.
+  useEffect(() => {
+    if (!fetchingPrice) { setFetchMsgIdx(0); return; }
+    const id = setInterval(() => setFetchMsgIdx(i => i + 1), 1100);
+    return () => clearInterval(id);
+  }, [fetchingPrice]);
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
+
+  // Unified display copy: a real deal version, or a synthetic v1 quote for a
+  // base itinerary so the version line + PDF always show.
+  const baseLivePrice = computePrice(it.price, selectedDayOptions);
+  const travellers = 2 + (it.veg ? 0 : 1);
+  const displayVersion = version || {
+    num: 1,
+    status: "quote",
+    indicativePrice: baseLivePrice,
+    livePrice: baseLivePrice,
+    pricedAt: baseQuoteAt,
+    createdAt: baseQuoteAt,
+  };
 
   const upgradeInfo = getUpgradeInfo(it.id, it.days);
 
@@ -215,8 +252,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
   const handleChangeDaySelect = (dayIndex, option) => {
     const previousOption = selectedDayOptions[dayIndex] || null;
-    setSelectedDayOptions(prev => ({ ...prev, [dayIndex]: option }));
+    const next = { ...selectedDayOptions, [dayIndex]: option };
+    setSelectedDayOptions(next);
     setChangeDayIndex(null);
+
+    // First edit on a plan that isn't yet a copy → start "your changes".
+    if (!inDeal) {
+      const { dealId: nd, versionId: nv } = dealsCtx.createDeal({
+        itineraryId: it.id,
+        dest: it.dest,
+        title: it.name || `${it.dest} trip`,
+        img: it.img,
+        createdBy: "customer",
+        customizations: { selectedDayOptions: next, travelDates },
+        indicativePrice: computePrice(it.price, next),
+      });
+      navigate(`/itinerary/${it.id}?dealId=${nd}&versionId=${nv}`);
+      showToast("Personalising your own copy ✦");
+      return;
+    }
 
     const pricePart = option.priceDelta !== 0
       ? ` · Trip total ${option.priceDelta > 0 ? "+" : "−"}₹${Math.abs(option.priceDelta).toLocaleString("en-IN")}`
@@ -260,9 +314,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       })()
     : null;
 
-  // Check if a day has alternate options available (locked versions cannot edit)
+  // Check if a day has alternate options available.
   const dayHasOptions = (dayIndex) => {
-    if (!editable) return false;
     const data = generateDayOptions(it, dayIndex, daysWithActivities);
     return data && data.options.length > 1;
   };
@@ -280,80 +333,84 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     navigate(`/itinerary/${it.id}?dealId=${nd}&versionId=${nv}`);
     showToast("Saved to My Plans as a draft");
   };
-  const handleRequestPricing = () => {
-    const live = computePrice(it.price, selectedDayOptions);
-    dealsCtx.requestPricing(dealId, versionId, live);
-    showToast(`Live price locked · ₹${live.toLocaleString("en-IN")}/person`);
+  // "Get final price" / "Update quote" → instant quote + fresh PDF, in place.
+  // The copy stays fully editable afterwards.
+  const handleGetFinalPrice = () => {
+    if (fetchingPrice) return;
+    setFetchingPrice(true);
+    // Prototype: simulate a live fetch (real flow may take minutes).
+    setTimeout(() => {
+      const live = computePrice(it.price, selectedDayOptions);
+      dealsCtx.requestPricing(dealId, versionId, live);
+      setFetchingPrice(false);
+      showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
+    }, 3000);
   };
-  const handleEditQuote = () => {
-    const { versionId: nv } = dealsCtx.forkVersion(dealId, versionId);
-    navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${nv}`);
-    showToast("New version created · edit freely");
+  const handleDownloadPdf = () => showToast("Quote PDF downloaded (demo)");
+  const handleDiscardCopy = () => {
+    dealsCtx.discardVersion(dealId, versionId);
+    navigate(`/itinerary/${it.id}`);
+    showToast("Changes discarded · back to the original");
   };
+
+  // Subtle state chip shown next to the version name (under the hero).
+  const stateChip = !quoted
+    ? { label: "Editing", bg: C.p100, fg: C.p600 }
+    : quoteStale
+      ? { label: "Edited", bg: "#FEF3E0", fg: "#B54708" }
+      : { label: "Quote", bg: "#ECFDF3", fg: "#027A48" };
 
   return (
     <div style={{ position: "relative" }}>
-      {/* ═══ 0. Version status bar (deal context only) ═══ */}
-      {inDeal && (
-        <div style={{
-          position: "sticky", top: 0, zIndex: 30,
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-          padding: "10px 16px",
-          background: isDraft ? C.p100 : dealStatus === "expired" ? "#FEF3E0" : "#F2F4F7",
-          borderBottom: `1px solid ${C.div}`,
-        }}>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isDraft ? C.p600 : dealStatus === "expired" ? "#B54708" : C.head }}>
-              {isDraft ? `Draft · v${version.num}` : dealStatus === "expired" ? `Quote expired · v${version.num}` : `Locked quote · v${version.num}`}
-            </p>
-            <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {isDraft
-                ? `Editing · indicative ₹${(version.indicativePrice || 0).toLocaleString("en-IN")}/person`
-                : dealStatus === "expired"
-                  ? "Prices may have changed since this quote"
-                  : `₹${(version.livePrice || 0).toLocaleString("en-IN")}/person · valid till ${new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-            </p>
-          </div>
-          {isDraft ? (
-            <button data-testid="request-pricing" onClick={handleRequestPricing} style={{ flexShrink: 0, padding: "9px 14px", borderRadius: 999, border: "none", background: C.p600, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
-              Request live pricing
-            </button>
-          ) : (
-            <button data-testid="edit-version" onClick={handleEditQuote} style={{ flexShrink: 0, padding: "9px 14px", borderRadius: 999, border: `1.5px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
-              {dealStatus === "expired" ? "Refresh & edit" : "Edit"}
-            </button>
-          )}
-        </div>
-      )}
 
       {/* ═══ 1. Hero Image ═══ */}
       <div style={{ position: "relative", height: 240 }}>
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
         {/* Top buttons */}
-        <Link to={-1} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <button onClick={() => navigate(-1)} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <ArrowLeft size={18} color="#fff" />
-        </Link>
+        </button>
         <button onClick={() => setSaved(!saved)} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <Heart size={18} color="#fff" fill={saved ? "#E31B53" : "none"} />
         </button>
-        {/* Bottom info */}
-        <div style={{ position: "absolute", bottom: 16, left: 16, right: 16 }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "26px" }}>
-            🌴 Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span>
-          </p>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: "4px 0 10px" }}>
-            Mar 31 – Apr 6 · {2 + (it.veg ? 0 : 1)} travellers
-          </p>
+        {/* Bottom info — title + date on the left, Watch pill on the right */}
+        <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "26px" }}>
+              🌴 Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span>
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: "4px 0 0" }}>
+              Mar 31 – Apr 6 · {2 + (it.veg ? 0 : 1)} travellers
+            </p>
+          </div>
           {/* Watch the trip button */}
           <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
             display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
             background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)",
-            backdropFilter: "blur(8px)", cursor: "pointer",
+            backdropFilter: "blur(8px)", cursor: "pointer", flexShrink: 0,
           }}>
             <Play size={12} color="#fff" fill="#fff" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>Watch the trip</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>Watch the trip</span>
           </button>
+        </div>
+      </div>
+
+      {/* ═══ 1b. Subtle version line (always shown — quote or editing) ═══ */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: `1px solid ${C.div}` }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flexShrink: 0 }}>V{displayVersion.num}</span>
+        <span style={{ fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          · {new Date(quoted ? (displayVersion.pricedAt || displayVersion.createdAt) : displayVersion.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {quoted && (
+            <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", color: "#027A48", fontSize: 12.5, fontWeight: 700 }}>
+              <Download size={14} /> PDF
+            </button>
+          )}
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999 }}>
+            {stateChip.label}
+          </span>
         </div>
       </div>
 
@@ -404,7 +461,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
       ) : (
         <div style={{ padding: "16px 0 0" }}>
-          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>See your trip</p>
+          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>Watch your trip unfold</p>
           {/* Tabs: Highlights + Day pills */}
           <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
             <button onClick={() => setActiveDay(-1)} style={{
@@ -960,23 +1017,49 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       {/* Bottom padding for sticky CTA */}
       <div style={{ height: 20 }} />
 
-      {/* ═══ Sticky CTA ═══ */}
-      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 20, borderTop: `1px solid ${C.div}` }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
-            <span style={{ fontSize: 11, color: C.sub }}>From</span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{it.price}</span>
-            <span style={{ fontSize: 11, color: C.sub }}>/person</span>
+      {/* ═══ Sticky CTA — quote (Plan My Trip) or editing (Get final price) ═══ */}
+      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", zIndex: 20, borderTop: `1px solid ${C.div}` }}>
+        {fetchingPrice ? (
+          <div data-testid="price-loader" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "2px 0" }}>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", border: `2.5px solid ${C.p100}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>Fetching your price, please wait…</p>
+              <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>{FETCH_MSGS[fetchMsgIdx % FETCH_MSGS.length]}</p>
+            </div>
           </div>
-          <p style={{ fontSize: 9, color: C.inact, margin: 0 }}>Price incl. GST & TCS</p>
+        ) : (
+        <>
+        <div style={{ minWidth: 0 }}>
+          {quoted && !quoteStale ? (
+            <>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((displayVersion.livePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(displayVersion.livePrice || 0).toLocaleString("en-IN")}/person)</span></p>
+              <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Quote valid till {new Date(displayVersion.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Indicative</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((displayVersion.indicativePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(displayVersion.indicativePrice || 0).toLocaleString("en-IN")}/person)</span></p>
+            </>
+          )}
         </div>
-        <Link to={`/plan?dest=${it.dest}`} style={{
-          display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
-          background: C.p600, color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
-          boxShadow: "0 4px 16px rgba(227,27,83,0.3)",
-        }}>
-          Plan My Trip <ArrowRight size={14} />
-        </Link>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          {inDeal && !(quoted && !quoteStale) && (
+            <button data-testid="discard-copy" onClick={handleDiscardCopy} style={{ padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.sub, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Discard
+            </button>
+          )}
+          {quoted && !quoteStale ? (
+            <button data-testid="plan-my-trip" onClick={() => navigate(`/plan?dest=${it.dest}`)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+              Plan My Trip <ArrowRight size={14} />
+            </button>
+          ) : (
+            <button data-testid="get-final-price" onClick={handleGetFinalPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+              Get final price
+            </button>
+          )}
+        </div>
+        </>
+        )}
       </div>
 
       {/* ═══ Stories-Style Video Viewer ═══ */}
@@ -1080,33 +1163,43 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         }}>
           <div style={{
             position: "absolute",
-            bottom: 84, left: 16, right: 16,
+            bottom: 70, left: 16, right: 16,
             background: "rgba(24,29,39,0.95)",
             color: "#fff",
             borderRadius: 12,
-            padding: "12px 16px",
+            padding: "12px 14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 10,
             pointerEvents: "auto",
             animation: "toastSlideUp 0.3s ease-out forwards",
             fontSize: 13,
             fontWeight: 500,
           }}>
             <span>{toast.message}</span>
-            {toast.undoData && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+              {toast.undoData && (
+                <button
+                  onClick={handleUndo}
+                  style={{
+                    background: "none", border: "none",
+                    color: C.p300, fontSize: 13, fontWeight: 600,
+                    cursor: "pointer", textDecoration: "underline",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Undo
+                </button>
+              )}
               <button
-                onClick={handleUndo}
-                style={{
-                  background: "none", border: "none",
-                  color: C.p300, fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", textDecoration: "underline",
-                  fontFamily: "inherit", flexShrink: 0, marginLeft: 8,
-                }}
+                onClick={() => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); setToast(null); }}
+                aria-label="Dismiss"
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center" }}
               >
-                Undo
+                <XIcon size={16} />
               </button>
-            )}
+            </div>
           </div>
         </div>
       )}
