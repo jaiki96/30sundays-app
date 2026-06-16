@@ -107,6 +107,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [drawerActiveDay, setDrawerActiveDay] = useState(0);
   const [fetchingPrice, setFetchingPrice] = useState(false); // bottom-bar loader while pricing
   const [fetchMsgIdx, setFetchMsgIdx] = useState(0); // rotating reassurance copy
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
 
   // ─── Versioned-deal context ───
   // When opened with ?dealId&versionId, this screen edits a specific copy.
@@ -169,9 +170,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     return () => clearInterval(id);
   }, [fetchingPrice]);
 
+  // Track viewport so overlays fill the screen on mobile but match the phone
+  // frame on desktop (same pattern as the in-file sheets).
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
   const travellers = 2 + (it.veg ? 0 : 1);
+
+  // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
+  const overlayFrame = isMobile
+    ? { position: "fixed", inset: 0 }
+    : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 390, height: 844, borderRadius: 44, overflow: "hidden" };
 
   const upgradeInfo = getUpgradeInfo(it.id, it.days);
 
@@ -1205,7 +1219,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         const toList = (option.activities || []).join(", ");
         const incremental = (option.priceDelta || 0) - (currentOpt?.priceDelta || 0);
         return (
-          <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 390, height: 844, maxWidth: "100vw", zIndex: 160, display: "flex", alignItems: "flex-end", borderRadius: 44, overflow: "hidden" }}>
+          <div style={{ ...overlayFrame, zIndex: 160, display: "flex", alignItems: "flex-end" }}>
             <div onClick={() => setPendingDayChange(null)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
             <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
               <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
@@ -1246,16 +1260,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       {/* ═══ Toast Notification ═══ */}
       {toast && (
-        <div style={{
-          position: "fixed",
-          top: "50%", left: "50%",
-          width: 390, height: 844,
-          transform: "translate(-50%, -50%)",
-          zIndex: 150,
-          pointerEvents: "none",
-          borderRadius: 44,
-          overflow: "hidden",
-        }}>
+        <div style={{ ...overlayFrame, zIndex: 150, pointerEvents: "none" }}>
           <div style={{
             position: "absolute",
             bottom: 70, left: 16, right: 16,
