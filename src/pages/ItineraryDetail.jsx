@@ -621,7 +621,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                         <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
                       </div>
                       <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {displayActivities.join(", ")}
+                        • {displayActivities.join(", ")}
                       </p>
                       {hasOptions && (
                         <button
@@ -702,7 +702,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                         </div>
                       ) : (
                         <p style={{ fontSize: 12, color: C.sub, lineHeight: "18px", margin: "4px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                          {displayActivities.join(", ")}
+                          • {displayActivities.join(", ")}
                         </p>
                       )}
                     </>
