@@ -71,7 +71,7 @@ export default function ReviewHotel({ selectedHotels, setSelectedHotels }) {
           <img src={hotel.images[0].url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 10, fontWeight: 600, color: C.sub, margin: "0 0 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</p>
+          <p style={{ fontSize: 11, fontWeight: 600, color: C.sub, margin: "0 0 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</p>
           <p style={{ fontSize: 14, fontWeight: 700, color: "#181E4C", margin: "0 0 3px",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotel.name}</p>
           <p style={{ fontSize: 12, color: C.sub, margin: "0 0 2px" }}>{room.name}</p>

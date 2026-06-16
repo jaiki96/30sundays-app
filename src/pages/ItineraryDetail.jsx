@@ -80,7 +80,7 @@ function getHotels(it) {
 export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
   const dealsCtx = useDeals();
@@ -94,6 +94,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
   const [allCombosIndex, setAllCombosIndex] = useState(null); // dayIndex for the full "see all" browse screen
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
+  const [selectedHotelOptions, setSelectedHotelOptions] = useState({}); // { stayIndex: hotel } (per-version)
+  const [pendingDayChange, setPendingDayChange] = useState(null); // { dayIndex, option } awaiting confirm
   const [toast, setToast] = useState(null); // { message, undoData } or null
   const toastTimerRef = useRef(null);
   const [showPricingSheet, setShowPricingSheet] = useState(false);
@@ -128,6 +130,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   useEffect(() => {
     if (!version) { hydratedRef.current = false; return; }
     setSelectedDayOptions(version.customizations?.selectedDayOptions || {});
+    setSelectedHotelOptions(version.customizations?.selectedHotels || {});
     setTravelDates(version.customizations?.travelDates || null);
     hydratedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,11 +140,27 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   useEffect(() => {
     if (!it || !inDeal || !hydratedRef.current) return;
     dealsCtx.updateDraft(dealId, versionId, {
-      customizations: { selectedDayOptions, travelDates },
-      indicativePrice: computePrice(it.price, selectedDayOptions),
+      customizations: { selectedDayOptions, selectedHotels: selectedHotelOptions, travelDates },
+      indicativePrice: computePrice(it.price, selectedDayOptions, selectedHotelOptions),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDayOptions, travelDates, inDeal]);
+  }, [selectedDayOptions, selectedHotelOptions, travelDates, inDeal]);
+
+  // Show a toast once when returning from the hotel flow (?toast=hotel).
+  useEffect(() => {
+    const t = params.get("toast");
+    if (!t) return;
+    const msg = t === "hotel" ? "Hotel updated ✓ · price refreshed" : null;
+    if (msg) {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setToast({ message: msg });
+      toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+    }
+    const next = new URLSearchParams(params);
+    next.delete("toast");
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cycle reassurance copy while the price is being fetched.
   useEffect(() => {
@@ -197,9 +216,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     return items.slice(0, 8);
   }, [daysWithActivities]);
 
-  // Merge saved hotel selections
+  // Merge saved hotel selections. In a deal, per-version picks win; otherwise
+  // fall back to the app-level (Explore) selection.
   const hotels = baseHotels.map((h, i) => {
-    const savedHotel = selectedHotels?.[it.id]?.stays?.[i];
+    const savedHotel = inDeal ? selectedHotelOptions?.[i] : selectedHotels?.[it.id]?.stays?.[i];
     if (savedHotel) {
       return {
         ...h,
@@ -238,11 +258,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   };
 
+  // Open the hotel-change flow, carrying deal context so the change lands back
+  // in editing mode on this same copy.
+  const dealQS = inDeal ? `&dealId=${dealId}&versionId=${versionId}` : "";
+  const openHotelFlow = (stayIndex, currentHotelId) =>
+    navigate(`/hotels/${it.id}/${stayIndex}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`);
+
+  // Selecting a day option stages a confirmation; nothing changes until Continue.
   const handleChangeDaySelect = (dayIndex, option) => {
+    setChangeDayIndex(null);
+    setPreviewDay(null);
+    setAllCombosIndex(null);
+    setPendingDayChange({ dayIndex, option });
+  };
+
+  // Apply the staged day change (from the confirm popup's Continue).
+  const applyDayChange = () => {
+    if (!pendingDayChange) return;
+    const { dayIndex, option } = pendingDayChange;
     const previousOption = selectedDayOptions[dayIndex] || null;
     const next = { ...selectedDayOptions, [dayIndex]: option };
     setSelectedDayOptions(next);
-    setChangeDayIndex(null);
+    setPendingDayChange(null);
 
     // First edit on a plan that isn't yet a copy → start "your changes".
     if (!inDeal) {
@@ -252,16 +289,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         title: it.name || `${it.dest} trip`,
         img: it.img,
         createdBy: "customer",
-        customizations: { selectedDayOptions: next, travelDates },
-        indicativePrice: computePrice(it.price, next),
+        customizations: { selectedDayOptions: next, selectedHotels: selectedHotelOptions, travelDates },
+        indicativePrice: computePrice(it.price, next, selectedHotelOptions),
       });
       navigate(`/itinerary/${it.id}?dealId=${nd}&versionId=${nv}`);
       showToast("Personalising your own copy ✦");
       return;
     }
 
-    const pricePart = option.priceDelta !== 0
-      ? ` · Trip total ${option.priceDelta > 0 ? "+" : "−"}₹${Math.abs(option.priceDelta).toLocaleString("en-IN")}`
+    const incremental = (option.priceDelta || 0) - (previousOption?.priceDelta || 0);
+    const pricePart = incremental !== 0
+      ? ` · Trip total ${incremental > 0 ? "+" : "−"}₹${Math.abs(incremental).toLocaleString("en-IN")}`
       : "";
     showToast(
       `Day ${daysWithActivities[dayIndex]?.dayNum} updated ✓${pricePart}`,
@@ -328,7 +366,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     setFetchingPrice(true);
     // Prototype: simulate a live fetch (real flow may take minutes).
     setTimeout(() => {
-      const live = computePrice(it.price, selectedDayOptions);
+      const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
       dealsCtx.requestPricing(dealId, versionId, live);
       setFetchingPrice(false);
       showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
@@ -397,7 +435,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 <Download size={14} /> PDF
               </button>
             )}
-            <span style={{ fontSize: 10.5, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999 }}>
               {stateChip.label}
             </span>
           </div>
@@ -438,8 +476,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                   border: "1px solid rgba(255,255,255,0.25)",
                   borderRadius: 999, padding: "4px 9px",
                 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>Day {h.dayNum}</span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>· {h.city}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Day {h.dayNum}</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>· {h.city}</span>
                 </div>
                 {/* title */}
                 <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 14, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "18px" }}>
@@ -472,7 +510,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {day.dayNum}</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
                   <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
-                  <span style={{ fontSize: 10, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
+                  <span style={{ fontSize: 11, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{day.city}</span>
                 </div>
               </button>
             ))}
@@ -490,7 +528,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                     <div style={{
                       position: "absolute", top: 10, left: 10,
                       background: "rgba(255,255,255,0.95)", borderRadius: 999,
-                      padding: "3px 8px", fontSize: 10, fontWeight: 700, color: C.head,
+                      padding: "3px 8px", fontSize: 11, fontWeight: 700, color: C.head,
                     }}>
                       Day {h.dayNum} · {h.city}
                     </div>
@@ -710,7 +748,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                     <span style={{
                       display: "inline-flex", alignItems: "center", justifyContent: "center",
                       width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
-                      fontSize: 9, fontWeight: 700,
+                      fontSize: 11, fontWeight: 700,
                     }}>B</span>
                     <span style={{ fontSize: 11, fontWeight: 600, color: C.head }}>{h.rating}</span>
                   </div>
@@ -718,7 +756,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 <p style={{ fontSize: 11, color: C.sub, margin: "0 0 10px" }}>{h.type}</p>
                 {editable && (
                   <span
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/hotels/${it.id}/${i}?current=${encodeURIComponent(h.hotelId || "")}`; }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6,
                       cursor: "pointer", padding: 0, background: "none", border: "none",
@@ -960,8 +998,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 <div key={i} style={{ display: "flex", alignItems: "center" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.p600, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: C.head, marginTop: 4, whiteSpace: "nowrap" }}>{day.city}</span>
-                    <span style={{ fontSize: 8, color: C.sub }}>{day.n}N</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.head, marginTop: 4, whiteSpace: "nowrap" }}>{day.city}</span>
+                    <span style={{ fontSize: 11, color: C.sub }}>{day.n}N</span>
                   </div>
                   {i < it.days.length - 1 && (
                     <div style={{ width: 40, height: 1, borderTop: "2px dashed #A4A7AE", margin: "0 4px 16px" }}>
@@ -1026,7 +1064,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{it.price}</span>
                 <span style={{ fontSize: 11, color: C.sub }}>/person</span>
               </div>
-              <p style={{ fontSize: 9, color: C.inact, margin: 0 }}>Price incl. GST & TCS</p>
+              <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Price incl. GST & TCS</p>
             </div>
             <Link to={`/plan?dest=${it.dest}`} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
@@ -1042,11 +1080,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           {quoted && !quoteStale ? (
             <>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.livePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(version.livePrice || 0).toLocaleString("en-IN")}/person)</span></p>
-              <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
             </>
           ) : (
             <>
-              <p style={{ margin: 0, fontSize: 10.5, color: C.sub }}>Indicative</p>
+              <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Indicative</p>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.indicativePrice || 0) * travellers).toLocaleString("en-IN")} <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>(₹{(version.indicativePrice || 0).toLocaleString("en-IN")}/person)</span></p>
             </>
           )}
@@ -1158,6 +1196,54 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         />
       )}
 
+      {/* ═══ Day-change confirmation ═══ */}
+      {pendingDayChange && (() => {
+        const { dayIndex, option } = pendingDayChange;
+        const day = daysWithActivities[dayIndex];
+        const currentOpt = selectedDayOptions[dayIndex];
+        const fromList = (currentOpt?.activities || day?.sub.split(" · ") || []).join(", ");
+        const toList = (option.activities || []).join(", ");
+        const incremental = (option.priceDelta || 0) - (currentOpt?.priceDelta || 0);
+        return (
+          <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 390, height: 844, maxWidth: "100vw", zIndex: 160, display: "flex", alignItems: "flex-end", borderRadius: 44, overflow: "hidden" }}>
+            <div onClick={() => setPendingDayChange(null)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+            <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 14px" }}>Change Day {day?.dayNum}, {day?.city}?</h3>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                <div style={{ borderRadius: 12, border: `1px solid ${C.div}`, padding: "10px 12px" }}>
+                  <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: C.inact, textTransform: "uppercase", letterSpacing: 0.4 }}>Current plan</p>
+                  <p style={{ margin: 0, fontSize: 13, color: C.sub, lineHeight: "18px" }}>{fromList}</p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <ChevronDown size={16} color={C.p600} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: C.p600 }}>Changing to</span>
+                </div>
+                <div style={{ borderRadius: 12, border: `1.5px solid ${C.p300}`, background: C.p100, padding: "10px 12px" }}>
+                  <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: C.p600, textTransform: "uppercase", letterSpacing: 0.4 }}>New plan</p>
+                  <p style={{ margin: 0, fontSize: 13, color: C.head, fontWeight: 600, lineHeight: "18px" }}>{toList}</p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
+                <span style={{ fontSize: 13, color: C.sub }}>Price difference</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: incremental === 0 ? C.sub : incremental > 0 ? C.head : "#027A48" }}>
+                  {incremental === 0 ? "No change" : `${incremental > 0 ? "+" : "−"}₹${Math.abs(incremental).toLocaleString("en-IN")} /person`}
+                </span>
+              </div>
+
+              <button onClick={applyDayChange} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
+                Continue
+              </button>
+              <button onClick={() => setPendingDayChange(null)} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Go back
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ═══ Toast Notification ═══ */}
       {toast && (
         <div style={{
@@ -1261,14 +1347,14 @@ function DayTravellerPhotos({ dest, dayNum, dayIndex, totalDays, onPhotoClick })
           <div key={i} onClick={() => onPhotoClick(p.realIdx)} style={{ flex: 1, height: 70, borderRadius: 10, overflow: "hidden", position: "relative", cursor: "pointer" }}>
             <img src={p.img} alt={p.tag} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.65))" }} />
-            <span style={{ position: "absolute", bottom: 4, left: 5, right: 5, fontSize: 8, fontWeight: 600, color: "#fff", lineHeight: "10px" }}>{p.tag}</span>
+            <span style={{ position: "absolute", bottom: 4, left: 5, right: 5, fontSize: 11, fontWeight: 600, color: "#fff", lineHeight: "10px" }}>{p.tag}</span>
           </div>
         ))}
       </div>
       {/* CTA nudge */}
       <div onClick={() => onPhotoClick(dayPhotos[0].realIdx)} style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
         <Play size={10} color={C.p600} fill={C.p600} />
-        <span style={{ fontSize: 10, fontWeight: 600, color: C.p600 }}>See how {count}+ couples experienced this</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.p600 }}>See how {count}+ couples experienced this</span>
       </div>
     </div>
   );
@@ -1790,7 +1876,7 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
       </Link>
 
       {/* Direction label */}
-      <p style={{ fontSize: 10, fontWeight: 600, color: C.sub, margin: "0 0 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <p style={{ fontSize: 11, fontWeight: 600, color: C.sub, margin: "0 0 2px", textTransform: "uppercase", letterSpacing: 0.5 }}>
         {leg.direction === "outbound" ? "Outbound" : leg.direction === "return" ? "Return" : "Transfer"}
       </p>
 
@@ -1806,11 +1892,11 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
           <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{flight.from}</p>
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "0 10px" }}>
-          <span style={{ fontSize: 10, color: C.inact }}>{flight.duration}</span>
+          <span style={{ fontSize: 11, color: C.inact }}>{flight.duration}</span>
           <div style={{ width: "100%", height: 1, background: C.div, margin: "4px 0", position: "relative" }}>
             <Plane size={12} color="#D97706" fill="#D97706" style={{ position: "absolute", top: -6, left: "50%", transform: "translateX(-50%)" }} />
           </div>
-          <span style={{ fontSize: 10, fontWeight: 600, color: flight.stops === 0 ? "#027A48" : C.p600 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: flight.stops === 0 ? "#027A48" : C.p600 }}>
             {flight.stops === 0 ? "Non-stop" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}
           </span>
         </div>
@@ -1821,7 +1907,7 @@ function FlightCard({ flight, leg, itineraryId, legIndex }) {
       </div>
 
       {/* Price */}
-      <p style={{ fontSize: 13, fontWeight: 600, color: C.p600, margin: 0 }}>₹ {formatPrice(flight.price)} <span style={{ fontSize: 10, fontWeight: 400, color: C.inact }}>/person</span></p>
+      <p style={{ fontSize: 13, fontWeight: 600, color: C.p600, margin: 0 }}>₹ {formatPrice(flight.price)} <span style={{ fontSize: 11, fontWeight: 400, color: C.inact }}>/person</span></p>
     </div>
   );
 }
@@ -2292,7 +2378,7 @@ function PricingSheet({ onClose, initialDates, onSubmit }) {
                   <option value="">Select</option>
                   {nightOptions.map(n => <option key={n} value={n}>{n}N</option>)}
                 </select>
-                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: C.sub, pointerEvents: "none" }}>▼</span>
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: C.sub, pointerEvents: "none" }}>▼</span>
               </div>
             </div>
           </div>
@@ -2508,7 +2594,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
               <p style={{ fontSize: 13, fontWeight: 600, color: activeDay === i ? "#fff" : C.head, margin: 0 }}>Day {d.dayNum}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
                 <MapPin size={10} color={activeDay === i ? "rgba(255,255,255,0.7)" : C.sub} />
-                <span style={{ fontSize: 10, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{d.city}</span>
+                <span style={{ fontSize: 11, color: activeDay === i ? "rgba(255,255,255,0.7)" : C.sub }}>{d.city}</span>
               </div>
             </button>
           ))}
@@ -2598,7 +2684,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
               )}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 40%, rgba(0,0,0,0.85))" }} />
               {c.type === "activity" && (
-                <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 999 }}>
+                <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "2px 6px", borderRadius: 999 }}>
                   {c.duration}
                 </span>
               )}
@@ -2632,7 +2718,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: 0 }}>{a.name}</p>
-                  <span style={{ fontSize: 10, color: C.sub }}>· {DURATIONS[i % 4]}</span>
+                  <span style={{ fontSize: 11, color: C.sub }}>· {DURATIONS[i % 4]}</span>
                 </div>
                 <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px" }}>
                   {ACT_DESC[a.name] || fallback}
@@ -2696,12 +2782,12 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                       <span style={{
                         background: "#003B95", color: "#fff",
-                        fontSize: 10, fontWeight: 700,
+                        fontSize: 11, fontWeight: 700,
                         padding: "2px 5px", borderRadius: 4,
                         fontFamily: "system-ui, sans-serif", letterSpacing: -0.2,
                       }}>B.</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: C.head }}>{ratingOutOf10}</span>
-                      <span style={{ fontSize: 10, color: C.sub }}>/ 10</span>
+                      <span style={{ fontSize: 11, color: C.sub }}>/ 10</span>
                     </div>
                   </div>
 
@@ -2803,7 +2889,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.p100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: C.p600 }}>{r.name[0]}</div>
                     <div>
                       <p style={{ fontSize: 12, fontWeight: 600, color: C.head, margin: 0 }}>{r.name}</p>
-                      <p style={{ fontSize: 10, color: C.sub, margin: 0 }}>{r.dest}</p>
+                      <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{r.dest}</p>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>

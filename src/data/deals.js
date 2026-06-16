@@ -158,10 +158,12 @@ export function useDeals() {
 }
 
 // ─── Pricing helper ───
-// Per-person total = base itinerary price + sum of selected day-plan deltas.
-export function computePrice(basePriceStr, selectedDayOptions) {
+// Per-person total = base itinerary price + day-plan deltas + hotel deltas.
+export function computePrice(basePriceStr, selectedDayOptions, selectedHotels) {
   const base = Number(String(basePriceStr ?? 0).replace(/,/g, "")) || 0;
-  const deltas = Object.values(selectedDayOptions || {})
+  const dayDeltas = Object.values(selectedDayOptions || {})
     .reduce((sum, opt) => sum + (opt?.priceDelta || 0), 0);
-  return base + deltas;
+  const hotelDeltas = Object.values(selectedHotels || {})
+    .reduce((sum, h) => sum + (h?.priceDelta || 0), 0);
+  return base + dayDeltas + hotelDeltas;
 }

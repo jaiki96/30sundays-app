@@ -9,7 +9,7 @@ const fmtHrs = (h) => `${h} ${h === 1 ? "hr" : "hrs"}`;
 function Metric({ label, value }) {
   return (
     <div>
-      <span style={{ display: "block", fontSize: 9, color: C.inact, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3, lineHeight: "12px" }}>{label}</span>
+      <span style={{ display: "block", fontSize: 11, color: C.inact, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3, lineHeight: "12px" }}>{label}</span>
       <span style={{ fontSize: 11.5, fontWeight: 600, color: C.head, lineHeight: "15px" }}>{value}</span>
     </div>
   );

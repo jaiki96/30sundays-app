@@ -21,12 +21,17 @@ export default function HotelListing() {
   const { itineraryId, stayIndex } = useParams();
   const [params] = useSearchParams();
   const currentHotelId = params.get("current");
+  const dealId = params.get("dealId");
+  const versionId = params.get("versionId");
+  const dealQS = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
+  const backToItinerary = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
 
   const itinerary = allItineraries.find(i => i.id === Number(itineraryId));
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   // Filter/sort state
   const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
+  const [showCurrent, setShowCurrent] = useState(false); // expandable "current hotel" bar
   const [showSheet, setShowSheet] = useState(false);
   const [sheetTab, setSheetTab] = useState("Filters");
   const [sortIdx, setSortIdx] = useState(0);
@@ -172,7 +177,7 @@ export default function HotelListing() {
         {/* ═══ Header (scrolls with content) ═══ */}
         <div style={{ background: "linear-gradient(180deg, #FFEBF1 0%, #FFFFFF 100%)", padding: "10px 16px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Link to={`/itinerary/${itineraryId}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0 }}>
+            <Link to={backToItinerary} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0 }}>
               <ArrowLeft size={20} color={C.head} />
             </Link>
             <div style={{ flex: 1 }}>
@@ -187,8 +192,51 @@ export default function HotelListing() {
           </div>
         </div>
 
+        {/* ═══ Current hotel — expandable, so the user knows what they're changing ═══ */}
+        {currentHotel && (
+          <div style={{ margin: "0 16px 4px", border: `1px solid ${C.div}`, borderRadius: 12, overflow: "hidden", background: C.white }}>
+            <button
+              onClick={() => setShowCurrent(s => !s)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
+                background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, flexShrink: 0 }}>Changing</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentHotel.name}
+              </span>
+              {showCurrent ? <ChevronUp size={16} color={C.sub} style={{ flexShrink: 0 }} /> : <ChevronDown size={16} color={C.sub} style={{ flexShrink: 0 }} />}
+            </button>
+
+            {showCurrent && (
+              <div style={{ display: "flex", gap: 12, padding: "0 12px 12px" }}>
+                <div style={{ width: 76, height: 76, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+                  <img src={currentHotel.images[0].url} alt={currentHotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#181E4C", margin: "0 0 3px", lineHeight: 1.3 }}>{currentHotel.name}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {Array.from({ length: currentHotel.stars }).map((_, s) => (
+                        <Star key={s} size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff", fontSize: 12, fontWeight: 700 }}>B</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{currentHotel.bookingScore} Rated</span>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12, color: C.sub, margin: "0 0 2px" }}>{currentHotel.roomType} · {currentHotel.bedSummary}</p>
+                  <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>{currentHotel.rooms?.[0]?.mealPlan || "Breakfast included"}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ═══ Hotel List ═══ */}
-        <div style={{ padding: "0 16px" }}>
+        <div style={{ padding: "16px 16px 0" }}>
           {filtered.length === 0 && (
             <div style={{ padding: "40px 0", textAlign: "center" }}>
               <p style={{ fontSize: 15, fontWeight: 600, color: C.head }}>No hotels match your filters</p>
@@ -202,7 +250,7 @@ export default function HotelListing() {
             return (
               <Link
                 key={hotel.id}
-                to={`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}`}
+                to={`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`}
                 style={{ textDecoration: "none", color: "inherit", display: "block" }}
               >
                 <div style={{
@@ -218,7 +266,7 @@ export default function HotelListing() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {isCurrent && (
                       <span style={{
-                        display: "inline-block", fontSize: 10, fontWeight: 600, color: "#FD014F",
+                        display: "inline-block", fontSize: 11, fontWeight: 600, color: "#FD014F",
                         background: "#FFEBF1", borderRadius: 20, padding: "2px 8px", marginBottom: 4,
                       }}>
                         Currently Selected ✓
@@ -240,7 +288,7 @@ export default function HotelListing() {
                         <span style={{
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
                           width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
-                          fontSize: 9, fontWeight: 700,
+                          fontSize: 11, fontWeight: 700,
                         }}>B</span>
                         <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{hotel.bookingScore} Rated</span>
                       </div>
@@ -310,7 +358,7 @@ export default function HotelListing() {
         }}>
           <SlidersHorizontal size={14} color={activeFilterCount > 0 ? "#FD014F" : C.sub} />
           {activeFilterCount > 0 && (
-            <div style={{ position: "absolute", top: -6, right: -6, width: 16, height: 16, borderRadius: "50%", background: "#FD014F", color: "#fff", fontSize: 8, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeFilterCount}</div>
+            <div style={{ position: "absolute", top: -6, right: -6, width: 16, height: 16, borderRadius: "50%", background: "#FD014F", color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{activeFilterCount}</div>
           )}
         </button>
       </div>

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, Navigation, X as XIcon, ChevronLeft, ChevronRight, Bed, Maximize2, Bath, Eye, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Navigation, X as XIcon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Bed, Maximize2, Bath, Eye, UtensilsCrossed } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice, getHotelReviews } from "../data/hotelData";
+import { useDeals, computePrice } from "../data/deals";
 
 const amenityIcons = {
   Breakfast: "🍳", Spa: "💆", "Swimming pool": "🏊", "Indoor Games": "🎮",
@@ -16,6 +17,11 @@ export default function HotelPDP() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const currentHotelId = params.get("current");
+  const dealId = params.get("dealId");
+  const versionId = params.get("versionId");
+  const dealsCtx = useDeals();
+  const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
+  const [confirmReplace, setConfirmReplace] = useState(false); // warning popup
 
   const itinerary = allItineraries.find(i => i.id === Number(itineraryId));
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
@@ -46,9 +52,20 @@ export default function HotelPDP() {
   const reviews = getHotelReviews(hotel.id);
   const nights = stayInfo.nights;
   const selectedRoom = hotel.rooms.find(r => r.id === selectedRoomId);
+  const currentRoom = currentHotel?.rooms?.[0];
 
   // Check if current hotel + current room is selected (same as what's already booked)
   const isSameAsCurrent = isCurrentHotel && selectedRoomId === hotel.rooms[0]?.id;
+
+  // Stay-total difference of the selected room vs the current hotel.
+  const stayDelta = currentHotel ? (selectedRoom.pricePerNight - currentRoomPrice) * nights : 0;
+  // Delta vs the itinerary's default hotel — what gets stored on the copy.
+  const baseHotel = hotels.find(h => h.id === `${stayInfo.city}-hotel-0`) || hotels[0];
+  const basePrice = baseHotel?.rooms?.[0]?.pricePerNight || currentRoomPrice;
+  const storedDelta = (selectedRoom.pricePerNight - basePrice) * nights;
+
+  const backToItinerary = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
+  const hotelsQS = `?current=${encodeURIComponent(currentHotelId || "")}${dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : ""}`;
 
   // Image categories for gallery
   const allCategories = ["All", ...new Set(hotel.images.map(img => img.category))];
@@ -56,11 +73,36 @@ export default function HotelPDP() {
     ? hotel.images
     : hotel.images.filter(img => img.category === galleryCategoryFilter);
 
-  const handleContinue = () => {
-    if (!selectedRoom || isSameAsCurrent) return;
-    navigate(
-      `/review-hotel/${itineraryId}/${stayIndex}?new=${encodeURIComponent(hotel.id)}&room=${encodeURIComponent(selectedRoom.id)}&current=${encodeURIComponent(currentHotelId || "")}`
-    );
+  // Confirm → write the hotel onto the copy (create one if needed) + return.
+  const doReplace = () => {
+    if (!selectedRoom) return;
+    const stay = {
+      hotelId: hotel.id, hotelName: hotel.name,
+      roomId: selectedRoom.id, roomName: selectedRoom.name, mealPlan: selectedRoom.mealPlan,
+      image: hotel.images[0].url, stars: hotel.stars, bookingScore: hotel.bookingScore,
+      neighbourhood: hotel.neighbourhood, pricePerNight: selectedRoom.pricePerNight, nights,
+      priceDelta: storedDelta,
+    };
+    let did = dealId, vid = versionId;
+    if (dealId && versionId) {
+      const v = dealsCtx.getVersion(dealId, versionId);
+      const cust = v?.customizations || {};
+      const nextHotels = { ...(cust.selectedHotels || {}), [stayIndex]: stay };
+      dealsCtx.updateDraft(dealId, versionId, {
+        customizations: { ...cust, selectedHotels: nextHotels },
+        indicativePrice: computePrice(itinerary.price, cust.selectedDayOptions, nextHotels),
+      });
+    } else {
+      const created = dealsCtx.createDeal({
+        itineraryId: itinerary.id, dest: itinerary.dest,
+        title: itinerary.name || `${itinerary.dest} trip`, img: itinerary.img,
+        createdBy: "customer",
+        customizations: { selectedDayOptions: {}, selectedHotels: { [stayIndex]: stay }, travelDates: null },
+        indicativePrice: computePrice(itinerary.price, {}, { [stayIndex]: stay }),
+      });
+      did = created.dealId; vid = created.versionId;
+    }
+    navigate(`/itinerary/${itinerary.id}?dealId=${did}&versionId=${vid}&toast=hotel`);
   };
 
   // Gallery layout: 1 big (left, spans 2 rows) + 2 small (right column) + "+N" overlay on last
@@ -75,7 +117,7 @@ export default function HotelPDP() {
         <div style={{ background: "linear-gradient(180deg, #FFEBF1 0%, #FFFFFF 100%)", padding: "10px 16px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 2 }}>
             <Link
-              to={`/hotels/${itineraryId}/${stayIndex}?current=${encodeURIComponent(currentHotelId || "")}`}
+              to={`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0 }}
             >
               <ArrowLeft size={20} color={C.head} />
@@ -329,26 +371,90 @@ export default function HotelPDP() {
         </div>
       </div>
 
-      {/* ═══ Sticky Continue CTA ═══ */}
+      {/* ═══ Sticky bottom bar — current hotel + price diff, expandable, Replace CTA ═══ */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
-        padding: "12px 16px 16px",
-        background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 30%)",
+        padding: "10px 16px 14px",
+        background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 26%)",
       }}>
-        <button
-          onClick={handleContinue}
-          disabled={!selectedRoomId || isSameAsCurrent}
-          style={{
-            width: "100%", height: 52, borderRadius: 9999, border: "none",
-            background: (!selectedRoomId || isSameAsCurrent) ? C.inact : "#FD014F",
-            color: "#fff", fontSize: 16, fontWeight: 700,
-            cursor: (!selectedRoomId || isSameAsCurrent) ? "default" : "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {isSameAsCurrent ? "Already Selected" : "Continue"}
-        </button>
+        <div style={{ background: C.white, border: `1px solid ${C.div}`, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.12)", overflow: "hidden" }}>
+          {/* Expanded current-hotel details */}
+          {showCurrentDetails && currentHotel && (
+            <div style={{ display: "flex", gap: 12, padding: "12px 14px 0" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+                <img src={currentHotel.images[0].url} alt={currentHotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#181E4C", margin: "0 0 2px" }}>{currentHotel.name}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <div style={{ display: "flex", gap: 1 }}>
+                    {Array.from({ length: currentHotel.stars }).map((_, s) => <Star key={s} size={12} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>· {currentHotel.bookingScore} Rated</span>
+                </div>
+                <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{currentRoom?.name}{currentRoom?.mealPlan ? ` · ${currentRoom.mealPlan}` : ""}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Summary row + Replace CTA */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: showCurrentDetails && currentHotel ? "10px 14px 12px" : "12px 14px" }}>
+            <button
+              onClick={() => setShowCurrentDetails(s => !s)}
+              disabled={!currentHotel}
+              style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", padding: 0, cursor: currentHotel ? "pointer" : "default", fontFamily: "inherit" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 11, color: C.sub }}>Replacing</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.head, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{currentHotel ? currentHotel.name : "current hotel"}</span>
+                {currentHotel && (showCurrentDetails ? <ChevronDown size={14} color={C.sub} style={{ flexShrink: 0 }} /> : <ChevronUp size={14} color={C.sub} style={{ flexShrink: 0 }} />)}
+              </div>
+              <p style={{ margin: "2px 0 0", fontSize: 15, fontWeight: 700, color: stayDelta === 0 ? C.sub : stayDelta > 0 ? "#FD014F" : "#4EAC7E" }}>
+                {stayDelta === 0 ? "No price change" : `${stayDelta > 0 ? "+" : "−"} ₹ ${formatHotelPrice(Math.abs(stayDelta))}`}
+                <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>{stayDelta === 0 ? "" : ` for ${nights} night${nights > 1 ? "s" : ""}`}</span>
+              </p>
+            </button>
+            <button
+              onClick={() => setConfirmReplace(true)}
+              disabled={!selectedRoomId || isSameAsCurrent}
+              style={{
+                flexShrink: 0, padding: "11px 18px", height: 44, borderRadius: 12, border: "none",
+                background: (!selectedRoomId || isSameAsCurrent) ? C.inact : "#FD014F",
+                color: "#fff", fontSize: 14, fontWeight: 700,
+                cursor: (!selectedRoomId || isSameAsCurrent) ? "default" : "pointer", fontFamily: "inherit",
+              }}
+            >
+              {isSameAsCurrent ? "Selected" : "Replace hotel"}
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* ═══ Replace-hotel warning popup ═══ */}
+      {confirmReplace && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 120, display: "flex", alignItems: "flex-end" }}>
+          <div onClick={() => setConfirmReplace(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+          <div style={{ position: "relative", width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 8px" }}>Replace your hotel?</h3>
+            <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px", lineHeight: "19px" }}>
+              {currentHotel ? <>You're swapping <b style={{ color: C.head }}>{currentHotel.name}</b> for <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}).</> : <>Set <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}) for this stay.</>}
+            </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
+              <span style={{ fontSize: 13, color: C.sub }}>Price difference</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: stayDelta === 0 ? C.sub : stayDelta > 0 ? "#FD014F" : "#4EAC7E" }}>
+                {stayDelta === 0 ? "No change" : `${stayDelta > 0 ? "+" : "−"} ₹ ${formatHotelPrice(Math.abs(stayDelta))}`}
+              </span>
+            </div>
+            <button onClick={doReplace} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
+              Replace hotel
+            </button>
+            <button onClick={() => setConfirmReplace(false)} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Go back
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ═══ Fullscreen Gallery ═══ */}
       {galleryOpen && (
