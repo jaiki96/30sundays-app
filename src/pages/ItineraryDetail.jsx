@@ -96,6 +96,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
   const [selectedHotelOptions, setSelectedHotelOptions] = useState({}); // { stayIndex: hotel } (per-version)
   const [pendingDayChange, setPendingDayChange] = useState(null); // { dayIndex, option } awaiting confirm
+  const [showChanges, setShowChanges] = useState(false); // floating "changes since last version" panel
   const [toast, setToast] = useState(null); // { message, undoData } or null
   const toastTimerRef = useRef(null);
   const [showPricingSheet, setShowPricingSheet] = useState(false);
@@ -122,9 +123,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   // Explore itineraries (no deal) show no version/PDF until the first edit
   // creates one. Quoted = a PDF exists; a deal copy is quoted once priced.
   const quoted = inDeal && !!version.pricedAt;
-  // A quoted copy whose price drifted from the PDF (edited since / expired).
-  const quoteStale = quoted && (dealStatus === "expired" ||
-    (version.indicativePrice != null && version.indicativePrice !== version.livePrice));
   const hydratedRef = useRef(false);
 
   // Load the opened version's customizations into the editor (once per version).
@@ -151,7 +149,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   useEffect(() => {
     const t = params.get("toast");
     if (!t) return;
-    const msg = t === "hotel" ? "Hotel updated ✓ · price refreshed" : null;
+    const hotelName = params.get("h");
+    const msg = t === "hotel" ? `${hotelName || "Your new hotel"} is in ✓ Looking great!` : null;
     if (msg) {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       setToast({ message: msg });
@@ -159,6 +158,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     }
     const next = new URLSearchParams(params);
     next.delete("toast");
+    next.delete("h");
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -247,6 +247,55 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     }
     return { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
   });
+
+  // ─── Changes since the last finalized version ───
+  // Compare current customizations against the committed (last-quoted) snapshot.
+  const committed = version?.committed || {};
+  const committedDays = committed.selectedDayOptions || {};
+  const committedHotels = committed.selectedHotels || {};
+  const dayChanges = Object.entries(selectedDayOptions)
+    .filter(([di, opt]) => !committedDays[di] || committedDays[di].id !== opt.id)
+    .map(([di, opt]) => ({
+      kind: "day", key: di,
+      title: `Day ${daysWithActivities[di]?.dayNum} · ${daysWithActivities[di]?.city}`,
+      detail: (opt.activities || []).join(", "),
+    }));
+  const hotelChanges = Object.entries(selectedHotelOptions)
+    .filter(([si, h]) => !committedHotels[si] || committedHotels[si].hotelId !== h.hotelId)
+    .map(([si, h]) => ({
+      kind: "hotel", key: si,
+      title: `Hotel · ${baseHotels[si]?.city || ""}`,
+      detail: h.hotelName,
+    }));
+  const changes = [...dayChanges, ...hotelChanges];
+  const hasChanges = changes.length > 0;
+  const validQuote = quoted && !hasChanges && !isExpired(version);
+
+  // Revert one change back to the committed (last-version) value.
+  const undoChange = (ch) => {
+    if (ch.kind === "day") {
+      setSelectedDayOptions(prev => {
+        const next = { ...prev };
+        if (committedDays[ch.key]) next[ch.key] = committedDays[ch.key]; else delete next[ch.key];
+        return next;
+      });
+    } else {
+      setSelectedHotelOptions(prev => {
+        const next = { ...prev };
+        if (committedHotels[ch.key]) next[ch.key] = committedHotels[ch.key]; else delete next[ch.key];
+        return next;
+      });
+    }
+  };
+
+  // Discard all unsaved changes: revert to the quote, or drop the copy if never finalized.
+  const handleDiscardChanges = () => {
+    if (!quoted) { handleDiscardCopy(); return; }
+    setSelectedDayOptions(committedDays);
+    setSelectedHotelOptions(committedHotels);
+    setShowChanges(false);
+    showToast("Changes discarded · back to your quote");
+  };
 
   // Upgrade drawer must show the SAME current hotels as the Hotels cards above it,
   // not the stub's own "current" entries.
@@ -394,11 +443,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   };
 
   // Subtle state chip shown next to the version name (under the hero).
-  const stateChip = !quoted
+  const stateChip = hasChanges
     ? { label: "Editing", bg: C.p100, fg: C.p600 }
-    : quoteStale
-      ? { label: "Edited", bg: "#FEF3E0", fg: "#B54708" }
-      : { label: "Quote", bg: "#ECFDF3", fg: "#027A48" };
+    : (quoted && isExpired(version))
+      ? { label: "Expired", bg: "#FEF3E0", fg: "#B54708" }
+      : quoted
+        ? { label: "Quote", bg: "#ECFDF3", fg: "#027A48" }
+        : { label: "Draft", bg: C.p100, fg: C.p600 };
 
   return (
     <div style={{ position: "relative" }}>
@@ -443,16 +494,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           <span style={{ fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             · {new Date(quoted ? (version.pricedAt || version.createdAt) : version.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
           </span>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            {quoted && (
-              <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", color: "#027A48", fontSize: 12.5, fontWeight: 700 }}>
-                <Download size={14} /> PDF
-              </button>
-            )}
-            <span style={{ fontSize: 11, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999 }}>
-              {stateChip.label}
-            </span>
-          </div>
+          <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: stateChip.fg, background: stateChip.bg, padding: "3px 9px", borderRadius: 999, flexShrink: 0 }}>
+            {stateChip.label}
+          </span>
         </div>
       )}
 
@@ -482,17 +526,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 />
                 {/* gradient */}
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.85))" }} />
-                {/* day chip */}
-                <div style={{
-                  position: "absolute", top: 10, left: 10,
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.25)",
-                  borderRadius: 999, padding: "4px 9px",
-                }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>Day {h.dayNum}</span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>· {h.city}</span>
-                </div>
                 {/* title */}
                 <p style={{ position: "absolute", bottom: 12, left: 12, right: 12, fontSize: 14, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "18px" }}>
                   {h.name}
@@ -538,14 +571,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                   }}>
                     <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.85))" }} />
-                    {/* Day chip */}
-                    <div style={{
-                      position: "absolute", top: 10, left: 10,
-                      background: "rgba(255,255,255,0.95)", borderRadius: 999,
-                      padding: "3px 8px", fontSize: 11, fontWeight: 700, color: C.head,
-                    }}>
-                      Day {h.dayNum} · {h.city}
-                    </div>
                     {/* Play button */}
                     <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Play size={16} color="#fff" fill="#fff" />
@@ -609,11 +634,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                         <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Day {day.dayNum}: {day.city}</p>
                         <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 3 }}>
-                        {displayActivities.map((a, j) => (
-                          <span key={j} style={{ fontSize: 12, color: C.sub, lineHeight: "17px" }}>• {a}</span>
-                        ))}
-                      </div>
+                      <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "3px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {displayActivities.join(", ")}
+                      </p>
                       {hasOptions && (
                         <button
                           data-testid={`change-day-${globalDayIndex}`}
@@ -692,11 +715,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                           })}
                         </div>
                       ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
-                          {displayActivities.map((a, j) => (
-                            <span key={j} style={{ fontSize: 12, color: C.sub, lineHeight: "18px" }}>• {a}</span>
-                          ))}
-                        </div>
+                        <p style={{ fontSize: 12, color: C.sub, lineHeight: "18px", margin: "4px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {displayActivities.join(", ")}
+                        </p>
                       )}
                     </>
                   )}
@@ -1059,8 +1080,41 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       {/* Bottom padding for sticky CTA */}
       <div style={{ height: 20 }} />
 
-      {/* ═══ Sticky CTA — quote (Plan My Trip) or editing (Get final price) ═══ */}
-      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", zIndex: 20, borderTop: `1px solid ${C.div}` }}>
+      {/* ═══ Sticky footer — changes panel (floating) + price/CTA row ═══ */}
+      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
+        {/* Floating "changes since last version" panel */}
+        {inDeal && hasChanges && !fetchingPrice && (
+          <div style={{ background: C.white, borderTop: `1px solid ${C.div}`, boxShadow: "0 -6px 20px rgba(0,0,0,0.07)" }}>
+            <button onClick={() => setShowChanges(s => !s)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              <Sparkles size={14} color={C.p600} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.head, flex: 1, textAlign: "left" }}>
+                {changes.length} change{changes.length !== 1 ? "s" : ""} since your last version
+              </span>
+              {showChanges ? <ChevronDown size={16} color={C.sub} /> : <ChevronUp size={16} color={C.sub} />}
+            </button>
+            {showChanges && (
+              <div style={{ padding: "0 16px 12px", maxHeight: 220, overflowY: "auto" }}>
+                {changes.map((ch, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: `1px solid ${C.bg}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.head }}>{ch.title}</p>
+                      <p style={{ margin: "1px 0 0", fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ch.detail}</p>
+                    </div>
+                    <button onClick={() => undoChange(ch)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.div}`, background: C.white, fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
+                      Undo
+                    </button>
+                  </div>
+                ))}
+                <button data-testid="discard-copy" onClick={handleDiscardChanges} style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: `1px solid ${C.div}`, background: C.white, color: C.sub, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Discard all changes
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Price + CTA row */}
+        <div style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", borderTop: `1px solid ${C.div}` }}>
         {fetchingPrice ? (
           <div data-testid="price-loader" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "2px 0" }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", border: `2.5px solid ${C.p100}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
@@ -1090,7 +1144,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         ) : (
         <>
         <div style={{ minWidth: 0 }}>
-          {quoted && !quoteStale ? (
+          {validQuote ? (
             <>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.livePrice || 0) * travellers).toLocaleString("en-IN")}</p>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
@@ -1103,14 +1157,18 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          {!(quoted && !quoteStale) && (
-            <button data-testid="discard-copy" onClick={handleDiscardCopy} style={{ padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.sub, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              Discard
-            </button>
-          )}
-          {quoted && !quoteStale ? (
-            <button data-testid="plan-my-trip" onClick={() => navigate(`/plan?dest=${it.dest}`)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
-              Plan My Trip <ArrowRight size={14} />
+          {validQuote ? (
+            <>
+              <button data-testid="download-pdf" onClick={handleDownloadPdf} style={{ display: "flex", alignItems: "center", gap: 5, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#027A48", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                <Download size={15} /> PDF
+              </button>
+              <button data-testid="plan-my-trip" onClick={() => navigate(`/plan?dest=${it.dest}`)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+                Plan My Trip <ArrowRight size={14} />
+              </button>
+            </>
+          ) : hasChanges ? (
+            <button data-testid="create-itinerary" onClick={handleGetFinalPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+              Create Itinerary
             </button>
           ) : (
             <button data-testid="get-final-price" onClick={handleGetFinalPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
@@ -1120,6 +1178,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
         </>
         )}
+        </div>
       </div>
 
       {/* ═══ Stories-Style Video Viewer ═══ */}

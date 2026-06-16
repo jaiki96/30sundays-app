@@ -102,7 +102,7 @@ export default function HotelPDP() {
       });
       did = created.dealId; vid = created.versionId;
     }
-    navigate(`/itinerary/${itinerary.id}?dealId=${did}&versionId=${vid}&toast=hotel`);
+    navigate(`/itinerary/${itinerary.id}?dealId=${did}&versionId=${vid}&toast=hotel&h=${encodeURIComponent(hotel.name)}`);
   };
 
   // Gallery layout: 1 big (left, spans 2 rows) + 2 small (right column) + "+N" overlay on last

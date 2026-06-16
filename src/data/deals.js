@@ -87,7 +87,8 @@ export function DealsProvider({ children }) {
     }));
   }, []);
 
-  // Lock a Draft into a priced Quote (instant pricing for the prototype).
+  // Price the copy into a Quote and snapshot the committed customizations, so
+  // later edits surface as "changes since your last version".
   const requestPricing = useCallback((dealId, versionId, livePrice) => {
     setDeals(prev => prev.map(d => d.id !== dealId ? d : {
       ...d,
@@ -96,6 +97,7 @@ export function DealsProvider({ children }) {
         status: "quote",
         livePrice,
         pricedAt: Date.now(),
+        committed: JSON.parse(JSON.stringify(v.customizations || {})),
       }),
     }));
   }, []);
