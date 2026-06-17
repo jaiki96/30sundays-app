@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -8,6 +8,7 @@ import { Camera, Volume2, VolumeX, FileText, ChevronLeft } from "lucide-react";
 import ChangeDaySheet from "../components/ChangeDaySheet";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
+import JourneyMap from "../components/JourneyMap";
 import WatchTeaser from "../components/WatchTeaser";
 import DayScoringRow from "../components/DayScoringRow";
 import DayScoringModal from "../components/DayScoringModal";
@@ -119,7 +120,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [expanded, setExpanded] = useState(false);
   const [activeDay, setActiveDay] = useState(-1); // -1 = Highlights tab
   const [showViewer, setShowViewer] = useState(null); // { day, activity }
-  const [saved, setSaved] = useState(false);
+  const [flightsMenuOpen, setFlightsMenuOpen] = useState(false);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
@@ -583,20 +584,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <button onClick={() => navigate(-1)} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <ArrowLeft size={18} color="#fff" />
         </button>
-        <button onClick={() => setSaved(!saved)} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
-          <Heart size={18} color="#fff" fill={saved ? "#E31B53" : "none"} />
-        </button>
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px" }}>
-            Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span>
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+            <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
             {inDeal && (
               <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
                 V{version.num}
               </span>
             )}
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
               background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)",
@@ -613,7 +611,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           {inDeal ? (
-            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>{dateLabel} · {travellers} travellers</p>
+            /* A saved plan — dates/travellers are editable (tap the pencil) */
+            <button onClick={() => setShowTripSheet(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.head }}>{exploreStart ? exploreDateLabel : dateLabel} · {exploreStart ? explorePax : travellers} traveller{(exploreStart ? explorePax : travellers) > 1 ? "s" : ""}</span>
+              <Pencil size={12} color={C.p600} />
+            </button>
           ) : exploreStart ? (
             /* Explore: dates/party filled inline — show them, tap to edit */
             <button onClick={() => setShowTripSheet(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
@@ -807,13 +809,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                           data-testid={`change-day-${globalDayIndex}`}
                           onClick={(e) => { e.stopPropagation(); setChangeDayIndex(globalDayIndex); }}
                           style={{
-                            display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8,
+                            display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8,
                             padding: 0, background: "none", border: "none",
-                            fontSize: 12, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit",
+                            fontSize: 12, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
                           }}
                           aria-label="Change day plan"
                         >
-                          <RefreshCw size={12} color={C.sub} />
+                          <ArrowLeftRight size={13} color={C.p600} />
                           Change day plan
                         </button>
                       )}
@@ -848,12 +850,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                                 display: "inline-flex", alignItems: "center", gap: 4,
                                 padding: "4px 10px", background: C.white,
                                 border: `1px solid ${C.div}`, borderRadius: 999,
-                                fontSize: 11, fontWeight: 600, color: C.head, cursor: "pointer",
+                                fontSize: 11, fontWeight: 600, color: C.p600, cursor: "pointer",
                                 fontFamily: "inherit", flexShrink: 0, lineHeight: 1,
                               }}
                               aria-label="Change day plan"
                             >
-                              <RefreshCw size={11} color={C.sub} />
+                              <ArrowLeftRight size={11} color={C.p600} />
                               Change day
                             </button>
                           )}
@@ -894,9 +896,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         {daysWithActivities.length > 3 && (
           <button onClick={() => setExpanded(!expanded)} style={{
             display: "flex", alignItems: "center", gap: 4, margin: "14px 0 0", background: "none", border: "none",
-            fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+            fontSize: 13, fontWeight: 600, color: C.sub, cursor: "pointer", fontFamily: "inherit",
           }}>
-            {expanded ? "Hide details" : "Read more"} {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{expanded ? "Hide details" : "Read more"}</span> {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         )}
         {isVietnam && (
@@ -974,9 +976,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 {editable && (
                   <span
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.head }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.p600 }}
                   >
-                    <ArrowLeftRight size={13} color={C.sub} />
+                    <ArrowLeftRight size={13} color={C.p600} />
                     Change hotel
                   </span>
                 )}
@@ -1138,10 +1140,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
         const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
         const divider = <div style={{ borderTop: `1px solid ${C.div}`, margin: "12px 0" }} />;
-        const priceRow = (price) => (
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "baseline", gap: 3 }}>
-            <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>₹{formatPrice(price)}</span>
-            <span style={{ fontSize: 12, color: C.sub }}>/Person</span>
+        const priceRow = (price, left) => (
+          <div style={{ display: "flex", justifyContent: left ? "space-between" : "flex-end", alignItems: "baseline", gap: 8 }}>
+            {left}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+              <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>₹{formatPrice(price)}</span>
+              <span style={{ fontSize: 12, color: C.sub }}>/Person</span>
+            </div>
           </div>
         );
         // Per-leg airline header — airline shown ON its own flight so the carrier
@@ -1159,8 +1164,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         // Per-leg "Change" — selection is one flight at a time, so each leg links
         // to its own single-leg chooser (one-way mode).
         const changeCtrl = (legIdx, f) => (
-          <Link to={`/flights/${it.id}/${legIdx}?current=${encodeURIComponent(f?.id || "")}${dealQS}${homeQS}&mode=oneway`} style={{ display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
-            Change <ChevronRight size={12} />
+          <Link to={`/flights/${it.id}/${legIdx}?current=${encodeURIComponent(f?.id || "")}${dealQS}${homeQS}&mode=oneway`} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
+            <ArrowLeftRight size={13} /> Change
           </Link>
         );
 
@@ -1177,17 +1182,32 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         // One-way leg card (with per-leg Change + Remove) or an empty add slot.
         const owCard = (f, added, setAdded, label, legIdx) => (added && f) ? (
           <div style={padCard}>
-            {legHead(label, f, <span style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>{changeCtrl(legIdx, f)}{removeBtn(() => setAdded(false))}</span>)}
+            {legHead(label, f, removeBtn(() => setAdded(false)))}
             <FlightLegRow f={f} />
             {divider}
-            {priceRow(f.price)}
+            {priceRow(f.price, changeCtrl(legIdx, f))}
           </div>
         ) : addEmpty(label.toLowerCase(), () => setAdded(true));
 
-        const removeFlightsBtn = (
-          <button onClick={() => setFlightsIncluded(v => !v)} style={{ ...changeStyle, color: flightsIncluded ? C.sub : C.p600 }}>
-            {flightsIncluded ? "Remove flights" : "Add flights"}
-          </button>
+        // Kebab menu: lets the customer hand flight booking back to themselves
+        // (drops flights from our package + cost) or undo that.
+        const flightsMenu = (
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setFlightsMenuOpen(o => !o)} aria-label="Flight options" style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+              <MoreHorizontal size={16} color={C.sub} />
+            </button>
+            {flightsMenuOpen && (
+              <>
+                <div onClick={() => setFlightsMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 31, minWidth: 196, background: C.white, border: `1px solid ${C.div}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden" }}>
+                  <button onClick={() => { setFlightsIncluded(v => !v); setFlightsMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "11px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: C.head, textAlign: "left" }}>
+                    <Plane size={15} color={C.sub} />
+                    {flightsIncluded ? "I'll book the flights myself" : "Let us book the flights"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         );
 
         return (
@@ -1195,15 +1215,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             {/* Section header: Flights + remove/add-flights toggle */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
               <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Flights</p>
-              {removeFlightsBtn}
+              {flightsMenu}
             </div>
 
             {!flightsIncluded ? (
               /* Package only — no flights, no flight cost */
               <div style={{ ...padCard, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", padding: "24px 16px" }}>
                 <Plane size={20} color={C.sub} />
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>Package without flights</span>
-                <span style={{ fontSize: 12, color: C.sub }}>Flights are not included in your total. Add them anytime.</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>You're booking flights yourself</span>
+                <span style={{ fontSize: 12, color: C.sub }}>Flights aren't included in your total. Use the ⋯ menu to let us book them.</span>
               </div>
             ) : (
               <>
@@ -1229,13 +1249,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                       <span style={{ fontSize: 12, color: C.sub }}>Your earlier choice no longer applies. Tap to pick outbound & return.</span>
                     </Link>
                   ) : intlMode === "roundtrip" ? (
-                    /* One paired card, airline + per-leg Change, single combined price */
+                    /* One paired card, single combined price + a single Change at the price row */
                     <div style={padCard}>
-                      {selOut && <>{legHead("Outbound", selOut, changeCtrl(intlOutIdx, selOut))}<FlightLegRow f={selOut} /></>}
+                      {selOut && <>{legHead("Outbound", selOut)}<FlightLegRow f={selOut} /></>}
                       {divider}
-                      {selRet && <>{legHead("Return", selRet, changeCtrl(intlRetIdx, selRet))}<FlightLegRow f={selRet} /></>}
+                      {selRet && <>{legHead("Return", selRet)}<FlightLegRow f={selRet} /></>}
                       {divider}
-                      {priceRow((selOut?.price || 0) + (selRet?.price || 0))}
+                      {priceRow((selOut?.price || 0) + (selRet?.price || 0),
+                        <Link to={outTo} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
+                          <ArrowLeftRight size={13} /> Change flights
+                        </Link>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -1305,27 +1329,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* ═══ 6. Journey Map ═══ */}
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Journey Map</p>
-        <div style={{ position: "relative", height: 200, borderRadius: 14, overflow: "hidden", background: "#E8F4EA" }}>
-          {/* Simple visual map */}
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-              {it.days.map((day, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.p600, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.head, marginTop: 4, whiteSpace: "nowrap" }}>{day.city}</span>
-                    <span style={{ fontSize: 11, color: C.sub }}>{day.n}N</span>
-                  </div>
-                  {i < it.days.length - 1 && (
-                    <div style={{ width: 40, height: 1, borderTop: "2px dashed #A4A7AE", margin: "0 4px 16px" }}>
-                      <Plane size={10} color={C.inact} style={{ position: "relative", top: -7, left: 14 }} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <JourneyMap stops={it.days} height={220} />
       </div>
 
       <Divider />
@@ -3024,7 +3028,7 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
                   fontFamily: "inherit", lineHeight: 1,
                 }}
               >
-                <RefreshCw size={12} color={C.sub} />
+                <ArrowLeftRight size={12} color={C.sub} />
                 Change day
               </button>
             )}

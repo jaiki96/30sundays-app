@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, ChevronRight, Search, Heart, MapPin, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles, Plus } from "lucide-react";
 import { C, destinations, allItineraries } from "../data";
-import ItineraryCard from "../components/ItineraryCard";
+import TripPlanCard from "../components/TripPlanCard";
 import DatePicker from "../components/DatePicker";
 import LoginV2 from "./LoginV2";
-import { useDeals, effectiveStatus, STATUS_LABEL, QUOTE_VALID_DAYS } from "../data/deals";
+import { useDeals } from "../data/deals";
 
 const funLines = [
   "Meanwhile, your dream beach is warming up the sand for you...",
@@ -77,47 +77,6 @@ const DEFAULT_PLAN_DESTS = ["Bali", "Thailand", "Vietnam"];
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
 const adultOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-// Big, image-led card for a finalized quote version (vs the compact draft row).
-function QuoteCard({ deal, v, onOpen }) {
-  const itin = allItineraries.find(i => i.id === deal.itineraryId);
-  const travellers = 2 + (itin?.veg ? 0 : 1);
-  const expired = effectiveStatus(v) === "expired";
-  const total = (v.livePrice || 0) * travellers;
-  const validTill = v.pricedAt ? new Date(v.pricedAt + QUOTE_VALID_DAYS * 86400000) : null;
-  return (
-    <div
-      data-testid={`deal-quote-card-v${v.num}`}
-      onClick={onOpen}
-      style={{ position: "relative", height: 188, borderRadius: 16, overflow: "hidden", cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}
-    >
-      <img src={deal.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.78) 100%)" }} />
-
-      {/* Status + version chips */}
-      <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, color: "#fff", background: expired ? "rgba(181,71,8,0.92)" : "rgba(2,122,72,0.92)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)" }}>
-          {expired ? "Expired" : "Quote"}
-        </span>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.5px", padding: "4px 10px", borderRadius: 20, color: "#fff", background: "rgba(255,255,255,0.16)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", textTransform: "uppercase" }}>
-          V{v.num}
-        </span>
-      </div>
-
-      {/* Bottom overlay */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 14px 14px" }}>
-        <p style={{ margin: "0 0 3px", fontSize: 17, fontWeight: 700, color: "#fff", letterSpacing: "-0.2px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{deal.title}</p>
-        <p style={{ margin: "0 0 8px", fontSize: 12, color: "rgba(255,255,255,0.82)" }}>
-          {v.createdBy === "customer" ? "Created by you · " : ""}{deal.dest}{validTill && !expired ? ` · valid till ${validTill.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}
-        </p>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 20, fontWeight: 700, color: "#fff" }}>₹{total.toLocaleString("en-IN")}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 14, fontWeight: 700, color: "#fff" }}>Open <ArrowRight size={15} color="#fff" /></span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Plan({ userState, setUserState, leadData, setLeadData }) {
   const navigate = useNavigate();
   const { deals } = useDeals();
@@ -168,6 +127,9 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   // Welcome banner dismiss
   const [showWelcome, setShowWelcome] = useState(true);
   const [welcomeFadingOut, setWelcomeFadingOut] = useState(false);
+  // Bottom "older plans" accordion (closed/expired vacations), collapsed by default.
+  const [showOlder, setShowOlder] = useState(false);
+
 
   const funLine = useMemo(() => funLines[Math.floor(Math.random() * funLines.length)], []);
   const otpRefs = useRef([]);
@@ -355,144 +317,72 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
       {phase === "success" && (
         <>
           {/* Header */}
-          <div style={{ padding: "12px 16px 8px" }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Your Trips</h1>
-            <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>{recommendedItineraries.length} itinerary{recommendedItineraries.length !== 1 ? "s" : ""} curated for you</p>
-          </div>
-
-          {/* Content */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 80px" }} className="hide-scrollbar">
-            {/* Saved plans (versioned deals) */}
-            {deals.length > 0 && (
-              <div style={{ margin: "8px 0 20px" }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: C.head, margin: "0 0 10px" }}>Saved plans</p>
-                {deals.map(deal => {
-                  const sorted = [...deal.versions].sort((a, b) => b.num - a.num);
-                  const itin = allItineraries.find(i => i.id === deal.itineraryId);
-                  const travellers = 2 + (itin?.veg ? 0 : 1);
-                  const quotes = sorted.filter(v => effectiveStatus(v) !== "draft");
-                  const drafts = sorted.filter(v => effectiveStatus(v) === "draft");
-                  return (
-                    <div key={deal.id} style={{ marginBottom: 12, display: "flex", flexDirection: "column", gap: 12 }}>
-                      {/* Finalized quotes → big image cards */}
-                      {quotes.map(v => (
-                        <QuoteCard
-                          key={v.id}
-                          deal={deal}
-                          v={v}
-                          onOpen={() => navigate(`/itinerary/${deal.itineraryId}?dealId=${deal.id}&versionId=${v.id}`)}
-                        />
-                      ))}
-
-                      {/* Drafts (work in progress) → compact rows under a header */}
-                      {drafts.length > 0 && (
-                        <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", background: C.white }}>
-                          <div
-                            onClick={() => navigate(`/itinerary/${deal.itineraryId}?dealId=${deal.id}&versionId=${drafts[0].id}`)}
-                            style={{ display: "flex", alignItems: "center", gap: 10, padding: 10, borderBottom: `1px solid ${C.div}`, cursor: "pointer" }}
-                          >
-                            <img src={deal.img} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{deal.title}</p>
-                              <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub }}>{deal.dest} · {drafts.length} draft{drafts.length !== 1 ? "s" : ""}</p>
-                            </div>
-                            <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
-                          </div>
-                          {drafts.map(v => {
-                            const total = (v.indicativePrice || 0) * travellers;
-                            return (
-                              <div
-                                key={v.id}
-                                data-testid={`deal-version-draft-v${v.num}`}
-                                onClick={() => navigate(`/itinerary/${deal.itineraryId}?dealId=${deal.id}&versionId=${v.id}`)}
-                                style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", cursor: "pointer", borderTop: `1px solid ${C.bg}` }}
-                              >
-                                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: C.p100, color: C.p600, flexShrink: 0 }}>
-                                  Draft
-                                </span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    v{v.num}
-                                    {v.indicativePrice != null && <span style={{ fontWeight: 700 }}> · ₹{total.toLocaleString("en-IN")}</span>}
-                                  </p>
-                                  <p style={{ margin: "1px 0 0", fontSize: 11, color: C.sub }}>
-                                    {v.createdBy === "customer" ? "Created by you · " : ""}
-                                    {new Date(v.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · Editing
-                                  </p>
-                                </div>
-                                <ArrowRight size={16} color={C.inact} style={{ flexShrink: 0 }} />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Welcome banner */}
-            {showWelcome && (
-              <div style={{
-                margin: "8px 0 16px", borderRadius: 16, padding: "16px",
-                backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-                background: "linear-gradient(135deg, rgba(255,228,232,0.8) 0%, rgba(255,255,255,0.9) 100%)",
-                border: `1px solid ${C.p300}44`,
-                position: "relative",
-                animation: welcomeFadingOut ? "fadeOut 1s ease-out forwards" : "scaleIn 0.4s ease-out, fadeUp 0.5s ease-out",
-              }}>
-                <button
-                  onClick={() => { setWelcomeFadingOut(true); setTimeout(() => setShowWelcome(false), 800); }}
-                  style={{
-                    position: "absolute", top: 8, right: 10, width: 20, height: 20,
-                    background: "none", border: "none", cursor: "pointer", padding: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >
-                  <XIcon size={12} color="rgba(0,0,0,0.3)" />
-                </button>
-                <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-                    background: C.p100, display: "flex", alignItems: "center", justifyContent: "center",
-                    border: `1px solid ${C.p300}44`,
-                  }}>
-                    <Sparkles size={20} color={C.p600} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: C.p900, margin: "0 0 4px" }}>
-                      We're thrilled, {successName}! 🎉
-                    </p>
-                    <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
-                      We've curated {recommendedItineraries.length} itinerar{recommendedItineraries.length === 1 ? "y" : "ies"} for {successDests.join(" & ")}, scroll to explore.
-                      A travel consultant will also reach out shortly to personalise further.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recommended itineraries */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {recommendedItineraries.map(it => (
-                <ItineraryCard key={it.id} it={it} fullWidth showVersion />
-              ))}
+          {(() => {
+          const active = deals.filter(d => d.status !== "lost");
+          const older = deals.filter(d => d.status === "lost");
+          // Open the right itinerary for a version (or a Maldives property quote).
+          const openVersion = (deal, v, quote) => {
+            const itinId = quote?.itineraryId ?? v?.itineraryId ?? deal.itineraryId;
+            navigate(`/itinerary/${itinId}?dealId=${deal.id}&versionId=${v.id}`);
+          };
+          const recency = (d) => Math.max(...d.versions.map(v => v.createdAt || 0));
+          return (
+          <>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, padding: "12px 16px 8px" }}>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Your Trips</h1>
+              <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>
+                {active.length} {active.length === 1 ? "vacation" : "vacations"}
+              </p>
             </div>
-
-            {/* See more link */}
-            <Link
-              to={`/listing?dest=${successDests[0]}`}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                margin: "20px 0", padding: "14px 0", borderRadius: 14,
-                border: `1.5px solid ${C.p600}`, background: C.white,
-                fontSize: 14, fontWeight: 600, color: C.p600, textDecoration: "none",
-              }}
-            >
-              View all itineraries <ArrowRight size={15} />
+            <Link to="/build" style={{
+              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "8px 14px", borderRadius: 20, background: C.p600, color: "#fff",
+              fontSize: 12.5, fontWeight: 700, textDecoration: "none", marginTop: 2,
+            }}>
+              <Plus size={14} /> New trip
             </Link>
           </div>
+
+          {/* Content — active vacations first, then a collapsed "older plans" accordion */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 80px" }} className="hide-scrollbar">
+            {active.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[...active].sort((a, b) => recency(b) - recency(a)).map(deal => (
+                  <TripPlanCard key={deal.id} deal={deal} onOpen={(v, q) => openVersion(deal, v, q)} onStartNew={() => navigate("/build")} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "48px 20px" }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: C.head, margin: "0 0 4px" }}>No vacations yet</p>
+                <p style={{ fontSize: 13, color: C.sub, margin: 0 }}>Plan your first trip to see it here.</p>
+              </div>
+            )}
+
+            {/* Older / closed plans — collapsed accordion at the bottom */}
+            {older.length > 0 && (
+              <div style={{ marginTop: 22, borderTop: `1px solid ${C.div}`, paddingTop: 14 }}>
+                <button
+                  onClick={() => setShowOlder(o => !o)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "4px 2px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>
+                    Older plans <span style={{ color: C.inact }}>({older.length})</span>
+                  </span>
+                  <ChevronDown size={16} color={C.sub} style={{ transition: "transform 0.2s", transform: showOlder ? "rotate(180deg)" : "none" }} />
+                </button>
+                {showOlder && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+                    {[...older].sort((a, b) => recency(b) - recency(a)).map(deal => (
+                      <TripPlanCard key={deal.id} deal={deal} onOpen={(v, q) => openVersion(deal, v, q)} onStartNew={() => navigate("/build")} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          </>
+          ); })()}
         </>
       )}
 

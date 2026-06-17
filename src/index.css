@@ -123,3 +123,16 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
   cursor: pointer;
 }
+
+/* Leaflet route-map city labels: clean pill, no default arrow/border */
+.route-tip.leaflet-tooltip {
+  background: rgba(255,255,255,0.95);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #181D27;
+}
+.route-tip.leaflet-tooltip::before { display: none; }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, createElement } from "react";
+import { allItineraries } from "../data";
 
 // ─── Versioned deals store ───
 // Mirrors the back-office model: a deal holds versions. A version is an
@@ -7,10 +8,107 @@ import { createContext, useContext, useState, useEffect, useCallback, createElem
 // stale after QUOTE_VALID_DAYS and surface as Expired.
 
 const KEY = "30s_deals_v1";
+const SEED_KEY = "30s_deals_seeded_v4";
 export const QUOTE_VALID_DAYS = 7;
 
+const DAY = 86400000;
+const num = (p) => Number(String(p ?? 0).replace(/,/g, "")) || 0;
+
+// Demo deals modelling the real concepts for the Plan page:
+//  - A deal (vacation) is `active` or `lost`; lost deals just sink lower.
+//  - A version owns ONE immutable itinerary + destination. `status:"draft"` is
+//    an OPEN/editable version; `status:"quote"` is a FINALISED PDF (locked).
+//  - Versions of one deal may span DIFFERENT destinations.
+//  - Maldives versions carry MULTIPLE property quotes (one per resort) via
+//    `quotes`, each independently open or finalised.
+// Version-level `destination`/`itineraryId`/`title` let a single deal hold
+// versions for different trips; the card falls back to deal-level for older
+// (real) deals that predate this shape.
+function demoDeals() {
+  const now = Date.now();
+  const byId = (id) => allItineraries.find(i => i.id === id);
+  const routeTitle = (id) => { const it = byId(id); return (it?.route || []).map(r => r.city).join(" · ") || it?.name || "Trip"; };
+  const td = (startInDays, nights, travelers = 2) => ({
+    fromDate: new Date(now + startInDays * DAY).toISOString(), nights, travelers,
+  });
+  // A single version anchored to a real itinerary id.
+  const ver = (id, itinId, { num: n, status, ageDays, priceAdj = 0, pdfAgo, quotes }) => {
+    const it = byId(itinId);
+    const pp = num(it?.price) + priceAdj;
+    return {
+      id, num: n, status, parentId: null, createdBy: "customer",
+      destination: it?.dest, itineraryId: itinId, title: routeTitle(itinId),
+      customizations: { travelDates: td(45, it?.nights || 7), selectedDayOptions: {}, selectedHotels: {} },
+      indicativePrice: pp, livePrice: status === "quote" ? pp : null,
+      pricedAt: status === "quote" ? now - (pdfAgo ?? 1) * DAY : null,
+      createdAt: now - ageDays * DAY,
+      ...(quotes ? { quotes } : {}),
+    };
+  };
+
+  // 1. Active Bali deal — an OPEN v4 sitting on top of a finalised PDF v3.
+  const baliImg = byId(1)?.img;
+  const dealBali = {
+    id: "demo_bali", status: "active", itineraryId: 1, dest: "Bali", title: routeTitle(1), img: baliImg,
+    customItinerary: null, createdAt: now - 6 * DAY,
+    versions: [
+      ver("demo_bali_v1", 1, { num: 1, status: "quote", ageDays: 6, pdfAgo: 5 }),
+      ver("demo_bali_v2", 100, { num: 2, status: "quote", ageDays: 4, priceAdj: 4000, pdfAgo: 3 }),
+      ver("demo_bali_v3", 3, { num: 3, status: "quote", ageDays: 2, priceAdj: 8000, pdfAgo: 1 }),
+      ver("demo_bali_v4", 1, { num: 4, status: "draft", ageDays: 0.4, priceAdj: 12000 }),
+    ],
+  };
+
+  // 2. Active deal whose versions SPAN destinations (Bali -> Thailand).
+  const dealSpan = {
+    id: "demo_span", status: "active", itineraryId: 13, dest: "Thailand", title: routeTitle(13), img: byId(13)?.img,
+    customItinerary: null, createdAt: now - 9 * DAY,
+    versions: [
+      ver("demo_span_v1", 4, { num: 1, status: "quote", ageDays: 9, pdfAgo: 8 }),   // Bali
+      ver("demo_span_v2", 13, { num: 2, status: "quote", ageDays: 1, priceAdj: 3000, pdfAgo: 0 }), // Thailand (newest, finalised PDF)
+    ],
+  };
+
+  // 3. Maldives — a version carries MULTIPLE property quotes.
+  const malImg = byId(16)?.img;
+  const dealMal = {
+    id: "demo_maldives", status: "active", itineraryId: 16, dest: "Maldives", title: "Maldives escape", img: malImg,
+    customItinerary: null, createdAt: now - 3 * DAY,
+    versions: [
+      ver("demo_mal_v1", 16, { num: 1, status: "quote", ageDays: 7, pdfAgo: 6,
+        quotes: [{ property: "Anantara Veli", itineraryId: 16, status: "quote", price: num(byId(16)?.price), pdfAgo: 6 }] }),
+      ver("demo_mal_v2", 16, { num: 2, status: "draft", ageDays: 0.6,
+        quotes: [
+          { property: "Adaaran Select", itineraryId: 16, status: "quote", price: num(byId(16)?.price), pdfAgo: 1 },
+          { property: "Sun Siyam Olhuveli", itineraryId: 17, status: "draft", price: num(byId(17)?.price) },
+        ] }),
+    ],
+  };
+
+  // 4. Lost vacation — sinks to the bottom, muted. (Customer would start a new one.)
+  const dealLost = {
+    id: "demo_lost", status: "lost", itineraryId: 10, dest: "Vietnam", title: routeTitle(10), img: byId(10)?.img,
+    customItinerary: null, createdAt: now - 30 * DAY,
+    versions: [ver("demo_lost_v1", 10, { num: 1, status: "quote", ageDays: 30, pdfAgo: 24 })],
+  };
+
+  return [dealBali, dealSpan, dealMal, dealLost];
+}
+
 function load() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+  let deals;
+  try { deals = JSON.parse(localStorage.getItem(KEY)) || []; } catch { deals = []; }
+  // One-time demo seed (flag-guarded). This bump RESETS the list to a clean set
+  // of ~4 representative vacations (the accumulated prototype test deals are
+  // cleared) so the Plan screen stays legible.
+  try {
+    if (!localStorage.getItem(SEED_KEY)) {
+      deals = demoDeals();
+      localStorage.setItem(SEED_KEY, "1");
+      localStorage.setItem(KEY, JSON.stringify(deals));
+    }
+  } catch { /* ignore */ }
+  return deals;
 }
 function persist(deals) {
   try { localStorage.setItem(KEY, JSON.stringify(deals)); } catch { /* ignore */ }

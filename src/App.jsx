@@ -33,6 +33,7 @@ import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
 import WatchDeepLink from "./pages/WatchDeepLink";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { DealsProvider } from "./data/deals";
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
@@ -97,6 +98,7 @@ export default function App() {
   const [selectedHotels, setSelectedHotels] = useState({});
 
   return (
+    <ErrorBoundary>
     <DealsProvider>
       <BrowserRouter>
         <AppContent
@@ -111,5 +113,6 @@ export default function App() {
         />
       </BrowserRouter>
     </DealsProvider>
+    </ErrorBoundary>
   );
 }

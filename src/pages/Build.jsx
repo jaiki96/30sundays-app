@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from "react-leaflet";
+import L from "leaflet";
 import {
   ArrowLeft, Check, Plus, Minus, X as XIcon, ChevronDown, ChevronRight,
   Sparkles, Play, GripVertical, Map as MapIcon,
@@ -138,7 +140,7 @@ export default function Build() {
   const ctaFor = () => {
     switch (step) {
       case 1: return { label: "Continue", onClick: goNext, enabled: true };
-      case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate };
+      case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
       case 3: return editRoute
         ? { label: "Save new route", onClick: () => setConfirmRoute(true), enabled: !!route?.length }
         : { label: "Looks good, continue", onClick: goNext, enabled: !!route?.length };
@@ -235,8 +237,8 @@ function StepDestination({ onOpen }) {
                 {soc.trending && (
                   <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.92)", color: C.sText, fontSize: 9.5, fontWeight: 800, padding: "3px 7px", borderRadius: 20, letterSpacing: ".3px" }}>🔥 TRENDING</span>
                 )}
-                <span style={{ position: "absolute", top: 8, right: 8, display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20 }}>
-                  <Play size={9} color="#fff" fill="#fff" /> Reel
+                <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)" }}>
+                  <Play size={18} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
                 </span>
                 <div style={{ position: "absolute", left: 11, right: 11, bottom: 11 }}>
                   <p style={{ margin: 0, color: "#fff", fontSize: 17, fontWeight: 800, letterSpacing: "-0.2px" }}>{d}</p>
@@ -246,6 +248,9 @@ function StepDestination({ onOpen }) {
             );
           })}
         </div>
+        <p style={{ textAlign: "center", color: C.inact, fontSize: 12.5, fontWeight: 600, margin: "20px 0 4px" }}>
+          That's all for now ✈️ more dreamy destinations landing soon.
+        </p>
       </div>
     </div>
   );
@@ -292,9 +297,9 @@ const GlassChip = ({ children }) => (
 function StepParty({ party, setParty, onContinue }) {
   const isGroup = party.couples === 0;
   const cards = [
-    { key: "couple", emoji: "💑", label: "Just us two", sub: "A couple", on: party.couples === 1 },
-    { key: "two", emoji: "👯", label: "Two couples", sub: "4 travellers", on: party.couples === 2 },
-    { key: "group", emoji: "🎉", label: "A bigger group", sub: "Friends or family", on: isGroup },
+    { key: "couple", emoji: "💑", label: "Just us two", sub: "2 adults", on: party.couples === 1 },
+    { key: "two", emoji: "👯", label: "Two couples", sub: "4 adults", on: party.couples === 2 },
+    { key: "group", emoji: "🎉", label: "A bigger group", sub: "4+ adults", on: isGroup },
   ];
   const pick = (key) => {
     if (key === "couple") { setParty({ couples: 1, adults: 0, kids: 0 }); onContinue(); }
@@ -329,6 +334,9 @@ function StepParty({ party, setParty, onContinue }) {
           </div>
         ))}
       </div>
+      <p style={{ fontSize: 12, color: C.sub, lineHeight: 1.5, marginTop: 18, padding: "12px 14px", background: C.p100, borderRadius: 12 }}>
+        Travelling with kids or infants? <strong style={{ color: C.p600 }}>Reach out to our team</strong> for a personalised itinerary built around your little ones.
+      </p>
     </div>
   );
 }
@@ -364,17 +372,35 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
   }, []);
   const sel = startDate ? new Date(startDate) : null;
   const [openMonth, setOpenMonth] = useState(() => sel ? { m: sel.getMonth(), y: sel.getFullYear() } : monthsList[1]);
-  const [nightsOpen, setNightsOpen] = useState(false);
-
-  const pickDay = (day) => setStartDate(new Date(openMonth.y, openMonth.m, day).toISOString());
-  const ndays = DAYS_IN_MONTH[openMonth.m] + (openMonth.m === 1 && openMonth.y % 4 === 0 ? 1 : 0);
-  const isPast = (day) => new Date(openMonth.y, openMonth.m, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   const minN = destMeta[dest]?.minNights || 3;
-  const curNights = nights || destMeta[dest]?.defaultNights || 7;
-  const nightOptions = [];
-  for (let n = minN; n <= 14; n++) nightOptions.push(n);
+  const DAY_MS = 86400000;
+  const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  // End is derived: a complete range means we have both a start and a nights count.
+  const hasRange = !!startDate && !!nights;
+  const endD = hasRange ? new Date(midnight(sel).getTime() + nights * DAY_MS) : null;
+
+  const pickDay = (day) => {
+    const d = new Date(openMonth.y, openMonth.m, day);
+    // Fresh start when nothing picked yet, or when a full range already exists.
+    if (!startDate || hasRange) {
+      setStartDate(d.toISOString());
+      setNights(null);
+      return;
+    }
+    // Second tap: anything on/before the start just resets the start.
+    if (d <= midnight(sel)) {
+      setStartDate(d.toISOString());
+      setNights(null);
+      return;
+    }
+    setNights(Math.round((midnight(d) - midnight(sel)) / DAY_MS));
+  };
+
+  const ndays = DAYS_IN_MONTH[openMonth.m] + (openMonth.m === 1 && openMonth.y % 4 === 0 ? 1 : 0);
+  const isPast = (day) => new Date(openMonth.y, openMonth.m, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const firstDow = new Date(openMonth.y, openMonth.m, 1).getDay(); // 0=Sun, for calendar alignment
+  const shortDate = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
   return (
     <div style={{ padding: "18px 16px 24px" }}>
@@ -398,8 +424,10 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
         })}
       </div>
 
-      {/* day grid */}
-      <p style={{ margin: "18px 0 8px", fontSize: 13, fontWeight: 700, color: C.head }}>Pick your start date</p>
+      {/* day grid — tap a start date, then an end date */}
+      <p style={{ margin: "18px 0 8px", fontSize: 13, fontWeight: 700, color: C.head }}>
+        {!startDate ? "Pick your start date" : !hasRange ? "Now pick your end date" : "Your travel dates"}
+      </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 6 }}>
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
           <span key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: C.inact }}>{d}</span>
@@ -409,49 +437,38 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
         {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
         {Array.from({ length: ndays }, (_, i) => i + 1).map(day => {
           const past = isPast(day);
-          const on = sel && sel.getDate() === day && sel.getMonth() === openMonth.m && sel.getFullYear() === openMonth.y;
+          const d = new Date(openMonth.y, openMonth.m, day);
+          const isStart = sel && d.getTime() === midnight(sel).getTime();
+          const isEnd = endD && d.getTime() === midnight(endD).getTime();
+          const inRange = sel && endD && d > midnight(sel) && d < midnight(endD);
+          const cap = isStart || isEnd;
           return (
             <button key={day} disabled={past} onClick={() => pickDay(day)} style={{
               aspectRatio: "1", borderRadius: 10, border: "none", cursor: past ? "default" : "pointer",
-              background: on ? C.p600 : past ? "transparent" : C.bg, color: on ? "#fff" : past ? C.icon : C.head,
-              fontSize: 13, fontWeight: on ? 800 : 600, opacity: past ? 0.4 : 1,
+              background: cap ? C.p600 : inRange ? C.p100 : past ? "transparent" : C.bg,
+              color: cap ? "#fff" : inRange ? C.p600 : past ? C.icon : C.head,
+              fontSize: 13, fontWeight: cap ? 800 : inRange ? 700 : 600, opacity: past ? 0.4 : 1,
             }}>{day}</button>
           );
         })}
       </div>
 
-      {/* nights dropdown */}
-      <div style={{ marginTop: 22, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>Number of nights</span>
-        <div style={{ position: "relative" }}>
-          <button onClick={() => setNightsOpen(o => !o)} style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", borderRadius: 10,
-            background: C.white, border: `1.5px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit", minWidth: 104, justifyContent: "center",
-          }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>{curNights} nights</span>
-            <ChevronDown size={14} color={C.sub} style={{ transition: "transform 0.2s", transform: nightsOpen ? "rotate(180deg)" : "none" }} />
-          </button>
-          {nightsOpen && (
-            <div className="hide-scrollbar" style={{
-              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 50, background: C.white,
-              borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-              overflow: "auto", maxHeight: 220, width: 124,
-            }}>
-              {nightOptions.map((n, idx) => (
-                <button key={n} onClick={() => { setNights(n); setNightsOpen(false); }} style={{
-                  display: "block", width: "100%", padding: "11px 0", textAlign: "center",
-                  background: n === curNights ? C.p100 : "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-                  borderBottom: idx < nightOptions.length - 1 ? `1px solid ${C.div}` : "none",
-                  fontSize: 15, fontWeight: n === curNights ? 700 : 500, color: n === curNights ? C.p600 : C.head,
-                }}>{n} nights</button>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* range summary */}
+      <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 14, background: C.bg, border: `1px solid ${C.div}` }}>
+        {hasRange ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{shortDate(sel)} – {shortDate(endD)}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: C.p600 }}>{nights} nights</span>
+          </div>
+        ) : (
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.sub }}>
+            {startDate ? `Starts ${shortDate(sel)} · tap your return day` : "Tap a date to begin"}
+          </span>
+        )}
       </div>
-      <p style={{ margin: "10px 2px 0", fontSize: 12, color: C.sub }}>
+      <p style={{ margin: "10px 2px 0", fontSize: 12, color: hasRange && nights < minN ? C.p600 : C.sub }}>
         💡 We recommend at least {minN} nights for {dest}.
-        {startDate && ` · ${fmtDate(startDate)} start`}
+        {hasRange && nights < minN && " Consider a few more to enjoy it fully."}
       </p>
     </div>
   );
@@ -491,10 +508,12 @@ function StepRoute({ dest, route, setRoute, editRoute }) {
         <strong style={{ color: C.head }}>{route.length} {route.length > 1 ? "cities" : "city"}</strong> · {totalNights} night{totalNights > 1 ? "s" : ""} total
       </p>
 
-      {/* tappable map preview → full-screen editor */}
-      <button onClick={() => setMapOpen(true)} style={{ position: "relative", display: "block", width: "100%", padding: 0, border: "none", background: "none", cursor: "pointer" }} aria-label="Open map">
-        <RouteMap route={route} />
-        <span style={{ position: "absolute", top: 18, right: 0, display: "inline-flex", alignItems: "center", gap: 5, background: C.white, border: `1px solid ${C.div}`, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", color: C.head, fontSize: 12, fontWeight: 700, padding: "6px 11px", borderRadius: 20 }}>
+      {/* tappable real-map preview → full-screen editor */}
+      <button onClick={() => setMapOpen(true)} style={{ position: "relative", display: "block", width: "100%", padding: 0, border: "none", background: "none", cursor: "pointer", marginTop: 14 }} aria-label="Open map">
+        <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${C.div}`, pointerEvents: "none", position: "relative", zIndex: 0, isolation: "isolate" }}>
+          <LeafletRouteMap dest={dest} route={route} height={150} interactive={false} />
+        </div>
+        <span style={{ position: "absolute", top: 10, right: 10, display: "inline-flex", alignItems: "center", gap: 5, background: C.white, border: `1px solid ${C.div}`, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", color: C.head, fontSize: 12, fontWeight: 700, padding: "6px 11px", borderRadius: 20, zIndex: 1 }}>
           <MapIcon size={13} color={C.p600} /> Open map
         </span>
       </button>
@@ -567,15 +586,68 @@ function StepRoute({ dest, route, setRoute, editRoute }) {
   );
 }
 
-// Full-screen, functional map editor: all the destination's cities plotted at
-// their true relative positions. Tap a pin to add/remove; the selected ones show
-// a numbered sequence and a connecting path. Sequence + nights are edited in the
-// list below and reflected live on the map.
-function RouteMapFull({ dest, route, setRoute, onClose }) {
-  const [dragIdx, setDragIdx] = useState(null);
+// ─── Real OpenStreetMap (Leaflet) helpers ───
+// Keep the Leaflet view framed to whatever cities are plottable.
+function FitBounds({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 1) map.setView(points[0], 9);
+    else if (points.length > 1) map.fitBounds(points, { padding: [36, 36] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(points)]);
+  return null;
+}
+
+// A numbered pink pin for selected cities, a small grey dot for the rest.
+function cityPin(on, seq) {
+  const html = on
+    ? `<div style="width:26px;height:26px;border-radius:50%;background:${C.p600};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;font-family:inherit;">${seq + 1}</div>`
+    : `<div style="width:14px;height:14px;border-radius:50%;background:#9ca3af;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>`;
+  const size = on ? 26 : 14;
+  return L.divIcon({ className: "", html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+}
+
+// Shared Leaflet route map. interactive=false renders a static thumbnail.
+function LeafletRouteMap({ dest, route, onToggle, height, interactive = true }) {
   const areas = destAreas[dest] || [];
   const selected = route.map(r => r.city);
-  const selectedSet = new Set(selected);
+  const allPts = areas.map(a => cityCoords[a.city]).filter(Boolean).map(c => [c.lat, c.lng]);
+  const linePts = route.map(r => cityCoords[r.city]).filter(Boolean).map(c => [c.lat, c.lng]);
+  const center = allPts[0] || [0, 0];
+  return (
+    <MapContainer
+      center={center} zoom={8} style={{ height, width: "100%", background: "#aadaff" }}
+      scrollWheelZoom={interactive} dragging={interactive} zoomControl={interactive}
+      doubleClickZoom={interactive} touchZoom={interactive} boxZoom={interactive} keyboard={interactive}
+      attributionControl={false}
+    >
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <FitBounds points={allPts} />
+      {linePts.length > 1 && <Polyline positions={linePts} pathOptions={{ color: C.p600, weight: 3, dashArray: "7 6" }} />}
+      {(interactive ? areas : route).map((a) => {
+        const co = cityCoords[a.city]; if (!co) return null;
+        const seq = selected.indexOf(a.city); const on = seq >= 0;
+        return (
+          <Marker
+            key={a.city} position={[co.lat, co.lng]} icon={cityPin(on, seq)}
+            interactive={interactive}
+            eventHandlers={interactive && onToggle ? { click: () => onToggle(a) } : undefined}
+          >
+            <Tooltip permanent direction="top" offset={[0, on ? -14 : -8]} className="route-tip">{a.city}</Tooltip>
+          </Marker>
+        );
+      })}
+    </MapContainer>
+  );
+}
+
+// Full-screen, functional map editor: all the destination's cities plotted at
+// their true positions on a real map. Tap a pin to add/remove; the selected ones
+// show a numbered sequence and a connecting path. Sequence + nights are edited in
+// the list below and reflected live on the map.
+function RouteMapFull({ dest, route, setRoute, onClose }) {
+  const [dragIdx, setDragIdx] = useState(null);
+  const selectedSet = new Set(route.map(r => r.city));
   const totalNights = route.reduce((s, r) => s + r.n, 0);
 
   const setN = (i, n) => setRoute(r => r.map((s, j) => j === i ? { ...s, n: Math.max(1, n) } : s));
@@ -585,23 +657,6 @@ function RouteMapFull({ dest, route, setRoute, onClose }) {
     else setRoute(r => [...r, { city: area.city, n: area.n }]);
   };
   const reorder = (from, to) => setRoute(r => { const c = [...r]; const [m] = c.splice(from, 1); c.splice(to, 0, m); return c; });
-
-  // Project lat/lng of every plottable city into the canvas box.
-  const W = 320, H = 300, pad = 40;
-  const pts = areas.map(a => cityCoords[a.city]).filter(Boolean);
-  const lats = pts.map(p => p.lat), lngs = pts.map(p => p.lng);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const spanLat = Math.max(0.01, maxLat - minLat), spanLng = Math.max(0.01, maxLng - minLng);
-  const project = (c) => {
-    const co = cityCoords[c];
-    if (!co) return { x: W / 2, y: H / 2 };
-    return {
-      x: pad + ((co.lng - minLng) / spanLng) * (W - 2 * pad),
-      y: pad + (1 - (co.lat - minLat) / spanLat) * (H - 2 * pad), // invert: north up
-    };
-  };
-  const seqPath = route.map((s, i) => { const p = project(s.city); return `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`; }).join(" ");
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 65, background: C.white, display: "flex", flexDirection: "column" }}>
@@ -616,36 +671,10 @@ function RouteMapFull({ dest, route, setRoute, onClose }) {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {/* map canvas */}
-        <div style={{ background: "#EEF3F4", borderBottom: `1px solid ${C.div}` }}>
-          <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
-            {/* sea texture lines for a maplike feel */}
-            {[0.25, 0.5, 0.75].map((f, i) => (
-              <line key={i} x1={0} y1={H * f} x2={W} y2={H * f} stroke="#E0E8EA" strokeWidth="1" />
-            ))}
-            {/* sequence path through selected cities */}
-            {route.length > 1 && <path d={seqPath} stroke={C.p600} strokeWidth="2.5" strokeDasharray="6 5" fill="none" strokeLinecap="round" />}
-            {/* all city pins */}
-            {areas.map((a) => {
-              const p = project(a.city);
-              const seq = selected.indexOf(a.city);
-              const on = seq >= 0;
-              return (
-                <g key={a.city} onClick={() => toggle(a)} style={{ cursor: "pointer" }}>
-                  {on ? (
-                    <>
-                      <circle cx={p.x} cy={p.y} r="13" fill={C.p600} />
-                      <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">{seq + 1}</text>
-                    </>
-                  ) : (
-                    <circle cx={p.x} cy={p.y} r="7" fill={C.white} stroke={C.inact} strokeWidth="2" />
-                  )}
-                  <text x={p.x} y={p.y - (on ? 19 : 13)} textAnchor="middle" fontSize="10.5" fontWeight="700" fill={on ? C.head : C.sub} stroke="#EEF3F4" strokeWidth="3" paintOrder="stroke" style={{ strokeLinejoin: "round" }}>{a.city}</text>
-                </g>
-              );
-            })}
-          </svg>
-          <p style={{ margin: 0, padding: "0 16px 12px", fontSize: 11.5, color: C.sub, textAlign: "center" }}>Tap a pin to add or remove a city</p>
+        {/* real OpenStreetMap canvas */}
+        <div style={{ borderBottom: `1px solid ${C.div}` }}>
+          <LeafletRouteMap dest={dest} route={route} onToggle={toggle} height={300} />
+          <p style={{ margin: 0, padding: "10px 16px 12px", fontSize: 11.5, color: C.sub, textAlign: "center" }}>Tap a pin to add or remove a city</p>
         </div>
 
         {/* selected sequence — reorder + nights */}
@@ -697,28 +726,6 @@ function NightsDropdown({ value, onChange }) {
         ))}
       </select>
       <ChevronDown size={14} color={C.sub} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-    </div>
-  );
-}
-
-function RouteMap({ route }) {
-  // Honest static thumbnail: labelled dots on a path, no fake interactivity.
-  const W = 320, H = 88, pad = 26;
-  const n = route.length;
-  const xs = n === 1 ? [W / 2] : route.map((_, i) => pad + (i * (W - 2 * pad)) / (n - 1));
-  const ys = route.map((_, i) => H / 2 + (i % 2 === 0 ? -10 : 10));
-  const path = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x} ${ys[i]}`).join(" ");
-  return (
-    <div style={{ marginTop: 14 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
-        <path d={path} stroke={C.p300} strokeWidth="2.5" strokeDasharray="5 5" fill="none" strokeLinecap="round" />
-        {xs.map((x, i) => (
-          <g key={i}>
-            <circle cx={x} cy={ys[i]} r="6" fill={C.p600} />
-            <text x={x} y={ys[i] + (i % 2 === 0 ? -12 : 20)} textAnchor="middle" fontSize="10" fontWeight="700" fill={C.head}>{route[i].city}</text>
-          </g>
-        ))}
-      </svg>
     </div>
   );
 }
