@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { C } from "../data";
 
-// Document builders — fields mimic OCR-extracted passport / PAN data.
+// Document builders - fields mimic OCR-extracted passport / PAN data.
 const passportDoc = (file, { no, dob, issue, expiry, place }) => ({
   type: "Passport", file,
   fields: [
@@ -1304,7 +1304,7 @@ function ReferTermsSheet({ onClose }) {
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.head, flexShrink: 0 }}>{i + 1}.</span>
               <p style={{ fontSize: 13.5, color: C.sub, margin: 0, lineHeight: "20px" }}>
-                <span style={{ fontWeight: 700, color: C.head }}>{title}</span> — {body}
+                <span style={{ fontWeight: 700, color: C.head }}>{title}</span>: {body}
               </p>
             </div>
           ))}

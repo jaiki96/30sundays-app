@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -77,14 +77,45 @@ function getHotels(it) {
   }));
 }
 
-export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
+// One flight row (Figma "Frame 2147227936"): dep block — duration/stops — arr block.
+// dep/arr codes are the visual anchor (18px), date above (grey), time below.
+function FlightLegRow({ f }) {
+  const stopTxt = f.stops === 0 ? "Non-stop" : `${f.stops} stop${f.stops > 1 ? "s" : ""}`;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <span style={{ fontSize: 12, color: C.sub, lineHeight: "16px" }}>{f.date}</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: C.head, lineHeight: "24px" }}>{f.from}</span>
+        <span style={{ fontSize: 12.5, color: C.head, lineHeight: "18px" }}>{f.dep}</span>
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 0 }}>
+        <span style={{ fontSize: 11.5, color: C.sub }}>{f.duration}</span>
+        <div style={{ width: "100%", display: "flex", alignItems: "center" }}>
+          <div style={{ flex: 1, borderTop: `1px dashed ${C.div}` }} />
+          <Plane size={16} color="#FDA201" style={{ transform: "rotate(45deg)", margin: "0 2px" }} />
+          <div style={{ flex: 1, borderTop: `1px dashed ${C.div}` }} />
+        </div>
+        <span style={{ fontSize: 11.5, color: C.p600 }}>{stopTxt}</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}>
+        <span style={{ fontSize: 12, color: C.sub, lineHeight: "16px" }}>{f.arrDate}</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: C.head, lineHeight: "24px" }}>{f.to}</span>
+        <span style={{ fontSize: 12.5, color: C.head, lineHeight: "18px" }}>{f.arr}</span>
+      </div>
+    </div>
+  );
+}
+
+export default function ItineraryDetail({ selectedFlights, selectedHotels, setSelectedHotels }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
   const dealsCtx = useDeals();
-  const it = allItineraries.find(i => i.id === Number(id));
+  // Seed itineraries resolve from static data; trips built from scratch resolve
+  // from the deal that stores their synthesized itinerary.
+  const it = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
   const [expanded, setExpanded] = useState(false);
   const [activeDay, setActiveDay] = useState(-1); // -1 = Highlights tab
   const [showViewer, setShowViewer] = useState(null); // { day, activity }
@@ -109,10 +140,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const [fetchingPrice, setFetchingPrice] = useState(false); // bottom-bar loader while pricing
   const [fetchMsgIdx, setFetchMsgIdx] = useState(0); // rotating reassurance copy
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  // International flights: round trip (one paired fare) vs one-way (two separate
+  // fares). The MODE is chosen in the flight listing and mirrored here; we don't
+  // re-offer the choice on this summary. outAdded/retAdded let a one-way leg be
+  // dropped so we can show "only one flight selected".
+  const [outAdded, setOutAdded] = useState(true);
+  const [retAdded, setRetAdded] = useState(true);
+  // Departure city in India; changing it re-routes the international legs and
+  // re-generates the available flights.
+  const [departureCity, setDepartureCity] = useState("Indore");
+  // Customer can drop flights entirely and book the land package only.
+  const [flightsIncluded, setFlightsIncluded] = useState(true);
+  // Explore itineraries: capture dates/travellers inline here (login is deferred
+  // to the final step), instead of bouncing to the login-gated plan flow.
+  const [showTripSheet, setShowTripSheet] = useState(false);
+  const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
+  const [explorePax, setExplorePax] = useState(2);
 
   // ─── Versioned-deal context ───
   // When opened with ?dealId&versionId, this screen edits a specific copy.
-  // Every copy is always editable — changes are allowed from anywhere and
+  // Every copy is always editable - changes are allowed from anywhere and
   // auto-save. A quoted copy that's edited just needs an "Update quote".
   const version = dealId && versionId ? dealsCtx.getVersion(dealId, versionId) : null;
   const dealStatus = version ? effectiveStatus(version) : null;
@@ -139,7 +186,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   useEffect(() => {
     if (!it || !inDeal || !hydratedRef.current) return;
     dealsCtx.updateDraft(dealId, versionId, {
-      customizations: { selectedDayOptions, selectedHotels: selectedHotelOptions, travelDates },
+      // Preserve other customization keys (e.g. a built trip's `builtItinerary`)
+      // while patching the edit state.
+      customizations: { ...(version?.customizations || {}), selectedDayOptions, selectedHotels: selectedHotelOptions, travelDates },
       indicativePrice: computePrice(it.price, selectedDayOptions, selectedHotelOptions),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,17 +229,35 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
   if (!it) return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Itinerary not found</div>;
 
-  const travellers = 2 + (it.veg ? 0 : 1);
+  const travellers = it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax);
+  // Explore: dates set inline (start + the trip's nights → range label).
+  const exploreDateLabel = exploreStart ? (() => {
+    const s = new Date(exploreStart);
+    const e = new Date(s); e.setDate(e.getDate() + (it.nights || 0));
+    const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return `${f(s)} – ${f(e)}`;
+  })() : null;
+
+  // Built trips carry a real start date; show its range. Seed trips keep the demo dates.
+  const dateLabel = it.custom && it.startDate
+    ? (() => {
+        const s = new Date(it.startDate);
+        const e = new Date(s); e.setDate(e.getDate() + (it.nights || 0));
+        const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+        return `${f(s)} – ${f(e)}`;
+      })()
+    : "Mar 31 – Apr 6";
+  const goEditRoute = () => navigate(`/build?dealId=${dealId}&versionId=${versionId}&editRoute=1`);
 
   // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
   const overlayFrame = isMobile
     ? { position: "fixed", inset: 0 }
     : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 390, height: 844, borderRadius: 44, overflow: "hidden" };
 
-  const upgradeInfo = getUpgradeInfo(it.id, it.days);
+  const upgradeInfo = getUpgradeInfo(it.id, it.days, it.custom);
 
   // Flight legs
-  const flightLegs = useMemo(() => getFlightLegs(it), [it]);
+  const flightLegs = useMemo(() => getFlightLegs(it, departureCity), [it, departureCity]);
   const internationalLegs = flightLegs.filter(l => l.type === "international");
   const internalLegs = flightLegs.filter(l => l.type === "internal");
 
@@ -204,10 +271,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     return flights[0] || null;
   };
 
+  // Flight legs split out for the two-section layout + pricing.
+  const intlOutIdx = flightLegs.findIndex(l => l.type === "international" && l.direction === "outbound");
+  const intlRetIdx = flightLegs.findIndex(l => l.type === "international" && l.direction === "return");
+  const domesticLegs = flightLegs.map((l, i) => ({ l, i })).filter(x => x.l.type === "internal");
+  const selOut = intlOutIdx >= 0 ? getFlightForLeg(intlOutIdx) : null;
+  const selRet = intlRetIdx >= 0 ? getFlightForLeg(intlRetIdx) : null;
+  // Mode mirrors what was chosen in the flight listing (default round trip).
+  const intlMode = selectedFlights?.[it.id]?.mode || "roundtrip";
+
+  // Per-person flight cost folded into the trip total. International legs count
+  // only when "added"; domestic hops always count. Round-trip vs one-way only
+  // changes how the price is presented, not the sum.
+  // Changing the departure city invalidates the chosen international flights
+  // (they were priced from the trip's home). Until the customer re-selects, the
+  // intl flights show an empty prompt and drop out of the costing.
+  const deptChanged = departureCity !== "Indore";
+  const flightPerPerson = !flightsIncluded ? 0 : (
+    (!deptChanged && (intlMode === "roundtrip" || outAdded) && selOut ? selOut.price : 0) +
+    (!deptChanged && (intlMode === "roundtrip" || retAdded) && selRet ? selRet.price : 0) +
+    domesticLegs.reduce((s, { i }) => s + (getFlightForLeg(i)?.price || 0), 0)
+  );
+  const hasChosenFlights = flightPerPerson > 0;
+
   const d = destData[it.dest];
   const daysWithActivities = getDayActivities(it);
   const baseHotels = getHotels(it);
-  const isVietnam = it.dest === "Vietnam";
+  // Unified itinerary design across all destinations: every dest now uses the
+  // "Watch your trip unfold" tabs + tappable day cards (previously Vietnam had a
+  // bespoke highlights carousel + thumbnail strip + day-wise drawer).
+  const isVietnam = false;
 
   // Top highlights: first unique activity per day, capped at 8
   const highlights = useMemo(() => {
@@ -248,6 +341,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
     return { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
   });
 
+  // Stays the customer chose to book themselves — set from the hotel chooser,
+  // stored in App selectedHotels so both screens agree. Excluded from cost.
+  const selfBookedStays = new Set((selectedHotels?.[it.id]?.stays || []).map((s, i) => (s?.selfBooked ? i : -1)).filter(i => i >= 0));
+  const restoreStay = (i) => setSelectedHotels?.(prev => {
+    const next = { ...prev };
+    const stays = [...(next[it.id]?.stays || [])];
+    if (stays[i]?.selfBooked) stays[i] = undefined;
+    next[it.id] = { ...next[it.id], stays };
+    return next;
+  });
+
   // ─── Changes since the last finalized version ───
   // Compare current customizations against the committed (last-quoted) snapshot.
   const committed = version?.committed || {};
@@ -270,6 +374,32 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
   const changes = [...dayChanges, ...hotelChanges];
   const hasChanges = changes.length > 0;
   const validQuote = quoted && !hasChanges && !isExpired(version);
+
+  // Cost breakdown — splits the all-in grand total (the number shown in the
+  // bottom bar) into the same headers as the price-quote PDF, reconciling
+  // exactly back to that total. Land price already bakes in GST/TCS, so we
+  // back those out rather than add on top.
+  const landPP = !inDeal
+    ? (Number(String(it.price).replace(/,/g, "")) || 0)
+    : (validQuote ? (version.livePrice || 0) : (version.indicativePrice || 0));
+  // Self-booked stays are removed from the land cost proportionally (hotels are
+  // ~62% of land, split by nights), so the customer only pays for what we provide.
+  const totalNights = it.days.reduce((a, d) => a + d.n, 0) || 1;
+  const estHotelPP = (idx) => Math.round(((landPP * 0.62) / totalNights) * (it.days[idx]?.n || 0));
+  const hotelDeductionPP = [...selfBookedStays].reduce((s, idx) => s + estHotelPP(idx), 0);
+  const netLandPP = Math.max(0, landPP - hotelDeductionPP);
+  const grandTotal = (netLandPP + flightPerPerson) * travellers;
+  const flightsLine = flightPerPerson * travellers;
+  const costSplit = (() => {
+    const tcs = Math.round((grandTotal * 2) / 102);          // 2% added on top
+    const discount = grandTotal > 60000 ? 5000 : 0;          // flat promo credit
+    const gross = grandTotal - tcs + discount;               // pre-discount, pre-TCS
+    const gst = Math.round((gross * 5) / 105);               // 5% within gross
+    const nonFlight = gross - gst - flightsLine;             // hotels + activities
+    const hotels = Math.round(nonFlight * 0.62);
+    const activities = nonFlight - hotels;
+    return { hotels, activities, flights: flightsLine, gst, discount, tcs, total: grandTotal };
+  })();
 
   // Revert one change back to the committed (last-version) value.
   const undoChange = (ch) => {
@@ -456,34 +586,83 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         <button onClick={() => setSaved(!saved)} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <Heart size={18} color="#fff" fill={saved ? "#E31B53" : "none"} />
         </button>
-        {/* Bottom info — title + date on the left, Watch pill on the right */}
-        <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "26px" }}>
-              🌴 Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span>
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "5px 0 0" }}>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", margin: 0 }}>
-                Mar 31 – Apr 6 · {travellers} travellers
-              </p>
-              {inDeal && (
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4, flexShrink: 0 }}>
-                  V{version.num}
-                </span>
-              )}
-            </div>
+        {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
+        <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px" }}>
+            Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span>
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {inDeal && (
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
+                V{version.num}
+              </span>
+            )}
+            <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
+              display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
+              background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)",
+              backdropFilter: "blur(8px)", cursor: "pointer",
+            }}>
+              <Play size={12} color="#fff" fill="#fff" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>Watch the trip</span>
+            </button>
           </div>
-          {/* Watch the trip button */}
-          <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
-            display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
-            background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)",
-            backdropFilter: "blur(8px)", cursor: "pointer", flexShrink: 0,
-          }}>
-            <Play size={12} color="#fff" fill="#fff" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>Watch the trip</span>
-          </button>
         </div>
       </div>
+
+      {/* Trip meta - dates, travellers, route + edit (moved out of the hero) */}
+      <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          {inDeal ? (
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>{dateLabel} · {travellers} travellers</p>
+          ) : exploreStart ? (
+            /* Explore: dates/party filled inline — show them, tap to edit */
+            <button onClick={() => setShowTripSheet(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.head }}>{exploreDateLabel} · {explorePax} traveller{explorePax > 1 ? "s" : ""}</span>
+              <Pencil size={12} color={C.p600} />
+            </button>
+          ) : (
+            /* Explore: we don't have the customer's dates/party yet — prompt to add (inline, no login) */
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[{ icon: <Calendar size={12} />, label: "Add travel dates" }, { icon: <Users size={12} />, label: "Add travellers" }].map(c => (
+                <button key={c.label} onClick={() => setShowTripSheet(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: C.p600, border: `1px dashed ${C.p300}`, borderRadius: 20, padding: "5px 10px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
+                  {c.icon} {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <p style={{ fontSize: 12.5, color: C.sub, margin: "3px 0 0", lineHeight: "17px" }}>{it.days.map(d => `${d.city} ${d.n}N`).join("  ·  ")}</p>
+        </div>
+        {it.custom && inDeal && (
+          <button onClick={goEditRoute} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
+            <Pencil size={13} /> Edit
+          </button>
+        )}
+      </div>
+
+      {/* Inline trip-details sheet (explore) — set dates/travellers without login */}
+      {showTripSheet && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div onClick={() => setShowTripSheet(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} />
+          <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", padding: "18px 18px 28px", maxWidth: 420, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Trip details</p>
+              <button onClick={() => setShowTripSheet(false)} style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}><XIcon size={20} color={C.sub} /></button>
+            </div>
+            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.sub, marginBottom: 6 }}>Start date</label>
+            <input type="date" value={exploreStart} onChange={(e) => setExploreStart(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", padding: "11px 12px", borderRadius: 10, border: `1px solid ${C.div}`, fontSize: 14, color: C.head, fontFamily: "inherit", marginBottom: 16 }} />
+            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.sub, marginBottom: 6 }}>Travellers</label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${C.div}`, borderRadius: 10, padding: "8px 12px", marginBottom: 20 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{explorePax} traveller{explorePax > 1 ? "s" : ""}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button onClick={() => setExplorePax(p => Math.max(1, p - 1))} style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer" }}><Minus size={15} color={C.head} /></button>
+                <button onClick={() => setExplorePax(p => Math.min(12, p + 1))} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: C.p600, display: "grid", placeItems: "center", cursor: "pointer" }}><Plus size={15} color="#fff" /></button>
+              </div>
+            </div>
+            <button onClick={() => setShowTripSheet(false)} disabled={!exploreStart} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: exploreStart ? C.p600 : C.div, color: exploreStart ? "#fff" : C.inact, fontSize: 15, fontWeight: 700, cursor: exploreStart ? "pointer" : "not-allowed", fontFamily: "inherit" }}>Done</button>
+          </div>
+        </div>
+      )}
 
 
       {/* ═══ 2. Highlights (Vietnam) / See Your Trip (others) ═══ */}
@@ -522,7 +701,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         </div>
       ) : (
         <div style={{ padding: "16px 0 0" }}>
-          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>Watch your trip unfold</p>
+          <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 10 }}>Watch your trip in videos</p>
           {/* Tabs: Highlights + Day pills */}
           <div className="hs" style={{ gap: 6, paddingLeft: 16, paddingRight: 16, marginBottom: 10 }}>
             <button onClick={() => setActiveDay(-1)} style={{
@@ -744,6 +923,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
         <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
           {hotels.map((h, i) => {
+            const selfBooked = selfBookedStays.has(i);
+            if (selfBooked) {
+              return (
+                <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
+                  <div style={{ borderRadius: 14, border: `1px dashed ${C.div}`, background: C.bg, padding: "12px", height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "4px 0 0" }}>You're booking this stay</p>
+                    <p style={{ fontSize: 12, color: C.sub, margin: 0, lineHeight: "17px", flex: 1 }}>We won't arrange a hotel in {h.city}. It's removed from your total.</p>
+                    {editable && (
+                      <button onClick={() => restoreStay(i)} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 20, border: `1px solid ${C.div}`, background: C.white, color: C.p600, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                        <Plus size={13} /> Let us book it
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             return (
             <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
             <Link to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
@@ -778,11 +974,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
                 {editable && (
                   <span
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      cursor: "pointer", padding: 0, background: "none", border: "none",
-                      fontSize: 12, fontWeight: 600, color: C.head,
-                    }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.head }}
                   >
                     <ArrowLeftRight size={13} color={C.sub} />
                     Change hotel
@@ -820,7 +1012,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         )}
       </div>
 
-      {/* ═══ 4b. Pricing & Availability — hidden for now ═══ */}
+      {/* ═══ 4b. Pricing & Availability - hidden for now ═══ */}
       {false && (
       <div style={{ padding: "0 16px" }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Pricing & Availability</p>
@@ -892,7 +1084,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
       </div>
       )}
 
-      {/* ═══ 4c. Book your trip / Payment — hidden for now ═══ */}
+      {/* ═══ 4c. Book your trip / Payment - hidden for now ═══ */}
       {false && (
       <>
       <Divider />
@@ -941,33 +1133,135 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
 
       <Divider />
 
-      {/* ═══ 5. Flights, Coming Soon Notice ═══ */}
-      <div style={{ padding: "0 16px" }}>
-        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Flights</p>
-        <div style={{
-          borderRadius: 14, padding: "16px 16px", border: `1.5px dashed ${C.div}`,
-          background: "#FAFAFA",
-        }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EBE9FE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Plane size={16} color="#6938EF" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 4px" }}>Flights not included in this price</p>
-              <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: "0 0 10px" }}>
-                Our travel consultant will help you find the best flights for your dates. In-app flight booking is coming soon!
-              </p>
-              <button style={{
-                display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10,
-                background: "#EBE9FE", border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: 12, fontWeight: 600, color: "#6938EF",
-              }}>
-                <Plane size={12} color="#6938EF" /> Talk to consultant about flights
-              </button>
-            </div>
+      {/* ═══ 5. Flights ═══ */}
+      {(() => {
+        const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
+        const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
+        const divider = <div style={{ borderTop: `1px solid ${C.div}`, margin: "12px 0" }} />;
+        const priceRow = (price) => (
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "baseline", gap: 3 }}>
+            <span style={{ fontSize: 17, fontWeight: 700, color: C.head }}>₹{formatPrice(price)}</span>
+            <span style={{ fontSize: 12, color: C.sub }}>/Person</span>
           </div>
-        </div>
-      </div>
+        );
+        // Per-leg airline header — airline shown ON its own flight so the carrier
+        // for each leg is unambiguous. Optional trailing control (Remove).
+        const legHead = (label, f, control) => (
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: ".3px", flexShrink: 0 }}>{label}</span>
+            <span style={{ flex: 1, textAlign: "right", fontSize: 12.5, fontWeight: 600, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f?.airline}</span>
+            {control}
+          </div>
+        );
+
+        const homeQS = `&home=${encodeURIComponent(departureCity)}`;
+        const outTo = `/flights/${it.id}/${intlOutIdx}?current=${encodeURIComponent(selOut?.id || "")}${dealQS}${homeQS}`;
+        // Per-leg "Change" — selection is one flight at a time, so each leg links
+        // to its own single-leg chooser (one-way mode).
+        const changeCtrl = (legIdx, f) => (
+          <Link to={`/flights/${it.id}/${legIdx}?current=${encodeURIComponent(f?.id || "")}${dealQS}${homeQS}&mode=oneway`} style={{ display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
+            Change <ChevronRight size={12} />
+          </Link>
+        );
+
+        const removeBtn = (onClick) => (
+          <button onClick={onClick} aria-label="Remove flight" style={{ display: "inline-flex", alignItems: "center", gap: 2, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.sub, border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}>
+            <XIcon size={12} /> Remove
+          </button>
+        );
+        const addEmpty = (label, onClick) => (
+          <button onClick={onClick} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "24px 14px", border: `1.5px dashed ${C.p300}`, borderRadius: 16, background: C.white, color: C.p600, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            <Plus size={18} /> Add {label} flight
+          </button>
+        );
+        // One-way leg card (with per-leg Change + Remove) or an empty add slot.
+        const owCard = (f, added, setAdded, label, legIdx) => (added && f) ? (
+          <div style={padCard}>
+            {legHead(label, f, <span style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>{changeCtrl(legIdx, f)}{removeBtn(() => setAdded(false))}</span>)}
+            <FlightLegRow f={f} />
+            {divider}
+            {priceRow(f.price)}
+          </div>
+        ) : addEmpty(label.toLowerCase(), () => setAdded(true));
+
+        const removeFlightsBtn = (
+          <button onClick={() => setFlightsIncluded(v => !v)} style={{ ...changeStyle, color: flightsIncluded ? C.sub : C.p600 }}>
+            {flightsIncluded ? "Remove flights" : "Add flights"}
+          </button>
+        );
+
+        return (
+          <div style={{ padding: "0 16px" }}>
+            {/* Section header: Flights + remove/add-flights toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
+              <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Flights</p>
+              {removeFlightsBtn}
+            </div>
+
+            {!flightsIncluded ? (
+              /* Package only — no flights, no flight cost */
+              <div style={{ ...padCard, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", padding: "24px 16px" }}>
+                <Plane size={20} color={C.sub} />
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>Package without flights</span>
+                <span style={{ fontSize: 12, color: C.sub }}>Flights are not included in your total. Add them anytime.</span>
+              </div>
+            ) : (
+              <>
+                {/* Departure city in India (re-routes + re-prices the flights) */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                  <Plane size={13} color={C.sub} />
+                  <span style={{ fontSize: 12.5, color: C.sub }}>Departing from</span>
+                  <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                    <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", border: `1px solid ${C.div}`, borderRadius: 8, background: C.white, padding: "4px 24px 4px 10px", fontSize: 12.5, fontWeight: 600, color: C.head, fontFamily: "inherit", cursor: "pointer" }}>
+                      {["Indore", "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata", "Ahmedabad"].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <ChevronDown size={13} color={C.sub} style={{ position: "absolute", right: 7, pointerEvents: "none" }} />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {/* International */}
+                  {deptChanged ? (
+                    /* Departure city changed → prior selection void; prompt to choose */
+                    <Link to={outTo} style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "28px 16px", border: `1.5px dashed ${C.p300}`, borderRadius: 16, background: C.white, textAlign: "center" }}>
+                      <Plane size={20} color={C.p600} />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>Select your flights from {departureCity}</span>
+                      <span style={{ fontSize: 12, color: C.sub }}>Your earlier choice no longer applies. Tap to pick outbound & return.</span>
+                    </Link>
+                  ) : intlMode === "roundtrip" ? (
+                    /* One paired card, airline + per-leg Change, single combined price */
+                    <div style={padCard}>
+                      {selOut && <>{legHead("Outbound", selOut, changeCtrl(intlOutIdx, selOut))}<FlightLegRow f={selOut} /></>}
+                      {divider}
+                      {selRet && <>{legHead("Return", selRet, changeCtrl(intlRetIdx, selRet))}<FlightLegRow f={selRet} /></>}
+                      {divider}
+                      {priceRow((selOut?.price || 0) + (selRet?.price || 0))}
+                    </div>
+                  ) : (
+                    <>
+                      {owCard(selOut, outAdded, setOutAdded, "Outbound", intlOutIdx)}
+                      {owCard(selRet, retAdded, setRetAdded, "Return", intlRetIdx)}
+                    </>
+                  )}
+
+                  {/* Connecting / domestic legs — same list, airline + per-leg Change */}
+                  {domesticLegs.map(({ l, i }) => {
+                    const f = getFlightForLeg(i);
+                    return (
+                      <div key={i} style={padCard}>
+                        {legHead(`${l.fromCity} → ${l.toCity}`, f, changeCtrl(i, f))}
+                        {f && <FlightLegRow f={f} />}
+                        {divider}
+                        {priceRow(f?.price || 0)}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       <Divider />
 
@@ -1063,10 +1357,41 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         ))}
       </div>
 
+      <Divider />
+
+      {/* ═══ 8. Cost breakdown ═══ */}
+      <div style={{ padding: "0 16px" }}>
+        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>Cost breakdown</p>
+        <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden" }}>
+          {[
+            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0 },
+            { label: "Hotels", value: costSplit.hotels },
+            { label: "Activities", value: costSplit.activities },
+            { label: "GST", value: costSplit.gst },
+            { label: "Discount", value: -costSplit.discount, hide: costSplit.discount <= 0, accent: true },
+            { label: "TCS", value: costSplit.tcs },
+          ].filter(r => !r.hide).map((r, i) => (
+            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.div}` }}>
+              <span style={{ fontSize: 13.5, color: C.sub }}>{r.label}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: r.accent ? "#027A48" : C.head }}>
+                {r.value < 0 ? "− " : ""}₹{Math.abs(r.value).toLocaleString("en-IN")}
+              </span>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 14px", borderTop: `1px solid ${C.div}`, background: C.p50 || "#FFF1F4" }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>Total</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: C.head }}>₹{costSplit.total.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+        <p style={{ fontSize: 11, color: C.inact, margin: "8px 2px 0", lineHeight: "15px" }}>
+          For {travellers} travellers · incl. GST & TCS. TCS is creditable against your income tax.
+        </p>
+      </div>
+
       {/* Bottom padding for sticky CTA */}
       <div style={{ height: 20 }} />
 
-      {/* ═══ Sticky footer — changes panel (floating) + price/CTA row ═══ */}
+      {/* ═══ Sticky footer - changes panel (floating) + price/CTA row ═══ */}
       <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
         {/* Floating "changes since last version" panel */}
         {inDeal && hasChanges && !fetchingPrice && (
@@ -1110,14 +1435,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
             </div>
           </div>
         ) : !inDeal ? (
-          /* Explore itinerary — no quote/PDF; just start planning. */
+          /* Explore itinerary - no quote/PDF; just start planning. */
           <>
             <div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
                 <span style={{ fontSize: 11, color: C.sub }}>From</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{((Number(String(it.price).replace(/,/g, "")) || 0) * travellers).toLocaleString("en-IN")}</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</span>
               </div>
-              <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Total for {travellers} · incl. GST & TCS</p>
+              <p style={{ fontSize: 11, color: C.inact, margin: 0 }}>Total for {travellers} · incl. GST & TCS{hasChosenFlights ? " & flights" : ""}</p>
             </div>
             <Link to={`/plan?dest=${it.dest}`} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "13px 20px", borderRadius: 12,
@@ -1132,13 +1457,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels }) {
         <div style={{ minWidth: 0 }}>
           {validQuote ? (
             <>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.livePrice || 0) * travellers).toLocaleString("en-IN")}</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Quote valid till {new Date(version.pricedAt + QUOTE_VALID_DAYS * 86400000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
             </>
           ) : (
             <>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Indicative total</p>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{((version.indicativePrice || 0) * travellers).toLocaleString("en-IN")}</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
             </>
           )}
         </div>
@@ -2105,7 +2430,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onP
         </div>
       </div>
 
-      {/* Activity detail — bottom drawer over the reel (keeps video in context) */}
+      {/* Activity detail - bottom drawer over the reel (keeps video in context) */}
       {showActivityDetail && currentAct && (
         <ActivityDetailSheet
           detail={buildActivityDetail(currentAct, { city: currentDay?.city, country: dest, isBooked: false, dayNum })}
@@ -2116,7 +2441,7 @@ function VideoViewer({ days, dest, itineraryId, initialDay, initialActivity, onP
   );
 }
 
-// ═══ Activity detail — draggable bottom drawer (opens at 50%, snaps 50% ↔ 92%) ═══
+// ═══ Activity detail - draggable bottom drawer (opens at 50%, snaps 50% ↔ 92%) ═══
 const SHEET_SNAPS = [0.5, 0.92];
 function ActivityDetailSheet({ detail, onClose }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
@@ -2159,7 +2484,7 @@ function ActivityDetailSheet({ detail, onClose }) {
 
   return (
     <div ref={frameRef} style={{ ...frameStyle, zIndex: 210, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      {/* Scrim — tap to dismiss, keeps the video peeking above */}
+      {/* Scrim - tap to dismiss, keeps the video peeking above */}
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", animation: "fadeInBg 0.2s ease-out" }} />
 
       {/* Sheet */}
@@ -2186,7 +2511,7 @@ function ActivityDetailSheet({ detail, onClose }) {
   );
 }
 
-// ═══ Day Detail — full-screen page with prev/next day switcher ═══
+// ═══ Day Detail - full-screen page with prev/next day switcher ═══
 function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canChangeDay, onChangeDay, onPhotoOpen, onClose }) {
   const [activeMetric, setActiveMetric] = useState(null);
   const day = days[dayIndex];
@@ -2219,7 +2544,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
 
   return (
     <div style={{ ...frameStyle, zIndex: 120, background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      {/* Top bar: back + prev/next day switcher — sits on the brand hero tint */}
+      {/* Top bar: back + prev/next day switcher - sits on the brand hero tint */}
       <div style={{ flexShrink: 0, padding: "16px 12px 12px", background: "#FFF1F4", display: "flex", alignItems: "center", gap: 8 }}>
         <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
           <ArrowLeft size={18} color={C.head} />
@@ -2238,7 +2563,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
 
       {/* Body */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 24 }}>
-        {/* Brand hero — title + scoring bonded on one soft-pink surface */}
+        {/* Brand hero - title + scoring bonded on one soft-pink surface */}
         <div style={{ background: "linear-gradient(180deg, #FFF1F4 0%, #FFF6F8 100%)", padding: "4px 0 16px", borderBottom: `1px solid ${C.div}` }}>
           <div style={{ padding: "8px 20px 14px" }}>
             <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#181E4C", lineHeight: 1.25 }}>{activityNames}</h2>
@@ -2278,7 +2603,7 @@ function DayDetailScreen({ days, dayIndex, setDayIndex, dest, itineraryId, canCh
         )}
       </div>
 
-      {/* Floating CTA — opens the day-selection drawer */}
+      {/* Floating CTA - opens the day-selection drawer */}
       {canChangeDay && (
         <div style={{ flexShrink: 0, padding: "12px 16px calc(12px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.div}`, background: "#fff", boxShadow: "0 -2px 12px rgba(0,0,0,0.06)" }}>
           <button onClick={() => onChangeDay(dayIndex)} style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 16px", background: C.head, border: "none", borderRadius: 14, fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>

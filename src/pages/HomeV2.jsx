@@ -235,7 +235,7 @@ export default function HomeV2() {
           <p style={{ fontSize: 12, color: C.sub, margin: "0 0 14px" }}>
             Tell us where you'd love to go
           </p>
-          <Link to="/plan" style={{
+          <Link to="/build" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             fontSize: 14, fontWeight: 600, color: "#fff",
             background: C.p600, border: "none", borderRadius: 8,

@@ -116,12 +116,54 @@ const upgradeData = {
   ],
 };
 
+// Generic 5★ upgrade templates for trips built from scratch (no curated map).
+// Rotated across the 4★ stays; the itinerary screen overrides `current` with the
+// actual shown hotel, so only the `upgrade` side here needs to be plausible.
+const SYNTH_UPGRADES = [
+  {
+    suffix: "The Reserve", type: "Pool Villa · All meals included", rating: 9.3, delta: 4200,
+    img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80&auto=format&fit=crop",
+    perks: ["Private infinity pool", "Complimentary spa session", "Butler service", "Airport transfer included"],
+  },
+  {
+    suffix: "Sanctuary Collection", type: "Riverfront Villa · Half board", rating: 9.4, delta: 3800,
+    img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=80&auto=format&fit=crop",
+    perks: ["Private terrace with a view", "Daily yoga sessions", "Gourmet dining credit", "Sunset cocktails included"],
+  },
+  {
+    suffix: "Grand Luxe", type: "Penthouse Suite · All meals included", rating: 9.1, delta: 3600,
+    img: "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=600&q=80&auto=format&fit=crop",
+    perks: ["Rooftop infinity pool", "Curated local experience", "Spa credit ₹5,000/day", "Private sunset dining"],
+  },
+];
+
+// Built trips use a [4,5,4,5] star pattern (see getHotels in ItineraryDetail),
+// so the 4★ stays that warrant an upgrade sit where i % 4 is 0 or 2.
+function synthUpgrades(days) {
+  const out = [];
+  (days || []).forEach((day, i) => {
+    if ([4, 5, 4, 5][i % 4] !== 4) return;
+    const lux = SYNTH_UPGRADES[out.length % SYNTH_UPGRADES.length];
+    out.push({
+      cityIndex: i,
+      current: {
+        name: `${day.city} Grand Resort`, stars: 4, type: "Deluxe Room · Breakfast included",
+        rating: [8.4, 8.9, 8.1, 8.7][i % 4],
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
+      },
+      upgrade: { name: `${day.city} ${lux.suffix}`, stars: 5, type: lux.type, rating: lux.rating, img: lux.img, delta: lux.delta, perks: lux.perks },
+    });
+  });
+  return out;
+}
+
 /**
  * Get upgrade info for an itinerary.
  * Returns { upgrades: [...], upgradeCount, totalAdditional }
+ * Custom (built-from-scratch) trips have no curated map, so we synthesize one.
  */
-export function getUpgradeInfo(itineraryId, days) {
-  const raw = upgradeData[itineraryId];
+export function getUpgradeInfo(itineraryId, days, isCustom = false) {
+  const raw = upgradeData[itineraryId] || (isCustom ? synthUpgrades(days) : null);
   if (!raw || raw.length === 0)
     return { upgrades: [], upgradeCount: 0, totalAdditional: 0 };
 

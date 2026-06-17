@@ -35,6 +35,7 @@ export const airports = {
   AMD: { city: "Ahmedabad", country: "India", code: "AMD" },
   // Bali
   DPS: { city: "Denpasar", country: "Indonesia", code: "DPS" },
+  LBJ: { city: "Labuan Bajo", country: "Indonesia", code: "LBJ" },
   // Vietnam
   HAN: { city: "Hanoi", country: "Vietnam", code: "HAN" },
   SGN: { city: "Ho Chi Minh City", country: "Vietnam", code: "SGN" },
@@ -70,6 +71,7 @@ export const cityToAirport = {
   "Nusa Dua": "DPS", "Nusa Penida": "DPS", "Uluwatu": "DPS",
   "Sidemen": "DPS", "Munduk": "DPS", "Amed": "DPS", "Kintamani": "DPS",
   "Pemuteran": "DPS", "Lovina": "DPS", "Denpasar": "DPS",
+  "Labuan Bajo": "LBJ",
   // Vietnam
   "Hanoi": "HAN", "Ha Long": "HAN", "HCMC": "SGN", "Ho Chi Minh City": "SGN",
   "Da Nang": "DAD", "Hoi An": "DAD", "Phu Quoc": "PQC",
@@ -150,6 +152,11 @@ const routeAirlines = {
     { codes: ["MH", "NZ"], stops: 2, hubCodes: ["DEL", "KUL"], durationRange: [22, 30] },
   ],
   // Domestic / Internal flights
+  "DPS-LBJ": [
+    { codes: ["GA"], stops: 0, hubCodes: [], durationRange: [1.25, 1.5] },
+    { codes: ["VJ"], stops: 0, hubCodes: [], durationRange: [1.25, 1.5] },
+    { codes: ["6E"], stops: 0, hubCodes: [], durationRange: [1.25, 1.5] },
+  ],
   "HAN-SGN": [
     { codes: ["VN"], stops: 0, hubCodes: [], durationRange: [2, 2.5] },
     { codes: ["VJ"], stops: 0, hubCodes: [], durationRange: [2, 2.5] },
@@ -316,7 +323,27 @@ export function generateFlightsForRoute(from, to, date, pax = 2) {
     }
   }
 
-  if (!templates) return [];
+  // Generic fallback so any origin works (route pools are authored from IDR only;
+  // changing the departure city would otherwise yield no flights).
+  if (!templates) {
+    const rt = getRouteType(from, to);
+    templates = rt === "domestic"
+      ? [
+          { codes: ["6E"], stops: 0, hubCodes: [], durationRange: [1.5, 2.75] },
+          { codes: ["AI"], stops: 0, hubCodes: [], durationRange: [1.5, 2.75] },
+          { codes: ["SG"], stops: 1, hubCodes: ["DEL"], durationRange: [3, 5] },
+        ]
+      : rt === "longHaul"
+      ? [
+          { codes: ["SQ", "NZ"], stops: 2, hubCodes: ["DEL", "SIN"], durationRange: [20, 28] },
+          { codes: ["MH", "NZ"], stops: 2, hubCodes: ["BOM", "KUL"], durationRange: [21, 30] },
+        ]
+      : [
+          { codes: ["AI"], stops: 1, hubCodes: ["SIN"], durationRange: [8, 13] },
+          { codes: ["6E", "QZ"], stops: 1, hubCodes: ["KUL"], durationRange: [9, 14] },
+          { codes: ["TG"], stops: 1, hubCodes: ["BKK"], durationRange: [9, 14] },
+        ];
+  }
 
   const rand = seededRandom(hashStr(routeKey + date));
   const routeType = getRouteType(from, to);

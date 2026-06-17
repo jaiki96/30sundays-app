@@ -23,7 +23,7 @@ export default function HotelPDP() {
   const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
   const [confirmReplace, setConfirmReplace] = useState(false); // warning popup
 
-  const itinerary = allItineraries.find(i => i.id === Number(itineraryId));
+  const itinerary = allItineraries.find(i => i.id === Number(itineraryId)) || dealsCtx.findCustomItinerary(Number(itineraryId), versionId);
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const hotels = itinerary && stayInfo
@@ -59,7 +59,7 @@ export default function HotelPDP() {
 
   // Stay-total difference of the selected room vs the current hotel.
   const stayDelta = currentHotel ? (selectedRoom.pricePerNight - currentRoomPrice) * nights : 0;
-  // Delta vs the itinerary's default hotel — what gets stored on the copy.
+  // Delta vs the itinerary's default hotel - what gets stored on the copy.
   const baseHotel = hotels.find(h => h.id === `${stayInfo.city}-hotel-0`) || hotels[0];
   const basePrice = baseHotel?.rooms?.[0]?.pricePerNight || currentRoomPrice;
   const storedDelta = (selectedRoom.pricePerNight - basePrice) * nights;
@@ -196,7 +196,7 @@ export default function HotelPDP() {
           </div>
         </div>
 
-        {/* ═══ Location — tappable map, opens Google Maps ═══ */}
+        {/* ═══ Location - tappable map, opens Google Maps ═══ */}
         <div style={{ margin: "24px 16px 0", borderRadius: 16, border: `1px solid ${C.div}`, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${hotel.name}, ${hotel.address}`)}`}
@@ -371,7 +371,7 @@ export default function HotelPDP() {
         </div>
       </div>
 
-      {/* ═══ Sticky bottom bar — current hotel + price diff, expandable, Replace CTA ═══ */}
+      {/* ═══ Sticky bottom bar - current hotel + price diff, expandable, Replace CTA ═══ */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
         padding: "10px 16px 14px",

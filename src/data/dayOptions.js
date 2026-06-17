@@ -3,7 +3,7 @@ import { destData } from "../data";
 // ─── Alternate Day Plans per destination ───
 // Each city has 3 vibe variants. The system picks based on day type and generates options.
 
-const cityVibes = {
+export const cityVibes = {
   // Bali
   Ubud: [
     { vibe: "Culture Deep Dive", activities: ["Sacred Monkey Forest", "Tirta Empul purification", "Ubud Art Market stroll"], pace: "relaxed", activityHours: 4, travelHours: 1, crowdLevel: "moderate" },
@@ -34,6 +34,11 @@ const cityVibes = {
     { vibe: "The Classic", activities: ["Uluwatu temple", "Kecak dance at sunset", "Cliff-edge dinner"], pace: "balanced", activityHours: 4, travelHours: 1, crowdLevel: "moderate" },
     { vibe: "Adventure Day", activities: ["Surfing at Padang Padang", "Blue Point beach", "Rock bar sunset"], pace: "active", activityHours: 5, travelHours: 1, crowdLevel: "moderate" },
     { vibe: "Chill & Scenic", activities: ["Sundays Beach Club", "Private pool villa", "Sunset yoga"], pace: "relaxed", activityHours: 3, travelHours: 0.5, crowdLevel: "low" },
+  ],
+  "Labuan Bajo": [
+    { vibe: "Adventure Day", activities: ["Komodo dragon trek", "Pink Beach snorkeling", "Padar Island viewpoint"], pace: "active", activityHours: 7, travelHours: 3, crowdLevel: "low" },
+    { vibe: "Chill & Scenic", activities: ["Island-hop by boat", "Manta Point snorkel", "Harbour sunset cruise"], pace: "relaxed", activityHours: 5, travelHours: 2, crowdLevel: "low" },
+    { vibe: "Off the Beaten Path", activities: ["Rangko Cave swim", "Cunca Wulang waterfall", "Local fishing village"], pace: "balanced", activityHours: 6, travelHours: 2.5, crowdLevel: "low" },
   ],
   "Nusa Penida": [
     { vibe: "Adventure Day", activities: ["Kelingking Beach hike", "Broken Beach viewpoint", "Snorkeling with mantas"], pace: "active", activityHours: 6, travelHours: 2, crowdLevel: "moderate" },

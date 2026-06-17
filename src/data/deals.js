@@ -63,6 +63,10 @@ export function DealsProvider({ children }) {
       dest: init.dest,
       title: init.title,
       img: init.img,
+      // For trips built from scratch, the full synthesized itinerary lives here
+      // so the itinerary screen (and hotel/flight subpages) can resolve a trip
+      // that isn't in the static seed data.
+      customItinerary: init.customItinerary || null,
       versions: [version],
       createdAt: Date.now(),
     };
@@ -71,7 +75,7 @@ export function DealsProvider({ children }) {
   }, []);
 
   // Patch a copy's customizations / indicative price in place. Works on any
-  // copy (draft or quote) — changes are allowed from anywhere; we reconcile a
+  // copy (draft or quote) - changes are allowed from anywhere; we reconcile a
   // quote's price/PDF on the next "Update quote".
   const updateDraft = useCallback((dealId, versionId, patch) => {
     setDeals(prev => prev.map(d => d.id !== dealId ? d : {
@@ -146,9 +150,30 @@ export function DealsProvider({ children }) {
     return d ? d.versions.find(v => v.id === versionId) || null : null;
   }, [deals]);
 
+  // Resolve a from-scratch itinerary by its (high, synthetic) id, so pages that
+  // look up `allItineraries.find(...)` can fall back to a built trip. A specific
+  // version's route (after a route-change fork) wins over the deal's base.
+  const findCustomItinerary = useCallback((itineraryId, versionId) => {
+    for (const d of deals) {
+      if (d.itineraryId !== itineraryId) continue;
+      if (versionId) {
+        const v = d.versions.find(x => x.id === versionId);
+        if (v?.customizations?.builtItinerary) return v.customizations.builtItinerary;
+      }
+      return d.customItinerary || d.versions[0]?.customizations?.builtItinerary || null;
+    }
+    return null;
+  }, [deals]);
+
+  // Replace a deal's base built itinerary (used when the route is reworked).
+  const setCustomItinerary = useCallback((dealId, customItinerary) => {
+    setDeals(prev => prev.map(d => d.id !== dealId ? d : { ...d, customItinerary }));
+  }, []);
+
   const value = {
     deals, createDeal, updateDraft, requestPricing, forkVersion,
     deleteDeal, discardVersion, getDeal, getVersion,
+    findCustomItinerary, setCustomItinerary,
   };
   return createElement(DealsContext.Provider, { value }, children);
 }

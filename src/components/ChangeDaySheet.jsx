@@ -47,7 +47,7 @@ function PlanCard({ opt, onSelect, onPreview }) {
           <Play size={12} color="#fff" fill="#fff" />
         </button>
 
-        {/* Price delta chip — neutral */}
+        {/* Price delta chip - neutral */}
         {delta !== 0 && (
           <div style={{
             position: "absolute", left: 8, bottom: 8,
@@ -71,7 +71,7 @@ function PlanCard({ opt, onSelect, onPreview }) {
           <Metric label="Crowd levels" value={crowdLabels[opt.scoring.crowdLevel]} />
         </div>
 
-        {/* CTA — pinned to the card bottom so it aligns across the row */}
+        {/* CTA - pinned to the card bottom so it aligns across the row */}
         <div style={{ marginTop: "auto", paddingTop: 10 }}>
           {opt.isCurrent ? (
             <div style={{

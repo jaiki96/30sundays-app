@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown, ChevronUp, Search, Check } from "lucide-react";
+import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown, ChevronUp, Search, Check, Home } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { useDeals } from "../data/deals";
 
 // ─── Quick filter chips (floating bar) ───
 const quickFilters = [
@@ -17,16 +18,30 @@ const sortOptions = [
   { label: "Distance: Nearest", fn: (a, b) => a.distanceFromCenter - b.distanceFromCenter },
 ];
 
-export default function HotelListing() {
+export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const { itineraryId, stayIndex } = useParams();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const currentHotelId = params.get("current");
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
   const dealQS = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
   const backToItinerary = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
 
-  const itinerary = allItineraries.find(i => i.id === Number(itineraryId));
+  // Customer opts to arrange this stay themselves → mark it and return.
+  const bookStayMyself = () => {
+    setSelectedHotels?.(prev => {
+      const next = { ...prev };
+      const stays = [...(next[itineraryId]?.stays || [])];
+      stays[Number(stayIndex)] = { selfBooked: true };
+      next[itineraryId] = { ...next[itineraryId], stays };
+      return next;
+    });
+    navigate(backToItinerary);
+  };
+
+  const dealsCtx = useDeals();
+  const itinerary = allItineraries.find(i => i.id === Number(itineraryId)) || dealsCtx.findCustomItinerary(Number(itineraryId), versionId);
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   // Filter/sort state
@@ -192,7 +207,7 @@ export default function HotelListing() {
           </div>
         </div>
 
-        {/* ═══ Current hotel — expandable, so the user knows what they're changing ═══ */}
+        {/* ═══ Current hotel - expandable, so the user knows what they're changing ═══ */}
         {currentHotel && (
           <div style={{ margin: "0 16px 4px", border: `1px solid ${C.div}`, borderRadius: 12, overflow: "hidden", background: C.white }}>
             <button
@@ -235,6 +250,19 @@ export default function HotelListing() {
           </div>
         )}
 
+        {/* ═══ Book this stay yourself ═══ */}
+        <button onClick={bookStayMyself} style={{
+          margin: "0 16px 4px", width: "calc(100% - 32px)", display: "flex", alignItems: "center", gap: 10,
+          padding: "11px 12px", borderRadius: 12, border: `1px dashed ${C.div}`, background: C.white, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+        }}>
+          <Home size={18} color={C.sub} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: C.head }}>Booking this stay yourself?</span>
+            <span style={{ display: "block", fontSize: 11.5, color: C.sub }}>Skip this hotel and remove it from your package.</span>
+          </span>
+          <ChevronDown size={16} color={C.sub} style={{ transform: "rotate(-90deg)", flexShrink: 0 }} />
+        </button>
+
         {/* ═══ Hotel List ═══ */}
         <div style={{ padding: "16px 16px 0" }}>
           {filtered.length === 0 && (
@@ -253,7 +281,10 @@ export default function HotelListing() {
                 to={`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`}
                 style={{ textDecoration: "none", color: "inherit", display: "block" }}
               >
-                <div style={{
+                <div style={isCurrent ? {
+                  display: "flex", gap: 14, padding: "12px", margin: "4px 0",
+                  border: `1.5px solid ${C.sBorder || "#C0E5D5"}`, background: C.sBg || "#ECFDF3", borderRadius: 12,
+                } : {
                   display: "flex", gap: 14, padding: "16px 0",
                   borderBottom: i < filtered.length - 1 ? `1px solid ${C.div}` : "none",
                 }}>
@@ -266,8 +297,8 @@ export default function HotelListing() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {isCurrent && (
                       <span style={{
-                        display: "inline-block", fontSize: 11, fontWeight: 600, color: "#FD014F",
-                        background: "#FFEBF1", borderRadius: 20, padding: "2px 8px", marginBottom: 4,
+                        display: "inline-block", fontSize: 11, fontWeight: 600, color: C.sText || "#027A48",
+                        background: "#fff", border: `1px solid ${C.sBorder || "#C0E5D5"}`, borderRadius: 20, padding: "2px 8px", marginBottom: 4,
                       }}>
                         Currently Selected ✓
                       </span>

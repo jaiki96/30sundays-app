@@ -219,7 +219,7 @@ export default function HotelUpgradeDrawer({ upgrades, totalAdditional, onClose 
                           </div>
                         </div>
 
-                        {/* perks — the "details" revealed on tap */}
+                        {/* perks - the "details" revealed on tap */}
                         {up.perks?.length > 0 && (
                           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                             {up.perks.map((p, pi) => (

@@ -14,6 +14,7 @@ import Listing from "./pages/Listing";
 import Detail from "./pages/Detail";
 import ItineraryDetail from "./pages/ItineraryDetail";
 import Plan from "./pages/Plan";
+import Build from "./pages/Build";
 import LoginV2 from "./pages/LoginV2";
 import LogoAnim from "./pages/LogoAnim";
 import MediaLab from "./pages/MediaLab";
@@ -39,7 +40,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -61,16 +62,17 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/destination/:name" element={<Destination />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
-        <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} />} />
+        <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
+        <Route path="/build" element={<Build />} />
         <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/media-lab" element={<MediaLab />} />
-        <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing />} />
+        <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
-        <Route path="/hotels/:itineraryId/:stayIndex" element={<HotelListing />} />
+        <Route path="/hotels/:itineraryId/:stayIndex" element={<HotelListing selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/hotel-detail/:itineraryId/:stayIndex/:hotelId" element={<HotelPDP />} />
         <Route path="/review-hotel/:itineraryId/:stayIndex" element={<ReviewHotel selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/trips" element={<MyTrips userState={userState} leadData={leadData} />} />

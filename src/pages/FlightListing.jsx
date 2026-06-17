@@ -7,16 +7,31 @@ import {
   flightSortOptions, applyFlightFilters, formatPrice,
   timeSlots, timeSlotIcons, getTimeSlot, airlines as airlineDb,
 } from "../data/flightData";
+import { useDeals } from "../data/deals";
 
-export default function FlightListing() {
+export default function FlightListing({ selectedFlights, setSelectedFlights }) {
   const { itineraryId, legIndex } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const dealsCtx = useDeals();
+  const versionId = params.get("versionId");
+  const dealId = params.get("dealId");
+  // Carry deal context through the flight flow so built trips resolve and the
+  // change lands back on the right itinerary copy.
+  const home = params.get("home") || "Indore";
+  const homeQS = `&home=${encodeURIComponent(home)}`;
+  const dealQS = (dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "") + homeQS;
+  const itinHref = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
 
-  const itinerary = allItineraries.find(i => i.id === Number(itineraryId));
-  const legs = itinerary ? getFlightLegs(itinerary) : [];
+  const itinerary = allItineraries.find(i => i.id === Number(itineraryId)) || dealsCtx.findCustomItinerary(Number(itineraryId), versionId);
+  const legs = itinerary ? getFlightLegs(itinerary, home) : [];
   const leg = legs[Number(legIndex)];
   const pax = 2;
+  // International round-trip context. `isRT` → show bundled outbound+return cards
+  // and a per-leg filter sheet (filters scoped to outbound vs return).
+  const outIdx = legs.findIndex(l => l.type === "international" && l.direction === "outbound");
+  const retIdx = legs.findIndex(l => l.type === "international" && l.direction === "return");
+  const curLegKey = Number(legIndex) === retIdx ? "ret" : "out";
 
   // Get currently selected flight from query param
   const currentFlightId = params.get("current");
@@ -32,20 +47,25 @@ export default function FlightListing() {
   const [showFilters, setShowFilters] = useState(false);
   const [filterTab, setFilterTab] = useState("Filters");
   const [sortIdx, setSortIdx] = useState(0);
-  const [filters, setFilters] = useState({
-    stops: new Set(),
-    airlines: new Set(),
-    checkinBaggage: false,
-    handBaggageOnly: false,
-    twoCheckinBags: false,
-    heavyBaggage: false,
-    depTimes: new Set(),
-    arrTimes: new Set(),
-    maxDuration: null,
-    maxPrice: null,
-    maxLayover: null,
-    lowEmission: false,
+  // Round trip vs one-way; one-way reveals per-leg tabs (Outbound / Return).
+  // Persisted in the URL so it survives switching legs via the tabs.
+  const [tripMode, setTripMode] = useState(params.get("mode") === "oneway" ? "oneway" : "roundtrip");
+  const emptyFilters = () => ({
+    stops: new Set(), airlines: new Set(),
+    checkinBaggage: false, handBaggageOnly: false, twoCheckinBags: false, heavyBaggage: false,
+    depTimes: new Set(), arrTimes: new Set(),
+    maxDuration: null, maxPrice: null, maxLayover: null, lowEmission: false,
   });
+  // Per-leg filter state (outbound vs return), and which leg the sheet edits.
+  const [fOut, setFOut] = useState(emptyFilters);
+  const [fRet, setFRet] = useState(emptyFilters);
+  const [filterLeg, setFilterLeg] = useState("out");
+  const isRT = tripMode === "roundtrip" && leg?.type === "international" && outIdx >= 0 && retIdx >= 0;
+  // `filters`/`setFilters`/`toggleSet` transparently point at the active leg's
+  // state: the sheet-scoped leg in round trip, else the leg being viewed.
+  const scope = isRT ? filterLeg : curLegKey;
+  const filters = scope === "ret" ? fRet : fOut;
+  const setFilters = scope === "ret" ? setFRet : setFOut;
 
   // Available airlines for filter
   const availableAirlines = useMemo(() => {
@@ -104,13 +124,8 @@ export default function FlightListing() {
   };
 
   const clearAll = () => {
-    setFilters({
-      stops: new Set(), airlines: new Set(),
-      checkinBaggage: false, handBaggageOnly: false,
-      twoCheckinBags: false, heavyBaggage: false,
-      depTimes: new Set(), arrTimes: new Set(),
-      maxDuration: null, maxPrice: null, maxLayover: null, lowEmission: false,
-    });
+    setFOut(emptyFilters());
+    setFRet(emptyFilters());
     setSortIdx(0);
   };
 
@@ -118,34 +133,153 @@ export default function FlightListing() {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Flight route not found</div>;
   }
 
+  // In one-way mode let the user switch between the Outbound and Return legs.
+  const showLegTabs = leg.type === "international" && outIdx >= 0 && retIdx >= 0;
+  const goLeg = (idx) => navigate(`/flights/${itineraryId}/${idx}?current=${dealQS}&mode=oneway`);
+  const legTabs = [
+    { idx: outIdx, label: "Outbound", sub: outIdx >= 0 ? `${legs[outIdx].from}→${legs[outIdx].to}` : "" },
+    { idx: retIdx, label: "Return", sub: retIdx >= 0 ? `${legs[retIdx].from}→${legs[retIdx].to}` : "" },
+  ];
+  // Legs already chosen (other than the one being picked) — pinned at top in
+  // one-way mode so the user sees their progress while selecting the next leg.
+  const selLegs = selectedFlights?.[itineraryId]?.legs || [];
+  const pinned = legTabs.filter(t => t.idx >= 0 && t.idx !== Number(legIndex) && selLegs[t.idx]).map(t => ({ ...t, f: selLegs[t.idx] }));
+
+  // Round-trip bundles: each filtered+sorted outbound paired with the matching
+  // filtered+sorted return (index-wise), combined price. Per-leg filters narrow
+  // each side independently, so narrowing one leg reshuffles the pairs.
+  const sortFn = flightSortOptions[sortIdx].fn;
+  const outFlights = isRT ? generateFlightsForRoute(legs[outIdx].from, legs[outIdx].to, legs[outIdx].date, pax) : [];
+  const retFlights = isRT ? generateFlightsForRoute(legs[retIdx].from, legs[retIdx].to, legs[retIdx].date, pax) : [];
+  const outFiltered = isRT ? [...applyFlightFilters(outFlights, fOut)].sort(sortFn) : [];
+  const retFiltered = isRT ? [...applyFlightFilters(retFlights, fRet)].sort(sortFn) : [];
+  const bundles = [];
+  if (isRT) for (let k = 0; k < Math.min(outFiltered.length, retFiltered.length); k++) bundles.push({ out: outFiltered[k], ret: retFiltered[k] });
+  const resultCount = isRT ? bundles.length : filtered.length;
+
+  // Select a whole round-trip bundle: sets both legs at once.
+  const pickBundle = (b) => {
+    setSelectedFlights(prev => {
+      const updated = { ...prev };
+      const legsArr = [...(updated[itineraryId]?.legs || [])];
+      legsArr[outIdx] = b.out;
+      legsArr[retIdx] = b.ret;
+      updated[itineraryId] = { ...updated[itineraryId], legs: legsArr, mode: "roundtrip" };
+      return updated;
+    });
+    navigate(itinHref);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative", background: C.bg }}>
       {/* ═══ Header ═══ */}
       <div style={{ background: "linear-gradient(135deg, #FFE4E8 0%, #FFF5F0 100%)", padding: "10px 16px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <Link to={`/itinerary/${itineraryId}`} style={{ width: 34, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <button onClick={() => navigate(-1)} style={{ width: 34, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 0 }}>
             <ArrowLeft size={18} color={C.head} />
-          </Link>
+          </button>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>
               {airports[leg.from]?.city || leg.from} – {airports[leg.to]?.city || leg.to}
             </h1>
             <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>
-              {leg.date} – {leg.type === "international" && leg.direction === "outbound"
-                ? (() => { const totalNights = itinerary.days.reduce((s, d) => s + d.n, 0); return `Return · 👤 ${pax}`; })()
-                : `One way · 👤 ${pax}`}
+              {(() => {
+                const retLeg = legs.find(l => l.type === "international" && l.direction === "return");
+                const isRound = leg.type === "international" && leg.direction === "outbound" && retLeg;
+                return isRound
+                  ? `${leg.date} → ${retLeg.date} · Round trip · 👤 ${pax}`
+                  : `${leg.date} · One way · 👤 ${pax}`;
+              })()}
             </p>
           </div>
         </div>
+        {/* Round trip / One-way toggle (international only) */}
+        {showLegTabs && (
+          <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.6)", borderRadius: 20, padding: 3, gap: 2, marginTop: 10 }}>
+            {[["roundtrip", "Round trip"], ["oneway", "One-way"]].map(([m, t]) => (
+              <button key={m} onClick={() => setTripMode(m)} style={{ border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 18, background: tripMode === m ? C.white : "transparent", color: tripMode === m ? C.p600 : C.sub, boxShadow: tripMode === m ? "0 1px 3px rgba(0,0,0,0.12)" : "none" }}>{t}</button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Leg tabs (one-way mode): pick each leg separately */}
+      {showLegTabs && tripMode === "oneway" && (
+        <div style={{ display: "flex", gap: 8, padding: "12px 16px 0" }}>
+          {legTabs.map(t => {
+            const active = Number(legIndex) === t.idx;
+            return (
+              <button key={t.idx} onClick={() => goLeg(t.idx)} style={{
+                flex: 1, padding: "8px 10px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                background: active ? C.p600 : C.white, border: active ? "none" : `1px solid ${C.div}`, textAlign: "left",
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: active ? "#fff" : C.head, margin: 0 }}>{t.label}</p>
+                <p style={{ fontSize: 10.5, color: active ? "rgba(255,255,255,0.8)" : C.sub, margin: "1px 0 0" }}>{t.sub}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Selected-so-far summary (one-way multi-leg flow) */}
+      {showLegTabs && tripMode === "oneway" && pinned.length > 0 && (
+        <div style={{ padding: "12px 16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+          {pinned.map(p => (
+            <button key={p.idx} onClick={() => goLeg(p.idx)} style={{
+              display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left",
+              padding: "8px 12px", borderRadius: 10, border: `1px solid ${C.sBorder || C.div}`, background: C.sBg || "#ECFDF3", cursor: "pointer", fontFamily: "inherit",
+            }}>
+              <Check size={14} color={C.sText} strokeWidth={2.5} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.sText, flexShrink: 0 }}>{p.label}</span>
+              <span style={{ fontSize: 12, color: C.head, flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.f.airline} · {p.f.from}→{p.f.to} · {p.f.dep}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.head, flexShrink: 0 }}>₹{formatPrice(p.f.price)}</span>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: C.p600, flexShrink: 0 }}>Edit</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ═══ Options Count ═══ */}
       <div style={{ padding: "10px 16px 6px" }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{filtered.length} Options</p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{resultCount} {isRT ? "Round-trip options" : "Options"}</p>
       </div>
 
-      {/* ═══ Flight Cards ═══ */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px 120px" }} className="hide-scrollbar">
+      {/* ═══ Round-trip bundle cards ═══ */}
+      {isRT ? (
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 120px" }} className="hide-scrollbar">
+          {bundles.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {bundles.map((b, i) => (
+                <div key={i} onClick={() => pickBundle(b)} style={{ background: C.white, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.div}`, cursor: "pointer", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: ".3px" }}>Outbound · {b.out.airline}</span>
+                  </div>
+                  <FlightLeg dep={b.out.dep} arr={b.out.arr} from={b.out.from} to={b.out.to} date={b.out.date} arrDate={b.out.arrDate} duration={b.out.duration} stops={b.out.stops} stopCities={b.out.stopCities} segments={b.out.segments} />
+                  <div style={{ borderTop: `1px dashed ${C.div}` }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: ".3px" }}>Return · {b.ret.airline}</span>
+                  </div>
+                  <FlightLeg dep={b.ret.dep} arr={b.ret.arr} from={b.ret.from} to={b.ret.to} date={b.ret.date} arrDate={b.ret.arrDate} duration={b.ret.duration} stops={b.ret.stops} stopCities={b.ret.stopCities} segments={b.ret.segments} />
+                  <div style={{ borderTop: `1px solid ${C.div}`, paddingTop: 10, display: "flex", justifyContent: "flex-end", alignItems: "baseline", gap: 4 }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: C.head }}>₹ {formatPrice(b.out.price + b.ret.price)}</span>
+                    <span style={{ fontSize: 11, color: C.inact }}>round trip · per person</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "60px 20px" }}>
+              <p style={{ fontSize: 40, marginBottom: 12 }}>✈️</p>
+              <p style={{ fontSize: 16, fontWeight: 600, color: C.head, marginBottom: 4 }}>No round-trip options</p>
+              <p style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Try adjusting your filters</p>
+              <button onClick={clearAll} style={{ fontSize: 13, fontWeight: 600, color: C.p600, background: C.p100, border: "none", borderRadius: 10, padding: "10px 20px", cursor: "pointer", fontFamily: "inherit" }}>Clear all filters</button>
+            </div>
+          )}
+        </div>
+      ) : (
+
+      /* ═══ Flight Cards (single leg) ═══ */
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 120px" }} className="hide-scrollbar">
         {filtered.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {filtered.map((flight) => {
@@ -154,7 +288,7 @@ export default function FlightListing() {
               return (
                 <div key={flight.id}>
                   <div
-                    onClick={() => navigate(`/flight-detail/${itineraryId}/${legIndex}/${encodeURIComponent(flight.id)}?current=${currentFlightId || ""}`)}
+                    onClick={() => navigate(`/flight-detail/${itineraryId}/${legIndex}/${encodeURIComponent(flight.id)}?current=${currentFlightId || ""}${dealQS}&mode=${tripMode}`)}
                     style={{
                       background: C.white, borderRadius: 14, padding: "14px 16px",
                       border: isCurrent ? `2px solid ${C.p600}` : `1px solid ${C.div}`,
@@ -168,8 +302,11 @@ export default function FlightListing() {
                     )}
                     {/* Airline + Price */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0, maxWidth: "60%" }}>{flight.airline}</p>
-                      <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>₹ {formatPrice(flight.price)}</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0, maxWidth: "55%" }}>{flight.airline}</p>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>₹ {formatPrice(flight.price)}</p>
+                        <p style={{ fontSize: 10, color: C.inact, margin: 0 }}>One way · per person</p>
+                      </div>
                     </div>
 
                     {/* Outbound leg */}
@@ -178,6 +315,7 @@ export default function FlightListing() {
                       from={flight.from} to={flight.to}
                       date={flight.date} arrDate={flight.arrDate}
                       duration={flight.duration} stops={flight.stops}
+                      stopCities={flight.stopCities} segments={flight.segments}
                     />
 
                     {/* More Details toggle */}
@@ -234,6 +372,7 @@ export default function FlightListing() {
           </div>
         )}
       </div>
+      )}
 
       {/* ═══ Floating Bottom Bar ═══ */}
       <div style={{
@@ -268,9 +407,9 @@ export default function FlightListing() {
             {/* Header */}
             <div style={{ flexShrink: 0, padding: "14px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <Link to={`/itinerary/${itineraryId}`} style={{ display: "flex" }}>
+                <button onClick={() => setShowFilters(false)} style={{ display: "flex", border: "none", background: "none", cursor: "pointer", padding: 0 }}>
                   <ArrowLeft size={18} color={C.head} />
-                </Link>
+                </button>
                 <span style={{ fontSize: 16, fontWeight: 700, color: C.head }}>Filters</span>
               </div>
               <button onClick={clearAll} style={{ fontSize: 13, fontWeight: 600, color: C.p600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
@@ -289,6 +428,18 @@ export default function FlightListing() {
                 }}>{tab}</button>
               ))}
             </div>
+
+            {/* Per-leg scope (round trip): filter outbound vs return separately */}
+            {isRT && filterTab === "Filters" && (
+              <div style={{ display: "flex", gap: 8, padding: "12px 20px 0" }}>
+                {[["out", `Outbound (${legs[outIdx].from}→${legs[outIdx].to})`], ["ret", `Return (${legs[retIdx].from}→${legs[retIdx].to})`]].map(([k, label]) => (
+                  <button key={k} onClick={() => setFilterLeg(k)} style={{
+                    flex: 1, padding: "8px 6px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+                    background: filterLeg === k ? C.p100 : C.white, color: filterLeg === k ? C.p600 : C.sub, border: `1.5px solid ${filterLeg === k ? C.p600 : C.div}`,
+                  }}>{label}</button>
+                ))}
+              </div>
+            )}
 
             {/* Filter content */}
             {filterTab === "Filters" && (
@@ -425,7 +576,7 @@ export default function FlightListing() {
             <div style={{ display: "flex", gap: 10, padding: "12px 20px 32px", borderTop: `1px solid ${C.div}`, flexShrink: 0 }}>
               <button onClick={() => { clearAll(); setShowFilters(false); }} style={{ flex: 1, fontSize: 14, fontWeight: 600, padding: "13px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.sub, cursor: "pointer", fontFamily: "inherit" }}>Clear all</button>
               <button onClick={() => setShowFilters(false)} style={{ flex: 1, fontSize: 14, fontWeight: 600, padding: "13px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
-                Show {filtered.length} flights
+                Show {resultCount} {isRT ? "round trips" : "flights"}
               </button>
             </div>
           </div>
@@ -436,8 +587,13 @@ export default function FlightListing() {
 }
 
 // ─── Flight Leg Row ───
-function FlightLeg({ dep, arr, from, to, date, arrDate, duration, stops }) {
+function FlightLeg({ dep, arr, from, to, date, arrDate, duration, stops, stopCities, segments }) {
   const diffDay = arrDate && arrDate !== date;
+  // Short stop detail: "via DEL · 3h 40m layover".
+  const layover = segments?.find(s => s.layoverBefore)?.layoverBefore;
+  const stopDetail = stops > 0 && stopCities?.length
+    ? `${stopCities.map(c => airports[c]?.city || c).join(", ")}${layover ? ` · ${layover}` : ""}`
+    : null;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -446,14 +602,15 @@ function FlightLeg({ dep, arr, from, to, date, arrDate, duration, stops }) {
           <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>{from}</p>
           <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>{dep}</p>
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "6px 14px 0" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "6px 14px 0" }}>
           <span style={{ fontSize: 10, color: C.inact }}>{duration}</span>
-          <div style={{ width: "100%", height: 1, background: C.div, margin: "4px 0", position: "relative" }}>
+          <div style={{ width: "100%", height: 1, background: C.div, position: "relative" }}>
             <Plane size={14} color="#D97706" fill="#D97706" style={{ position: "absolute", top: -7, left: "50%", transform: "translateX(-50%) rotate(0deg)" }} />
           </div>
           <span style={{ fontSize: 10, fontWeight: 600, color: stops === 0 ? C.sText : C.p600 }}>
             {stops === 0 ? "Non-stop" : `${stops} stop${stops > 1 ? "s" : ""}`}
           </span>
+          {stopDetail && <span style={{ fontSize: 9.5, color: C.inact, textAlign: "center" }}>{stopDetail}</span>}
         </div>
         <div style={{ textAlign: "right" }}>
           <p style={{ fontSize: 10, color: C.sub, margin: 0 }}>{diffDay ? arrDate : date}</p>

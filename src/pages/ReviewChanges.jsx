@@ -4,14 +4,22 @@ import { C, allItineraries } from "../data";
 import {
   generateFlightsForRoute, getFlightLegs, airports, formatPrice,
 } from "../data/flightData";
+import { useDeals } from "../data/deals";
 
 export default function ReviewChanges({ selectedFlights, setSelectedFlights }) {
   const { itineraryId, legIndex } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const dealsCtx = useDeals();
+  const versionId = params.get("versionId");
+  const dealId = params.get("dealId");
+  const dealQS = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
+  const itinHref = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
 
-  const itinerary = allItineraries.find(i => i.id === Number(itineraryId));
-  const legs = itinerary ? getFlightLegs(itinerary) : [];
+  const home = params.get("home") || "Indore";
+  const mode = params.get("mode") === "oneway" ? "oneway" : "roundtrip";
+  const itinerary = allItineraries.find(i => i.id === Number(itineraryId)) || dealsCtx.findCustomItinerary(Number(itineraryId), versionId);
+  const legs = itinerary ? getFlightLegs(itinerary, home) : [];
   const leg = legs[Number(legIndex)];
   const pax = 2;
 
@@ -38,10 +46,24 @@ export default function ReviewChanges({ selectedFlights, setSelectedFlights }) {
       // Ensure array is long enough
       const legsArr = [...(updated[itineraryId].legs || [])];
       legsArr[Number(legIndex)] = newFlight;
-      updated[itineraryId] = { legs: legsArr };
+      updated[itineraryId] = { ...updated[itineraryId], legs: legsArr, mode };
       return updated;
     });
-    navigate(`/itinerary/${itineraryId}`);
+    // One-way multi-leg: after confirming this leg, advance to the next still-
+    // unselected international leg (so the return gets picked too) before
+    // landing back on the itinerary.
+    if (mode === "oneway") {
+      const intlIdxs = legs.map((l, i) => ({ l, i })).filter(x => x.l.type === "international").map(x => x.i);
+      const already = selectedFlights?.[itineraryId]?.legs || [];
+      const justSelected = Number(legIndex);
+      const nextIdx = intlIdxs.find(idx => idx !== justSelected && !already[idx]);
+      if (nextIdx != null) {
+        const dq = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
+        navigate(`/flights/${itineraryId}/${nextIdx}?current=${dq}&home=${encodeURIComponent(home)}&mode=oneway`);
+        return;
+      }
+    }
+    navigate(itinHref);
   };
 
   return (
@@ -49,12 +71,12 @@ export default function ReviewChanges({ selectedFlights, setSelectedFlights }) {
       {/* ═══ Header ═══ */}
       <div style={{ background: "linear-gradient(135deg, #FFE4E8 0%, #FFF5F0 100%)", padding: "10px 16px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Link
-            to={`/flights/${itineraryId}/${legIndex}?current=${currentFlightId || ""}`}
-            style={{ width: 34, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          <button
+            onClick={() => navigate(-1)}
+            style={{ width: 34, height: 34, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 0 }}
           >
             <ArrowLeft size={18} color={C.head} />
-          </Link>
+          </button>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Review Changes</h1>
             <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>
@@ -132,20 +154,6 @@ export default function ReviewChanges({ selectedFlights, setSelectedFlights }) {
           </div>
         )}
 
-        {/* Key differences */}
-        {currentFlight && (
-          <div style={{
-            background: C.white, borderRadius: 14, padding: "16px",
-            border: `1px solid ${C.div}`,
-          }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>Key differences</p>
-            <DiffRow label="Airline" oldVal={currentFlight.airline} newVal={newFlight.airline} />
-            <DiffRow label="Duration" oldVal={currentFlight.duration} newVal={newFlight.duration} />
-            <DiffRow label="Stops" oldVal={currentFlight.stops === 0 ? "Non-stop" : `${currentFlight.stops} stop`} newVal={newFlight.stops === 0 ? "Non-stop" : `${newFlight.stops} stop`} />
-            <DiffRow label="Departure" oldVal={currentFlight.dep} newVal={newFlight.dep} />
-            <DiffRow label="Arrival" oldVal={currentFlight.arr} newVal={newFlight.arr} />
-          </div>
-        )}
       </div>
 
       {/* ═══ Sticky CTA ═══ */}
@@ -207,20 +215,6 @@ function CompactFlightCard({ flight, variant }) {
           <p style={{ fontSize: 15, fontWeight: 700, color: C.head, margin: 0 }}>{flight.arr}</p>
           <p style={{ fontSize: 11, color: C.sub, margin: 0 }}>{flight.to}</p>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Diff Row ───
-function DiffRow({ label, oldVal, newVal }) {
-  const changed = oldVal !== newVal;
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.div}` }}>
-      <span style={{ fontSize: 12, color: C.sub }}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {changed && <span style={{ fontSize: 11, color: C.inact, textDecoration: "line-through" }}>{oldVal}</span>}
-        <span style={{ fontSize: 12, fontWeight: changed ? 600 : 400, color: changed ? C.head : C.sub }}>{newVal}</span>
       </div>
     </div>
   );

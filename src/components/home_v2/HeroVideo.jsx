@@ -74,7 +74,7 @@ export default function HeroVideo({
           {tagline}
         </h1>
         <button
-          onClick={() => navigate("/plan")}
+          onClick={() => navigate("/build")}
           style={{
             background: C.p600, color: "#fff",
             border: "none", padding: "9px 20px", borderRadius: 999,
