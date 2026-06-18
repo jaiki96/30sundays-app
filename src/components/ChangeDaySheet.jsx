@@ -103,7 +103,7 @@ function PlanCard({ opt, onSelect, onPreview }) {
 export default function ChangeDaySheet({ dayData, combinations = [], onSelect, onPreview, onClose }) {
   const [closing, setClosing] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [visible, setVisible] = useState(8);
+  const [showMore, setShowMore] = useState(false);
   const [paceFilter, setPaceFilter] = useState([]);
   const [actFilter, setActFilter] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -128,30 +128,45 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
   const paceOpts = [...new Set(combinations.map(c => c.scoring.pace))];
   const actOpts = [...new Set(combinations.flatMap(c => c.activities))];
   const toggle = (list, setList, val) => {
-    setVisible(8);
+    setShowMore(false);
     setList(list.includes(val) ? list.filter(v => v !== val) : [...list, val]);
   };
-  const filtered = combinations.filter(c => {
-    const paceOk = paceFilter.length === 0 || paceFilter.includes(c.scoring.pace);
-    const actOk = actFilter.length === 0 || c.activities.some(a => actFilter.includes(a));
-    return paceOk && actOk;
-  });
+
+  // The current plan always leads. Everything else is a real, de-duped
+  // alternative (no cycling/repeats) so the count is honest.
+  const currentOpt = options.find(o => o.isCurrent);
+  const passes = (c) =>
+    (paceFilter.length === 0 || paceFilter.includes(c.scoring.pace)) &&
+    (actFilter.length === 0 || c.activities.some(a => actFilter.includes(a)));
+  const seen = new Set([currentOpt ? currentOpt.activities.join("|") : ""]);
+  const alts = [];
+  for (const c of [...options, ...combinations]) {
+    if (c.isCurrent) continue;
+    const key = c.activities.join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (passes(c)) alts.push(c);
+  }
   const activeFilters = paceFilter.length + actFilter.length;
 
-  // Infinite scroll: cycle the filtered set so the grid feels endless.
-  const grid = filtered.length
-    ? Array.from({ length: Math.min(visible, filtered.length * 4) }, (_, i) => {
-        const base = filtered[i % filtered.length];
-        return { ...base, id: `${base.id}__${i}` };
-      })
-    : [];
+  // Default to 3 rows (current + 5 alternatives); "Show more" reveals the rest.
+  const DEFAULT_ALTS = currentOpt ? 5 : 6;
+  const shownAlts = showMore ? alts : alts.slice(0, DEFAULT_ALTS);
+  const remaining = alts.length - shownAlts.length;
+
+  // Pick a relaxed "leisure day" option (no plans), priced flat.
+  const leisureOpt = {
+    id: "leisure-day",
+    activities: ["Free day, explore at your own pace"],
+    scoring: { pace: "relaxed", activityHours: 0, travelHours: 0, crowdLevel: "low" },
+    priceDelta: 0,
+    heroImage: currentOpt?.heroImage || options[0]?.heroImage,
+    isCurrent: false,
+  };
 
   const onScroll = (e) => {
     const el = e.currentTarget;
     if (!expanded && el.scrollTop > 24) setExpanded(true);
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 240) {
-      setVisible(v => Math.min(v + 8, filtered.length * 4));
-    }
   };
 
   const chip = (label, active, onClick, key) => (
@@ -188,7 +203,6 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
           <div style={{ padding: "6px 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexShrink: 0, borderBottom: `1px solid ${C.div}` }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Change Day {dayNumber}, {city}</p>
-              <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0", lineHeight: "17px" }}>{contextLine}</p>
             </div>
             <button onClick={handleClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, marginLeft: 8 }}>
               <XIcon size={16} color={C.sub} />
@@ -197,28 +211,51 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
 
           {/* Scrollable body */}
           <div ref={scrollRef} onScroll={onScroll} className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(86px + env(safe-area-inset-bottom))" }}>
+            {/* Quiet leisure-day shortcut (low emphasis, before the picks) */}
+            <button onClick={() => onSelect(leisureOpt)} style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%", marginBottom: 14,
+              padding: "10px 12px", borderRadius: 12, border: `1px dashed ${C.div}`, background: C.white,
+              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+            }}>
+              <span style={{ fontSize: 17, flexShrink: 0 }}>🌴</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.head }}>Make this a leisure day</span>
+                <span style={{ display: "block", fontSize: 11.5, color: C.sub }}>No plans, just relax at your own pace.</span>
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, flexShrink: 0 }}>Select</span>
+            </button>
+
             {/* Our picks */}
             <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Our picks</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
-              {options.map(opt => (
-                <PlanCard key={opt.id} opt={opt} onSelect={onSelect} onPreview={onPreview} />
-              ))}
-            </div>
-
-            {/* More plans */}
-            <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              More plans
-            </p>
-
-            {/* Grid */}
-            {grid.length > 0 ? (
+            {(currentOpt || shownAlts.length) ? (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {grid.map(opt => (
-                  <PlanCard key={opt.id} opt={opt} onSelect={onSelect} onPreview={onPreview} />
+                {currentOpt && <PlanCard key={currentOpt.id} opt={currentOpt} onSelect={onSelect} onPreview={onPreview} />}
+                {shownAlts.map((opt, i) => (
+                  <PlanCard key={`${opt.id}-${i}`} opt={opt} onSelect={onSelect} onPreview={onPreview} />
                 ))}
               </div>
             ) : (
               <p style={{ textAlign: "center", color: C.sub, fontSize: 13, margin: "30px 0" }}>No plans match these filters.</p>
+            )}
+
+            {/* Show more / less */}
+            {remaining > 0 && (
+              <button onClick={() => setShowMore(true)} style={{
+                display: "block", width: "100%", marginTop: 16, padding: "12px 0", borderRadius: 12,
+                border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 13.5, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+                Show {remaining} more plan{remaining !== 1 ? "s" : ""}
+              </button>
+            )}
+            {showMore && alts.length > DEFAULT_ALTS && (
+              <button onClick={() => { setShowMore(false); scrollRef.current?.scrollTo({ top: 0 }); }} style={{
+                display: "block", width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 12,
+                border: "none", background: "none", color: C.sub, fontSize: 13, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+                Show less
+              </button>
             )}
           </div>
 
@@ -252,7 +289,7 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Filters</h3>
                   {activeFilters > 0 && (
-                    <button onClick={() => { setPaceFilter([]); setActFilter([]); setVisible(8); }} style={{ background: "none", border: "none", color: C.p600, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    <button onClick={() => { setPaceFilter([]); setActFilter([]); setShowMore(false); }} style={{ background: "none", border: "none", color: C.p600, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                       Clear all
                     </button>
                   )}
@@ -271,7 +308,7 @@ export default function ChangeDaySheet({ dayData, combinations = [], onSelect, o
                   width: "100%", marginTop: 22, padding: "14px 0", borderRadius: 12, border: "none",
                   background: C.p600, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                 }}>
-                  Show {filtered.length} plan{filtered.length !== 1 ? "s" : ""}
+                  Show {alts.length} plan{alts.length !== 1 ? "s" : ""}
                 </button>
               </div>
             </div>

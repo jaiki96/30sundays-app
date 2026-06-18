@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ArrowRight, Download } from "lucide-react";
+import { ChevronDown, ArrowRight, Download, User, Baby } from "lucide-react";
 import { C, allItineraries } from "../data";
 
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
@@ -27,8 +27,8 @@ function StatusChip({ kind }) {
 // The one action affordance per item: quote → View PDF, draft → Continue editing.
 function ActionLink({ quote }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700, color: C.p600, whiteSpace: "nowrap" }}>
-      {quote ? <><Download size={13} /> Download PDF</> : <>Continue editing <ArrowRight size={14} /></>}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: C.p600, whiteSpace: "nowrap" }}>
+      {quote ? <><Download size={13} /> PDF</> : <>Continue editing <ArrowRight size={14} /></>}
     </span>
   );
 }
@@ -57,10 +57,16 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
   const route = itin?.route?.length
     ? itin.route.map(r => `${r.city} ${r.n}N`).join(" · ")
     : (primary.title ?? deal.title);
-  const meta = [shortDate(td?.fromDate), nights ? `${nights}N` : null, `${t} travellers`].filter(Boolean).join(" · ");
+  const kids = td?.kids || 0;
+  const adults = Math.max(1, t - kids);
+  const dateStr = shortDate(td?.fromDate);
   const generatedOn = shortDate(primaryIsQuote ? primary.pricedAt : primary.createdAt);
 
-  const hotels = primary.quotes?.length ? primary.quotes : null;
+  // Maldives cards are per-property: title = resort, with the destination + route
+  // on the line below. (Same property's quotes are its versions.)
+  const property = deal.property;
+  const titleText = property ? property : `${destFlags[dest] || ""} ${dest}${nights ? ` · ${nights}N` : ""}`;
+  const routeText = property ? `${destFlags[dest] || ""} ${dest} · ${route}` : route;
   const earlier = sorted.filter(v => v.id !== primary.id);
 
   const Header = (
@@ -69,15 +75,20 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {destFlags[dest] || ""} {dest}
+            {titleText}
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, letterSpacing: ".3px" }}>V{primary.num}</span>
             <StatusChip kind={stateKind} />
           </div>
         </div>
-        <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.head, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route}</p>
-        <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>{meta}</p>
+        <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.head, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{routeText}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "2px 0 0", fontSize: 11.5, color: C.sub }}>
+          {dateStr && <span>{dateStr}</span>}
+          {dateStr && <span>·</span>}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{adults}<User size={12} /></span>
+          {kids > 0 && <><span>·</span><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>{kids}<Baby size={12} /></span></>}
+        </div>
         {generatedOn && <p style={{ margin: "1px 0 0", fontSize: 11, color: C.inact }}>Generated {generatedOn}</p>}
       </div>
     </div>
@@ -102,24 +113,11 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
     <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", background: C.white }}>
       {Header}
 
-      {hotels ? (
-        // Maldives — one priced row per property (final price, no "from").
-        hotels.map((q, i) => (
-          <div key={i} onClick={() => onOpen(primary, q)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{q.property}</p>
-              <p style={{ margin: "1px 0 0", fontSize: 12, color: C.head }}>{fmt(total(q.price, t))}{priceCaption} · {isQuote(q) ? "Quote" : "Draft"}</p>
-            </div>
-            <ActionLink quote={isQuote(q)} />
-          </div>
-        ))
-      ) : (
-        // Standard — one final price + one action.
-        <div onClick={() => onOpen(primary)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
-          <span style={{ flex: 1, fontSize: 16, fontWeight: 700, color: C.head }}>{fmt(total(ppPrice(primary), t))}{priceCaption}</span>
-          <ActionLink quote={primaryIsQuote} />
-        </div>
-      )}
+      {/* One final price + one action */}
+      <div onClick={() => onOpen(primary)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
+        <span style={{ flex: 1, fontSize: 16, fontWeight: 700, color: C.head }}>{fmt(total(ppPrice(primary), t))}{priceCaption}</span>
+        <ActionLink quote={primaryIsQuote} />
+      </div>
 
       {/* Quiet expander — earlier versions (V1, V2 …) */}
       {earlier.length > 0 && (

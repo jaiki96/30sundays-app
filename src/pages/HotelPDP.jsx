@@ -57,7 +57,9 @@ export default function HotelPDP() {
   // Check if current hotel + current room is selected (same as what's already booked)
   const isSameAsCurrent = isCurrentHotel && selectedRoomId === hotel.rooms[0]?.id;
 
-  // Stay-total difference of the selected room vs the current hotel.
+  // Stay totals: anchor on the new stay cost (old struck through), delta secondary.
+  const newStayTotal = selectedRoom.pricePerNight * nights;
+  const oldStayTotal = currentRoomPrice * nights;
   const stayDelta = currentHotel ? (selectedRoom.pricePerNight - currentRoomPrice) * nights : 0;
   // Delta vs the itinerary's default hotel - what gets stored on the copy.
   const baseHotel = hotels.find(h => h.id === `${stayInfo.city}-hotel-0`) || hotels[0];
@@ -409,9 +411,15 @@ export default function HotelPDP() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: C.head, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{currentHotel ? currentHotel.name : "current hotel"}</span>
                 {currentHotel && (showCurrentDetails ? <ChevronDown size={14} color={C.sub} style={{ flexShrink: 0 }} /> : <ChevronUp size={14} color={C.sub} style={{ flexShrink: 0 }} />)}
               </div>
-              <p style={{ margin: "2px 0 0", fontSize: 15, fontWeight: 700, color: stayDelta === 0 ? C.sub : stayDelta > 0 ? "#FD014F" : "#4EAC7E" }}>
-                {stayDelta === 0 ? "No price change" : `${stayDelta > 0 ? "+" : "−"} ₹ ${formatHotelPrice(Math.abs(stayDelta))}`}
-                <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>{stayDelta === 0 ? "" : ` for ${nights} night${nights > 1 ? "s" : ""}`}</span>
+              <p style={{ margin: "2px 0 0", display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                {currentHotel && stayDelta !== 0 && (
+                  <span style={{ fontSize: 12, color: C.inact, textDecoration: "line-through" }}>₹{formatHotelPrice(oldStayTotal)}</span>
+                )}
+                <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>₹{formatHotelPrice(newStayTotal)}</span>
+                {stayDelta !== 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.sub }}>{stayDelta > 0 ? "+" : "−"}₹{formatHotelPrice(Math.abs(stayDelta))}</span>
+                )}
+                <span style={{ fontSize: 11, fontWeight: 400, color: C.sub }}>· {nights} night{nights > 1 ? "s" : ""}</span>
               </p>
             </button>
             <button
@@ -440,11 +448,21 @@ export default function HotelPDP() {
             <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px", lineHeight: "19px" }}>
               {currentHotel ? <>You're swapping <b style={{ color: C.head }}>{currentHotel.name}</b> for <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}).</> : <>Set <b style={{ color: C.head }}>{hotel.name}</b> ({selectedRoom.name}) for this stay.</>}
             </p>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
-              <span style={{ fontSize: 13, color: C.sub }}>Price difference</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: stayDelta === 0 ? C.sub : stayDelta > 0 ? "#FD014F" : "#4EAC7E" }}>
-                {stayDelta === 0 ? "No change" : `${stayDelta > 0 ? "+" : "−"} ₹ ${formatHotelPrice(Math.abs(stayDelta))}`}
-              </span>
+            <div style={{ padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, color: C.sub }}>This stay · {nights} night{nights > 1 ? "s" : ""}</span>
+                <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  {currentHotel && stayDelta !== 0 && <span style={{ fontSize: 13, color: C.inact, textDecoration: "line-through" }}>₹{formatHotelPrice(oldStayTotal)}</span>}
+                  <span style={{ fontSize: 18, fontWeight: 800, color: C.head }}>₹{formatHotelPrice(newStayTotal)}</span>
+                </span>
+              </div>
+              {stayDelta !== 0 && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: C.sub }}>
+                    {stayDelta > 0 ? `+₹${formatHotelPrice(stayDelta)} on your trip` : `You save ₹${formatHotelPrice(Math.abs(stayDelta))}`}
+                  </span>
+                </div>
+              )}
             </div>
             <button onClick={doReplace} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: "#FD014F", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
               Replace hotel

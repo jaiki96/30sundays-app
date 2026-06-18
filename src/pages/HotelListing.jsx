@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown, ChevronUp, Search, Check, Home } from "lucide-react";
+import { ArrowLeft, Star, MapPin, SlidersHorizontal, X as XIcon, ChevronDown, ChevronUp, Search, Check, Home, MoreVertical } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { useDeals } from "../data/deals";
@@ -47,6 +47,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   // Filter/sort state
   const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
   const [showCurrent, setShowCurrent] = useState(false); // expandable "current hotel" bar
+  const [menuOpen, setMenuOpen] = useState(false); // header kebab menu
+  const [confirmSelf, setConfirmSelf] = useState(false); // self-book confirm modal
   const [showSheet, setShowSheet] = useState(false);
   const [sheetTab, setSheetTab] = useState("Filters");
   const [sortIdx, setSortIdx] = useState(0);
@@ -204,6 +206,23 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 {stayInfo.checkIn} – {stayInfo.checkOut} &bull; 1 Room &bull; 👤 2
               </p>
             </div>
+            {/* Overflow menu — secondary action (book this stay yourself) */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <button onClick={() => setMenuOpen(o => !o)} aria-label="More options" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 10, border: "none", background: "rgba(255,255,255,0.6)", cursor: "pointer" }}>
+                <MoreVertical size={20} color={C.head} />
+              </button>
+              {menuOpen && (
+                <>
+                  <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                  <div style={{ position: "absolute", top: 42, right: 0, zIndex: 41, width: 220, background: C.white, borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
+                    <button onClick={() => { setMenuOpen(false); setConfirmSelf(true); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+                      <Home size={17} color={C.sub} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: C.head }}>Book this stay myself</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -249,19 +268,6 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
             )}
           </div>
         )}
-
-        {/* ═══ Book this stay yourself ═══ */}
-        <button onClick={bookStayMyself} style={{
-          margin: "0 16px 4px", width: "calc(100% - 32px)", display: "flex", alignItems: "center", gap: 10,
-          padding: "11px 12px", borderRadius: 12, border: `1px dashed ${C.div}`, background: C.white, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-        }}>
-          <Home size={18} color={C.sub} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: C.head }}>Booking this stay yourself?</span>
-            <span style={{ display: "block", fontSize: 11.5, color: C.sub }}>Skip this hotel and remove it from your package.</span>
-          </span>
-          <ChevronDown size={16} color={C.sub} style={{ transform: "rotate(-90deg)", flexShrink: 0 }} />
-        </button>
 
         {/* ═══ Hotel List ═══ */}
         <div style={{ padding: "16px 16px 0" }}>
@@ -335,10 +341,10 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                         <span style={{ fontWeight: 600, color: C.sub }}>No price change</span>
                       ) : (
                         <>
-                          <span style={{ fontWeight: 700, color: priceDelta > 0 ? "#FD014F" : "#4EAC7E" }}>
-                            {priceDelta > 0 ? "+" : "−"} ₹ {formatHotelPrice(Math.abs(priceDelta))}
+                          <span style={{ fontWeight: 700, color: C.head }}>
+                            {priceDelta > 0 ? "+" : "−"} ₹ {formatHotelPrice(Math.abs(priceDelta) * stayInfo.nights)}
                           </span>
-                          <span style={{ fontSize: 11, color: C.sub }}> per night</span>
+                          <span style={{ fontSize: 11, color: C.sub }}> on your trip</span>
                         </>
                       )}
                     </p>
@@ -537,6 +543,26 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
             )}
             </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Self-book confirmation ═══ */}
+      {confirmSelf && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", alignItems: "flex-end" }}>
+          <div onClick={() => setConfirmSelf(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+          <div style={{ position: "relative", width: "100%", maxWidth: 420, margin: "0 auto", background: C.white, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 32px rgba(0,0,0,0.18)" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: C.div, margin: "0 auto 16px" }} />
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 8px" }}>Book this {stayInfo.city} stay yourself?</h3>
+            <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px", lineHeight: "19px" }}>
+              We'll remove this hotel from your package and its cost from your trip total. You can add a hotel back anytime.
+            </p>
+            <button onClick={() => { setConfirmSelf(false); bookStayMyself(); }} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
+              Yes, I'll book it myself
+            </button>
+            <button onClick={() => setConfirmSelf(false)} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: C.head, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Keep this hotel
+            </button>
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ import {
   ArrowLeft, Check, Plus, Minus, X as XIcon, ChevronDown, ChevronRight,
   Sparkles, Play, GripVertical, Map as MapIcon,
 } from "lucide-react";
-import { C, customerPhotos } from "../data";
+import { C, customerPhotos, allItineraries } from "../data";
 import {
   BUILD_DESTS, destMeta, destAreas, MONTHS, monthRating,
   areaImg, destHero, topActivities, recommendedRoute, routeNights,
@@ -29,22 +29,119 @@ function fmtDate(iso) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// Reconstruct the picked activities ({ city: [names] }) from an already-built
+// itinerary, so a travellers/dates edit re-synthesises with the same day plans.
+function picksFromBuilt(built) {
+  const map = {};
+  (built?.days || []).forEach((d) => {
+    if (!d.city || !d.sub) return;
+    (map[d.city] ||= []).push(...d.sub.split(" · "));
+  });
+  Object.keys(map).forEach((c) => { map[c] = [...new Set(map[c])]; });
+  return map;
+}
+
+const paxToParty = (n) => {
+  const t = Math.max(1, n || 2);
+  return { couples: Math.floor(t / 2), adults: t % 2, kids: 0 };
+};
+
+// ─── Curated route recommendations (the route step is select-only) ───
+const CROWD_RANK = { Low: 0, Mixed: 1, High: 2 };
+
+// Greedy-fill an ordered area list to exactly `nights` (leftover lands on the last stop).
+function buildRouteFromAreas(areas, nights) {
+  const route = [];
+  let rem = nights;
+  for (const a of areas) {
+    if (rem <= 0) break;
+    const n = Math.min(a.n, rem);
+    if (n > 0) { route.push({ city: a.city, n }); rem -= n; }
+  }
+  if (!route.length && areas[0]) route.push({ city: areas[0].city, n: nights });
+  if (rem > 0 && route.length) route[route.length - 1].n += rem;
+  return route;
+}
+
+// A handful of distinct curated routes for the chosen nights, from different angles.
+function routeVariants(dest, nights) {
+  const areas = destAreas[dest] || [];
+  if (!areas.length || !nights) return [];
+  const orderings = [
+    areas,                                                                   // classic / recommended
+    [...areas].sort((a, b) => CROWD_RANK[a.crowd] - CROWD_RANK[b.crowd]),     // calm-first
+    [...areas].sort((a, b) => CROWD_RANK[b.crowd] - CROWD_RANK[a.crowd]),     // buzzy-first
+    areas.slice(1).concat(areas[0]),                                         // alternate lead
+    [...areas].reverse(),                                                     // flipped
+  ];
+  const seen = new Set(); const out = [];
+  for (const ord of orderings) {
+    const r = buildRouteFromAreas(ord, nights);
+    const sig = r.map(s => `${s.city}${s.n}`).join("|");
+    if (!r.length || seen.has(sig)) continue;
+    seen.add(sig); out.push(r);
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+// A short vibe tag derived from the route's crowd mix.
+function routeVibe(route, dest, isFirst) {
+  if (isFirst) return "Most loved";
+  const areas = destAreas[dest] || [];
+  const crowds = route.map(s => (areas.find(a => a.city === s.city) || {}).crowd);
+  const low = crowds.filter(c => c === "Low").length;
+  const high = crowds.filter(c => c === "High").length;
+  if (low > high && low * 2 >= crowds.length) return "Calm & offbeat";
+  if (high * 2 >= crowds.length) return "Buzzy & lively";
+  return "Balanced mix";
+}
+
+// Edit mode for a curated (non-built) plan: seed the wizard from the deal's
+// itinerary + the version's travel dates so dates/travellers/route are editable.
+function seedFromCurated(deal, version) {
+  if (!deal) return null;
+  const it = allItineraries.find((i) => i.id === (version?.itineraryId ?? deal.itineraryId));
+  if (!it) return null;
+  const td = version?.customizations?.travelDates || {};
+  const route = (it.route?.length ? it.route : (it.days || []).map((d) => ({ city: d.city, n: d.n })))
+    .map((r) => ({ city: r.city, n: r.n }));
+  return {
+    id: it.id,
+    custom: false, // not a wizard-built itinerary — a save will mint a fresh id
+    dest: it.dest || deal.dest,
+    route,
+    nights: td.nights ?? it.nights ?? routeNights(route),
+    startDate: td.fromDate || null,
+    partySize: paxToParty(td.travelers ?? it.travellers ?? 2),
+    _vibes: [],
+    days: it.days || [],
+  };
+}
+
 export default function Build() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dealsCtx = useDeals();
 
-  // Route-change mode: re-enter the builder on the Route step for an existing deal.
+  // Edit mode: re-enter the builder on ONE screen (travellers / dates / cities)
+  // for an existing deal, change it, and save it as a new version. `editRoute=1`
+  // is kept as a legacy alias for `edit=route`.
   const editDealId = params.get("dealId");
   const editVersionId = params.get("versionId");
-  const editRoute = params.get("editRoute") === "1";
-  const editingVersion = editRoute && editDealId && editVersionId
-    ? dealsCtx.getVersion(editDealId, editVersionId) : null;
-  const editBuilt = editRoute
-    ? (editingVersion?.customizations?.builtItinerary || dealsCtx.getDeal(editDealId)?.customItinerary || null)
+  const editTarget = params.get("editRoute") === "1" ? "route" : params.get("edit"); // travellers | dates | route
+  const editRoute = editTarget === "route";
+  const editMode = !!editTarget && !!editDealId && !!editVersionId;
+  const editingVersion = editMode ? dealsCtx.getVersion(editDealId, editVersionId) : null;
+  const editDeal = editMode ? dealsCtx.getDeal(editDealId) : null;
+  const editBuilt = editMode
+    ? (editingVersion?.customizations?.builtItinerary
+        || editDeal?.customItinerary
+        || seedFromCurated(editDeal, editingVersion))
     : null;
+  const editStep = { travellers: 1, dates: 2, route: 3 }[editTarget] ?? 0;
 
-  const [step, setStep] = useState(editRoute ? 3 : 0);
+  const [step, setStep] = useState(editMode ? editStep : 0);
   const [dest, setDest] = useState(editBuilt?.dest || null);
   const [party, setParty] = useState(editBuilt?.partySize
     ? { ...editBuilt.partySize }
@@ -55,7 +152,7 @@ export default function Build() {
   const [route, setRoute] = useState(editBuilt?.route || null);
   const [picks, setPicks] = useState(() => new Set());
   const [detailDest, setDetailDest] = useState(null); // full-screen destination view
-  const [confirmRoute, setConfirmRoute] = useState(false); // route-change fork confirm
+  const [confirmEdit, setConfirmEdit] = useState(false); // edit-fork confirm (travellers/dates/route)
   const [building, setBuilding] = useState(false);
 
   const travellers = party.couples * 2 + party.adults + party.kids;
@@ -74,7 +171,7 @@ export default function Build() {
 
   // ─── navigation ───
   const goBack = () => {
-    if (step === 0 || editRoute) { navigate(-1); return; }
+    if (step === 0 || editMode) { navigate(-1); return; }
     setStep(s => Math.max(0, s - 1));
   };
   const goNext = () => setStep(s => s + 1);
@@ -120,30 +217,56 @@ export default function Build() {
     }, 1400);
   };
 
-  // ─── route-change confirm (edit mode) ───
-  const applyRouteChange = () => {
+  // ─── edit confirm (travellers / dates / route) → fork a new version ───
+  // Changing the route (or the trip length on the dates screen) is structural:
+  // it re-synthesises the itinerary and resets day/hotel swaps. A travellers- or
+  // dates-only change keeps the existing day plans and hotels.
+  const applyEdit = () => {
+    const nightsChanged = editTarget === "dates" && nights && routeNights(route) !== nights;
+    const effRoute = nightsChanged ? recommendedRoute(dest, nights) : route;
+    const structural = editTarget === "route" || nightsChanged;
     const it = synthesizeItinerary({
-      dest, nights: routeNights(route), route, picksByCity: {}, vibes, startDate, party, id: editBuilt.id,
+      dest, nights: routeNights(effRoute), route: effRoute,
+      picksByCity: structural ? {} : picksFromBuilt(editBuilt),
+      vibes, startDate, party,
+      // Reuse a built trip's id; a curated edit mints a fresh (high) id so it
+      // doesn't collide with the seed itinerary it forked from.
+      id: editBuilt.custom ? editBuilt.id : undefined,
     });
     it._vibes = vibes;
     const { versionId: newVer } = dealsCtx.forkVersion(editDealId, editVersionId);
+    const prev = editingVersion?.customizations || {};
     dealsCtx.updateDraft(editDealId, newVer, {
-      customizations: { selectedDayOptions: {}, selectedHotels: {}, travelDates: editingVersion?.customizations?.travelDates || null, builtItinerary: it },
+      customizations: {
+        selectedDayOptions: structural ? {} : (prev.selectedDayOptions || {}),
+        selectedHotels: structural ? {} : (prev.selectedHotels || {}),
+        travelDates: { fromDate: startDate, nights: it.nights, travelers: travellers },
+        builtItinerary: it,
+      },
       indicativePrice: Number(String(it.price).replace(/,/g, "")) || 0,
     });
     dealsCtx.setCustomItinerary(editDealId, it);
-    // Replace the route-editor entry so Back lands on the itinerary, not the editor.
+    // Replace the editor entry so Back lands on the itinerary, not the wizard.
     navigate(`/itinerary/${it.id}?dealId=${editDealId}&versionId=${newVer}`, { replace: true });
   };
 
+  // Route step is select-only and gated: too few / too many nights block continue
+  // (the screen guides the user to fix nights or talk to the team instead).
+  const routeMinN = destMeta[dest]?.minNights || 4;
+  const ROUTE_LONG = 14;
+  const routeStepOk = !!route?.length && targetNights >= routeMinN && targetNights <= ROUTE_LONG;
+
   // ─── primary CTA per step ───
   const ctaFor = () => {
+    // Single-screen edit: the CTA on the active step saves a new version.
+    if (editMode) {
+      const enabled = step === 1 ? party.kids === 0 : step === 2 ? (!!startDate && !!nights) : step === 3 ? routeStepOk : true;
+      return { label: "Save changes", onClick: () => setConfirmEdit(true), enabled };
+    }
     switch (step) {
-      case 1: return { label: "Continue", onClick: goNext, enabled: true };
+      case 1: return { label: "Continue", onClick: goNext, enabled: party.kids === 0 };
       case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
-      case 3: return editRoute
-        ? { label: "Save new route", onClick: () => setConfirmRoute(true), enabled: !!route?.length }
-        : { label: "Looks good, continue", onClick: goNext, enabled: !!route?.length };
+      case 3: return { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk };
       case 4: return picks.size > 0
         ? { label: "Create my itinerary ✦", onClick: doBuild, enabled: true }
         : { label: "Skip & build my trip", onClick: doBuild, enabled: true };
@@ -167,7 +290,7 @@ export default function Build() {
               <div key={i} style={{ flex: 1, height: 4, borderRadius: 4, background: i <= step ? C.p600 : C.div, transition: "background .2s" }} />
             ))}
           </div>
-          {runningTotal != null && step >= 2 ? (
+          {runningTotal != null && step >= 2 && step !== 3 ? (
             <div style={{ textAlign: "right", minWidth: 78 }}>
               <p style={{ margin: 0, fontSize: 9, color: C.inact, fontWeight: 600, letterSpacing: ".3px" }}>EST. TOTAL</p>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: C.head }}>₹{runningTotal.toLocaleString("en-IN")}</p>
@@ -182,7 +305,7 @@ export default function Build() {
         {step === 1 && <StepParty party={party} setParty={setParty} onContinue={goNext} />}
         {step === 2 && <StepDates dest={dest} startDate={startDate} setStartDate={setStartDate} nights={nights} setNights={setNights} />}
         {step === 3 && route && (
-          <StepRoute dest={dest} route={route} setRoute={setRoute} targetNights={targetNights} editRoute={editRoute} />
+          <StepRoute dest={dest} nights={targetNights} route={route} setRoute={setRoute} setNights={setNights} editRoute={editRoute} />
         )}
         {step === 4 && route && <StepActivities dest={dest} route={route} vibes={vibes} picks={picks} setPicks={setPicks} />}
       </div>
@@ -205,9 +328,9 @@ export default function Build() {
         <DestinationDetail dest={detailDest} onClose={() => setDetailDest(null)} onChoose={chooseDest} />
       )}
 
-      {/* Route-change fork confirm */}
-      {confirmRoute && (
-        <ConfirmRoute onCancel={() => setConfirmRoute(false)} onConfirm={applyRouteChange} />
+      {/* Edit fork confirm (travellers / dates / cities) */}
+      {confirmEdit && (
+        <ConfirmEdit target={editTarget} onCancel={() => setConfirmEdit(false)} onConfirm={applyEdit} />
       )}
     </div>
   );
@@ -277,7 +400,6 @@ function DestinationDetail({ dest, onClose, onChoose }) {
         <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.45, color: "rgba(255,255,255,0.92)" }}>{destCaption[dest]}</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "14px 0 0" }}>
           <GlassChip>🛂 {visaShort(dest)}</GlassChip>
-          <GlassChip>📅 Best {meta.peak.slice(0, 2).join(", ")}</GlassChip>
           <GlassChip>🌙 {nightsRange} nights</GlassChip>
         </div>
         <button onClick={() => onChoose(dest)} style={{ ...primaryBtn, marginTop: 16 }}>Select {dest}</button>
@@ -295,19 +417,23 @@ const GlassChip = ({ children }) => (
 // Card-based. Couple and two-couples need no extra input (tap advances). A
 // bigger group reveals traveller + kids steppers inline.
 function StepParty({ party, setParty, onContinue }) {
-  const isGroup = party.couples === 0;
+  const isGroup = party.couples === 0 && party.kids === 0;
+  // Selecting "couple with kids" doesn't advance — we surface the couples-only
+  // note and disable Continue (kids>0 is the not-catered signal Build reads).
+  const kidsBlocked = party.kids > 0;
   const cards = [
-    { key: "couple", emoji: "💑", label: "Just us two", sub: "2 adults", on: party.couples === 1 },
-    { key: "two", emoji: "👯", label: "Two couples", sub: "4 adults", on: party.couples === 2 },
-    { key: "group", emoji: "🎉", label: "A bigger group", sub: "4+ adults", on: isGroup },
+    { key: "couple", emoji: "💑", label: "Just us two", sub: "2 adults", on: party.couples === 1 && !kidsBlocked },
+    { key: "two", emoji: "👯", label: "Two couples", sub: "4 adults", on: party.couples === 2 && !kidsBlocked },
+    { key: "kids", emoji: "👨‍👩‍👧", label: "Couple with kids", sub: "Adults + little ones", on: kidsBlocked },
+    { key: "group", emoji: "🎉", label: "A bigger group", sub: "4+ adults", on: isGroup && !kidsBlocked },
   ];
   const pick = (key) => {
+    if (key === "kids") { setParty({ couples: 1, adults: 0, kids: 1 }); return; } // not catered → blocks Continue
     if (key === "couple") { setParty({ couples: 1, adults: 0, kids: 0 }); onContinue(); }
     else if (key === "two") { setParty({ couples: 2, adults: 0, kids: 0 }); onContinue(); }
     else setParty({ couples: 0, adults: 6, kids: 0 }); // reveal steppers, stay on screen
   };
   const setAdults = (v) => setParty(p => ({ ...p, adults: Math.max(3, v) }));
-  const setKids = (v) => setParty(p => ({ ...p, kids: Math.max(0, v) }));
   return (
     <div style={{ padding: "18px 16px 24px" }}>
       <h1 style={titleStyle}>Who's travelling?</h1>
@@ -325,18 +451,23 @@ function StepParty({ party, setParty, onContinue }) {
               </span>
               {c.on && <Check size={20} color={C.p600} strokeWidth={2.5} />}
             </button>
-            {c.key === "group" && isGroup && (
+            {c.key === "group" && isGroup && !kidsBlocked && (
               <div style={{ marginTop: 10, border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", animation: "fadeUp 0.2s ease-out" }}>
                 <Stepper label="Travellers" value={party.adults} onChange={setAdults} min={3} />
-                <Stepper label="Kids" value={party.kids} onChange={setKids} last />
               </div>
             )}
           </div>
         ))}
       </div>
-      <p style={{ fontSize: 12, color: C.sub, lineHeight: 1.5, marginTop: 18, padding: "12px 14px", background: C.p100, borderRadius: 12 }}>
-        Travelling with kids or infants? <strong style={{ color: C.p600 }}>Reach out to our team</strong> for a personalised itinerary built around your little ones.
-      </p>
+      {kidsBlocked && (
+        <div style={{ marginTop: 14, padding: 16, borderRadius: 14, background: "linear-gradient(135deg, #FFF5F0 0%, #FFE4E8 100%)", border: "1px solid rgba(254,163,180,0.27)", animation: "fadeUp 0.3s ease-out" }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#89123E", margin: "0 0 4px" }}>We're so sorry! 😔</p>
+          <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>
+            Right now, 30 Sundays is exclusively crafted for couples, romantic getaways, sunset dinners for two, that kind of magic. We don't have kids' itineraries yet, but we're working on it!
+          </p>
+          <p style={{ fontSize: 13, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>For now, maybe plan a couples-only escape? You deserve it. 💕</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -475,113 +606,215 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
 }
 
 // ════════════════════ Step 3: Route ════════════════════
-// One clean white screen: drag to reorder, nights with - / +, View details for a
-// full-screen city look, and more places to add below.
-function StepRoute({ dest, route, setRoute, editRoute }) {
-  const usedCities = new Set(route.map(r => r.city));
-  const available = (destAreas[dest] || []).filter(a => !usedCities.has(a.city));
-  const [dragIdx, setDragIdx] = useState(null);
+// Select-only: get to know the regions (intro videos), then pick one of our
+// curated routes for the chosen nights. No manual route editing here. Too few
+// nights → nudge to add some; too many → hand off to the team.
+function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
+  const meta = destMeta[dest] || {};
+  const minN = meta.minNights || 4;
+  const LONG = 14;
+  const n = nights || routeNights(route) || meta.defaultNights || 7;
+  const areas = destAreas[dest] || [];
+
   const [cityView, setCityView] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
-  const totalNights = route.reduce((s, r) => s + r.n, 0);
+  const [showAllCities, setShowAllCities] = useState(false);
+  const [showAllRoutes, setShowAllRoutes] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterCities, setFilterCities] = useState([]);
+  const [leadSent, setLeadSent] = useState(false);
 
-  const setN = (i, n) => setRoute(r => r.map((s, j) => j === i ? { ...s, n: Math.max(1, n) } : s));
-  const remove = (i) => setRoute(r => r.length > 1 ? r.filter((_, j) => j !== i) : r);
-  const add = (area) => setRoute(r => [...r, { city: area.city, n: area.n }]);
-  const reorder = (from, to) => setRoute(r => { const c = [...r]; const [m] = c.splice(from, 1); c.splice(to, 0, m); return c; });
-  const areaOf = (city) => (destAreas[dest] || []).find(a => a.city === city) || { city, crowd: "Mixed", blurb: "" };
+  const tooShort = n < minN;
+  const tooLong = n > LONG;
 
-  const crowdChip = (crowd) => {
+  const variants = useMemo(() => routeVariants(dest, n), [dest, n]);
+  const filtered = filterCities.length
+    ? variants.filter(r => r.some(s => filterCities.includes(s.city)))
+    : variants;
+  const shownRoutes = showAllRoutes ? filtered : filtered.slice(0, 4);
+
+  const sigOf = (r) => r.map(s => `${s.city}${s.n}`).join("|");
+  const selectedSig = sigOf(route);
+  const shownCities = showAllCities ? areas : areas.slice(0, 6);
+
+  const bumpNights = (d) => {
+    const nn = Math.max(1, n + d);
+    setNights?.(nn);
+    setRoute(recommendedRoute(dest, nn));
+  };
+  const toggleFilterCity = (city) =>
+    setFilterCities(f => (f.includes(city) ? f.filter(c => c !== city) : [...f, city]));
+
+  const crowdChip = (crowd, light) => {
     const label = CROWD_LABEL[crowd] || "Popular";
     const col = LABEL_COLOR[label];
-    return <span style={{ fontSize: 10, fontWeight: 700, color: col, background: `${col}14`, padding: "2px 7px", borderRadius: 6 }}>{label}</span>;
+    return <span style={{ fontSize: 10, fontWeight: 700, color: light ? "#fff" : col, background: light ? "rgba(255,255,255,0.22)" : `${col}14`, padding: "2px 7px", borderRadius: 6 }}>{label}</span>;
   };
-  const viewLink = (city) => (
-    <button onClick={() => setCityView(city)} style={{ marginTop: 4, padding: 0, border: "none", background: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 1, color: C.sub, fontSize: 12, fontWeight: 500, fontFamily: "inherit" }}>
-      View details <ChevronRight size={13} />
-    </button>
-  );
+
+  const sectionHead = { margin: "26px 0 12px", fontSize: 13, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" };
+
   return (
     <div style={{ padding: "18px 16px 24px" }}>
-      <h1 style={titleStyle}>{editRoute ? "Change your cities" : "Here are your cities"}</h1>
-      <p style={{ ...subStyle, marginTop: 4 }}>
-        <strong style={{ color: C.head }}>{route.length} {route.length > 1 ? "cities" : "city"}</strong> · {totalNights} night{totalNights > 1 ? "s" : ""} total
-      </p>
-
-      {/* tappable real-map preview → full-screen editor */}
-      <button onClick={() => setMapOpen(true)} style={{ position: "relative", display: "block", width: "100%", padding: 0, border: "none", background: "none", cursor: "pointer", marginTop: 14 }} aria-label="Open map">
-        <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${C.div}`, pointerEvents: "none", position: "relative", zIndex: 0, isolation: "isolate" }}>
-          <LeafletRouteMap dest={dest} route={route} height={150} interactive={false} />
+      {/* Header + a quiet map pill (top-right) */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 style={titleStyle}>{editRoute ? "Change your route" : `Your ${dest} trip`}</h1>
+          <p style={{ ...subStyle, marginTop: 4 }}>Explore the regions, then pick a route.</p>
         </div>
-        <span style={{ position: "absolute", top: 10, right: 10, display: "inline-flex", alignItems: "center", gap: 5, background: C.white, border: `1px solid ${C.div}`, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", color: C.head, fontSize: 12, fontWeight: 700, padding: "6px 11px", borderRadius: 20, zIndex: 1 }}>
-          <MapIcon size={13} color={C.p600} /> Open map
-        </span>
-      </button>
-
-      {/* route cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-        {route.map((stop, i) => {
-          const area = areaOf(stop.city);
-          return (
-            <div
-              key={stop.city + i}
-              draggable
-              onDragStart={() => setDragIdx(i)}
-              onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) { reorder(dragIdx, i); setDragIdx(i); } }}
-              onDragEnd={() => setDragIdx(null)}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "10px 8px 10px 2px",
-                border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, opacity: dragIdx === i ? 0.45 : 1,
-              }}
-            >
-              <span style={{ flexShrink: 0, cursor: "grab", color: C.icon, display: "grid", placeItems: "center" }} aria-label="Drag to reorder">
-                <GripVertical size={18} />
-              </span>
-              <img src={areaImg(dest, stop.city, i)} alt={stop.city} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: C.head }}>{stop.city}</span>
-                  {crowdChip(area.crowd)}
-                </div>
-                {viewLink(stop.city)}
-              </div>
-              <NightsDropdown value={stop.n} onChange={(n) => setN(i, n)} />
-              {route.length > 1 && (
-                <button onClick={() => remove(i)} style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 2 }} aria-label={`Remove ${stop.city}`}>
-                  <XIcon size={15} color={C.icon} />
-                </button>
-              )}
-            </div>
-          );
-        })}
+        <button onClick={() => setMapOpen(true)} aria-label="Open map" style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, background: C.white, border: `1px solid ${C.div}`, color: C.head, fontSize: 12.5, fontWeight: 600, padding: "7px 12px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
+          <MapIcon size={14} color={C.p600} /> Map
+        </button>
       </div>
 
-      {/* more places to add */}
-      {available.length > 0 && (
-        <>
-          <p style={{ margin: "24px 0 10px", fontSize: 13, fontWeight: 800, color: C.head }}>Add another place</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {available.map((a, i) => (
-              <div key={a.city} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px", border: `1px solid ${C.div}`, borderRadius: 16, background: C.white }}>
-                <img src={areaImg(dest, a.city, i)} alt={a.city} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: C.head }}>{a.city}</span>
-                    {crowdChip(a.crowd)}
-                  </div>
-                  {viewLink(a.city)}
-                </div>
-                <button onClick={() => add(a)} style={{ ...pillBtn, color: C.p600, borderColor: C.p300, flexShrink: 0 }} aria-label={`Add ${a.city}`}>
-                  <Plus size={14} color={C.p600} style={{ marginRight: 3 }} /> Add
-                </button>
+      {/* ── Section 1: get to know the regions (intro videos) ── */}
+      <p style={sectionHead}>Get to know the regions</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {shownCities.map((a, i) => (
+          <button key={a.city} onClick={() => setCityView(a.city)} style={{ padding: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+            <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", borderRadius: 14, overflow: "hidden", background: C.div }}>
+              <img src={areaImg(dest, a.city, i)} alt={a.city} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,0.78))" }} />
+              <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 38, height: 38, borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)", display: "grid", placeItems: "center" }}>
+                <Play size={15} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
+              </span>
+              <div style={{ position: "absolute", left: 10, right: 10, bottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#fff", fontSize: 15, fontWeight: 800 }}>{a.city}</span>
+                {crowdChip(a.crowd, true)}
               </div>
-            ))}
+            </div>
+            <p style={{ margin: "7px 2px 0", fontSize: 12, color: C.sub, lineHeight: 1.4 }}>{a.blurb}</p>
+          </button>
+        ))}
+      </div>
+      {areas.length > 6 && !showAllCities && (
+        <button onClick={() => setShowAllCities(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 14, padding: "12px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, fontSize: 13.5, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
+          Show more regions <ChevronDown size={15} color={C.sub} />
+        </button>
+      )}
+
+      {/* ── Section 2: curated routes (or an edge-case nudge) ── */}
+      <p style={sectionHead}>Routes we recommend</p>
+
+      {tooShort ? (
+        <div style={{ padding: 16, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}` }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>{dest} shines with at least {minN} nights</p>
+          <p style={{ margin: "6px 0 14px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>You've picked {n} night{n > 1 ? "s" : ""}. Add a couple more and we'll unlock routes that do {dest} justice.</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.white, borderRadius: 12, padding: "8px 12px" }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>{n} night{n > 1 ? "s" : ""}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button onClick={() => bumpNights(-1)} disabled={n <= 1} style={{ ...roundBtn, opacity: n <= 1 ? 0.3 : 1 }} aria-label="Fewer nights"><Minus size={16} color={C.head} /></button>
+              <button onClick={() => bumpNights(1)} style={{ ...roundBtn, border: "none", background: C.p600 }} aria-label="More nights"><Plus size={16} color="#fff" /></button>
+            </div>
           </div>
+        </div>
+      ) : tooLong ? (
+        leadSent ? (
+          <div style={{ padding: 16, borderRadius: 14, background: C.sBg || "#ECFDF3", border: `1px solid ${C.sBorder || "#C0E5D5"}` }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>Thanks, you're in good hands ✨</p>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>Our trip designers will reach out within 24 hours to craft your {n}-night {dest} journey.</p>
+          </div>
+        ) : (
+          <div style={{ padding: 16, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}` }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>A {n}-night trip deserves a personal touch</p>
+            <p style={{ margin: "6px 0 14px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>Longer journeys are hand-crafted by our team. Share your trip and we'll design the perfect route for you.</p>
+            <button onClick={() => setLeadSent(true)} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              Request a custom plan
+            </button>
+          </div>
+        )
+      ) : (
+        <>
+          {/* Quiet filter */}
+          <div style={{ marginBottom: 12 }}>
+            <button onClick={() => setShowFilter(f => !f)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, color: C.sub }}>
+              Filter by city{filterCities.length ? ` · ${filterCities.length}` : ""} <ChevronDown size={14} color={C.sub} style={{ transform: showFilter ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+            </button>
+            {showFilter && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 10 }}>
+                {areas.map(a => {
+                  const on = filterCities.includes(a.city);
+                  return (
+                    <button key={a.city} onClick={() => toggleFilterCity(a.city)} style={{ fontSize: 12, fontWeight: 600, padding: "6px 11px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${on ? C.p600 : C.div}`, background: on ? C.p600 : C.white, color: on ? "#fff" : C.head }}>
+                      {a.city}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {shownRoutes.length === 0 ? (
+            <p style={{ textAlign: "center", color: C.sub, fontSize: 13, margin: "24px 0" }}>No routes include those cities. Try fewer filters.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {shownRoutes.map((r, idx) => {
+                const selected = sigOf(r) === selectedSig;
+                const isFirst = idx === 0 && !showAllRoutes && filterCities.length === 0;
+                const totalN = r.reduce((s, x) => s + x.n, 0);
+                return (
+                  <button key={sigOf(r)} onClick={() => setRoute(r)} style={{
+                    textAlign: "left", padding: "12px 14px", borderRadius: 16, cursor: "pointer", fontFamily: "inherit",
+                    border: `${selected ? 2 : 1}px solid ${selected ? C.p600 : C.div}`, background: selected ? C.p100 : C.white,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ display: "flex" }}>
+                          {r.slice(0, 3).map((s, k) => (
+                            <img key={s.city} src={areaImg(dest, s.city, k)} alt="" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover", border: "2px solid #fff", marginLeft: k ? -8 : 0 }} />
+                          ))}
+                        </span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: C.p600, background: C.p100, padding: "2px 8px", borderRadius: 6 }}>{routeVibe(r, dest, isFirst)}</span>
+                      </span>
+                      {selected
+                        ? <Check size={18} color={C.p600} strokeWidth={2.5} />
+                        : <span style={{ fontSize: 12.5, fontWeight: 700, color: C.p600 }}>Select</span>}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4 }}>
+                      {r.map((s, k) => (
+                        <span key={s.city} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {k > 0 && <ChevronRight size={13} color={C.icon} />}
+                          <span style={{ fontSize: 14, fontWeight: 700, color: C.head }}>{s.city}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>{s.n}N</span>
+                        </span>
+                      ))}
+                    </div>
+                    <p style={{ margin: "8px 0 0", fontSize: 12, color: C.sub }}>{r.length} {r.length > 1 ? "cities" : "city"} · {totalN} nights</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {filtered.length > 4 && !showAllRoutes && (
+            <button onClick={() => setShowAllRoutes(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 12, padding: "12px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, fontSize: 13.5, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
+              See more options <ChevronDown size={15} color={C.sub} />
+            </button>
+          )}
         </>
       )}
 
       {cityView && <CityDetail dest={dest} city={cityView} onClose={() => setCityView(null)} />}
-      {mapOpen && <RouteMapFull dest={dest} route={route} setRoute={setRoute} onClose={() => setMapOpen(false)} />}
+      {mapOpen && <RouteMapView dest={dest} route={route} onClose={() => setMapOpen(false)} />}
+    </div>
+  );
+}
+
+// Read-only fullscreen map for the selected route (no editing on this step).
+function RouteMapView({ dest, route, onClose }) {
+  const totalNights = route.reduce((s, r) => s + r.n, 0);
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 65, background: C.white, display: "flex", flexDirection: "column" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
+        <button onClick={onClose} style={iconBtn} aria-label="Close map"><XIcon size={20} color={C.head} /></button>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head }}>Your route</p>
+          <p style={{ margin: 0, fontSize: 12, color: C.sub }}>{route.map(s => s.city).join(" · ")} · {totalNights} night{totalNights > 1 ? "s" : ""}</p>
+        </div>
+        <button onClick={onClose} style={{ ...pillBtn, color: C.p600, borderColor: C.p300 }}>Done</button>
+      </div>
+      <div style={{ flex: 1, position: "relative", zIndex: 0, isolation: "isolate" }}>
+        <LeafletRouteMap dest={dest} route={route} height="100%" interactive={false} />
+      </div>
     </div>
   );
 }
@@ -899,13 +1132,14 @@ function Building({ dest }) {
   );
 }
 
-function ConfirmRoute({ onCancel, onConfirm }) {
+function ConfirmEdit({ target, onCancel, onConfirm }) {
+  const what = target === "dates" ? "your dates" : target === "travellers" ? "your travellers" : "your cities";
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 70, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-end" }} onClick={onCancel}>
       <div onClick={e => e.stopPropagation()} style={{ width: "100%", background: C.white, borderRadius: "20px 20px 0 0", padding: "22px 20px calc(22px + env(safe-area-inset-bottom))" }}>
         <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: C.head }}>Save this as a new version?</h2>
         <p style={{ margin: "8px 0 0", fontSize: 14, color: C.sub, lineHeight: 1.5 }}>
-          Changing your cities creates a new version of this trip. Your current one stays saved in My Plans.
+          Changing {what} creates a new version of this trip. Your current one stays saved in My Plans.
         </p>
         <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
           <button onClick={onCancel} style={{ ...secondaryBtn, flex: 1 }}>Go back</button>

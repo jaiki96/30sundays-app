@@ -320,19 +320,25 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           {(() => {
           const active = deals.filter(d => d.status !== "lost");
           const older = deals.filter(d => d.status === "lost");
-          // Open the right itinerary for a version (or a Maldives property quote).
-          const openVersion = (deal, v, quote) => {
-            const itinId = quote?.itineraryId ?? v?.itineraryId ?? deal.itineraryId;
-            navigate(`/itinerary/${itinId}?dealId=${deal.id}&versionId=${v.id}`);
+          // Open the right itinerary for a version (uses the real deal id even
+          // for an expanded Maldives property card).
+          const openVersion = (card, v) => {
+            const itinId = v?.itineraryId ?? card.itineraryId;
+            navigate(`/itinerary/${itinId}?dealId=${card.dealId ?? card.id}&versionId=${v.id}`);
           };
-          const recency = (d) => Math.max(...d.versions.map(v => v.createdAt || 0));
+          const recency = (d) => Math.max(...((d.versions || []).map(v => v.createdAt || 0)), 0);
+          // Maldives → one card per property; every other vacation → one card.
+          const toCards = (list) => list.flatMap(deal => deal.properties?.length
+            ? deal.properties.map(p => ({ ...deal, id: `${deal.id}__${p.property.replace(/\s+/g, "")}`, dealId: deal.id, property: p.property, itineraryId: p.itineraryId, versions: p.versions, properties: undefined }))
+            : [deal]);
+          const activeCards = toCards(active);
           return (
           <>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, padding: "12px 16px 8px" }}>
             <div style={{ minWidth: 0 }}>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Your Trips</h1>
               <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>
-                {active.length} {active.length === 1 ? "vacation" : "vacations"}
+                {activeCards.length} {activeCards.length === 1 ? "plan" : "plans"}
               </p>
             </div>
             <Link to="/build" style={{
@@ -346,10 +352,10 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
 
           {/* Content — active vacations first, then a collapsed "older plans" accordion */}
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 80px" }} className="hide-scrollbar">
-            {active.length > 0 ? (
+            {activeCards.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {[...active].sort((a, b) => recency(b) - recency(a)).map(deal => (
-                  <TripPlanCard key={deal.id} deal={deal} onOpen={(v, q) => openVersion(deal, v, q)} onStartNew={() => navigate("/build")} />
+                {[...activeCards].sort((a, b) => recency(b) - recency(a)).map(card => (
+                  <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} />
                 ))}
               </div>
             ) : (
@@ -374,7 +380,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                 {showOlder && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
                     {[...older].sort((a, b) => recency(b) - recency(a)).map(deal => (
-                      <TripPlanCard key={deal.id} deal={deal} onOpen={(v, q) => openVersion(deal, v, q)} onStartNew={() => navigate("/build")} />
+                      <TripPlanCard key={deal.id} deal={deal} onOpen={(v) => openVersion(deal, v)} onStartNew={() => navigate("/build")} />
                     ))}
                   </div>
                 )}

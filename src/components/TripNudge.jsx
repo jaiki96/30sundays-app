@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Plane, Heart, Star, X, Sparkles } from "lucide-react";
 import { C, destData } from "../data";
+import { useDeals } from "../data/deals";
 
 const bgColors = {
   lead: "rgba(255, 228, 232, 0.65)",
@@ -22,8 +23,17 @@ const NEW_ACCENT = "#B88500";
 
 export default function TripNudge({ userState }) {
   const [dismissed, setDismissed] = useState(false);
+  const { deals } = useDeals();
 
   if (dismissed) return null;
+
+  // "Your Bali itinerary is ready" → open the actual saved plan's detail
+  // (in-deal editable view), not the explore overview page.
+  const baliDeal = deals.find(d => d.dest === "Bali" && d.status !== "lost");
+  const baliLatest = baliDeal ? [...(baliDeal.versions || [])].sort((a, b) => b.num - a.num)[0] : null;
+  const baliLink = baliDeal && baliLatest
+    ? `/itinerary/${baliLatest.itineraryId ?? baliDeal.itineraryId}?dealId=${baliDeal.id}&versionId=${baliLatest.id}`
+    : "/detail/1";
 
   const dismiss = (e) => {
     e.preventDefault();
@@ -172,7 +182,7 @@ export default function TripNudge({ userState }) {
   if (!content) return null;
 
   const linkTo =
-    userState === "lead" ? "/detail/1" :
+    userState === "lead" ? baliLink :
     userState === "customer" ? "/trips/trip-3" :
     userState === "new" ? "/plan" :
     "/plan";

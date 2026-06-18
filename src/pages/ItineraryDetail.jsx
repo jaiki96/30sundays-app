@@ -155,6 +155,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Explore itineraries: capture dates/travellers inline here (login is deferred
   // to the final step), instead of bouncing to the login-gated plan flow.
   const [showTripSheet, setShowTripSheet] = useState(false);
+  const [showEditMenu, setShowEditMenu] = useState(false);
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
   const [explorePax, setExplorePax] = useState(2);
 
@@ -248,7 +249,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         return `${f(s)} – ${f(e)}`;
       })()
     : "Mar 31 – Apr 6";
-  const goEditRoute = () => navigate(`/build?dealId=${dealId}&versionId=${versionId}&editRoute=1`);
+  // One edit entry → the wizard on the relevant screen (travellers / dates /
+  // cities). Each change forks a new version (handled in Build). Only built
+  // (wizard-backed) trips can round-trip through the wizard.
+  const goEdit = (target) => navigate(`/build?dealId=${dealId}&versionId=${versionId}&edit=${target}`);
+  // Any saved plan can be edited via the wizard — built trips seed from their
+  // own data, curated ones seed from the itinerary (Build handles the fallback).
+  const wizardEditable = inDeal;
 
   // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
   const overlayFrame = isMobile
@@ -610,8 +617,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* Trip meta - dates, travellers, route + edit (moved out of the hero) */}
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          {inDeal ? (
-            /* A saved plan — dates/travellers are editable (tap the pencil) */
+          {wizardEditable ? (
+            /* A built plan — one "Edit" entry (right) routes back to the wizard */
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.head, margin: 0 }}>
+              {dateLabel} · {travellers} traveller{travellers > 1 ? "s" : ""}
+            </p>
+          ) : inDeal ? (
+            /* A curated saved plan — dates/travellers editable inline (tap the pencil) */
             <button onClick={() => setShowTripSheet(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: C.head }}>{exploreStart ? exploreDateLabel : dateLabel} · {exploreStart ? explorePax : travellers} traveller{(exploreStart ? explorePax : travellers) > 1 ? "s" : ""}</span>
               <Pencil size={12} color={C.p600} />
@@ -634,8 +646,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           )}
           <p style={{ fontSize: 12.5, color: C.sub, margin: "3px 0 0", lineHeight: "17px" }}>{it.days.map(d => `${d.city} ${d.n}N`).join("  ·  ")}</p>
         </div>
-        {it.custom && inDeal && (
-          <button onClick={goEditRoute} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
+        {wizardEditable && (
+          <button onClick={() => setShowEditMenu(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, border: `1px solid ${C.div}`, borderRadius: 20, padding: "6px 12px", background: C.white, cursor: "pointer", fontFamily: "inherit" }}>
             <Pencil size={13} /> Edit
           </button>
         )}
@@ -662,6 +674,34 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </div>
             </div>
             <button onClick={() => setShowTripSheet(false)} disabled={!exploreStart} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: exploreStart ? C.p600 : C.div, color: exploreStart ? "#fff" : C.inact, fontSize: 15, fontWeight: 700, cursor: exploreStart ? "pointer" : "not-allowed", fontFamily: "inherit" }}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit menu — one entry, three targets, each routes to the wizard and forks a new version */}
+      {showEditMenu && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div onClick={() => setShowEditMenu(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} />
+          <div style={{ position: "relative", background: C.white, borderRadius: "20px 20px 0 0", padding: "18px 18px calc(20px + env(safe-area-inset-bottom))", maxWidth: 420, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0 }}>Edit your trip</p>
+              <button onClick={() => setShowEditMenu(false)} style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}><XIcon size={20} color={C.sub} /></button>
+            </div>
+            <p style={{ fontSize: 12.5, color: C.sub, margin: "0 0 14px" }}>Each change saves a new version. Your current one stays in My Plans.</p>
+            {[
+              { target: "dates", icon: <Calendar size={18} color={C.p600} />, label: "Travel dates", value: dateLabel },
+              { target: "travellers", icon: <Users size={18} color={C.p600} />, label: "Travellers", value: `${travellers} traveller${travellers > 1 ? "s" : ""}` },
+              { target: "route", icon: <MapPin size={18} color={C.p600} />, label: "Cities & route", value: it.days.map(d => d.city).join(" · ") },
+            ].map((row) => (
+              <button key={row.target} onClick={() => goEdit(row.target)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 4px", border: "none", borderTop: `1px solid ${C.bg}`, background: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                <span style={{ width: 38, height: 38, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>{row.icon}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head }}>{row.label}</span>
+                  <span style={{ display: "block", fontSize: 12.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.value}</span>
+                </span>
+                <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -729,36 +769,51 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </button>
             ))}
           </div>
-          {/* Video thumbnails - Highlights or active day */}
-          <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
-            {activeDay === -1
-              ? highlights.map((h, i) => (
-                  <div key={i} onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })} style={{
-                    width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
-                  }}>
-                    <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.85))" }} />
-                    {/* Play button */}
-                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Play size={16} color="#fff" fill="#fff" />
-                    </div>
-                    <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{h.name}</p>
+          {/* Highlights → bare carousel. A day → a tinted panel that bonds the
+              day's score one-liner with its videos (tap the score for the full
+              breakdown). The active pink tab sits right above this tint. */}
+          {activeDay === -1 ? (
+            <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
+              {highlights.map((h, i) => (
+                <div key={i} onClick={() => setShowViewer({ day: h.dayIndex, activity: h.activityIndex })} style={{
+                  width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+                }}>
+                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.85))" }} />
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Play size={16} color="#fff" fill="#fff" />
                   </div>
-                ))
-              : daysWithActivities[activeDay]?.activities.map((act, i) => (
-                  <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
-                    width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
-                  }}>
-                    <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.8))" }} />
-                    {/* Play button */}
-                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Play size={16} color="#fff" fill="#fff" />
+                  <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{h.name}</p>
+                </div>
+              ))}
+            </div>
+          ) : (() => {
+            const day = daysWithActivities[activeDay];
+            const sc = getDayScoring(day, activeDay, daysWithActivities);
+            return (
+              <div style={{ margin: "0 16px", background: "#FFF5F7", border: "1px solid #FFE0E7", borderRadius: 16, padding: "12px 0", overflow: "hidden" }}>
+                {/* Videos first */}
+                <div className="hs" style={{ gap: 10, paddingLeft: 14, paddingRight: 14 }}>
+                  {day?.activities.map((act, i) => (
+                    <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
+                      width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
+                    }}>
+                      <img src={act.img} alt={act.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 35%, rgba(0,0,0,0.8))" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-55%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Play size={16} color="#fff" fill="#fff" />
+                      </div>
+                      <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
                     </div>
-                    <p style={{ position: "absolute", bottom: 10, left: 10, right: 10, fontSize: 12, fontWeight: 600, color: "#fff", margin: 0 }}>{act.name}</p>
-                  </div>
-                ))}
-          </div>
+                  ))}
+                </div>
+                {/* Then the day score — same tiles as the day page; tap → full breakdown */}
+                <div style={{ marginTop: 12, padding: "0 14px" }}>
+                  <DayScoreRow scoring={sc} onOpen={() => setDayDetailIndex(activeDay)} bg="transparent" borderColor="#FFE0E7" divider="#FFE0E7" />
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1613,12 +1668,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
-                <span style={{ fontSize: 13, color: C.sub }}>Price difference</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: incremental === 0 ? C.sub : incremental > 0 ? C.head : "#027A48" }}>
-                  {incremental === 0 ? "No change" : `${incremental > 0 ? "+" : "−"}₹${Math.abs(incremental * travellers).toLocaleString("en-IN")}`}
-                </span>
-              </div>
+              {(() => {
+                const deltaTotal = incremental * travellers;
+                const newTotal = grandTotal + deltaTotal;
+                return (
+                  <div style={{ padding: "12px 14px", borderRadius: 12, background: C.bg, marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, color: C.sub }}>Your trip now</span>
+                      <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        {deltaTotal !== 0 && <span style={{ fontSize: 13, color: C.inact, textDecoration: "line-through" }}>₹{grandTotal.toLocaleString("en-IN")}</span>}
+                        <span style={{ fontSize: 18, fontWeight: 800, color: C.head }}>₹{newTotal.toLocaleString("en-IN")}</span>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 600, color: C.sub }}>
+                        {deltaTotal === 0 ? "No change in price" : deltaTotal > 0 ? `+₹${deltaTotal.toLocaleString("en-IN")} for this change` : `You save ₹${Math.abs(deltaTotal).toLocaleString("en-IN")}`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <button onClick={applyDayChange} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>
                 Continue

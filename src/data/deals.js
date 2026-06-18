@@ -8,7 +8,7 @@ import { allItineraries } from "../data";
 // stale after QUOTE_VALID_DAYS and surface as Expired.
 
 const KEY = "30s_deals_v1";
-const SEED_KEY = "30s_deals_seeded_v4";
+const SEED_KEY = "30s_deals_seeded_v5";
 export const QUOTE_VALID_DAYS = 7;
 
 const DAY = 86400000;
@@ -71,17 +71,19 @@ function demoDeals() {
 
   // 3. Maldives — a version carries MULTIPLE property quotes.
   const malImg = byId(16)?.img;
+  // Maldives works per-PROPERTY: each resort is its own card. Different quotes
+  // for the SAME property are that property's versions (V1, V2 …).
   const dealMal = {
-    id: "demo_maldives", status: "active", itineraryId: 16, dest: "Maldives", title: "Maldives escape", img: malImg,
+    id: "demo_maldives", status: "active", dest: "Maldives", title: "Maldives escape", img: malImg,
     customItinerary: null, createdAt: now - 3 * DAY,
-    versions: [
-      ver("demo_mal_v1", 16, { num: 1, status: "quote", ageDays: 7, pdfAgo: 6,
-        quotes: [{ property: "Anantara Veli", itineraryId: 16, status: "quote", price: num(byId(16)?.price), pdfAgo: 6 }] }),
-      ver("demo_mal_v2", 16, { num: 2, status: "draft", ageDays: 0.6,
-        quotes: [
-          { property: "Adaaran Select", itineraryId: 16, status: "quote", price: num(byId(16)?.price), pdfAgo: 1 },
-          { property: "Sun Siyam Olhuveli", itineraryId: 17, status: "draft", price: num(byId(17)?.price) },
-        ] }),
+    properties: [
+      { property: "Adaaran Select", itineraryId: 16, versions: [
+        ver("demo_mal_ada_v1", 16, { num: 1, status: "quote", ageDays: 7, pdfAgo: 6 }),
+        ver("demo_mal_ada_v2", 16, { num: 2, status: "draft", ageDays: 0.6, priceAdj: 5000 }),
+      ] },
+      { property: "Sun Siyam Olhuveli", itineraryId: 17, versions: [
+        ver("demo_mal_sun_v1", 17, { num: 1, status: "draft", ageDays: 1 }),
+      ] },
     ],
   };
 
@@ -245,13 +247,31 @@ export function DealsProvider({ children }) {
   const getDeal = useCallback((dealId) => deals.find(d => d.id === dealId) || null, [deals]);
   const getVersion = useCallback((dealId, versionId) => {
     const d = deals.find(x => x.id === dealId);
-    return d ? d.versions.find(v => v.id === versionId) || null : null;
+    if (!d) return null;
+    const inVersions = (d.versions || []).find(v => v.id === versionId);
+    if (inVersions) return inVersions;
+    // Maldives deals keep versions per property.
+    for (const p of (d.properties || [])) {
+      const pv = (p.versions || []).find(v => v.id === versionId);
+      if (pv) return pv;
+    }
+    return null;
   }, [deals]);
 
   // Resolve a from-scratch itinerary by its (high, synthetic) id, so pages that
   // look up `allItineraries.find(...)` can fall back to a built trip. A specific
   // version's route (after a route-change fork) wins over the deal's base.
   const findCustomItinerary = useCallback((itineraryId, versionId) => {
+    // 1. Resolve by the built itinerary's own id — works even when a curated
+    //    deal forks into a synthesized trip whose id differs from d.itineraryId.
+    for (const d of deals) {
+      for (const v of (d.versions || [])) {
+        const bi = v.customizations?.builtItinerary;
+        if (bi && bi.id === itineraryId && (!versionId || v.id === versionId)) return bi;
+      }
+      if (d.customItinerary && d.customItinerary.id === itineraryId) return d.customItinerary;
+    }
+    // 2. Legacy fallback: deal keyed by itineraryId (built-from-scratch deals).
     for (const d of deals) {
       if (d.itineraryId !== itineraryId) continue;
       if (versionId) {
