@@ -16,6 +16,8 @@ import { getDayScore } from "../data/dayScoring";
 import { videosForDest } from "../data/watchData";
 import { getDayScoring, getDayTours, getAllDaysScoring } from "../data/dayScoring";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
+import ItineraryScoreboard from "../components/ItineraryScoreboard";
+import InvitePartnerSection from "../components/InvitePartnerSection";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { buildActivityDetail } from "../data/activityData";
 
@@ -156,6 +158,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // to the final step), instead of bouncing to the login-gated plan flow.
   const [showTripSheet, setShowTripSheet] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false);
+  const [dayScore, setDayScore] = useState(null); // { metric, scoring, dayLabel, dayIdx } for the score drawer
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
   const [explorePax, setExplorePax] = useState(2);
 
@@ -791,9 +794,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             const day = daysWithActivities[activeDay];
             const sc = getDayScoring(day, activeDay, daysWithActivities);
             return (
-              <div style={{ margin: "0 16px", background: "#FFF5F7", border: "1px solid #FFE0E7", borderRadius: 16, padding: "12px 0", overflow: "hidden" }}>
+              <div>
                 {/* Videos first */}
-                <div className="hs" style={{ gap: 10, paddingLeft: 14, paddingRight: 14 }}>
+                <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
                   {day?.activities.map((act, i) => (
                     <div key={i} onClick={() => setShowViewer({ day: activeDay, activity: i })} style={{
                       width: 170, minWidth: 170, height: 220, borderRadius: 14, overflow: "hidden", position: "relative", flexShrink: 0, cursor: "pointer",
@@ -807,9 +810,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                     </div>
                   ))}
                 </div>
-                {/* Then the day score — same tiles as the day page; tap → full breakdown */}
-                <div style={{ marginTop: 12, padding: "0 14px" }}>
-                  <DayScoreRow scoring={sc} onOpen={() => setDayDetailIndex(activeDay)} bg="transparent" borderColor="#FFE0E7" divider="#FFE0E7" />
+                {/* Divider, a small title, then the day score tiles (tap → drawer) */}
+                <div style={{ height: 1, background: C.div, margin: "14px 16px 0" }} />
+                <p style={{ margin: "12px 16px 2px", fontSize: 12.5, fontWeight: 800, color: C.head, letterSpacing: "-0.1px" }}>Day {day.dayNum} scores</p>
+                <div style={{ padding: "0 16px" }}>
+                  <DayScoreRow scoring={sc} onOpen={(metric) => setDayScore({ metric, scoring: sc, dayLabel: `Day ${day.dayNum} · ${day.city}`, dayIdx: activeDay })} bg="transparent" borderColor="transparent" divider={C.div} />
                 </div>
               </div>
             );
@@ -972,6 +977,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </button>
         )}
       </div>
+
+      <Divider />
+
+      {/* ═══ Invite partner (co-planner) ═══ */}
+      <InvitePartnerSection destination={it.dest} />
 
       <Divider />
 
@@ -1344,6 +1354,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       <Divider />
 
+      {/* ═══ 5·5 Itinerary Scoreboard ═══ */}
+      <ItineraryScoreboard
+        it={it}
+        days={daysWithActivities}
+        selOut={selOut}
+        selRet={selRet}
+        hotelStays={selectedHotels?.[it.id]?.stays}
+      />
+
+      <Divider />
+
       {/* ═══ 5a. Trip briefings - educational videos for this trip ═══ */}
       {(() => {
         const deck = videosForDest(it.dest);
@@ -1577,6 +1598,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
           onClose={() => setDayDetailIndex(null)}
         />
+      )}
+
+      {/* ═══ Day score metric drawer (from the day panel tiles) ═══ */}
+      {/* Wrapped in a fixed viewport frame so the Sheet's inset:0 fills the
+          screen (not the tall scroll content) and the drawer shows at the bottom. */}
+      {dayScore && (
+        <div style={{ ...overlayFrame, zIndex: 170 }}>
+          <DayScoreModal
+            metric={dayScore.metric}
+            scoring={dayScore.scoring}
+            allDaysScoring={getAllDaysScoring(daysWithActivities)}
+            currentDayIdx={dayScore.dayIdx}
+            dayLabel={dayScore.dayLabel}
+            onClose={() => setDayScore(null)}
+          />
+        </div>
       )}
 
       {/* ═══ Day-wise Full Screen (Vietnam) ═══ */}

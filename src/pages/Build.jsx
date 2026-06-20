@@ -627,6 +627,19 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
   const tooShort = n < minN;
   const tooLong = n > LONG;
 
+  // Sticky "your route" summary: pinned above Continue, but gives way once the
+  // routes section itself scrolls into view (no duplicate of the same info).
+  const routesRef = useRef(null);
+  const [routesInView, setRoutesInView] = useState(false);
+  useEffect(() => {
+    const el = routesRef.current;
+    if (!el || tooShort || tooLong) { setRoutesInView(false); return; }
+    const io = new IntersectionObserver(([e]) => setRoutesInView(e.isIntersecting), { threshold: 0.01 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [tooShort, tooLong, dest, n]);
+  const totalN = route.reduce((s, x) => s + x.n, 0);
+
   const variants = useMemo(() => routeVariants(dest, n), [dest, n]);
   const filtered = filterCities.length
     ? variants.filter(r => r.some(s => filterCities.includes(s.city)))
@@ -693,6 +706,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
       )}
 
       {/* ── Section 2: curated routes (or an edge-case nudge) ── */}
+      <div ref={routesRef}>
       <p style={sectionHead}>Routes we recommend</p>
 
       {tooShort ? (
@@ -793,28 +807,79 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
         </>
       )}
 
+      </div>
+
+      {/* Sticky selected-route summary — pinned above Continue; hides once the
+          routes section is on screen. Tap to jump to the routes list. */}
+      {!tooShort && !tooLong && !routesInView && (
+        <div
+          onClick={() => routesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          style={{ position: "sticky", bottom: 0, zIndex: 5, margin: "20px -16px -24px", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))", background: C.white, borderTop: `1px solid ${C.div}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: C.inact, letterSpacing: ".3px" }}>YOUR ROUTE</p>
+            <p style={{ margin: "1px 0 0", fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.map(s => `${s.city} ${s.n}N`).join(" · ")}</p>
+          </div>
+          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12.5, fontWeight: 700, color: C.p600, border: `1px solid ${C.p300}`, borderRadius: 20, padding: "6px 12px" }}>
+            <ChevronDown size={13} color={C.p600} /> Change
+          </span>
+        </div>
+      )}
+
       {cityView && <CityDetail dest={dest} city={cityView} onClose={() => setCityView(null)} />}
-      {mapOpen && <RouteMapView dest={dest} route={route} onClose={() => setMapOpen(false)} />}
+      {mapOpen && <RouteMapView dest={dest} nights={n} route={route} setRoute={setRoute} onClose={() => setMapOpen(false)} />}
     </div>
   );
 }
 
-// Read-only fullscreen map for the selected route (no editing on this step).
-function RouteMapView({ dest, route, onClose }) {
-  const totalNights = route.reduce((s, r) => s + r.n, 0);
+// Read-only map for the chosen route. The map frames just the selected cities;
+// a bottom rail of recommended routes lets the user switch and the map re-frames
+// live. No manual editing.
+function RouteMapView({ dest, nights, route, setRoute, onClose }) {
+  const n = nights || route.reduce((s, r) => s + r.n, 0);
+  const variants = useMemo(() => routeVariants(dest, n), [dest, n]);
+  const sigOf = (r) => r.map(s => `${s.city}${s.n}`).join("|");
+  const selectedSig = sigOf(route);
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 65, background: C.white, display: "flex", flexDirection: "column" }}>
       <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
         <button onClick={onClose} style={iconBtn} aria-label="Close map"><XIcon size={20} color={C.head} /></button>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head }}>Your route</p>
-          <p style={{ margin: 0, fontSize: 12, color: C.sub }}>{route.map(s => s.city).join(" · ")} · {totalNights} night{totalNights > 1 ? "s" : ""}</p>
+          <p style={{ margin: 0, fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.map(s => `${s.city} ${s.n}N`).join(" · ")}</p>
         </div>
         <button onClick={onClose} style={{ ...pillBtn, color: C.p600, borderColor: C.p300 }}>Done</button>
       </div>
-      <div style={{ flex: 1, position: "relative", zIndex: 0, isolation: "isolate" }}>
+
+      <div style={{ flex: 1, position: "relative", zIndex: 0, isolation: "isolate", minHeight: 0 }}>
         <LeafletRouteMap dest={dest} route={route} height="100%" interactive={false} />
       </div>
+
+      {/* Recommended routes — tap to switch; the map re-frames live */}
+      {variants.length > 0 && (
+        <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, padding: "12px 0 calc(14px + env(safe-area-inset-bottom))", background: C.white }}>
+          <p style={{ margin: "0 16px 10px", fontSize: 12, fontWeight: 800, color: C.head }}>Recommended routes</p>
+          <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
+            {variants.map((r, idx) => {
+              const on = sigOf(r) === selectedSig;
+              return (
+                <button key={sigOf(r)} onClick={() => setRoute(r)} style={{
+                  flexShrink: 0, width: 230, textAlign: "left", padding: "10px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
+                  border: `${on ? 2 : 1}px solid ${on ? C.p600 : C.div}`, background: on ? C.p100 : C.white,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 5 }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: C.p600, background: C.p100, padding: "2px 7px", borderRadius: 6 }}>{routeVibe(r, dest, idx === 0)}</span>
+                    {on ? <Check size={15} color={C.p600} strokeWidth={2.5} /> : <span style={{ fontSize: 11.5, fontWeight: 700, color: C.p600 }}>Select</span>}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {r.map(s => `${s.city} ${s.n}N`).join(" · ")}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -846,7 +911,9 @@ function LeafletRouteMap({ dest, route, onToggle, height, interactive = true }) 
   const selected = route.map(r => r.city);
   const allPts = areas.map(a => cityCoords[a.city]).filter(Boolean).map(c => [c.lat, c.lng]);
   const linePts = route.map(r => cityCoords[r.city]).filter(Boolean).map(c => [c.lat, c.lng]);
-  const center = allPts[0] || [0, 0];
+  // Editor frames all options; the read-only view frames just the chosen route.
+  const fitPts = interactive ? allPts : (linePts.length ? linePts : allPts);
+  const center = fitPts[0] || [0, 0];
   return (
     <MapContainer
       center={center} zoom={8} style={{ height, width: "100%", background: "#aadaff" }}
@@ -855,7 +922,7 @@ function LeafletRouteMap({ dest, route, onToggle, height, interactive = true }) 
       attributionControl={false}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <FitBounds points={allPts} />
+      <FitBounds points={fitPts} />
       {linePts.length > 1 && <Polyline positions={linePts} pathOptions={{ color: C.p600, weight: 3, dashArray: "7 6" }} />}
       {(interactive ? areas : route).map((a) => {
         const co = cityCoords[a.city]; if (!co) return null;

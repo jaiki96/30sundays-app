@@ -323,7 +323,7 @@ export default function AddOnsSection({ addOns }) {
 
   return (
     <>
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 16 }}>
         <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Add Ons</h4>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
           {ADD_ONS.map(({ key, label, Icon }) => {

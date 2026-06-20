@@ -234,11 +234,13 @@ const METRIC_EXPLAINERS = {
 };
 
 // Per-level tag definitions - used only inside the "other levels" accordion.
+// Generic, feel-based definitions. Pace blends activity time, transit and
+// downtime, so we describe the rhythm of the day rather than a stop count.
 const PACE_DEFS = {
-  Relaxed: "1 stop with plenty of downtime to soak in the place.",
-  Balanced: "2 stops with breaks in between. Moves at a comfortable rhythm.",
-  Active: "3 stops with brisk transitions. Plan for a full day out.",
-  "Fast-paced": "4 or more stops back-to-back, often with a transfer in between.",
+  Relaxed: "An easy, unhurried day with plenty of downtime to soak it all in.",
+  Balanced: "A comfortable rhythm, a few experiences with breathing room in between.",
+  Active: "A fuller day on the go, more to see with shorter pauses between stops.",
+  "Fast-paced": "A packed, high-energy day with lots planned and little idle time.",
 };
 
 const CROWD_DEFS = {

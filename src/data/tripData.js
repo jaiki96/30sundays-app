@@ -64,6 +64,10 @@ export const mockTrips = [
     flights: [
       {
         id: "fl-1",
+        bookingStatus: "booked",
+        pnr: "HK4T9P",
+        webCheckinOpen: false,
+        checkinOpensOn: fmtDisplay(addDays(today, 37)),
         date: fmtDisplay(addDays(today, 39)),
         departTime: "10:50",
         arriveTime: "16:25",
@@ -80,6 +84,9 @@ export const mockTrips = [
       },
       {
         id: "fl-2",
+        bookingStatus: "processing",
+        webCheckinOpen: false,
+        checkinOpensOn: fmtDisplay(addDays(today, 42)),
         date: fmtDisplay(addDays(today, 44)),
         departTime: "08:30",
         arriveTime: "09:45",
@@ -96,6 +103,10 @@ export const mockTrips = [
       },
       {
         id: "fl-3",
+        bookingStatus: "booked",
+        pnr: "QR8M2L",
+        webCheckinOpen: false,
+        checkinOpensOn: fmtDisplay(addDays(today, 44)),
         date: fmtDisplay(addDays(today, 46)),
         departTime: "22:10",
         arriveTime: "01:35",
@@ -114,6 +125,8 @@ export const mockTrips = [
     hotels: [
       {
         id: "ht-1",
+        bookingStatus: "booked",
+        confirmationNo: "AND-884213",
         dayRange: "Day 1 – 4",
         city: "Phuket",
         name: "Andakira Hotel",
@@ -125,6 +138,8 @@ export const mockTrips = [
       },
       {
         id: "ht-2",
+        bookingStatus: "booked",
+        confirmationNo: "DUS-771902",
         dayRange: "Day 4 – 6",
         city: "Krabi",
         name: "Dusit Thani Krabi Beach Resort",
@@ -136,6 +151,7 @@ export const mockTrips = [
       },
       {
         id: "ht-3",
+        bookingStatus: "processing",
         dayRange: "Day 6 – 8",
         city: "Bangkok",
         name: "Centara Watergate Pavilion Hotel",
@@ -487,6 +503,9 @@ export const mockTrips = [
     flights: [
       {
         id: "fl-4",
+        bookingStatus: "booked",
+        pnr: "6E7K3N",
+        webCheckinOpen: true,
         date: fmtDisplay(addDays(today, -3)),
         departTime: "06:15",
         arriveTime: "14:45",
@@ -505,6 +524,8 @@ export const mockTrips = [
     hotels: [
       {
         id: "ht-4",
+        bookingStatus: "booked",
+        confirmationNo: "KOM-553119",
         dayRange: "Day 1 – 4",
         city: "Ubud",
         name: "Komaneka at Bisma",
@@ -516,6 +537,8 @@ export const mockTrips = [
       },
       {
         id: "ht-5",
+        bookingStatus: "booked",
+        confirmationNo: "LEG-662044",
         dayRange: "Day 4 – 6",
         city: "Seminyak",
         name: "The Legian Seminyak",

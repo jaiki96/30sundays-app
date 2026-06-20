@@ -4,6 +4,7 @@ import {
   ArrowLeft, FileText, Receipt, FolderOpen, Ticket, ChevronRight, ChevronDown, ChevronUp,
   Share2, MapPin, Star, MessageCircle, Plane, Users, PalmtreeIcon,
   User as UserIcon, Phone, Pencil, Trash2, Plus, Bell, PlayCircle, Send,
+  X, Download, Hotel, ShieldCheck, BookCheck, Stamp, Clock, Luggage,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
@@ -111,7 +112,7 @@ function PaymentBanner({ trip, navigate }) {
   const remainingLabel = `${remainingCount} Installment${remainingCount > 1 ? "s" : ""} left!`;
 
   return (
-    <div style={{ margin: "0 0 24px" }}>
+    <div style={{ margin: "0 0 16px" }}>
       {/* Top gradient block */}
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "flex-end",
@@ -164,8 +165,143 @@ function PaymentBanner({ trip, navigate }) {
   );
 }
 
+// ─── Tickets & Vouchers bottom sheet ───
+// Five document families: flights, hotels, whole-trip voucher, visa, insurance.
+// Each is grouped under a heading; every row says what it is, which component it
+// covers, and offers a download (or a quiet "not added" state when not purchased).
+function buildTicketGroups(trip) {
+  const flights = (trip?.flights || []).map((f) => ({
+    id: f.id,
+    title: `${f.from?.city || f.from?.code} → ${f.to?.city || f.to?.code}`,
+    meta: `${f.airline} · ${f.date}`,
+    ready: true,
+  }));
+  const hotels = (trip?.hotels || []).map((h) => ({
+    id: h.id,
+    title: h.name,
+    meta: `${h.city} · ${h.dayRange}`,
+    ready: true,
+  }));
+
+  const visa = trip?.addOns?.visa;
+  const insurance = trip?.addOns?.insurance;
+
+  return [
+    {
+      key: "voucher",
+      heading: "Trip voucher",
+      Icon: BookCheck,
+      items: [{
+        id: "trip-voucher",
+        title: `${trip?.destination || "Trip"} confirmation voucher`,
+        meta: "Full booking summary · all components",
+        ready: true,
+      }],
+    },
+    { key: "flights", heading: "Flight tickets", Icon: Plane, items: flights },
+    { key: "hotels", heading: "Hotel vouchers", Icon: Hotel, items: hotels },
+    {
+      key: "visa",
+      heading: "Visa",
+      Icon: Stamp,
+      items: [{
+        id: "visa-doc",
+        title: "e-Visa document",
+        meta: visa?.purchased ? "Approved · ready to download" : "Not added to this trip",
+        ready: !!visa?.purchased,
+      }],
+    },
+    {
+      key: "insurance",
+      heading: "Travel insurance",
+      Icon: ShieldCheck,
+      items: [{
+        id: "insurance-doc",
+        title: "Insurance policy",
+        meta: insurance?.purchased ? "Active · ready to download" : "Not added to this trip",
+        ready: !!insurance?.purchased,
+      }],
+    },
+  ].filter((g) => g.items.length > 0);
+}
+
+function TicketRow({ item, onDownload }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+      padding: "12px 0",
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", margin: "0 0 2px", lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {item.title}
+        </p>
+        <p style={{ fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px" }}>{item.meta}</p>
+      </div>
+      {item.ready ? (
+        <button
+          onClick={() => onDownload(item)}
+          aria-label={`Download ${item.title}`}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            padding: 4, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+          }}
+        >
+          <Download size={19} color="#FD014F" strokeWidth={1.9} />
+        </button>
+      ) : (
+        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 500, color: C.inact }}>Not added</span>
+      )}
+    </div>
+  );
+}
+
+function TicketsSheet({ trip, onClose }) {
+  const groups = buildTicketGroups(trip);
+  const download = (item) => alert(`Downloading\n\n${item.title}`);
+
+  return (
+    <div style={{
+      position: "absolute", inset: 0, zIndex: 100,
+      display: "flex", flexDirection: "column", justifyContent: "flex-end",
+    }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", animation: "fadeInBg 0.2s ease-out" }} />
+      <div style={{
+        position: "relative", background: C.white, borderRadius: "16px 16px 0 0",
+        padding: "16px 20px 32px", maxHeight: "78vh", overflowY: "auto",
+        animation: "sheetSlideUp 0.25s ease-out",
+      }}>
+        {/* Grabber + header */}
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "#E0E2EB", margin: "0 auto 14px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+          <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: 0 }}>Tickets &amp; vouchers</h4>
+          <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", padding: 4, marginRight: -4 }}>
+            <X size={20} color="#666C99" />
+          </button>
+        </div>
+
+        {groups.map((g) => (
+          <div key={g.key} style={{ marginTop: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+              <g.Icon size={16} color="#FD014F" strokeWidth={1.9} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{g.heading}</span>
+            </div>
+            <div>
+              {g.items.map((item, i) => (
+                <div key={item.id} style={{ borderTop: i === 0 ? "none" : "1px solid #F0F1F5" }}>
+                  <TicketRow item={item} onDownload={download} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Documents Section (Figma-styled: solid pink tiles with white icons) ───
 function DocumentsSection({ trip, navigate }) {
+  const [showTickets, setShowTickets] = useState(false);
   const docs = [
     {
       label: "Itinerary PDF",
@@ -175,12 +311,7 @@ function DocumentsSection({ trip, navigate }) {
     {
       label: "Tickets",
       Icon: Ticket,
-      onClick: () => {
-        const flightCount = trip?.flights?.length || 0;
-        alert(flightCount > 0
-          ? `Tickets\n\n${flightCount} flight ticket(s) ready to download.`
-          : "Tickets\n\nYour flight tickets will appear here once flights are confirmed.");
-      },
+      onClick: () => setShowTickets(true),
     },
     {
       label: "Payment Receipts",
@@ -194,7 +325,7 @@ function DocumentsSection({ trip, navigate }) {
     },
   ];
   return (
-    <div style={{ marginBottom: 24 }}>
+    <div style={{ marginBottom: 16 }}>
       <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Documents</h4>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
         {docs.map(d => (
@@ -215,6 +346,7 @@ function DocumentsSection({ trip, navigate }) {
           </button>
         ))}
       </div>
+      {showTickets && <TicketsSheet trip={trip} onClose={() => setShowTickets(false)} />}
     </div>
   );
 }
@@ -364,17 +496,166 @@ function ItineraryGlance({ trip, setDetailTab }) {
 }
 
 // ─── Flight Cards Carousel (Figma-styled: 322px, gray header + body) ───
+// Top-right pill: green "Booked" once confirmed, amber "Processing" until then.
+function BookingStatusBadge({ status }) {
+  const booked = status === "booked";
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600, lineHeight: "16px", padding: "3px 8px", borderRadius: 8,
+      color: booked ? "#2E7D52" : "#A66B00",
+      background: booked ? "#E6F4EC" : "#FEF5E5",
+      border: `1px solid ${booked ? "#BBE3CA" : "#F5D98B"}`,
+    }}>
+      {booked ? "Booked" : "Processing"}
+    </span>
+  );
+}
+
+// Slim full-width footer inside a booked card: a confirmation/PNR ref + a
+// download glyph, tinted green to reinforce the confirmed state.
+function BookingRefBar({ label, value, onDownload }) {
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onDownload(); }}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+        padding: "8px 12px", background: "#E6F4EC", borderTop: "1px solid #BBE3CA", cursor: "pointer",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+        <span style={{ fontSize: 11, color: "#3E8E63", lineHeight: "16px" }}>{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#1B5E3A", letterSpacing: ".3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
+      </div>
+      <Download size={16} color="#2E7D52" strokeWidth={2} style={{ flexShrink: 0 }} />
+    </div>
+  );
+}
+
+// Full flight details, opened from a flight card. Mirrors the planning/exploration
+// detail: route, baggage, web check-in (or its tentative open date), and ticket/PNR.
+function FlightDetailSheet({ flight: fl, onClose }) {
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", animation: "fadeInBg 0.2s ease-out" }} />
+      <div style={{ position: "relative", background: C.white, borderRadius: "16px 16px 0 0", padding: "16px 20px 32px", maxHeight: "84vh", overflowY: "auto", animation: "sheetSlideUp 0.25s ease-out" }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: "#E0E2EB", margin: "0 auto 14px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: 0 }}>Flight details</h4>
+          <button onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", padding: 4, marginRight: -4 }}><X size={20} color="#666C99" /></button>
+        </div>
+
+        {/* Airline + status */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 28, height: 20, borderRadius: 4, background: "#F4F2F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#666C99" }}>{fl.airlineLogo}</div>
+            <span style={{ fontSize: 14, color: "#181E4C" }}>{fl.airline}</span>
+          </div>
+          <BookingStatusBadge status={fl.bookingStatus} />
+        </div>
+
+        {/* Route + times */}
+        <div style={{ borderRadius: 12, border: "1px solid #E0E2EB", padding: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+            <div><span style={{ fontSize: 13, color: "#666C99" }}>{fl.date}</span><div style={{ fontSize: 16, fontWeight: 600, color: "#181E4C" }}>{fl.departTime}</div></div>
+            <div style={{ textAlign: "right" }}><span style={{ fontSize: 13, color: "#666C99" }}>{fl.date}</span><div style={{ fontSize: 16, fontWeight: 600, color: "#181E4C" }}>{fl.arriveTime}</div></div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div><div style={{ fontSize: 20, fontWeight: 600, color: "#181E4C" }}>{fl.from.code}</div><div style={{ fontSize: 13, color: "#FD014F" }}>{fl.from.city}</div></div>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ fontSize: 12, color: "#181E4C" }}>{fl.duration}</div>
+              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
+                <Plane size={16} color="#FDA201" style={{ transform: "rotate(90deg)" }} />
+                <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
+              </div>
+              <div style={{ fontSize: 12, color: "#181E4C" }}>{fl.stops === "Direct" ? "Direct" : fl.stops}</div>
+            </div>
+            <div style={{ textAlign: "right" }}><div style={{ fontSize: 20, fontWeight: 600, color: "#181E4C" }}>{fl.to.code}</div><div style={{ fontSize: 13, color: "#FD014F" }}>{fl.to.city}</div></div>
+          </div>
+        </div>
+
+        {/* Baggage */}
+        {fl.baggage?.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Luggage size={16} color="#FD014F" strokeWidth={1.9} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>Baggage</span>
+            </div>
+            <div style={{ display: "flex", fontSize: 12, color: "#666C99", marginBottom: 6 }}>
+              <span style={{ flex: 1 }}>Traveller</span>
+              <span style={{ flex: 1, textAlign: "center" }}>Cabin</span>
+              <span style={{ flex: 1, textAlign: "right" }}>Check-in</span>
+            </div>
+            {fl.baggage.map((b, i) => (
+              <div key={i} style={{ display: "flex", fontSize: 13, color: "#181E4C", marginBottom: 3 }}>
+                <span style={{ flex: 1 }}>{b.traveler}</span>
+                <span style={{ flex: 1, textAlign: "center" }}>{b.cabin}</span>
+                <span style={{ flex: 1, textAlign: "right" }}>{b.checkin}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Web check-in: live button when open, else tentative date */}
+        <div style={{ marginTop: 16 }}>
+          {fl.webCheckinOpen ? (
+            <button
+              onClick={() => alert(`Web check-in\n\nOpening ${fl.airline} web check-in…`)}
+              style={{ width: "100%", padding: "12px 0", borderRadius: 40, border: "1.5px solid #FD014F", background: "none", color: "#FD014F", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Web check-in
+            </button>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#F9F9FB", border: "1px solid #E0E2EB" }}>
+              <Clock size={16} color="#666C99" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: "#666C99", lineHeight: "17px" }}>
+                Web check-in opens 48 hrs before departure{fl.checkinOpensOn ? ` · around ${fl.checkinOpensOn}` : ""}.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Ticket / PNR */}
+        <div style={{ marginTop: 12 }}>
+          {fl.bookingStatus === "booked" && fl.pnr ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#E6F4EC", border: "1px solid #BBE3CA" }}>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: 11, color: "#3E8E63" }}>PNR</span>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#1B5E3A", letterSpacing: ".3px" }}>{fl.pnr}</div>
+              </div>
+              <button
+                onClick={() => alert(`Downloading\n\nFlight ticket · PNR ${fl.pnr}`)}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8, background: C.white, border: "1px solid #BBE3CA", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+              >
+                <Download size={15} color="#2E7D52" strokeWidth={2} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#2E7D52" }}>Ticket</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#FEF5E5", border: "1px solid #F5D98B" }}>
+              <Clock size={16} color="#A66B00" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: "#A66B00", lineHeight: "17px" }}>Ticket and PNR will appear here once this flight is confirmed.</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FlightsSection({ flights }) {
+  const [openFlight, setOpenFlight] = useState(null);
   if (!flights || flights.length === 0) return null;
   return (
     <div style={{ marginBottom: 24 }}>
-      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", textAlign: "center" }}>Flights</h4>
-      <div className="hs" style={{ gap: 16, paddingLeft: 0, paddingRight: 16 }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Flights</h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {flights.map(fl => (
-          <div key={fl.id} style={{
-            minWidth: 322, maxWidth: 322, flexShrink: 0, background: C.white,
+          <div key={fl.id} onClick={() => setOpenFlight(fl)} style={{
+            width: "100%", background: C.white, cursor: "pointer",
             borderRadius: 16, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)",
-            border: "1px solid #E0E2EB", overflow: "hidden",
+            border: `1px solid ${fl.bookingStatus === "booked" ? "#8FD0AB" : "#E0E2EB"}`,
+            overflow: "hidden",
           }}>
             {/* Header strip: dates + times in gray */}
             <div style={{ padding: "16px 16px 12px", background: "#F9F9FB", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -392,16 +673,19 @@ function FlightsSection({ flights }) {
 
             {/* Body */}
             <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Airline row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 8, borderBottom: "1px solid #E0E2EB" }}>
-                <div style={{
-                  width: 28, height: 20, borderRadius: 4, background: "#F4F2F0",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: "#666C99",
-                }}>
-                  {fl.airlineLogo}
+              {/* Airline row + booking status */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: 8, borderBottom: "1px solid #E0E2EB" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <div style={{
+                    width: 28, height: 20, borderRadius: 4, background: "#F4F2F0",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, fontWeight: 700, color: "#666C99", flexShrink: 0,
+                  }}>
+                    {fl.airlineLogo}
+                  </div>
+                  <span style={{ fontSize: 14, color: "#181E4C", lineHeight: "20px" }}>{fl.airline}</span>
                 </div>
-                <span style={{ fontSize: 14, color: "#181E4C", lineHeight: "20px" }}>{fl.airline}</span>
+                <BookingStatusBadge status={fl.bookingStatus} />
               </div>
 
               {/* Route */}
@@ -427,36 +711,26 @@ function FlightsSection({ flights }) {
                 </div>
               </div>
 
-              {/* Baggage table */}
-              <div style={{ borderTop: "1px solid #E0E2EB", paddingTop: 10 }}>
-                <div style={{ display: "flex", gap: 0, fontSize: 12, color: "#666C99", marginBottom: 6 }}>
-                  <span style={{ flex: 1 }}>Baggage</span>
-                  <span style={{ flex: 1, textAlign: "center" }}>Cabin</span>
-                  <span style={{ flex: 1, textAlign: "right" }}>Check-in</span>
-                </div>
-                {fl.baggage.map((b, i) => (
-                  <div key={i} style={{ display: "flex", fontSize: 12, color: "#181E4C", marginBottom: 2 }}>
-                    <span style={{ flex: 1 }}>{b.traveler}</span>
-                    <span style={{ flex: 1, textAlign: "center" }}>{b.cabin}</span>
-                    <span style={{ flex: 1, textAlign: "right" }}>{b.checkin}</span>
-                  </div>
-                ))}
+              {/* Tap-for-details hint */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: -2 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: "#FD014F" }}>View details</span>
+                <ChevronRight size={15} color="#FD014F" />
               </div>
-
-              {/* Web check-in */}
-              <button
-                onClick={() => alert("Web check-in opens 48 hours before departure.")}
-                style={{
-                  width: "100%", padding: "10px 0", borderRadius: 40,
-                  border: "1.5px solid #FD014F", background: "none", color: "#FD014F",
-                  fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-                }}>
-                Web check-in
-              </button>
             </div>
+
+            {/* PNR + download — only once ticketed */}
+            {fl.bookingStatus === "booked" && fl.pnr && (
+              <BookingRefBar
+                label="PNR"
+                value={fl.pnr}
+                onDownload={() => alert(`Downloading\n\nFlight ticket · PNR ${fl.pnr}`)}
+              />
+            )}
           </div>
         ))}
       </div>
+
+      {openFlight && <FlightDetailSheet flight={openFlight} onClose={() => setOpenFlight(null)} />}
     </div>
   );
 }
@@ -473,20 +747,36 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
       <div
         onClick={goPdp}
         style={{
+          position: "relative",
           background: C.white, borderRadius: 12,
+          border: hotel.bookingStatus === "booked" ? "1px solid #8FD0AB" : "1px solid transparent",
           filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
           cursor: tripId !== undefined ? "pointer" : "default",
           overflow: "hidden",
         }}
       >
+        {/* Booked / Processing pill, top-right over the image */}
+        {hotel.bookingStatus && (
+          <div style={{ position: "absolute", top: 16, right: 16, zIndex: 1 }}>
+            <BookingStatusBadge status={hotel.bookingStatus} />
+          </div>
+        )}
+
         {/* Image block: 8px white inset around the image */}
         <div style={{ padding: 8, background: C.white }}>
-          <div style={{
-            height: 224, borderRadius: "8px 8px 0 0",
-            background: hotel.photo
-              ? `url(${hotel.photo}) center/cover no-repeat`
-              : "#F4F2F0",
-          }} />
+          <img
+            src={hotel.photo || hotel.fallbackPhoto}
+            alt={hotel.name}
+            onError={(e) => {
+              if (hotel.fallbackPhoto && !e.currentTarget.src.endsWith(hotel.fallbackPhoto)) {
+                e.currentTarget.src = hotel.fallbackPhoto;
+              }
+            }}
+            style={{
+              display: "block", width: "100%", height: 224, objectFit: "cover",
+              borderRadius: "8px 8px 0 0", background: "#F4F2F0",
+            }}
+          />
         </div>
 
         {/* Description block */}
@@ -513,6 +803,15 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
             </div>
           </div>
         </div>
+
+        {/* Hotel confirmation no. + download — only once confirmed */}
+        {hotel.bookingStatus === "booked" && hotel.confirmationNo && (
+          <BookingRefBar
+            label="Confirmation"
+            value={hotel.confirmationNo}
+            onDownload={() => alert(`Downloading\n\nHotel voucher · ${hotel.name}\nConfirmation ${hotel.confirmationNo}`)}
+          />
+        )}
       </div>
 
       {/* Get direction button - only on the single Day-wise stay */}
@@ -543,12 +842,11 @@ function HotelsSection({ hotels, tripId }) {
   if (!hotels || hotels.length === 0) return null;
   return (
     <div style={{
-      margin: "0 -16px 0",
-      padding: "24px 20px",
+      marginBottom: 24,
       display: "flex", flexDirection: "column", gap: 16,
     }}>
       <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: 0, lineHeight: "28px" }}>Your hotels</h4>
-      <div className="hs" style={{ gap: 16, paddingRight: 20, marginRight: -20 }}>
+      <div className="hs" style={{ gap: 16, paddingRight: 16, marginRight: -16 }}>
         {hotels.map((ht, idx) => (
           <div key={ht.id} style={{ minWidth: 309, maxWidth: 309, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
             <div>
