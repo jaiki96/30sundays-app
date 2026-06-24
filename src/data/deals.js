@@ -8,7 +8,7 @@ import { allItineraries } from "../data";
 // stale after QUOTE_VALID_DAYS and surface as Expired.
 
 const KEY = "30s_deals_v1";
-const SEED_KEY = "30s_deals_seeded_v5";
+const SEED_KEY = "30s_deals_seeded_v6";
 export const QUOTE_VALID_DAYS = 7;
 
 const DAY = 86400000;
@@ -77,12 +77,14 @@ function demoDeals() {
     id: "demo_maldives", status: "active", dest: "Maldives", title: "Maldives escape", img: malImg,
     customItinerary: null, createdAt: now - 3 * DAY,
     properties: [
+      // Only ONE open (un-finalized) version may exist across all trips at a time
+      // — the single draft is demo_bali_v4. Everything else is a finalized Quote.
       { property: "Adaaran Select", itineraryId: 16, versions: [
         ver("demo_mal_ada_v1", 16, { num: 1, status: "quote", ageDays: 7, pdfAgo: 6 }),
-        ver("demo_mal_ada_v2", 16, { num: 2, status: "draft", ageDays: 0.6, priceAdj: 5000 }),
+        ver("demo_mal_ada_v2", 16, { num: 2, status: "quote", ageDays: 0.6, priceAdj: 5000, pdfAgo: 0 }),
       ] },
       { property: "Sun Siyam Olhuveli", itineraryId: 17, versions: [
-        ver("demo_mal_sun_v1", 17, { num: 1, status: "draft", ageDays: 1 }),
+        ver("demo_mal_sun_v1", 17, { num: 1, status: "quote", ageDays: 1, pdfAgo: 0 }),
       ] },
     ],
   };

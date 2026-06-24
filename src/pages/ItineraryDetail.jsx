@@ -131,6 +131,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [selectedHotelOptions, setSelectedHotelOptions] = useState({}); // { stayIndex: hotel } (per-version)
   const [pendingDayChange, setPendingDayChange] = useState(null); // { dayIndex, option } awaiting confirm
   const [showChanges, setShowChanges] = useState(false); // floating "changes since last version" panel
+  const [leavePrompt, setLeavePrompt] = useState(false); // "discard / create itinerary" on back with unsaved edits
   const [toast, setToast] = useState(null); // { message, undoData } or null
   const toastTimerRef = useRef(null);
   const [showPricingSheet, setShowPricingSheet] = useState(false);
@@ -583,6 +584,33 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     showToast("Changes discarded · back to the original");
   };
 
+  // ─── Back / leave guard ───
+  // Only one open (un-finalized) version may live at a time, so leaving an edited
+  // draft must resolve it: discard the changes, or create the itinerary (lock the
+  // PDF). With no unsaved edits we just leave.
+  const attemptLeave = () => {
+    if (inDeal && hasChanges) { setLeavePrompt(true); return; }
+    navigate(-1);
+  };
+  const createItineraryAndLeave = () => {
+    const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
+    dealsCtx.requestPricing(dealId, versionId, live);
+    setLeavePrompt(false);
+    navigate(-1);
+  };
+  const discardAndLeave = () => {
+    setLeavePrompt(false);
+    if (!quoted) {
+      dealsCtx.discardVersion(dealId, versionId); // never finalized → drop the draft
+    } else {
+      // Revert the stored copy back to the last finalized snapshot.
+      dealsCtx.updateDraft(dealId, versionId, {
+        customizations: { ...(version.customizations || {}), selectedDayOptions: committedDays, selectedHotels: committedHotels },
+      });
+    }
+    navigate(-1);
+  };
+
   return (
     <div style={{ position: "relative" }}>
 
@@ -591,7 +619,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
         {/* Top buttons */}
-        <button onClick={() => navigate(-1)} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
+        <button onClick={attemptLeave} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <ArrowLeft size={18} color="#fff" />
         </button>
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
@@ -1613,6 +1641,37 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             dayLabel={dayScore.dayLabel}
             onClose={() => setDayScore(null)}
           />
+        </div>
+      )}
+
+      {/* ═══ Leave guard: unsaved edits → discard or create the itinerary ═══ */}
+      {leavePrompt && (
+        <div style={{ ...overlayFrame, zIndex: 190, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={() => setLeavePrompt(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }} />
+          <div style={{ position: "relative", width: "100%", maxWidth: 360, background: C.white, borderRadius: 20, padding: 20, boxShadow: "0 12px 40px rgba(0,0,0,0.22)" }}>
+            <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: "0 0 6px" }}>Save your changes?</p>
+            <p style={{ fontSize: 13.5, color: C.sub, margin: "0 0 18px", lineHeight: "20px" }}>
+              You've edited this itinerary but haven't created it yet. Create the itinerary to keep it, or discard your changes.
+            </p>
+            <button
+              onClick={createItineraryAndLeave}
+              style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Create the itinerary
+            </button>
+            <button
+              onClick={discardAndLeave}
+              style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#C2410C", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Discard changes
+            </button>
+            <button
+              onClick={() => setLeavePrompt(false)}
+              style={{ width: "100%", marginTop: 6, padding: "10px 0", border: "none", background: "none", color: C.sub, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Keep editing
+            </button>
+          </div>
         </div>
       )}
 

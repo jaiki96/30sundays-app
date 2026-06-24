@@ -327,6 +327,9 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             navigate(`/itinerary/${itinId}?dealId=${card.dealId ?? card.id}&versionId=${v.id}`);
           };
           const recency = (d) => Math.max(...((d.versions || []).map(v => v.createdAt || 0)), 0);
+          // The single open (un-finalized) version is what the user is mid-edit on —
+          // pin its card to the very top so it's the first thing they see on return.
+          const hasOpenDraft = (d) => (d.versions || []).some(v => v.status === "draft");
           // Maldives → one card per property; every other vacation → one card.
           const toCards = (list) => list.flatMap(deal => deal.properties?.length
             ? deal.properties.map(p => ({ ...deal, id: `${deal.id}__${p.property.replace(/\s+/g, "")}`, dealId: deal.id, property: p.property, itineraryId: p.itineraryId, versions: p.versions, properties: undefined }))
@@ -354,7 +357,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 80px" }} className="hide-scrollbar">
             {activeCards.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {[...activeCards].sort((a, b) => recency(b) - recency(a)).map(card => (
+                {[...activeCards].sort((a, b) => (hasOpenDraft(b) - hasOpenDraft(a)) || (recency(b) - recency(a))).map(card => (
                   <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} />
                 ))}
               </div>
