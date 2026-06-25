@@ -342,7 +342,7 @@ function DocumentsSection({ trip, navigate }) {
       onClick: () => alert(`Itinerary PDF\n\nDownloading your ${trip?.destination || "trip"} itinerary…`),
     },
     {
-      label: "Tickets",
+      label: "Trip Documents",
       Icon: Ticket,
       onClick: () => setShowTickets(true),
     },

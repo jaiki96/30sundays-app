@@ -6,6 +6,10 @@ import UserToggle from "./components/UserToggle";
 import TripNudge from "./components/TripNudge";
 import Home from "./pages/Home";
 import HomeV2 from "./pages/HomeV2";
+import HomeV3 from "./pages/HomeV3";
+import HomeV4 from "./pages/HomeV4";
+import HomeV5 from "./pages/HomeV5";
+import HomeV6 from "./pages/HomeV6";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -26,6 +30,7 @@ import HotelPDP from "./pages/HotelPDP";
 import ReviewHotel from "./pages/ReviewHotel";
 import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
+import TripDocsDemo from "./pages/TripDocsDemo";
 import BookedHotelPDP from "./pages/BookedHotelPDP";
 import ActivityDetail from "./pages/ActivityDetail";
 import PaymentDetails from "./pages/PaymentDetails";
@@ -34,7 +39,14 @@ import Account from "./pages/Account";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
 import WatchDeepLink from "./pages/WatchDeepLink";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Discover from "./pages/Discover";
+import DiscoverRoutes from "./pages/DiscoverRoutes";
+import RoutesCouples from "./pages/RoutesCouples";
+import DiscoverWF from "./pages/DiscoverWF";
+import WishlistWF from "./pages/WishlistWF";
+import RoutesWF from "./pages/RoutesWF";
 import { DealsProvider } from "./data/deals";
+import { SavesProvider } from "./data/saves";
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
@@ -56,6 +68,17 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
         <Route path="/" element={<HomeV2 />} />
+        <Route path="/v3" element={<HomeV3 />} />
+        <Route path="/v4" element={<HomeV4 userState={userState} />} />
+        <Route path="/v5" element={<HomeV5 userState={userState} />} />
+        <Route path="/v6" element={<HomeV6 userState={userState} />} />
+        <Route path="/discover/:name" element={<Discover />} />
+        <Route path="/discover/:name/routes" element={<DiscoverRoutes />} />
+        <Route path="/discover-couples/:name" element={<Discover routesBase="/discover-couples" />} />
+        <Route path="/discover-couples/:name/routes" element={<RoutesCouples />} />
+        <Route path="/wf/:name" element={<DiscoverWF />} />
+        <Route path="/wf/:name/wishlist" element={<WishlistWF />} />
+        <Route path="/wf/:name/routes" element={<RoutesWF />} />
         <Route path="/v1" element={<Home userState={userState} />} />
         <Route path="/chat" element={<ChatScreen />} />
         <Route path="/destination/Maldives" element={<MaldivesDestination />} />
@@ -78,6 +101,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/review-hotel/:itineraryId/:stayIndex" element={<ReviewHotel selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/trips" element={<MyTrips userState={userState} leadData={leadData} />} />
         <Route path="/trips/:tripId" element={<TripDetails />} />
+        <Route path="/trip-docs-demo/:tripId" element={<TripDocsDemo />} />
+        <Route path="/trip-docs-demo" element={<TripDocsDemo />} />
         <Route path="/trips/:tripId/hotel/:hotelIdx" element={<BookedHotelPDP />} />
         <Route path="/trips/:tripId/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
         <Route path="/itinerary/:id/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
@@ -100,6 +125,7 @@ export default function App() {
   return (
     <ErrorBoundary>
     <DealsProvider>
+    <SavesProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -112,6 +138,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </SavesProvider>
     </DealsProvider>
     </ErrorBoundary>
   );
