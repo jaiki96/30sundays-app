@@ -334,7 +334,6 @@ function TicketsSheet({ trip, onClose }) {
 
 // ─── Documents Section (Figma-styled: solid pink tiles with white icons) ───
 function DocumentsSection({ trip, navigate }) {
-  const [showTickets, setShowTickets] = useState(false);
   const docs = [
     {
       label: "Itinerary PDF",
@@ -344,7 +343,7 @@ function DocumentsSection({ trip, navigate }) {
     {
       label: "Trip Documents",
       Icon: Ticket,
-      onClick: () => setShowTickets(true),
+      onClick: () => trip && navigate(`/trips/${trip.id}/documents`),
     },
     {
       label: "Payment Receipts",
@@ -354,7 +353,7 @@ function DocumentsSection({ trip, navigate }) {
     {
       label: "Traveler Documents",
       Icon: FolderOpen,
-      onClick: () => trip && navigate(`/traveler-docs-demo/${trip.id}`),
+      onClick: () => trip && navigate(`/trips/${trip.id}/traveler-documents`),
     },
   ];
   return (
@@ -379,7 +378,6 @@ function DocumentsSection({ trip, navigate }) {
           </button>
         ))}
       </div>
-      {showTickets && <TicketsSheet trip={trip} onClose={() => setShowTickets(false)} />}
     </div>
   );
 }

@@ -102,6 +102,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/review-hotel/:itineraryId/:stayIndex" element={<ReviewHotel selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/trips" element={<MyTrips userState={userState} leadData={leadData} />} />
         <Route path="/trips/:tripId" element={<TripDetails />} />
+        <Route path="/trips/:tripId/documents" element={<TripDocsDemo />} />
+        <Route path="/trips/:tripId/traveler-documents" element={<TravelerDocsDemo />} />
         <Route path="/trip-docs-demo/:tripId" element={<TripDocsDemo />} />
         <Route path="/trip-docs-demo" element={<TripDocsDemo />} />
         <Route path="/traveler-docs-demo/:tripId" element={<TravelerDocsDemo />} />
