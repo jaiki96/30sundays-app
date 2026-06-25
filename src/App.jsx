@@ -31,6 +31,7 @@ import ReviewHotel from "./pages/ReviewHotel";
 import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
 import TripDocsDemo from "./pages/TripDocsDemo";
+import TravelerDocsDemo from "./pages/TravelerDocsDemo";
 import BookedHotelPDP from "./pages/BookedHotelPDP";
 import ActivityDetail from "./pages/ActivityDetail";
 import PaymentDetails from "./pages/PaymentDetails";
@@ -103,6 +104,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/trips/:tripId" element={<TripDetails />} />
         <Route path="/trip-docs-demo/:tripId" element={<TripDocsDemo />} />
         <Route path="/trip-docs-demo" element={<TripDocsDemo />} />
+        <Route path="/traveler-docs-demo/:tripId" element={<TravelerDocsDemo />} />
+        <Route path="/traveler-docs-demo" element={<TravelerDocsDemo />} />
         <Route path="/trips/:tripId/hotel/:hotelIdx" element={<BookedHotelPDP />} />
         <Route path="/trips/:tripId/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
         <Route path="/itinerary/:id/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />

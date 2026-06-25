@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, FileText, BookCheck, Plane, Hotel, Stamp, ShieldCheck,
-  Receipt, Download, ChevronRight, Upload, Check, CreditCard, BookUser,
+  Receipt, Download, ChevronRight, FolderOpen,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, mockTrips } from "../data/tripData";
@@ -13,24 +13,6 @@ const FLIGHT_PLACE_NAMES = {
   KBV: "Krabi", MLE: "Maldives", SGN: "Ho Chi Minh City",
 };
 const flightPlace = (pt) => FLIGHT_PLACE_NAMES[pt?.code] || pt?.city || pt?.code;
-
-// ── Deterministic mock identity data (prototype only) ──
-const hashNum = (s, len) => {
-  let h = 0;
-  for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return String(h).padStart(len, "0").slice(0, len);
-};
-const passportNo = (name) => `Z${hashNum(name, 7)}`;
-const passportExpiry = (name) => {
-  const yr = 2030 + (Number(hashNum(name, 1)) % 5);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const m = months[Number(hashNum(name, 2)) % 12];
-  return `${m} ${yr}`;
-};
-const panNo = (name) => {
-  const letters = (String(name).replace(/[^a-z]/gi, "").toUpperCase() + "ABCDE").slice(0, 5);
-  return `${letters}${hashNum(name, 4)}F`;
-};
 
 // Compute a check-in date string from the trip start + day offset
 const addDaysDisp = (startDisp, n) => {
@@ -92,20 +74,6 @@ function buildHubGroups(trip) {
       }]
     : [];
 
-  // Uploads — Passport + PAN per traveller
-  const passportItems = travelers.map((t, i) => ({
-    id: `pass-${i}`,
-    title: t.name,
-    meta: `No. ${passportNo(t.name)} · Exp ${passportExpiry(t.name)}`,
-    action: i === 0 ? "uploaded" : "upload",
-  }));
-  const panItems = travelers.map((t, i) => ({
-    id: `pan-${i}`,
-    title: t.name,
-    meta: `PAN ${panNo(t.name)}`,
-    action: i === 0 ? "uploaded" : "upload",
-  }));
-
   return {
     provided: [
       { key: "itinerary", heading: "Itinerary", Icon: FileText, items: [
@@ -123,10 +91,6 @@ function buildHubGroups(trip) {
         { id: "receipts", title: "View all payment receipts", meta: "Invoices & installment receipts", action: "navigate" },
       ]},
     ].filter((g) => g.items.length > 0),
-    uploads: [
-      { key: "passport", heading: "Passport", Icon: BookUser, items: passportItems },
-      { key: "pan", heading: "PAN card", Icon: CreditCard, items: panItems },
-    ],
   };
 }
 
@@ -134,16 +98,6 @@ function Row({ item, onAct }) {
   const right = {
     download: <Download size={19} color="#FD014F" strokeWidth={1.9} />,
     navigate: <ChevronRight size={19} color="#FD014F" strokeWidth={1.9} />,
-    upload: (
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#FD014F" }}>
-        <Upload size={14} color="#FD014F" /> Upload
-      </span>
-    ),
-    uploaded: (
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#039855" }}>
-        <Check size={14} color="#039855" /> Uploaded
-      </span>
-    ),
   }[item.action];
 
   return (
@@ -192,7 +146,7 @@ export default function TripDocsDemo() {
   const trip = getTripById(tripId) || getTripById(mockTrips.find(t => t.combinedVoucher)?.id) || mockTrips[1];
   const [toast, setToast] = useState(null);
 
-  const { provided, uploads } = buildHubGroups(trip);
+  const { provided } = buildHubGroups(trip);
 
   const onAct = (item) => {
     if (item.action === "navigate") { navigate(`/trips/${trip.id}/payments`); return; }
@@ -221,9 +175,24 @@ export default function TripDocsDemo() {
         {provided.map((g) => <GroupCard key={g.key} g={g} onAct={onAct} />)}
 
         <div style={{ height: 1, background: "#E0E2EB", margin: "18px 0" }} />
-        <p style={{ fontSize: 12, fontWeight: 600, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 4px" }}>Documents you've shared</p>
-        <p style={{ fontSize: 12, color: "#666C99", margin: "0 0 10px", lineHeight: "17px" }}>Passport & PAN, used to process your visa.</p>
-        {uploads.map((g) => <GroupCard key={g.key} g={g} onAct={onAct} />)}
+        <p style={{ fontSize: 12, fontWeight: 600, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 10px" }}>Documents you've shared</p>
+        <button
+          onClick={() => navigate(`/traveler-docs-demo/${trip.id}`)}
+          style={{
+            display: "flex", alignItems: "center", gap: 12, width: "100%",
+            border: "1px solid #E0E2EB", borderRadius: 12, background: C.white,
+            padding: "14px", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FFF0F4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <FolderOpen size={20} color="#FD014F" strokeWidth={1.9} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: 0 }}>Traveler Documents</p>
+            <p style={{ fontSize: 12, color: "#666C99", margin: "2px 0 0" }}>Passport & PAN, used to process your visa</p>
+          </div>
+          <ChevronRight size={19} color="#FD014F" strokeWidth={1.9} />
+        </button>
 
         <div style={{ height: 24 }} />
       </div>
