@@ -4,8 +4,8 @@ import { C } from "../data";
 
 const ADD_ONS = [
   { key: "visa", label: "Visa", Icon: IdCard },
-  { key: "forex", label: "Forex", Icon: Banknote },
   { key: "insurance", label: "Insurance", Icon: ShieldCheck },
+  { key: "forex", label: "Forex", Icon: Banknote },
 ];
 
 // ─── Tile (white bg + pink icon, green tick badge if included) ───

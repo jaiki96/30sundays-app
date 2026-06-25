@@ -457,6 +457,7 @@ export const mockTrips = [
     destination: "Bali",
     emoji: "🌺",
     status: "ongoing",
+    combinedVoucher: true,
     startDate: fmt(addDays(today, -3)),
     endDate: fmt(addDays(today, 4)),
     startDateDisplay: fmtDisplay(addDays(today, -3)),

@@ -169,22 +169,59 @@ function PaymentBanner({ trip, navigate }) {
 // Five document families: flights, hotels, whole-trip voucher, visa, insurance.
 // Each is grouped under a heading; every row says what it is, which component it
 // covers, and offers a download (or a quiet "not added" state when not purchased).
+// Traveller-known place names (region over airport city where it reads better)
+const FLIGHT_PLACE_NAMES = {
+  DPS: "Bali", LBJ: "Labuan Bajo", HKT: "Phuket", USM: "Koh Samui",
+  KBV: "Krabi", MLE: "Maldives", SGN: "Ho Chi Minh City",
+};
+const flightPlace = (pt) => FLIGHT_PLACE_NAMES[pt?.code] || pt?.city || pt?.code;
+
 function buildTicketGroups(trip) {
+  // Flights — sector only, no code/airline/date
   const flights = (trip?.flights || []).map((f) => ({
     id: f.id,
-    title: `${f.from?.city || f.from?.code} → ${f.to?.city || f.to?.code}`,
-    meta: `${f.airline} · ${f.date}`,
+    title: `${flightPlace(f.from)} → ${flightPlace(f.to)}`,
     ready: true,
   }));
+
+  // Hotels — name + city, no dates/nights
   const hotels = (trip?.hotels || []).map((h) => ({
     id: h.id,
     title: h.name,
-    meta: `${h.city} · ${h.dayRange}`,
+    meta: h.city,
     ready: true,
   }));
 
   const visa = trip?.addOns?.visa;
   const insurance = trip?.addOns?.insurance;
+  const travelers = [trip?.leadTraveler, ...(trip?.coTravelers || [])].filter(Boolean);
+
+  // Visa / insurance — one row per traveler, name only
+  const visaItems = travelers.map((t, i) => ({
+    id: `visa-${i}`,
+    title: t.name,
+    ready: !!visa?.purchased,
+  }));
+  const insuranceItems = travelers.map((t, i) => ({
+    id: `insurance-${i}`,
+    title: t.name,
+    ready: !!insurance?.purchased,
+  }));
+
+  // Combined hotel + activity voucher — only when trip is flagged
+  const combinedGroup = trip?.combinedVoucher
+    ? [{
+        key: "combined",
+        heading: "Hotel + activity voucher",
+        Icon: BookCheck,
+        items: [{
+          id: "combined-voucher",
+          title: "Combined hotel & activity voucher",
+          meta: "Hotels and activities in one document",
+          ready: true,
+        }],
+      }]
+    : [];
 
   return [
     {
@@ -193,35 +230,16 @@ function buildTicketGroups(trip) {
       Icon: BookCheck,
       items: [{
         id: "trip-voucher",
-        title: `${trip?.destination || "Trip"} confirmation voucher`,
+        title: "Complete trip voucher",
         meta: "Full booking summary · all components",
         ready: true,
       }],
     },
+    ...combinedGroup,
     { key: "flights", heading: "Flight tickets", Icon: Plane, items: flights },
     { key: "hotels", heading: "Hotel vouchers", Icon: Hotel, items: hotels },
-    {
-      key: "visa",
-      heading: "Visa",
-      Icon: Stamp,
-      items: [{
-        id: "visa-doc",
-        title: "e-Visa document",
-        meta: visa?.purchased ? "Approved · ready to download" : "Not added to this trip",
-        ready: !!visa?.purchased,
-      }],
-    },
-    {
-      key: "insurance",
-      heading: "Travel insurance",
-      Icon: ShieldCheck,
-      items: [{
-        id: "insurance-doc",
-        title: "Insurance policy",
-        meta: insurance?.purchased ? "Active · ready to download" : "Not added to this trip",
-        ready: !!insurance?.purchased,
-      }],
-    },
+    { key: "visa", heading: "Visa", Icon: Stamp, items: visaItems },
+    { key: "insurance", heading: "Travel insurance", Icon: ShieldCheck, items: insuranceItems },
   ].filter((g) => g.items.length > 0);
 }
 
@@ -232,10 +250,10 @@ function TicketRow({ item, onDownload }) {
       padding: "12px 0",
     }}>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", margin: "0 0 2px", lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", margin: item.meta ? "0 0 2px" : 0, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {item.title}
         </p>
-        <p style={{ fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px" }}>{item.meta}</p>
+        {item.meta && <p style={{ fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px" }}>{item.meta}</p>}
       </div>
       {item.ready ? (
         <button
@@ -280,12 +298,27 @@ function TicketsSheet({ trip, onClose }) {
         </div>
 
         {groups.map((g) => (
-          <div key={g.key} style={{ marginTop: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+          <div key={g.key} style={{
+            marginTop: 14,
+            border: "1px solid #E0E2EB",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}>
+            {/* Section header strip */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "10px 14px",
+              background: "#F9F9FB",
+              borderBottom: "1px solid #E0E2EB",
+            }}>
               <g.Icon size={16} color="#FD014F" strokeWidth={1.9} />
               <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>{g.heading}</span>
+              {g.items.length > 1 && (
+                <span style={{ fontSize: 11, color: "#666C99", marginLeft: "auto" }}>{g.items.length}</span>
+              )}
             </div>
-            <div>
+            {/* Rows */}
+            <div style={{ padding: "0 14px" }}>
               {g.items.map((item, i) => (
                 <div key={item.id} style={{ borderTop: i === 0 ? "none" : "1px solid #F0F1F5" }}>
                   <TicketRow item={item} onDownload={download} />
