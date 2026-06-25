@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -29,6 +29,7 @@ const PREBOOKING_CONSULTANTS = [
 ];
 import { getUpgradeInfo } from "../data/upgradeData";
 import { useDeals, computePrice, effectiveStatus, isExpired, QUOTE_VALID_DAYS, STATUS_LABEL } from "../data/deals";
+import { runLiveCheck, stayState } from "../data/liveCheck";
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
 
@@ -142,6 +143,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [showDayWiseDrawer, setShowDayWiseDrawer] = useState(false);
   const [drawerActiveDay, setDrawerActiveDay] = useState(0);
   const [fetchingPrice, setFetchingPrice] = useState(false); // bottom-bar loader while pricing
+  const [liveResult, setLiveResult] = useState(null); // live availability + price check result
   const [fetchMsgIdx, setFetchMsgIdx] = useState(0); // rotating reassurance copy
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   // International flights: round trip (one paired fare) vs one-way (two separate
@@ -569,13 +571,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const handleGetFinalPrice = () => {
     if (fetchingPrice) return;
     setFetchingPrice(true);
-    // Prototype: simulate a live fetch (real flow may take minutes).
+    // Prototype: a real-time availability + price check. Sold-out stays block the
+    // lock until resolved; price increases auto-apply with a "change?" option.
     setTimeout(() => {
-      const live = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
-      dealsCtx.requestPricing(dealId, versionId, live);
+      const resolved = new Set(Object.keys(selectedHotelOptions || {}).map(Number));
+      const result = runLiveCheck(it, hotels, resolved);
       setFetchingPrice(false);
-      showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
-    }, 3000);
+      setLiveResult(result);
+      if (result.blocking) {
+        showToast("A stay just sold out — pick another to lock your price");
+        document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return; // do not finalize until availability is resolved
+      }
+      const base = computePrice(it.price, selectedDayOptions, selectedHotelOptions);
+      const live = base + result.totalDelta;
+      dealsCtx.requestPricing(dealId, versionId, live);
+      showToast(result.totalDelta > 0
+        ? `Prices updated · +₹${result.totalDelta.toLocaleString("en-IN")}/person at today's rates`
+        : `Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
+    }, 1800);
   };
   const handleDownloadPdf = () => showToast("Quote PDF downloaded (demo)");
   const handleDiscardCopy = () => {
@@ -1014,11 +1028,13 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <Divider />
 
       {/* ═══ 4. Hotels ═══ */}
-      <div>
+      <div id="hotels-section">
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
         <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
           {hotels.map((h, i) => {
             const selfBooked = selfBookedStays.has(i);
+            const ls = stayState(liveResult, i);
+            const soldOut = ls && ls.status === "sold_out";
             if (selfBooked) {
               return (
                 <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
@@ -1038,12 +1054,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             return (
             <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
             <Link to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
-              style={{ borderRadius: 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
+              style={{ borderRadius: 14, border: soldOut ? `1.5px solid ${C.p600}` : `1px solid ${C.div}`, boxShadow: soldOut ? "0 0 0 3px rgba(227,27,83,0.10)" : "none", overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
               <div style={{ padding: "10px 10px 0" }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
               </div>
-              <div style={{ margin: 10, borderRadius: 10, overflow: "hidden", height: 140 }}>
-                <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <div style={{ margin: 10, borderRadius: 10, overflow: "hidden", height: 140, position: "relative" }}>
+                <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: soldOut ? "grayscale(0.5) brightness(0.72)" : "none" }} />
+                {soldOut && (
+                  <span style={{ position: "absolute", top: 8, left: 8, background: C.p600, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999, letterSpacing: "0.3px", boxShadow: "0 1px 6px rgba(0,0,0,0.25)" }}>
+                    Sold out
+                  </span>
+                )}
               </div>
               <div style={{ padding: "0 12px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 2 }}>
@@ -1066,6 +1087,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   </div>
                 </div>
                 <p style={{ fontSize: 11, color: C.sub, margin: "0 0 10px" }}>{h.type}</p>
+                {ls?.status === "price_up" && (
+                  <p style={{ fontSize: 12, color: C.p600, fontWeight: 700, margin: "0 0 10px", lineHeight: "16px" }}>
+                    Price rose +₹{ls.delta.toLocaleString("en-IN")}/person since you saved.
+                  </p>
+                )}
                 {editable && (
                   <span
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
@@ -1081,6 +1107,30 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             );
           })}
         </div>
+
+        {/* Live availability + price check result (hotels only) */}
+        {liveResult && (liveResult.blocking || liveResult.hotelDelta > 0) && (
+          <div style={{
+            margin: "16px 16px 0",
+            background: liveResult.blocking ? "#FEF2F2" : "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)",
+            border: `1.5px solid ${liveResult.blocking ? "#FECACA" : "#E8D5A3"}`,
+            borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {liveResult.blocking ? <AlertTriangle size={16} color="#B91C1C" /> : <RefreshCw size={15} color="#B8860B" />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "18px", display: "block" }}>
+                {liveResult.blocking ? "Availability changed since you saved" : "Live prices updated"}
+              </span>
+              <span style={{ display: "block", fontSize: 12, color: C.sub, lineHeight: "16px", marginTop: 2 }}>
+                {liveResult.blocking
+                  ? `${liveResult.soldOut.length} stay${liveResult.soldOut.length > 1 ? "s" : ""} sold out (${liveResult.soldOut.map(s => s.city).join(", ")}). Pick another to lock your price.`
+                  : `+₹${liveResult.hotelDelta.toLocaleString("en-IN")}/person at today's rates. Your total reflects this.`}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Single hotel-upgrade banner (per-card chips removed) */}
         {upgradeInfo.upgradeCount >= 1 && (
@@ -1532,6 +1582,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         )}
 
+        {/* Activity price change — sits just above the action bar */}
+        {liveResult && liveResult.tour?.delta > 0 && !fetchingPrice && (
+          <div style={{ background: "#FFF8E7", borderTop: "1px solid #E8D5A3", padding: "9px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+            <RefreshCw size={13} color="#B8860B" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: C.head, lineHeight: "16px" }}>
+              <b style={{ fontWeight: 700 }}>{liveResult.tour.name}</b> rose +₹{liveResult.tour.delta.toLocaleString("en-IN")}/person at today's rates. Included in your total.
+            </span>
+          </div>
+        )}
+
         {/* Price + CTA row */}
         <div style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", borderTop: `1px solid ${C.div}` }}>
         {fetchingPrice ? (
@@ -1586,12 +1646,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </button>
             </>
           ) : hasChanges ? (
-            <button data-testid="create-itinerary" onClick={handleGetFinalPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
-              Create Itinerary
+            <button data-testid="create-itinerary" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
+              {fetchingPrice ? "Checking availability…" : "Create Itinerary"}
             </button>
           ) : (
-            <button data-testid="get-final-price" onClick={handleGetFinalPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
-              Get final price
+            <button data-testid="get-final-price" onClick={handleGetFinalPrice} disabled={fetchingPrice} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(227,27,83,0.3)", opacity: fetchingPrice ? 0.7 : 1 }}>
+              {fetchingPrice ? "Checking availability…" : "Get final price"}
             </button>
           )}
         </div>

@@ -9,8 +9,10 @@ const tabs = [
   { to: "/account", label: "Account",  icon: User },
 ];
 
+// Home + its parallel design variants all map to the Explore tab.
+const HOME_ROUTES = ["/", "/v3", "/v4", "/v5", "/v6"];
 // Top-level paths that always show the nav
-const showOn = new Set(["/", "/trips", "/account"]);
+const showOn = new Set([...HOME_ROUTES, "/trips", "/account"]);
 
 // Tokens
 const INACTIVE = "#9097A4";
@@ -28,7 +30,7 @@ export default function BottomNav({ userState }) {
   const visible = showOn.has(pathname) || (pathname === "/plan" && userState !== "new");
   if (!visible) return null;
 
-  const isOn = (to) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
+  const isOn = (to) => (to === "/" ? HOME_ROUTES.includes(pathname) : pathname.startsWith(to));
   const activeIdx = tabs.findIndex((t) => isOn(t.to));
 
   return (

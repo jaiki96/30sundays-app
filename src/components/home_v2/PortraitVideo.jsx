@@ -14,6 +14,7 @@ export default function PortraitVideo({
   topRightSlot,        // node rendered absolute top-right (e.g. duration chip)
   bottomSlot,          // node rendered overlay bottom (e.g. caption)
   topLeftSlot,         // node rendered absolute top-left (e.g. issue stamp)
+  showPlay = true,     // hide the centre play affordance (e.g. video not ready)
   onClick,
 }) {
   const [open, setOpen] = useState(false);
@@ -47,14 +48,16 @@ export default function PortraitVideo({
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.65) 100%)" }} />
 
         {/* Center play */}
-        <div style={{
-          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-          width: 52, height: 52, borderRadius: "50%",
-          background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
-        }}>
-          <Play size={22} color={C.head} fill={C.head} />
-        </div>
+        {showPlay && (
+          <div style={{
+            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+            width: 52, height: 52, borderRadius: "50%",
+            background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+          }}>
+            <Play size={22} color={C.head} fill={C.head} />
+          </div>
+        )}
 
         {topLeftSlot && (
           <div style={{ position: "absolute", top: 10, left: 10 }}>{topLeftSlot}</div>
