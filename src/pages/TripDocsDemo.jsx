@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft, FileText, BookCheck, Plane, Hotel, Stamp, ShieldCheck,
-  Receipt, Download, ChevronRight,
+  ArrowLeft, BookCheck, Plane, Hotel, Stamp, ShieldCheck,
+  Download, ChevronRight,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, mockTrips } from "../data/tripData";
@@ -76,9 +76,6 @@ function buildHubGroups(trip) {
 
   return {
     provided: [
-      { key: "itinerary", heading: "Itinerary", Icon: FileText, items: [
-        { id: "itinerary-pdf", title: "Trip itinerary PDF", meta: "Day-by-day plan", action: "download" },
-      ]},
       { key: "activity", heading: "Activity voucher", Icon: BookCheck, items: [
         { id: "trip-voucher", title: "Complete trip voucher", meta: `${start} → ${end}`, action: "download" },
         ...combined,
@@ -87,9 +84,6 @@ function buildHubGroups(trip) {
       { key: "hotels", heading: "Hotels", Icon: Hotel, items: hotels },
       ...(visaItems.length ? [{ key: "visa", heading: "Visa", Icon: Stamp, items: visaItems }] : []),
       ...(insuranceItems.length ? [{ key: "insurance", heading: "Insurance", Icon: ShieldCheck, items: insuranceItems }] : []),
-      { key: "receipts", heading: "Payment receipts", Icon: Receipt, items: [
-        { id: "receipts", title: "View all payment receipts", meta: "Invoices & installment receipts", action: "navigate" },
-      ]},
     ].filter((g) => g.items.length > 0),
   };
 }
