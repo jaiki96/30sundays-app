@@ -84,7 +84,12 @@ function buildHubGroups(trip) {
     : [];
 
   const combined = trip?.combinedVoucher
-    ? [{ id: "combined", title: "Combined hotel & activity voucher", meta: "Hotels + activities in one file", action: "download" }]
+    ? [{
+        id: "combined",
+        title: "Combined hotel & activity voucher",
+        lines: [...(trip?.hotels || []).map((h) => h.name), "All activities"],
+        action: "download",
+      }]
     : [];
 
   // Uploads — Passport + PAN per traveller
@@ -151,8 +156,11 @@ function Row({ item, onAct }) {
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", margin: item.meta ? "0 0 2px" : 0, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</p>
+        <p style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", margin: (item.meta || item.lines) ? "0 0 2px" : 0, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</p>
         {item.meta && <p style={{ fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.meta}</p>}
+        {item.lines && item.lines.map((line, i) => (
+          <p key={i} style={{ fontSize: 12, color: "#666C99", margin: i === 0 ? 0 : "2px 0 0", lineHeight: "16px" }}>{line}</p>
+        ))}
       </div>
       <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>{right}</span>
     </button>
