@@ -354,7 +354,7 @@ function DocumentsSection({ trip, navigate }) {
     {
       label: "Traveler Documents",
       Icon: FolderOpen,
-      onClick: () => alert(`Traveler Documents\n\nUpload IDs, visa pages, vaccination certificates here.`),
+      onClick: () => trip && navigate(`/traveler-docs-demo/${trip.id}`),
     },
   ];
   return (

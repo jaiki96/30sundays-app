@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, FileText, BookCheck, Plane, Hotel, Stamp, ShieldCheck,
-  Receipt, Download, ChevronRight, FolderOpen,
+  Receipt, Download, ChevronRight,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, mockTrips } from "../data/tripData";
@@ -171,28 +171,7 @@ export default function TripDocsDemo() {
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px" }} className="hide-scrollbar">
-        <p style={{ fontSize: 12, fontWeight: 600, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 10px" }}>Your travel documents</p>
         {provided.map((g) => <GroupCard key={g.key} g={g} onAct={onAct} />)}
-
-        <div style={{ height: 1, background: "#E0E2EB", margin: "18px 0" }} />
-        <p style={{ fontSize: 12, fontWeight: 600, color: "#666C99", textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 10px" }}>Documents you've shared</p>
-        <button
-          onClick={() => navigate(`/traveler-docs-demo/${trip.id}`)}
-          style={{
-            display: "flex", alignItems: "center", gap: 12, width: "100%",
-            border: "1px solid #E0E2EB", borderRadius: 12, background: C.white,
-            padding: "14px", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-          }}
-        >
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FFF0F4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <FolderOpen size={20} color="#FD014F" strokeWidth={1.9} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: 0 }}>Traveler Documents</p>
-            <p style={{ fontSize: 12, color: "#666C99", margin: "2px 0 0" }}>Passport & PAN, used to process your visa</p>
-          </div>
-          <ChevronRight size={19} color="#FD014F" strokeWidth={1.9} />
-        </button>
 
         <div style={{ height: 24 }} />
       </div>
