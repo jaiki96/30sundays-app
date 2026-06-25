@@ -138,7 +138,7 @@ function GetCTA({ label }) {
 }
 
 // ─── Document row (purchased state) ───
-function DocumentRow({ available, label, url }) {
+function DocumentRow({ available, label, meta, url }) {
   if (available) {
     return (
       <a href={url || "#"} target="_blank" rel="noreferrer" style={{
@@ -152,9 +152,9 @@ function DocumentRow({ available, label, url }) {
         }}>
           <FileText size={18} color={C.p600} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{label}</p>
-          <p style={{ fontSize: 12, color: C.p600, margin: "2px 0 0", fontWeight: 500 }}>Tap to view</p>
+          <p style={{ fontSize: 12, color: meta ? C.sub : C.p600, margin: "2px 0 0", fontWeight: meta ? 400 : 500 }}>{meta || "Tap to view"}</p>
         </div>
         <ExternalLink size={16} color={C.sub} />
       </a>
@@ -180,7 +180,7 @@ function DocumentRow({ available, label, url }) {
 }
 
 // ─── Visa Sheet ───
-function VisaSheet({ state, onClose }) {
+function VisaSheet({ state, travelers = [], onClose }) {
   const purchased = state?.purchased;
 
   return (
@@ -204,11 +204,15 @@ function VisaSheet({ state, onClose }) {
               We'll email you the visa PDF as soon as it's stamped - usually within 1 business day of departure.
             </p>
           </div>
-          <DocumentRow
-            available={Boolean(state?.documentUrl)}
-            url={state?.documentUrl}
-            label="Your visa document"
-          />
+          {(travelers.length ? travelers : [{ name: "Your visa document" }]).map((t, i) => (
+            <DocumentRow
+              key={i}
+              available={Boolean(state?.documentUrl)}
+              url={state?.documentUrl}
+              label={t.name}
+              meta="e-Visa document"
+            />
+          ))}
         </>
       ) : (
         <div style={{ background: C.bg, borderRadius: 14, padding: 16 }}>
@@ -233,7 +237,7 @@ function VisaSheet({ state, onClose }) {
 }
 
 // ─── Insurance Sheet ───
-function InsuranceSheet({ state, onClose }) {
+function InsuranceSheet({ state, travelers = [], onClose }) {
   const purchased = state?.purchased;
 
   return (
@@ -265,7 +269,8 @@ function InsuranceSheet({ state, onClose }) {
           <DocumentRow
             available={Boolean(state?.documentUrl)}
             url={state?.documentUrl}
-            label="Your insurance policy"
+            label="Travel insurance policy"
+            meta={travelers.length ? travelers.map((t) => t.name).join(", ") : undefined}
           />
         </>
       ) : (
@@ -318,7 +323,7 @@ function ForexSheet({ onClose }) {
 }
 
 // ─── Main Section ───
-export default function AddOnsSection({ addOns }) {
+export default function AddOnsSection({ addOns, travelers = [] }) {
   const [openKey, setOpenKey] = useState(null);
 
   return (
@@ -341,8 +346,8 @@ export default function AddOnsSection({ addOns }) {
         </div>
       </div>
 
-      {openKey === "visa" && <VisaSheet state={addOns?.visa} onClose={() => setOpenKey(null)} />}
-      {openKey === "insurance" && <InsuranceSheet state={addOns?.insurance} onClose={() => setOpenKey(null)} />}
+      {openKey === "visa" && <VisaSheet state={addOns?.visa} travelers={travelers} onClose={() => setOpenKey(null)} />}
+      {openKey === "insurance" && <InsuranceSheet state={addOns?.insurance} travelers={travelers} onClose={() => setOpenKey(null)} />}
       {openKey === "forex" && <ForexSheet onClose={() => setOpenKey(null)} />}
     </>
   );

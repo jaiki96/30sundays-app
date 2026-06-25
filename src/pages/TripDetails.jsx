@@ -351,7 +351,7 @@ function DocumentsSection({ trip, navigate }) {
       onClick: () => trip && navigate(`/trips/${trip.id}/payments`),
     },
     {
-      label: "Traveler Documents",
+      label: "Personal Documents",
       Icon: FolderOpen,
       onClick: () => trip && navigate(`/trips/${trip.id}/traveler-documents`),
     },
@@ -1948,7 +1948,7 @@ export default function TripDetails() {
           {!isCompleted && <PaymentBanner trip={trip} navigate={navigate} />}
 
           <DocumentsSection trip={trip} navigate={navigate} />
-          {trip.addOns && <AddOnsSection addOns={trip.addOns} />}
+          {trip.addOns && <AddOnsSection addOns={trip.addOns} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
           <CoTravelersSection trip={trip} />
           <ItineraryGlance trip={trip} setDetailTab={setDetailTab} />
           <FlightsSection flights={trip.flights} />

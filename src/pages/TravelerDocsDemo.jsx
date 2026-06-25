@@ -72,7 +72,7 @@ export default function TravelerDocsDemo() {
         </button>
         <div>
           <p style={{ fontSize: 11, color: "#666C99", margin: 0 }}>{trip.tripName}</p>
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#181E4C", margin: 0 }}>Traveler Documents</p>
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#181E4C", margin: 0 }}>Personal Documents</p>
         </div>
       </div>
 
