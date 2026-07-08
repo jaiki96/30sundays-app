@@ -5,12 +5,18 @@ import {
   Share2, MapPin, Star, MessageCircle, Plane, Users, PalmtreeIcon,
   User as UserIcon, Phone, Pencil, Trash2, Plus, Bell, PlayCircle, Send,
   X, Download, Hotel, ShieldCheck, BookCheck, Stamp, Clock, Luggage,
+  Play, SkipBack, SkipForward, Volume2, Maximize,
 } from "lucide-react";
 import { C } from "../data";
 import { getTripById, getCountdown } from "../data/tripData";
+import { getMauritiusInclusionsByName } from "../data/mauritiusData";
 import ConsultantCard from "../components/ConsultantCard";
 import AddOnsSection from "../components/AddOnsSection";
+import InclusionsDrawer from "../components/InclusionsDrawer";
+import HotelStayCard from "../components/HotelStayCard";
+import RouteMap from "../components/JourneyMap";
 import { buildActivityDetail } from "../data/activityData";
+import { Sparkles } from "lucide-react";
 
 // ─── Simplified 2-tab bottom nav for trip details ───
 function TripBottomNav() {
@@ -332,6 +338,11 @@ function TicketsSheet({ trip, onClose }) {
   );
 }
 
+// ─── Thick full-bleed band that physically separates sections ───
+function SectionDivider() {
+  return <div style={{ height: 12, background: "#F1F2F6", margin: "0 -16px 24px" }} aria-hidden="true" />;
+}
+
 // ─── Documents Section (Figma-styled: solid pink tiles with white icons) ───
 function DocumentsSection({ trip, navigate }) {
   const docs = [
@@ -359,22 +370,17 @@ function DocumentsSection({ trip, navigate }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Documents</h4>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
         {docs.map(d => (
           <button key={d.label} onClick={d.onClick} style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            gap: 6, padding: 0, background: "none", border: "none",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+            gap: 8, padding: "12px 6px", minHeight: 84,
+            background: C.white, border: "1px solid #E0E2EB", borderRadius: 12,
+            boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)",
             cursor: "pointer", fontFamily: "inherit",
           }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 12, background: C.white,
-              border: "1px solid #E0E2EB",
-              boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <d.Icon size={22} color="#FD014F" strokeWidth={1.8} />
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 400, color: "#181E4C", textAlign: "center", lineHeight: "16px" }}>{d.label}</span>
+            <d.Icon size={22} color="#FD014F" strokeWidth={1.8} />
+            <span style={{ fontSize: 11, fontWeight: 400, color: "#181E4C", textAlign: "center", lineHeight: "14px" }}>{d.label}</span>
           </button>
         ))}
       </div>
@@ -388,20 +394,17 @@ function CoTravelersSection({ trip }) {
   return (
     <>
       <div style={{
-        background: "#F9F9FB",
-        borderTop: "1px solid #E0E2EB",
-        borderBottom: "1px solid #E0E2EB",
-        padding: "24px 20px",
-        margin: "0 -16px 24px",
+        background: C.white,
+        padding: "0 4px 4px",
+        marginBottom: 24,
       }}>
         <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 4px", lineHeight: "28px" }}>Manage co-travelers</h4>
         <p style={{ fontSize: 14, color: "#666C99", margin: "0 0 12px", lineHeight: "20px" }}>Invite the ones who makes every journey special.</p>
         <button
           onClick={() => setShowSheet(true)}
-          style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 4 }}
+          style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}
         >
-          <span style={{ fontSize: 14, fontWeight: 500, color: "#FD014F" }}>Add guest</span>
-          <ChevronRight size={16} color="#FD014F" />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#FD014F" }}>See Guests</span>
         </button>
       </div>
 
@@ -596,7 +599,7 @@ function FlightDetailSheet({ flight: fl, onClose }) {
               <div style={{ fontSize: 12, color: "#181E4C" }}>{fl.duration}</div>
               <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                 <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
-                <Plane size={16} color="#FDA201" style={{ transform: "rotate(90deg)" }} />
+                <Plane size={16} color="#FDA201" style={{ transform: "rotate(45deg)" }} />
                 <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
               </div>
               <div style={{ fontSize: 12, color: "#181E4C" }}>{fl.stops === "Direct" ? "Direct" : fl.stops}</div>
@@ -689,15 +692,15 @@ function FlightsSection({ flights }) {
             overflow: "hidden",
           }}>
             {/* Header strip: dates + times in gray */}
-            <div style={{ padding: "16px 16px 12px", background: "#F9F9FB", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ padding: "14px 16px 10px", background: "#F9F9FB", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 400, color: "#666C99", lineHeight: "20px" }}>{fl.date}</span>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", lineHeight: "22px" }}>{fl.departTime}</span>
+                  <span style={{ fontSize: 12, fontWeight: 400, color: "#666C99", lineHeight: "16px" }}>{fl.date}</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{fl.departTime}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end" }}>
-                  <span style={{ fontSize: 14, fontWeight: 400, color: "#666C99", lineHeight: "20px" }}>{fl.date}</span>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", lineHeight: "22px" }}>{fl.arriveTime}</span>
+                  <span style={{ fontSize: 12, fontWeight: 400, color: "#666C99", lineHeight: "16px" }}>{fl.date}</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", lineHeight: "20px" }}>{fl.arriveTime}</span>
                 </div>
               </div>
             </div>
@@ -722,25 +725,43 @@ function FlightsSection({ flights }) {
               {/* Route */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div>
-                  <div style={{ fontSize: 20, fontWeight: 600, color: "#181E4C", lineHeight: "28px" }}>{fl.from.code}</div>
-                  <div style={{ fontSize: 14, color: "#FD014F", lineHeight: "20px" }}>{fl.from.city}</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", lineHeight: "24px" }}>{fl.from.code}</div>
+                  <div style={{ fontSize: 12, color: "#FD014F", lineHeight: "16px" }}>{fl.from.city}</div>
                 </div>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <div style={{ fontSize: 12, color: "#181E4C", lineHeight: "16px" }}>{fl.duration}</div>
+                  <div style={{ fontSize: 11, color: "#181E4C", lineHeight: "16px" }}>{fl.duration}</div>
                   <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                     <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
-                    <Plane size={16} color="#FDA201" style={{ transform: "rotate(90deg)" }} />
+                    <Plane size={16} color="#FDA201" style={{ transform: "rotate(45deg)" }} />
                     <div style={{ flex: 1, height: 0, borderTop: "1px dashed #E0E2EB" }} />
                   </div>
-                  <div style={{ fontSize: 12, color: "#181E4C", lineHeight: "16px" }}>
+                  <div style={{ fontSize: 11, color: "#181E4C", lineHeight: "16px" }}>
                     {fl.stops === "Direct" ? "Direct" : fl.stops}
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 20, fontWeight: 600, color: "#181E4C", lineHeight: "28px" }}>{fl.to.code}</div>
-                  <div style={{ fontSize: 14, color: "#FD014F", lineHeight: "20px" }}>{fl.to.city}</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", lineHeight: "24px" }}>{fl.to.code}</div>
+                  <div style={{ fontSize: 12, color: "#FD014F", lineHeight: "16px" }}>{fl.to.city}</div>
                 </div>
               </div>
+
+              {/* Baggage allowance per traveller */}
+              {fl.baggage?.length > 0 && (
+                <div style={{ paddingTop: 12, borderTop: "1px solid #E0E2EB" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C" }}>Baggage</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C", textAlign: "center" }}>Cabin</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#181E4C", textAlign: "center" }}>Check-in</span>
+                  </div>
+                  {fl.baggage.map((b, bi) => (
+                    <div key={bi} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 4 }}>
+                      <span style={{ fontSize: 12.5, color: "#666C99" }}>Traveler {bi + 1}</span>
+                      <span style={{ fontSize: 12.5, color: "#666C99", textAlign: "center" }}>{b.cabin}</span>
+                      <span style={{ fontSize: 12.5, color: "#666C99", textAlign: "center" }}>{b.checkin}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Tap-for-details hint */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: -2 }}>
@@ -769,81 +790,51 @@ function FlightsSection({ flights }) {
 // ─── Hotel Cards Carousel (Figma-styled: Day label above, rating + Booking.com badge) ───
 function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDirection = false }) {
   const navigate = useNavigate();
+  const [showIncl, setShowIncl] = useState(false);
   const directionUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${hotel.name}, ${hotel.city}`)}`;
   const goPdp = () => tripId !== undefined && navigate(`/trips/${tripId}/hotel/${hotelIdx}`);
+  const inclusions = getMauritiusInclusionsByName(hotel.name);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: fullWidth ? "100%" : undefined }}>
-      {/* Offering card */}
-      <div
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, width: fullWidth ? "100%" : undefined }}>
+      <HotelStayCard
+        image={hotel.photo || hotel.fallbackPhoto}
+        fallbackImage={hotel.fallbackPhoto}
+        imageAlt={hotel.name}
+        imageHeight={fullWidth ? 200 : 170}
+        dayLabel={hotel.dayRange}
+        topRightBadge={hotel.bookingStatus ? <BookingStatusBadge status={hotel.bookingStatus} /> : undefined}
+        stars={hotel.stars}
+        ratingScore={hotel.bookingRating}
+        name={hotel.name}
+        roomType={hotel.roomType}
+        city={hotel.address || hotel.city}
         onClick={goPdp}
-        style={{
-          position: "relative",
-          background: C.white, borderRadius: 12,
-          border: hotel.bookingStatus === "booked" ? "1px solid #8FD0AB" : "1px solid transparent",
-          filter: "drop-shadow(0 4px 16px rgba(15,23,42,0.06))",
-          cursor: tripId !== undefined ? "pointer" : "default",
-          overflow: "hidden",
-        }}
-      >
-        {/* Booked / Processing pill, top-right over the image */}
-        {hotel.bookingStatus && (
-          <div style={{ position: "absolute", top: 16, right: 16, zIndex: 1 }}>
-            <BookingStatusBadge status={hotel.bookingStatus} />
-          </div>
-        )}
-
-        {/* Image block: 8px white inset around the image */}
-        <div style={{ padding: 8, background: C.white }}>
-          <img
-            src={hotel.photo || hotel.fallbackPhoto}
-            alt={hotel.name}
-            onError={(e) => {
-              if (hotel.fallbackPhoto && !e.currentTarget.src.endsWith(hotel.fallbackPhoto)) {
-                e.currentTarget.src = hotel.fallbackPhoto;
-              }
-            }}
-            style={{
-              display: "block", width: "100%", height: 224, objectFit: "cover",
-              borderRadius: "8px 8px 0 0", background: "#F4F2F0",
-            }}
-          />
-        </div>
-
-        {/* Description block */}
-        <div style={{ padding: "8px 12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {/* Rating row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Star size={20} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-              <span style={{ fontSize: 14, fontWeight: 500, color: "#4EAC7E", lineHeight: "20px" }}>{hotel.stars} star hotel</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#003580", padding: "2px 4px", borderRadius: 3 }}>B</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", lineHeight: "20px" }}>{hotel.bookingRating} Rated</span>
-            </div>
-          </div>
-
-          {/* Meta */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <h5 style={{ fontSize: 14, fontWeight: 500, color: "#000", margin: 0, lineHeight: "20px" }}>{hotel.name}</h5>
-            <p style={{ fontSize: 12, color: "#666C99", margin: 0, lineHeight: "16px" }}>{hotel.roomType}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <MapPin size={14} color="#666C99" />
-              <span style={{ fontSize: 12, color: "#666C99", lineHeight: "16px" }}>{hotel.address || hotel.city}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Hotel confirmation no. + download — only once confirmed */}
-        {hotel.bookingStatus === "booked" && hotel.confirmationNo && (
+        showChevron={tripId !== undefined}
+        confirmationBar={hotel.bookingStatus === "booked" && hotel.confirmationNo ? (
           <BookingRefBar
             label="Confirmation"
             value={hotel.confirmationNo}
             onDownload={() => alert(`Downloading\n\nHotel voucher · ${hotel.name}\nConfirmation ${hotel.confirmationNo}`)}
           />
-        )}
-      </div>
+        ) : undefined}
+      />
+
+      {/* View special inclusions - a light secondary link; perks open in a drawer */}
+      {inclusions && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowIncl(true); }}
+          style={{
+            alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 5,
+            marginTop: -4, padding: "2px 0",
+            background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+            color: "#FD014F", fontSize: 13, fontWeight: 500,
+          }}
+        >
+          <Sparkles size={13} color="#FD014F" />
+          View special inclusions
+        </button>
+      )}
 
       {/* Get direction button - only on the single Day-wise stay */}
       {showGetDirection && (
@@ -865,6 +856,15 @@ function BookedHotelCard({ hotel, tripId, hotelIdx, fullWidth = false, showGetDi
           Get direction
         </a>
       )}
+
+      {showIncl && (
+        <InclusionsDrawer
+          hotelName={hotel.name}
+          city={hotel.city}
+          inclusions={inclusions}
+          onClose={() => setShowIncl(false)}
+        />
+      )}
     </div>
   );
 }
@@ -879,11 +879,7 @@ function HotelsSection({ hotels, tripId }) {
       <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: 0, lineHeight: "28px" }}>Your hotels</h4>
       <div className="hs" style={{ gap: 16, paddingRight: 16, marginRight: -16 }}>
         {hotels.map((ht, idx) => (
-          <div key={ht.id} style={{ minWidth: 309, maxWidth: 309, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 500, color: "#181E4C", lineHeight: "22px" }}>{ht.dayRange}</div>
-              <div style={{ fontSize: 14, color: "#666C99", lineHeight: "20px" }}>{ht.city}</div>
-            </div>
+          <div key={ht.id} style={{ minWidth: 309, maxWidth: 309, flexShrink: 0 }}>
             <BookedHotelCard hotel={ht} tripId={tripId} hotelIdx={idx} />
           </div>
         ))}
@@ -939,6 +935,33 @@ function ThirtySundaysPass({ trip }) {
 }
 
 // ─── Journey Map (Figma-styled with floating "View on map" pill) ───
+// Real interactive map (the same Leaflet map used in explore/planning), with a
+// "Journey map" heading and a "View on map" shortcut. Coordinates come from the
+// shared cityCoords (real lat/lng), so pins sit in their true spots.
+function TripJourneyMap({ trip }) {
+  const cities = trip.journeyMapCities || [];
+  if (!cities.length) return null;
+  const nightsByCity = {};
+  (trip.dayWise || []).forEach((d) => { nightsByCity[d.city] = (nightsByCity[d.city] || 0) + 1; });
+  const stops = cities.map((c) => ({ city: c.name, n: nightsByCity[c.name] || 1 }));
+  const handleViewMap = () => {
+    const q = cities.map((c) => c.name).join(",");
+    window.open(`https://www.google.com/maps/dir/${encodeURIComponent(q)}`, "_blank");
+  };
+  return (
+    <div style={{ background: C.white, padding: "24px 20px", margin: "0 -16px", borderTop: "1px solid #E0E2EB", borderBottom: "1px solid #E0E2EB" }}>
+      <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px", textAlign: "center", lineHeight: "28px" }}>Journey map</h4>
+      <div style={{ position: "relative" }}>
+        <RouteMap stops={stops} height={244} />
+        <button onClick={handleViewMap} style={{ position: "absolute", right: 12, bottom: 12, zIndex: 1000, display: "flex", alignItems: "center", gap: 8, background: C.white, border: "1px solid #E0E2EB", borderRadius: 40, padding: "10px 20px", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(0,0,0,0.15)" }}>
+          <MapPin size={16} color="#181E4C" />
+          <span style={{ fontSize: 14, fontWeight: 500, color: "#181E4C" }}>View on map</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function JourneyMap({ cities }) {
   if (!cities || cities.length === 0) return null;
   const handleViewMap = () => {
@@ -1487,18 +1510,21 @@ function DatePicker({ days, selectedDay, onSelect }) {
             key={i}
             onClick={() => onSelect(i)}
             style={{
-              width: 56, height: 54, flexShrink: 0,
-              borderRadius: 12, padding: 8,
+              minWidth: 116, flexShrink: 0,
+              borderRadius: 12, padding: "10px 16px",
               border: active ? "none" : "1px solid #E0E2EB",
               background: active ? "#FD014F" : C.white, cursor: "pointer",
               display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
+              alignItems: "flex-start", gap: 4,
               fontFamily: "inherit",
               transition: "all 0.15s",
             }}
           >
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: "22px", color: active ? "#fff" : "#181E4C" }}>{dayNum}</span>
-            <span style={{ fontSize: 12, fontWeight: 400, lineHeight: "16px", color: active ? "#fff" : "#181E4C" }}>{monthShort}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, lineHeight: "20px", color: active ? "#fff" : "#181E4C" }}>{monthShort} {dayNum}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <MapPin size={12} color={active ? "rgba(255,255,255,0.9)" : "#666C99"} />
+              <span style={{ fontSize: 11, fontWeight: 400, lineHeight: "15px", color: active ? "rgba(255,255,255,0.9)" : "#666C99", whiteSpace: "nowrap" }}>{d.city}</span>
+            </span>
           </button>
         );
       })}
@@ -1784,6 +1810,141 @@ function ReviewsSection() {
   );
 }
 
+// ─── Day-wise: video player hero (styled, prototype) ───
+function DayVideoPlayer({ day }) {
+  const poster = day.activities?.[0]?.photo;
+  const duration = day.videoDuration || "02:34";
+  return (
+    <div style={{ margin: "16px 20px 0", borderRadius: 12, overflow: "hidden", position: "relative", aspectRatio: "16/9", background: poster ? `url(${poster}) center/cover no-repeat` : "#0C0F26" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(12,15,38,0.35)" }} />
+      {/* Top-right controls */}
+      <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 10 }}>
+        <Volume2 size={20} color="#fff" />
+      </div>
+      {/* Center transport controls */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 36 }}>
+        <SkipBack size={22} color="rgba(255,255,255,0.85)" fill="rgba(255,255,255,0.85)" />
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Play size={26} color="#fff" fill="#fff" />
+        </div>
+        <SkipForward size={22} color="rgba(255,255,255,0.85)" fill="rgba(255,255,255,0.85)" />
+      </div>
+      {/* Bottom bar: time + fullscreen */}
+      <div style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 11, color: "#fff", fontWeight: 500 }}>00:00 / {duration}</span>
+          <Maximize size={15} color="#fff" />
+        </div>
+        <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.35)", position: "relative" }}>
+          <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 10, height: 10, borderRadius: "50%", background: "#FD014F" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Day-wise: "Experience your journey" + numbered activity list ───
+function ExperienceSection({ day, tripId, dayIdx }) {
+  const navigate = useNavigate();
+  const acts = day.activities || [];
+  if (!acts.length) return null;
+  return (
+    <div style={{ padding: "20px 20px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+        <h4 style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", margin: 0, lineHeight: "22px" }}>Experience your journey</h4>
+        <button onClick={() => navigate(`/trips/${tripId}/day/${dayIdx}/activity/0`)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: C.white, border: "1px solid #E0E2EB", borderRadius: 40, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+          <Play size={13} color="#181E4C" fill="#181E4C" />
+          <span style={{ fontSize: 13, fontWeight: 500, color: "#181E4C" }}>Play all</span>
+        </button>
+      </div>
+      {day.experienceTitle && (
+        <h5 style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: "0 0 14px", lineHeight: "20px" }}>{day.experienceTitle}</h5>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {acts.map((act, i) => (
+          <div key={i} onClick={() => navigate(`/trips/${tripId}/day/${dayIdx}/activity/${i}`)} style={{ display: "flex", gap: 12, cursor: "pointer", alignItems: "flex-start" }}>
+            <span style={{ fontSize: 12, color: "#666C99", width: 12, flexShrink: 0, paddingTop: 40 }}>{i + 1}</span>
+            <div style={{ position: "relative", width: 120, height: 100, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: act.photo ? `url(${act.photo}) center/cover no-repeat` : "#F4F2F0" }}>
+              <div style={{ position: "absolute", right: 8, bottom: 8, width: 20, height: 20, borderRadius: 6, background: "#181E4C", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Play size={10} color="#fff" fill="#fff" />
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#181E4C", margin: "0 0 4px", lineHeight: "20px" }}>{act.title}</p>
+              <p style={{ fontSize: 12.5, color: "#666C99", margin: "0 0 6px", lineHeight: "18px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{act.description}</p>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#FD014F" }}>Explore</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Day-wise: compact "Hotel" card (Day range badge + rating + chevron) ───
+function CompactHotelCard({ hotel, trip }) {
+  const navigate = useNavigate();
+  if (!hotel) return null;
+  const matchIdx = trip?.hotels?.findIndex((h) => h.name === hotel.name);
+  const canNav = matchIdx !== undefined && matchIdx >= 0;
+  const dayRange = canNav ? trip.hotels[matchIdx].dayRange : null;
+  return (
+    <div style={{ background: C.white, padding: "24px 20px" }}>
+      <h4 style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", margin: "0 0 14px", lineHeight: "22px" }}>Hotel</h4>
+      <HotelStayCard
+        image={hotel.photo}
+        imageAlt={hotel.name}
+        imageHeight={170}
+        dayLabel={dayRange}
+        stars={hotel.stars}
+        ratingScore={hotel.bookingRating}
+        name={hotel.name}
+        roomType={hotel.roomType}
+        city={hotel.city}
+        showChevron={canNav}
+        onClick={() => canNav && navigate(`/trips/${trip.id}/hotel/${matchIdx}`)}
+      />
+    </div>
+  );
+}
+
+// ─── Day-wise: Discover (Restaurants + Shopping) ───
+function DiscoverRow({ title, items }) {
+  if (!items?.length) return null;
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <h5 style={{ fontSize: 15, fontWeight: 600, color: "#181E4C", margin: 0, lineHeight: "22px" }}>{title}</h5>
+        <span style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 13, fontWeight: 500, color: "#FD014F" }}>View all <ChevronRight size={15} color="#FD014F" /></span>
+      </div>
+      <div className="hs" style={{ gap: 12, paddingRight: 16 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ width: 108, flexShrink: 0 }}>
+            <div style={{ width: 108, height: 112, borderRadius: 12, background: it.photo ? `url(${it.photo}) center/cover no-repeat` : "#F4F2F0", marginBottom: 8 }} />
+            <p style={{ fontSize: 14, fontWeight: 500, color: "#181E4C", margin: "0 0 3px", lineHeight: "18px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{it.name}</p>
+            <p style={{ fontSize: 11.5, color: "#666C99", margin: 0, lineHeight: "15px" }}>{it.city}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DiscoverSection({ day }) {
+  const restaurants = day.restaurants || [];
+  const shopping = day.shopping || [];
+  if (!restaurants.length && !shopping.length) return null;
+  return (
+    <div style={{ background: C.white, padding: "24px 20px" }}>
+      <h4 style={{ fontSize: 16, fontWeight: 600, color: "#181E4C", margin: "0 0 18px", lineHeight: "22px" }}>Discover</h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <DiscoverRow title="Restaurants" items={restaurants} />
+        <DiscoverRow title="Shopping" items={shopping} />
+      </div>
+    </div>
+  );
+}
+
 function DayWiseTab({ trip }) {
   const days = trip.dayWise;
   const [selectedDay, setSelectedDay] = useState(0);
@@ -1801,15 +1962,13 @@ function DayWiseTab({ trip }) {
   return (
     <div style={{ background: C.white }}>
       <DatePicker days={days} selectedDay={selectedDay} onSelect={setSelectedDay} />
-      <DayHero day={day} />
-      <ActivityCards activities={day.activities} city={day.city} tripId={trip.id} dayIdx={selectedDay} />
-      <DayHotelCard hotel={day.hotel} trip={trip} />
-      <HighlightsSection day={day} />
-      <AIChatbotCard />
-      <ReviewsSection />
-      <div style={{ padding: "0 16px" }}>
-        <JourneyMap cities={trip.journeyMapCities} />
+      <DayVideoPlayer day={day} />
+      <ExperienceSection day={day} tripId={trip.id} dayIdx={selectedDay} />
+      <div style={{ padding: "24px 16px 0" }}>
+        <TripJourneyMap trip={trip} />
       </div>
+      <CompactHotelCard hotel={day.hotel} trip={trip} />
+      <DiscoverSection day={day} />
     </div>
   );
 }
@@ -1949,9 +2108,13 @@ export default function TripDetails() {
 
           <DocumentsSection trip={trip} navigate={navigate} />
           {trip.addOns && <AddOnsSection addOns={trip.addOns} travelers={[trip.leadTraveler, ...(trip.coTravelers || [])].filter(Boolean)} />}
+          <SectionDivider />
           <CoTravelersSection trip={trip} />
+          <SectionDivider />
           <ItineraryGlance trip={trip} setDetailTab={setDetailTab} />
+          <SectionDivider />
           <FlightsSection flights={trip.flights} />
+          <SectionDivider />
           {trip.consultant && (
             <div style={{ marginBottom: 24 }}>
               <h4 style={{ fontSize: 18, fontWeight: 600, color: C.head, margin: "0 0 12px" }}>
@@ -1964,12 +2127,13 @@ export default function TripDetails() {
               />
             </div>
           )}
+          <SectionDivider />
           <HotelsSection hotels={trip.hotels} tripId={trip.id} />
-          <ThirtySundaysPass trip={trip} />
-          <JourneyMap cities={trip.journeyMapCities} />
+          <SectionDivider />
+          <TripJourneyMap trip={trip} />
 
           {/* Before You Go (hide for completed) */}
-          {!isCompleted && trip.beforeYouGo && <BeforeYouGo data={trip.beforeYouGo} />}
+          {!isCompleted && trip.beforeYouGo && <><SectionDivider /><BeforeYouGo data={trip.beforeYouGo} /></>}
 
           {/* Completed trip CTA */}
           {isCompleted && (

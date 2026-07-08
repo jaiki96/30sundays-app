@@ -1,14 +1,19 @@
+import { useState } from "react";
 import { GlassPlay } from "./EduSingleCard";
 import SundaySchoolMasthead from "./SundaySchoolMasthead";
+import LessonViewer from "./LessonViewer";
 
 // Sunday School - series carousel (multi-video).
 // Editorial masthead + horizontal-scroll video tiles. Each tile is the poster
 // only (no white body) with the title overlaid bottom-left in DM Serif white.
+// Tapping a tile opens it full-screen with a wishlist strip for whatever
+// places/activities that lesson covers (see LessonViewer).
 export default function EduMultiCarousel({
   lessons,
   valueTitle = "The full series",
   tagline,            // pass "" to suppress the byline on repeat SS sections
 }) {
+  const [active, setActive] = useState(null);
   return (
     <div style={{
       background: "#FCF4CC",
@@ -22,17 +27,19 @@ export default function EduMultiCarousel({
       </div>
 
       <div className="hs" style={{ gap: 12, padding: "4px 16px 4px" }}>
-        {lessons.map((l, i) => <LessonCard key={i} l={l} />)}
+        {lessons.map((l, i) => <LessonCard key={i} l={l} onOpen={() => setActive(l)} />)}
       </div>
+
+      {active && <LessonViewer lesson={active} onClose={() => setActive(null)} />}
     </div>
   );
 }
 
-function LessonCard({ l }) {
+function LessonCard({ l, onOpen }) {
   // Title source: prefer hook, fall back to tag.
   const title = l.hook || l.tag || "";
   return (
-    <div style={{
+    <div onClick={onOpen} style={{
       flex: "0 0 220px", width: 220,
       position: "relative",
       borderRadius: 16, overflow: "hidden",
@@ -40,6 +47,7 @@ function LessonCard({ l }) {
       boxShadow: "0 2px 8px rgba(24,29,39,0.06)",
       height: 300,
       background: "#d6cfc4",
+      cursor: "pointer",
     }}>
       {l.poster && (
         <img

@@ -700,6 +700,282 @@ export const mockTrips = [
     ],
   },
 
+  // ── Trip 4: Upcoming Mauritius honeymoon (starts in ~28 days) ──
+  {
+    id: "trip-4",
+    tripName: "Aditya's Mauritius Honeymoon",
+    destination: "Mauritius",
+    emoji: "🇲🇺",
+    status: "upcoming",
+    combinedVoucher: true,
+    startDate: fmt(addDays(today, 28)),
+    endDate: fmt(addDays(today, 34)),
+    startDateDisplay: fmtDisplay(addDays(today, 28)),
+    endDateDisplay: fmtDisplay(addDays(today, 34)),
+    nightsBreakdown: "3N Grand Baie • 3N Belle Mare",
+    totalNights: 6,
+    heroImages: [
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=900&q=80&auto=format&fit=crop",
+      "https://images.bingo.travel/Images/Hotel/Hero/Big/24730bb8-f5b9-46e3-a058-9b1182ffd07c_b.jpeg",
+      "https://images.bingo.travel/Images/Hotel/Hero/Big/1e648dcc-b5d5-410f-a942-b053611df573_b.jpeg",
+    ],
+    totalPackageValue: 339992,
+    amountPaid: 170000,
+    installments: [
+      { id: 1, label: "Installment 1", date: fmtDisplay(addDays(today, -6)), amount: 85000, status: "paid" },
+      { id: 2, label: "Installment 2", date: fmtDisplay(addDays(today, -1)), amount: 85000, status: "paid" },
+      { id: 3, label: "Installment 3", date: fmtDisplay(addDays(today, 10)), amount: 85000, status: "due" },
+      { id: 4, label: "Installment 4", date: fmtDisplay(addDays(today, 21)), amount: 84992, status: "pending" },
+    ],
+    documents: {
+      itineraryPdf: "#",
+      paymentReceipts: [
+        { id: 1, label: "Receipt #1", url: "#" },
+        { id: 2, label: "Receipt #2", url: "#" },
+      ],
+      travelerDocuments: [],
+    },
+    leadTraveler: { name: "Aditya Kulkarni", phone: "+91 99887 66554", role: "Lead traveler" },
+    coTravelers: [{ name: "Sneha Kulkarni", phone: "+91 99887 66555", role: "Co-traveler" }],
+    consultant: { name: "Sana Kapoor", phone: "+919876500044" },
+    addOns: {
+      visa: { purchased: false },
+      insurance: { purchased: true, documentUrl: "#" },
+      forex: { enabled: true },
+    },
+    itineraryDays: [
+      { day: 1, city: "Grand Baie", activities: ["Arrive at Mauritius airport", "Transfer to Grand Baie", "Beach evening at LUX* Grand Baie"] },
+      { day: 2, city: "Grand Baie", activities: ["North catamaran cruise", "Snorkeling stop", "Sundowner at Bisou rooftop"] },
+      { day: 3, city: "Grand Baie", activities: ["Grand Baie town & shopping", "Couple spa session", "Beachfront dinner"] },
+      { day: 4, city: "Belle Mare", activities: ["Transfer to Belle Mare", "Check-in at LUX* Belle Mare", "Lagoon swim"] },
+      { day: 5, city: "Belle Mare", activities: ["Île aux Cerfs day trip", "Water sports", "Private beach dinner"] },
+      { day: 6, city: "Belle Mare", activities: ["Leisure morning", "Transfer to airport", "Departure"] },
+    ],
+    flights: [
+      {
+        id: "fl-6",
+        bookingStatus: "booked",
+        pnr: "MK4Q8P",
+        webCheckinOpen: false,
+        date: fmtDisplay(addDays(today, 28)),
+        departTime: "21:40",
+        arriveTime: "03:35",
+        airline: "Air Mauritius",
+        airlineLogo: "MK",
+        from: { code: "BOM", city: "Mumbai" },
+        to: { code: "MRU", city: "Mauritius" },
+        duration: "6h 25m",
+        stops: "Non-stop",
+        baggage: [
+          { traveler: "Trav 1", cabin: "7 Kg", checkin: "23 Kg" },
+          { traveler: "Trav 2", cabin: "7 Kg", checkin: "23 Kg" },
+        ],
+      },
+    ],
+    hotels: [
+      {
+        id: "ht-6",
+        bookingStatus: "booked",
+        confirmationNo: "LUXGB-771204",
+        dayRange: "Day 1 – 4",
+        city: "Grand Baie",
+        name: "LUX* Grand Baie",
+        roomType: "Junior Suite Ocean View",
+        stars: 5,
+        bookingRating: 9.2,
+        photo: "https://images.bingo.travel/Images/Hotel/Hero/Big/24730bb8-f5b9-46e3-a058-9b1182ffd07c_b.jpeg",
+        fallbackPhoto: "https://images.bingo.travel/Images/Hotel/Hero/Big/24730bb8-f5b9-46e3-a058-9b1182ffd07c_b.jpeg",
+      },
+      {
+        id: "ht-7",
+        bookingStatus: "booked",
+        confirmationNo: "LUXBM-668190",
+        dayRange: "Day 4 – 6",
+        city: "Belle Mare",
+        name: "LUX* Belle Mare",
+        roomType: "Prestige Junior Suite",
+        stars: 5,
+        bookingRating: 9.0,
+        photo: "https://images.bingo.travel/Images/Hotel/Hero/Big/1e648dcc-b5d5-410f-a942-b053611df573_b.jpeg",
+        fallbackPhoto: "https://images.bingo.travel/Images/Hotel/Hero/Big/1e648dcc-b5d5-410f-a942-b053611df573_b.jpeg",
+      },
+    ],
+    journeyMapCities: [
+      { name: "Grand Baie", number: 1 },
+      { name: "Belle Mare", number: 2 },
+    ],
+    beforeYouGo: {
+      moneySim: {
+        title: "Money & SIM", icon: "💰", subtitle: "Cash, cards and connectivity sorted for two",
+        currencyRates: [
+          { label: "1 USD", value: "₹83 INR" },
+          { label: "1 INR", value: "0.55 MUR" },
+          { label: "1 USD", value: "45 MUR" },
+        ],
+        forex: {
+          intro: "International debit and credit cards are widely accepted across Mauritius. Carry approx 100 USD per person as backup cash. The local currency is the Mauritian Rupee (MUR).",
+          options: [
+            { icon: "💳", text: "Card: best for hotels, restaurants and resorts. Use a no or low forex-fee card (eg: Niyo) where possible." },
+            { icon: "💵", text: "Cash: useful for local markets, small purchases and tips. Carry some MUR for everyday spends." },
+          ],
+          warning: "At card machines, always pay in MUR (not INR). Paying in INR triggers Dynamic Currency Conversion and costs extra. Some smaller vendors and markets are cash-only.",
+        },
+        sim: {
+          title: "SIM & Connectivity",
+          intro: "Fill the mandatory Mauritius All-in-One Travel Form before arrival, then pick up a local SIM at the airport.",
+          options: [
+            { icon: "🌐", text: "All-in-One Travel Form (mandatory): complete online within 72 hours of arrival at safemauritius.govmu.org. Save the QR code and PDF, and carry a printed copy." },
+            { icon: "📶", text: "Local SIM at the airport: activation 5-10 minutes, approx ₹800-1,200. Passport required." },
+            { icon: "📲", text: "Wi-Fi is available at most hotels and public areas. The local SIM plus hotel wifi combo is usually enough." },
+            { icon: "🔄", text: "International roaming: activate a Jio, Airtel or Vi pack before departure for OTPs and banking alerts. Not recommended for heavy data." },
+          ],
+        },
+      },
+      packing: {
+        title: "Packing", icon: "🧳", subtitle: "Because 'I thought you packed it' isn't a plan",
+        checklist: [
+          { item: "Passport (valid 6+ months)", emoji: "🛂", person: "essential", checked: false },
+          { item: "Travel Form QR / PDF (printed copy too)", emoji: "🛂", person: "essential", checked: false },
+          { item: "Flight tickets + hotel confirmations", emoji: "🎫", person: "essential", checked: false },
+          { item: "Travel insurance + forex card & PIN", emoji: "💳", person: "essential", checked: false },
+          { item: "Light cotton dresses (5-6)", emoji: "👗", person: "her", checked: false },
+          { item: "Swimwear (2-3) + cover-up", emoji: "👙", person: "her", checked: false },
+          { item: "Sunhat + light jacket (evenings)", emoji: "👒", person: "her", checked: false },
+          { item: "Cotton t-shirts (5-6)", emoji: "👕", person: "his", checked: false },
+          { item: "Shorts (3-4) + swimwear (2)", emoji: "🩳", person: "his", checked: false },
+          { item: "Walking sandals + flip flops", emoji: "🩴", person: "his", checked: false },
+          { item: "1 dinner outfit each", emoji: "👔", person: "his", checked: false },
+          { item: "Phone chargers + cables", emoji: "🔌", person: "essential", checked: false },
+          { item: "Power bank (hand luggage)", emoji: "🔋", person: "essential", checked: false },
+          { item: "Universal adapter (Type C/G, 230V)", emoji: "🔌", person: "essential", checked: false },
+          { item: "Sunscreen SPF 50+ & sunglasses", emoji: "🧴", person: "essential", checked: false },
+          { item: "Insect repellent + ORS sachets", emoji: "🦟", person: "essential", checked: false },
+          { item: "Day backpack + waterproof phone pouch", emoji: "🎒", person: "essential", checked: false },
+        ],
+      },
+      atDestination: {
+        title: "At Your Destination", icon: "✈️", subtitle: "From touchdown to check-in, stress-free",
+        arrivalSteps: [
+          { icon: "✈️", title: "Before landing", description: "Complete web check-in and fill the Mauritius All-in-One Travel Form online (soft copy accepted): safemauritius.govmu.org" },
+          { icon: "🛂", title: "Immigration", description: "Have ready: passport, travel form confirmation, return flight details and hotel booking confirmation." },
+          { icon: "📶", title: "Get connected", description: "Buy a local SIM at the airport counters (passport required, ~5-10 min). Or use hotel wifi if you'd rather skip it." },
+          { icon: "🧳", title: "Collect luggage", description: "Check screens for your belt number. Confirm baggage allowance with your airline in advance." },
+          { icon: "🚗", title: "Meet your driver", description: "Your driver waits in the arrivals area with a placard showing your name. Private transfers run as per your itinerary." },
+        ],
+        foodDining: {
+          title: "Food & Water",
+          dishes: [
+            { name: "Dholl Puri", description: "Flatbread with split peas", veg: true },
+            { name: "Gateau Piment", description: "Spicy lentil fritters", veg: true },
+            { name: "Farata", description: "Flaky griddle bread", veg: true },
+            { name: "Rougaille", description: "Creole tomato stew", veg: false },
+            { name: "Mine Frite", description: "Mauritian fried noodles", veg: false },
+            { name: "Boulettes", description: "Steamed dumplings in broth", veg: false },
+          ],
+          tip: "Drink bottled or filtered water only. Vegetarian food is easily available across most restaurants and hotels, alongside Indian, continental and Creole cuisine.",
+        },
+      },
+      goodToKnow: {
+        title: "Good to Know", icon: "⚠️", subtitle: "Local know-how for a smooth trip together",
+        sections: [
+          { icon: "🔒", title: "Safety", text: "Mauritius is very safe for tourists. Keep valuables secure and use the hotel safe where available. Carry some cash for local markets and small purchases, as not everywhere accepts cards." },
+          { icon: "🌊", title: "Beach & Water Safety", text: "Follow local guidelines at beaches and during water activities. Conditions and currents vary between beaches. Listen to your operator's safety briefing before snorkeling, diving or watersports." },
+        ],
+        electricityNote: "Type C & G plugs, 230V. Carry a universal adapter. Mauritius is UTC+4, 1.5 hours behind India (IST).",
+      },
+      emergencyContacts: {
+        title: "Emergency Contacts", icon: "🆘", subtitle: "Hope you never need this, but just in case",
+        screenshotWarning: "Screenshot this section for offline access.",
+        numbers: [
+          { label: "General Emergency", number: "112 / 999" },
+          { label: "Police", number: "999 / 112" },
+          { label: "Ambulance (SAMU)", number: "114" },
+          { label: "Fire & Rescue", number: "115 / 995" },
+          { label: "Tourist Police", number: "+230 8321926" },
+        ],
+        hospitals: [
+          { name: "Wellkin Hospital (Moka)", phone: "+230 605 1000", mapUrl: "#" },
+          { name: "C-Care Clinique Darne (Floreal)", phone: "+230 601 2300", mapUrl: "#" },
+          { name: "Grand Bay Medical Centre (Grand Baie)", phone: "+230 263 1212", mapUrl: "#" },
+        ],
+      },
+    },
+    dayWise: (() => {
+      const UN = "https://images.unsplash.com/photo-";
+      const q = "?w=900&q=80&auto=format&fit=crop";
+      const IMG = {
+        catamaran: UN + "1544551763-46a013bb70d5" + q,
+        dolphin: UN + "1607153333879-c174d265f1d2" + q,
+        beach: UN + "1590490360182-c33d57733427" + q,
+        lagoon: UN + "1571003123894-1f0594d2b5d9" + q,
+        island: UN + "1512058564366-18510be2db19" + q,
+        waterfall: UN + "1432405972618-c60b0225b8f9" + q,
+        earth: UN + "1502786129293-79981df4e689" + q,
+        palms: UN + "1439066615861-d1af74d74000" + q,
+        spa: UN + "1540555700478-4be289fbecef" + q,
+        food: UN + "1414235077428-338989a2e8c0" + q,
+        rest2: UN + "1517248135467-4c7edcad34c4" + q,
+        rest3: UN + "1555396273-367ea4eb4db5" + q,
+        shop1: UN + "1481437156560-3205f6a55735" + q,
+        shop2: UN + "1441984904996-e0b6ba687e04" + q,
+        shop3: UN + "1513125370-3460ebe3401b" + q,
+      };
+      const luxGB = { name: "LUX* Grand Baie", stars: 5, bookingRating: 9.2, roomType: "Junior Suite Ocean View", city: "Grand Baie", photo: "https://images.bingo.travel/Images/Hotel/Hero/Big/24730bb8-f5b9-46e3-a058-9b1182ffd07c_b.jpeg" };
+      const luxBM = { name: "LUX* Belle Mare", stars: 5, bookingRating: 9.0, roomType: "Prestige Junior Suite", city: "Belle Mare", photo: "https://images.bingo.travel/Images/Hotel/Hero/Big/1e648dcc-b5d5-410f-a942-b053611df573_b.jpeg" };
+      const shopGB = [
+        { name: "Grand Baie Bazaar", city: "Grand Baie", photo: IMG.shop1 },
+        { name: "Super U Grand Baie", city: "Grand Baie", photo: IMG.shop2 },
+        { name: "La Croisette Mall", city: "Grand Baie", photo: IMG.shop3 },
+      ];
+      const shopBM = [
+        { name: "Flacq Market", city: "Belle Mare", photo: IMG.shop2 },
+        { name: "Trou d'Eau Douce boutiques", city: "Belle Mare", photo: IMG.shop1 },
+        { name: "Bo'Valon Mall", city: "Mahebourg", photo: IMG.shop3 },
+      ];
+      const restGB = [
+        { name: "Bisou Rooftop", cuisine: "Mediterranean", rating: 4.7, priceRange: "₹2,500 - 4,500", city: "Grand Baie", photo: IMG.food },
+        { name: "Cafe La Plage", cuisine: "Seafood", rating: 4.6, priceRange: "₹1,800 - 3,500", city: "Grand Baie", photo: IMG.rest2 },
+        { name: "Luigi's", cuisine: "Italian", rating: 4.5, priceRange: "₹1,500 - 3,000", city: "Grand Baie", photo: IMG.rest3 },
+      ];
+      const restBM = [
+        { name: "Amari Restaurant", cuisine: "Indian", rating: 4.7, priceRange: "₹2,000 - 3,800", city: "Belle Mare", photo: IMG.food },
+        { name: "The Beach House", cuisine: "Grill", rating: 4.6, priceRange: "₹2,200 - 4,000", city: "Belle Mare", photo: IMG.rest2 },
+        { name: "Duck Laundry", cuisine: "Asian", rating: 4.5, priceRange: "₹2,000 - 3,600", city: "Belle Mare", photo: IMG.rest3 },
+      ];
+      const day = (offset, dayNumber, city, hotel, experienceTitle, activities, restaurants, shopping) => ({
+        date: fmt(addDays(today, offset)),
+        dateDisplay: fmtDisplay(addDays(today, offset)),
+        dayNumber, city, hotel, experienceTitle, activities, restaurants, shopping,
+      });
+      return [
+        day(28, 1, "Grand Baie", luxGB, "Arrival & Grand Baie Beach", [
+          { title: "Arrive in Mauritius", venue: "SSR International Airport", description: "Land in Mauritius and transfer north to Grand Baie. Settle in at LUX* Grand Baie and unwind by the lagoon.", photo: IMG.beach },
+          { title: "Beach evening", venue: "Grand Baie beachfront", description: "Ease into island time with a sunset stroll along the powder-soft sand and a welcome drink at the rooftop bar.", photo: IMG.palms },
+        ], restGB, shopGB),
+        day(29, 2, "Grand Baie", luxGB, "North Coast Catamaran Cruise", [
+          { title: "North catamaran cruise", venue: "Grand Baie jetty", description: "Full-day catamaran sail along the north coast with snorkeling stops, a barbecue lunch on board and swims in turquoise water.", photo: IMG.catamaran },
+          { title: "Snorkeling stop", venue: "Coin de Mire", description: "Snorkel over coral gardens near the islands off the north coast, with gear provided on the boat.", photo: IMG.lagoon },
+        ], restGB, shopGB),
+        day(30, 3, "Grand Baie", luxGB, "Grand Baie Town, Spa & Leisure", [
+          { title: "Grand Baie town and shopping", venue: "Grand Baie village", description: "Browse the boutiques, local markets and cafes of Grand Baie, the lively hub of the north.", photo: IMG.island },
+          { title: "Couple spa session", venue: "LUX* Grand Baie Spa", description: "A relaxing couples massage and time at the spa to recharge before dinner.", photo: IMG.spa },
+        ], restGB, shopGB),
+        day(31, 4, "Belle Mare", luxBM, "Transfer East & Belle Mare Lagoon", [
+          { title: "Transfer to Belle Mare", venue: "East coast road", description: "Scenic drive to the east coast. Check in at LUX* Belle Mare on one of the island's finest white-sand beaches.", photo: IMG.beach },
+          { title: "Lagoon swim", venue: "Belle Mare beach", description: "Float in the calm, shallow lagoon and settle into the quieter rhythm of the east coast.", photo: IMG.lagoon },
+        ], restBM, shopBM),
+        day(32, 5, "Belle Mare", luxBM, "Ile aux Cerfs & Water Sports", [
+          { title: "Ile aux Cerfs day trip", venue: "Ile aux Cerfs", description: "Boat across to the postcard island of Ile aux Cerfs for beaches, lagoon swims and optional water sports.", photo: IMG.island },
+          { title: "Water sports", venue: "Belle Mare lagoon", description: "Try kayaking, glass-bottom boat rides and paddleboarding in the sheltered lagoon.", photo: IMG.catamaran },
+        ], restBM, shopBM),
+        day(33, 6, "Belle Mare", luxBM, "Leisure Morning & Departure", [
+          { title: "Leisure morning", venue: "LUX* Belle Mare", description: "A slow final morning by the pool and beach before checkout.", photo: IMG.palms },
+          { title: "Transfer to airport", venue: "SSR International Airport", description: "Private transfer back to the airport for your flight home, with time to spare.", photo: IMG.beach },
+        ], restBM, shopBM),
+      ];
+    })(),
+  },
+
   // ── Trip 3: Completed Vietnam ──
   {
     id: "trip-3",

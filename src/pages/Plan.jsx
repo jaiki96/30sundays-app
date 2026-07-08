@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, X as XIcon, ChevronDown, Search, Heart, MapPin, Sparkles, Plus } from "lucide-react";
 import { C, destinations, allItineraries } from "../data";
 import TripPlanCard from "../components/TripPlanCard";
@@ -129,6 +129,13 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
   const [welcomeFadingOut, setWelcomeFadingOut] = useState(false);
   // Bottom "older plans" accordion (closed/expired vacations), collapsed by default.
   const [showOlder, setShowOlder] = useState(false);
+  const [savedToast, setSavedToast] = useState(null); // destination name after hearting a plan
+  const savedTimer = useRef(null);
+  const showSavedToast = (d) => {
+    setSavedToast(d);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSavedToast(null), 3200);
+  };
 
 
   const funLine = useMemo(() => funLines[Math.floor(Math.random() * funLines.length)], []);
@@ -281,7 +288,17 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
 
   // ─── RENDER ───
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 700, background: C.white }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 700, background: C.white, position: "relative" }}>
+
+      {/* Saved-to-wishlist toast */}
+      {savedToast && (
+        <div style={{ position: "absolute", left: 16, right: 16, bottom: 84, zIndex: 60, background: C.head, color: "#fff", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.22)", animation: "scaleIn 0.2s ease-out" }}>
+          <span style={{ flex: 1, fontSize: 13, lineHeight: "18px" }}>{savedToast} saved to your wishlist.</span>
+          <button onClick={() => { setSavedToast(null); navigate("/saved"); }} style={{ flexShrink: 0, background: "none", border: "none", color: "#fff", fontSize: 13, fontWeight: 800, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+            View wishlist
+          </button>
+        </div>
+      )}
 
       {/* ═══ CURATING TRANSIENT STATE ═══ */}
       {phase === "curating" && (
@@ -318,7 +335,12 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
         <>
           {/* Header */}
           {(() => {
-          const active = deals.filter(d => d.status !== "lost");
+          // Only finalised plans belong in My Plans. An in-progress build (a deal
+          // whose only version is still an open draft) is hidden until it has a quote.
+          const hasQuote = (d) => (d.properties?.length
+            ? d.properties.flatMap(p => p.versions || [])
+            : (d.versions || [])).some(v => v.status === "quote");
+          const active = deals.filter(d => d.status !== "lost" && hasQuote(d));
           const older = deals.filter(d => d.status === "lost");
           // Open the right itinerary for a version (uses the real deal id even
           // for an expanded Maldives property card).
@@ -339,18 +361,11 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
           <>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, padding: "12px 16px 8px" }}>
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Your Trips</h1>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>My Plans</h1>
               <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>
                 {activeCards.length} {activeCards.length === 1 ? "plan" : "plans"}
               </p>
             </div>
-            <Link to="/build" style={{
-              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "8px 14px", borderRadius: 20, background: C.p600, color: "#fff",
-              fontSize: 12.5, fontWeight: 700, textDecoration: "none", marginTop: 2,
-            }}>
-              <Plus size={14} /> New trip
-            </Link>
           </div>
 
           {/* Content — active vacations first, then a collapsed "older plans" accordion */}
@@ -358,7 +373,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
             {activeCards.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {[...activeCards].sort((a, b) => (hasOpenDraft(b) - hasOpenDraft(a)) || (recency(b) - recency(a))).map(card => (
-                  <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} />
+                  <TripPlanCard key={card.id} deal={card} onOpen={(v) => openVersion(card, v)} onStartNew={() => navigate("/build")} onSaved={showSavedToast} />
                 ))}
               </div>
             ) : (
@@ -383,7 +398,7 @@ export default function Plan({ userState, setUserState, leadData, setLeadData })
                 {showOlder && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
                     {[...older].sort((a, b) => recency(b) - recency(a)).map(deal => (
-                      <TripPlanCard key={deal.id} deal={deal} onOpen={(v) => openVersion(deal, v)} onStartNew={() => navigate("/build")} />
+                      <TripPlanCard key={deal.id} deal={deal} onOpen={(v) => openVersion(deal, v)} onStartNew={() => navigate("/build")} onSaved={showSavedToast} />
                     ))}
                   </div>
                 )}

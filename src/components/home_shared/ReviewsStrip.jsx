@@ -4,9 +4,9 @@ import { tones } from "./sharedStyle";
 
 // Compact social-proof strip: rating line + a few testimonial cards.
 // Reuses the existing `reviews` data and mirrors HomeV2's ReviewMini look.
-export default function ReviewsStrip({ tone = "clean", pad = 16 }) {
+export default function ReviewsStrip({ tone = "clean", pad = 16, vertical = false }) {
   const t = tones[tone] || tones.clean;
-  const items = reviews.slice(0, 6);
+  const items = reviews.slice(0, vertical ? 5 : 6);
   return (
     <div style={{ marginBottom: 26 }}>
       <div style={{ padding: `0 ${pad}px`, marginBottom: 12 }}>
@@ -22,9 +22,14 @@ export default function ReviewsStrip({ tone = "clean", pad = 16 }) {
           </span>
         </div>
       </div>
-      <div className="hs" style={{ gap: 12, paddingLeft: pad, paddingRight: pad }}>
+      <div
+        className={vertical ? undefined : "hs"}
+        style={vertical
+          ? { display: "flex", flexDirection: "column", gap: 12, padding: `0 ${pad}px` }
+          : { gap: 12, paddingLeft: pad, paddingRight: pad }}
+      >
         {items.map((r, i) => (
-          <div key={i} style={{ flexShrink: 0, width: 250, background: C.white, borderRadius: t.cardRadius, padding: 15, border: `1px solid ${C.div}`, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
+          <div key={i} style={{ flexShrink: 0, width: vertical ? "100%" : 250, boxSizing: "border-box", background: C.white, borderRadius: t.cardRadius, padding: 15, border: `1px solid ${C.div}`, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.p100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: C.p600, flexShrink: 0 }}>
                 {r.name[0]}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Plane, Heart, Star, X, Sparkles } from "lucide-react";
+import { ChevronRight, ArrowRight, Plane, Heart, Star, X, Sparkles } from "lucide-react";
 import { C, destData } from "../data";
 import { useDeals } from "../data/deals";
 
@@ -126,11 +126,10 @@ export default function TripNudge({ userState }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>Already in touch with our team?</p>
-          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0" }}>Sign in to see your itinerary</p>
-          <p style={{ fontSize: 13, fontWeight: 600, color: NEW_ACCENT, margin: "4px 0 0" }}>Sign in →</p>
-        </div>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(245,184,28,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <ChevronRight size={16} color={NEW_ACCENT} />
+          <p style={{ fontSize: 13, fontWeight: 600, color: NEW_ACCENT, margin: "3px 0 0", display: "flex", alignItems: "center", gap: 4 }}>
+            Sign in to see your itinerary
+            <ArrowRight size={14} color={NEW_ACCENT} strokeWidth={2.4} />
+          </p>
         </div>
         {/* Glow + sparkle pulse keyframes, scoped to this nudge variant */}
         <style>{`

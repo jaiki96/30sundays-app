@@ -34,6 +34,25 @@ export default function UserToggle({ userState, setUserState }) {
     setPos({ left: w - FAB - 16, top: h - FAB - 160 });
   }, [pos]);
 
+  // Keep the FAB on-screen when the frame resizes: re-measure and clamp its
+  // stored position back inside the new bounds (otherwise it drifts off-edge).
+  useEffect(() => {
+    const btn = fabRef.current;
+    const parent = btn?.offsetParent || btn?.parentElement;
+    if (!parent || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const w = parent.clientWidth, h = parent.clientHeight;
+      if (!w || !h) return;
+      setFrame({ w, h });
+      setPos((p) => p && {
+        left: clamp(p.left, PAD, w - FAB - PAD),
+        top: clamp(p.top, PAD, h - FAB - PAD),
+      });
+    });
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, []);
+
   // Close on ESC
   useEffect(() => {
     if (!open) return;

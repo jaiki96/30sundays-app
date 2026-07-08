@@ -4,42 +4,35 @@ import { C } from "../data";
 
 const ADD_ONS = [
   { key: "visa", label: "Visa", Icon: IdCard },
-  { key: "insurance", label: "Insurance", Icon: ShieldCheck },
   { key: "forex", label: "Forex", Icon: Banknote },
+  { key: "insurance", label: "Insurance", Icon: ShieldCheck },
 ];
 
-// ─── Tile (white bg + pink icon, green tick badge if included) ───
+// ─── Tile (same small size/layout as the Documents tiles) ───
 function AddOnTile({ label, Icon, purchased, onClick }) {
   return (
     <button
       onClick={onClick}
       style={{
-        flex: 1, background: "none", border: "none",
-        padding: 0, cursor: "pointer", fontFamily: "inherit",
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+        position: "relative",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: 8, padding: "12px 6px", minHeight: 84,
+        background: C.white, border: "1px solid #E0E2EB", borderRadius: 12,
+        boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)",
+        cursor: "pointer", fontFamily: "inherit",
       }}
     >
-      <div style={{
-        position: "relative",
-        width: 52, height: 52, borderRadius: 12,
-        background: C.white,
-        border: "1px solid #E0E2EB",
-        boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <Icon size={24} color="#FD014F" strokeWidth={1.8} />
-        {purchased && (
-          <div style={{
-            position: "absolute", top: -4, right: -4, width: 18, height: 18,
-            borderRadius: "50%", background: "#4EAC7E",
-            border: "2px solid #fff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Check size={10} color="#fff" strokeWidth={3} />
-          </div>
-        )}
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 400, color: "#181E4C", textAlign: "center", lineHeight: "16px" }}>{label}</span>
+      <Icon size={22} color="#FD014F" strokeWidth={1.8} />
+      <span style={{ fontSize: 11, fontWeight: 400, color: "#181E4C", textAlign: "center", lineHeight: "14px" }}>{label}</span>
+      {purchased && (
+        <div style={{
+          position: "absolute", top: -6, right: -6, width: 18, height: 18,
+          borderRadius: "50%", background: "#4EAC7E", border: "2px solid #fff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Check size={10} color="#fff" strokeWidth={3} />
+        </div>
+      )}
     </button>
   );
 }
@@ -305,7 +298,7 @@ function InsuranceSheet({ state, travelers = [], onClose }) {
 function ForexSheet({ onClose }) {
   return (
     <Sheet title="Forex" onClose={onClose}>
-      <Illustration Icon={Wallet} />
+      <Illustration Icon={Banknote} />
       <div style={{ background: C.bg, borderRadius: 14, padding: 16, marginBottom: 16 }}>
         <h4 style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: "0 0 10px" }}>Spend smarter abroad</h4>
         <p style={{ fontSize: 14, color: C.head, margin: "0 0 12px", lineHeight: "21px" }}>
@@ -330,7 +323,7 @@ export default function AddOnsSection({ addOns, travelers = [] }) {
     <>
       <div style={{ marginBottom: 16 }}>
         <h4 style={{ fontSize: 18, fontWeight: 600, color: "#181E4C", margin: "0 0 16px" }}>Add Ons</h4>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {ADD_ONS.map(({ key, label, Icon }) => {
             const purchased = key !== "forex" && addOns?.[key]?.purchased;
             return (

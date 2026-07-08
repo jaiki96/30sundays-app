@@ -78,8 +78,9 @@ const regionFilters = {
 const matchByCities = (cities) => (it) =>
   it.route && it.route.some((r) => cities.includes(r.city));
 
-export default function Destination() {
-  const { name } = useParams();
+export default function Destination({ name: propName }) {
+  const { name: routeName } = useParams();
+  const name = propName || routeName;
   const d = destData[name];
   const [galleryIdx, setGalleryIdx] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -176,6 +177,7 @@ export default function Destination() {
             poster: (d.actImgs && d.actImgs[i]) || d.hero,
             duration: `${1 + (i % 2)}:${String(20 + i * 7).padStart(2, "0")}`,
             videoUrl: "",
+            topics: [{ dest: name, kind: "activity", key: act }],
           }))}
         />
       )}

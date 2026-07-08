@@ -59,22 +59,62 @@ export const seasonalLesson = {
   duration: "2:14",
 };
 
-// Comparison videos for Bali ↔ Thailand, etc.
+// Comparison videos for Bali ↔ Thailand, etc. `topics` lists the specific
+// places/experiences each side covers, so the full-screen viewer can offer a
+// wishlist for them. Regions use real destAreas city names (see buildData.js)
+// so hearting one here pre-selects it in the trip wizard later. Maldives and
+// Mauritius have no destAreas entry (they're resort-based), so their topics
+// are experiences instead of places.
 export const compareVideos = {
   baliVsThailand: {
     a: "Bali", b: "Thailand", poster: POSTER.baliVsThailand,
     hook: "Same budget, very different week.",
     videoUrl: "", duration: "1:52",
+    topics: [
+      { dest: "Bali", kind: "region", key: "Ubud" },
+      { dest: "Bali", kind: "region", key: "Seminyak" },
+      { dest: "Thailand", kind: "region", key: "Bangkok" },
+      { dest: "Thailand", kind: "region", key: "Krabi" },
+    ],
   },
   carouselA: [
-    { a: "Bali", b: "Vietnam", poster: POSTER.baliVsVietnam, hook: "Beaches vs bays - pick your week.", videoUrl: "", duration: "1:44" },
-    { a: "Vietnam", b: "Thailand", poster: POSTER.vietnamVsThailand, hook: "Street food capitals, compared.", videoUrl: "", duration: "2:01" },
-    { a: "Vietnam", b: "Maldives", poster: POSTER.vietnamVsMaldives, hook: "City buzz vs island silence.", videoUrl: "", duration: "1:38" },
+    {
+      a: "Bali", b: "Vietnam", poster: POSTER.baliVsVietnam, hook: "Beaches vs bays - pick your week.", videoUrl: "", duration: "1:44",
+      topics: [
+        { dest: "Bali", kind: "region", key: "Canggu" },
+        { dest: "Bali", kind: "region", key: "Uluwatu" },
+        { dest: "Vietnam", kind: "region", key: "Ha Long" },
+        { dest: "Vietnam", kind: "region", key: "Hoi An" },
+      ],
+    },
+    {
+      a: "Vietnam", b: "Thailand", poster: POSTER.vietnamVsThailand, hook: "Street food capitals, compared.", videoUrl: "", duration: "2:01",
+      topics: [
+        { dest: "Vietnam", kind: "region", key: "Hanoi" },
+        { dest: "Thailand", kind: "region", key: "Bangkok" },
+        { dest: "Thailand", kind: "region", key: "Phuket" },
+      ],
+    },
+    {
+      a: "Vietnam", b: "Maldives", poster: POSTER.vietnamVsMaldives, hook: "City buzz vs island silence.", videoUrl: "", duration: "1:38",
+      topics: [
+        { dest: "Vietnam", kind: "region", key: "Ha Long" },
+        { dest: "Vietnam", kind: "region", key: "Da Nang" },
+        { dest: "Maldives", kind: "activity", key: "Overwater villa stay" },
+        { dest: "Maldives", kind: "activity", key: "Manta ray snorkelling" },
+      ],
+    },
   ],
   maldivesVsMauritius: {
     a: "Maldives", b: "Mauritius", poster: POSTER.maldivesVsMauritius,
     hook: "Two island honeymoons, head-to-head.",
     videoUrl: "", duration: "1:56",
+    topics: [
+      { dest: "Maldives", kind: "activity", key: "Overwater villa stay" },
+      { dest: "Maldives", kind: "activity", key: "Manta ray snorkelling" },
+      { dest: "Mauritius", kind: "activity", key: "Le Morne lagoon" },
+      { dest: "Mauritius", kind: "activity", key: "Chamarel coloured earth" },
+    ],
   },
 };
 

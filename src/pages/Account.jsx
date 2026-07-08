@@ -10,6 +10,8 @@ import {
   ChevronDown, CreditCard, Copy, AlertCircle,
 } from "lucide-react";
 import { C } from "../data";
+import { useDeals } from "../data/deals";
+import { useWishlist } from "../data/wishlist";
 
 // Document builders - fields mimic OCR-extracted passport / PAN data.
 const passportDoc = (file, { no, dob, issue, expiry, place }) => ({
@@ -112,6 +114,9 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const navigate = useNavigate();
   const isLoggedIn = userState !== "new";
   const profile = leadData || DEMO_PROFILES[userState] || null;
+  const { wished } = useDeals();
+  const { counts } = useWishlist();
+  const wishlistTotal = Object.values(wished || {}).filter(Boolean).length + (counts?.poiTotal || 0);
 
   const [feedback, setFeedback] = useState(null); // "feature" | "problem" | null
   const [showDetails, setShowDetails] = useState(false);
@@ -130,7 +135,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const accountGroup = [
     { icon: Wallet, label: "Wallet", onClick: () => setShowWallet(true) },
     { icon: Gift, label: "Refer & Earn", onClick: () => setShowRefer(true) },
-    { icon: Bookmark, label: "Saved & Wishlist", badge: profile?.wishlist, soon: true },
+    { icon: Bookmark, label: "Saved & Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },
     { icon: Users, label: "Travellers & documents", onClick: () => setShowTravellers(true) },
   ];
   const supportGroup = [

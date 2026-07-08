@@ -94,6 +94,7 @@ export default function HomeV2() {
     duration: c.duration,
     tag: `${c.a} vs ${c.b}`,
     hook: c.hook,
+    topics: c.topics,
     watched: i === 0, // demo: first lesson marked watched
   }));
 

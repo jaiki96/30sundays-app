@@ -251,14 +251,13 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: "#181E4C", margin: "0 0 3px", lineHeight: 1.3 }}>{currentHotel.name}</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      {Array.from({ length: currentHotel.stars }).map((_, s) => (
-                        <Star key={s} size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                      ))}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <Star size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "#4EAC7E" }}>{currentHotel.stars} star hotel</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff", fontSize: 12, fontWeight: 700 }}>B</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{currentHotel.bookingScore} Rated</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: C.head }}>{currentHotel.bookingScore} Rated</span>
                     </div>
                   </div>
                   <p style={{ fontSize: 12, color: C.sub, margin: "0 0 2px" }}>{currentHotel.roomType} · {currentHotel.bedSummary}</p>
@@ -316,10 +315,9 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                     </p>
 
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {Array.from({ length: hotel.stars }).map((_, s) => (
-                          <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                        ))}
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <Star size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+                        <span style={{ fontSize: 12.5, fontWeight: 500, color: "#4EAC7E" }}>{hotel.stars} star hotel</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <span style={{
@@ -327,7 +325,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                           width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
                           fontSize: 11, fontWeight: 700,
                         }}>B</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: C.head }}>{hotel.bookingScore} Rated</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: C.head }}>{hotel.bookingScore} Rated</span>
                       </div>
                     </div>
 

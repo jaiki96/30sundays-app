@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
@@ -20,6 +20,9 @@ import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { buildActivityDetail } from "../data/activityData";
+import { getMauritiusHotel } from "../data/mauritiusData";
+import InclusionsDrawer from "../components/InclusionsDrawer";
+import HotelStayCard from "../components/HotelStayCard";
 
 const PREBOOKING_CONSULTANTS = [
   { name: "Riya Shah", phone: "+919876500011" },
@@ -70,15 +73,32 @@ const HOTEL_STUB_IMGS = [
 ];
 
 function getHotels(it) {
-  return it.days.map((day, i) => ({
-    city: day.city,
-    dayRange: `Day ${it.days.slice(0, i).reduce((a, d) => a + d.n, 0) + 1}–${it.days.slice(0, i + 1).reduce((a, d) => a + d.n, 0)}`,
-    name: `${day.city} Grand Resort`,
-    type: "Deluxe Room · Breakfast included",
-    stars: [4, 5, 4, 5][i % 4],
-    rating: [8.4, 8.9, 8.1, 8.7][i % 4], // Booking.com 10-point scale
-    img: HOTEL_STUB_IMGS[i % HOTEL_STUB_IMGS.length],
-  }));
+  return it.days.map((day, i) => {
+    const base = {
+      city: day.city,
+      dayRange: `Day ${it.days.slice(0, i).reduce((a, d) => a + d.n, 0) + 1}–${it.days.slice(0, i + 1).reduce((a, d) => a + d.n, 0)}`,
+      name: `${day.city} Grand Resort`,
+      type: "Deluxe Room · Breakfast included",
+      stars: [4, 5, 4, 5][i % 4],
+      rating: [8.4, 8.9, 8.1, 8.7][i % 4], // Booking.com 10-point scale
+      img: HOTEL_STUB_IMGS[i % HOTEL_STUB_IMGS.length],
+    };
+    // Mauritius uses real hotels from the sheet, each carrying its inclusions
+    // (honeymoon perks + value add-ons) surfaced in the accordion below.
+    if (it.dest === "Mauritius") {
+      const m = getMauritiusHotel(it.id, i, day.city);
+      if (m) {
+        return {
+          ...base,
+          name: m.name,
+          stars: m.stars,
+          img: m.img,
+          inclusions: (m.inclusions && (m.inclusions.honeymoon?.length || m.inclusions.valueAdds?.length)) ? m.inclusions : null,
+        };
+      }
+    }
+    return base;
+  });
 }
 
 // One flight row (Figma "Frame 2147227936"): dep block — duration/stops — arr block.
@@ -130,6 +150,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [allCombosIndex, setAllCombosIndex] = useState(null); // dayIndex for the full "see all" browse screen
   const [selectedDayOptions, setSelectedDayOptions] = useState({}); // { dayIndex: option }
   const [selectedHotelOptions, setSelectedHotelOptions] = useState({}); // { stayIndex: hotel } (per-version)
+  const [inclHotel, setInclHotel] = useState(null); // hotel whose special-inclusions drawer is open
   const [pendingDayChange, setPendingDayChange] = useState(null); // { dayIndex, option } awaiting confirm
   const [showChanges, setShowChanges] = useState(false); // floating "changes since last version" panel
   const [leavePrompt, setLeavePrompt] = useState(false); // "discard / create itinerary" on back with unsaved edits
@@ -144,6 +165,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [drawerActiveDay, setDrawerActiveDay] = useState(0);
   const [fetchingPrice, setFetchingPrice] = useState(false); // bottom-bar loader while pricing
   const [liveResult, setLiveResult] = useState(null); // live availability + price check result
+  // Snapshot of hotel picks at the last live check. A stay only counts as
+  // "resolved" (clearing its sold-out flag) once the user re-picks it *after*
+  // a check — not because the draft already had a saved hotel. Starts null so
+  // the first check on any itinerary always surfaces the seeded sold-out stay.
+  const hotelsAtCheckRef = useRef(null);
   const [fetchMsgIdx, setFetchMsgIdx] = useState(0); // rotating reassurance copy
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   // International flights: round trip (one paired fare) vs one-way (two separate
@@ -574,7 +600,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     // Prototype: a real-time availability + price check. Sold-out stays block the
     // lock until resolved; price increases auto-apply with a "change?" option.
     setTimeout(() => {
-      const resolved = new Set(Object.keys(selectedHotelOptions || {}).map(Number));
+      // A stay is resolved only if its hotel changed since the previous check.
+      // First check (ref null) resolves nothing, so the seeded sold-out always
+      // appears; once the user swaps that hotel and re-checks, it clears.
+      const baseline = hotelsAtCheckRef.current;
+      const resolved = new Set();
+      if (baseline) {
+        Object.keys(selectedHotelOptions || {}).forEach((k) => {
+          const i = Number(k);
+          const cur = selectedHotelOptions[i]?.hotelId ?? selectedHotelOptions[i]?.hotelName;
+          const base = baseline[i]?.hotelId ?? baseline[i]?.hotelName;
+          if (cur && cur !== base) resolved.add(i);
+        });
+      }
+      hotelsAtCheckRef.current = JSON.parse(JSON.stringify(selectedHotelOptions || {}));
       const result = runLiveCheck(it, hotels, resolved);
       setFetchingPrice(false);
       setLiveResult(result);
@@ -636,6 +675,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <button onClick={attemptLeave} style={{ position: "absolute", top: 14, left: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <ArrowLeft size={18} color="#fff" />
         </button>
+        {inDeal && versionId && (
+          <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
+            <Heart size={18} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
+          </button>
+        )}
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
@@ -1053,84 +1097,60 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             }
             return (
             <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
-            <Link to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
-              style={{ borderRadius: 14, border: soldOut ? `1.5px solid ${C.p600}` : `1px solid ${C.div}`, boxShadow: soldOut ? "0 0 0 3px rgba(227,27,83,0.10)" : "none", overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}>
-              <div style={{ padding: "10px 10px 0" }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>{h.dayRange} · {h.city}</span>
-              </div>
-              <div style={{ margin: 10, borderRadius: 10, overflow: "hidden", height: 140, position: "relative" }}>
-                <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: soldOut ? "grayscale(0.5) brightness(0.72)" : "none" }} />
-                {soldOut && (
-                  <span style={{ position: "absolute", top: 8, left: 8, background: C.p600, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999, letterSpacing: "0.3px", boxShadow: "0 1px 6px rgba(0,0,0,0.25)" }}>
-                    Sold out
-                  </span>
-                )}
-              </div>
-              <div style={{ padding: "0 12px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 2 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</p>
-                  <ChevronRight size={16} color={C.sub} style={{ flexShrink: 0 }} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 3 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    {Array.from({ length: h.stars }).map((_, s) => (
-                      <Star key={s} size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      width: 16, height: 16, borderRadius: 3, background: "#003580", color: "#fff",
-                      fontSize: 11, fontWeight: 700,
-                    }}>B</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: C.head }}>{h.rating}</span>
-                  </div>
-                </div>
-                <p style={{ fontSize: 11, color: C.sub, margin: "0 0 10px" }}>{h.type}</p>
-                {ls?.status === "price_up" && (
-                  <p style={{ fontSize: 12, color: C.p600, fontWeight: 700, margin: "0 0 10px", lineHeight: "16px" }}>
-                    Price rose +₹{ls.delta.toLocaleString("en-IN")}/person since you saved.
-                  </p>
-                )}
-                {editable && (
-                  <span
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.p600 }}
-                  >
-                    <ArrowLeftRight size={13} color={C.p600} />
-                    Change hotel
-                  </span>
-                )}
-              </div>
-            </Link>
+              <HotelStayCard
+                image={h.img}
+                imageAlt={h.name}
+                dayLabel={h.dayRange}
+                soldOut={soldOut}
+                topRightBadge={soldOut ? (
+                  <span style={{ background: C.p600, color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999, letterSpacing: "0.3px", boxShadow: "0 1px 6px rgba(0,0,0,0.25)" }}>Sold out</span>
+                ) : undefined}
+                stars={h.stars}
+                ratingScore={h.rating}
+                name={h.name}
+                roomType={h.type}
+                city={h.city}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}`}
+                footer={
+                  <>
+                    {ls?.status === "price_up" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFF4ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "6px 8px", marginTop: 4 }}>
+                        <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 11.5, color: "#C2410C", fontWeight: 700, lineHeight: "15px" }}>
+                          Price rose +₹{ls.delta.toLocaleString("en-IN")}/person since you saved
+                        </span>
+                      </div>
+                    )}
+                    {editable && (
+                      <span
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openHotelFlow(i, h.hotelId); }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.p600, marginTop: 6 }}
+                      >
+                        <ArrowLeftRight size={13} color={C.p600} />
+                        Change hotel
+                      </span>
+                    )}
+                    {h.inclusions && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setInclHotel(h); }}
+                        style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 0", border: "none", background: "none", color: C.p600, fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        <Sparkles size={13} color={C.p600} />
+                        View special inclusions
+                      </button>
+                    )}
+                  </>
+                }
+              />
             </div>
             );
           })}
         </div>
 
-        {/* Live availability + price check result (hotels only) */}
-        {liveResult && (liveResult.blocking || liveResult.hotelDelta > 0) && (
-          <div style={{
-            margin: "16px 16px 0",
-            background: liveResult.blocking ? "#FEF2F2" : "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)",
-            border: `1.5px solid ${liveResult.blocking ? "#FECACA" : "#E8D5A3"}`,
-            borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10,
-          }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              {liveResult.blocking ? <AlertTriangle size={16} color="#B91C1C" /> : <RefreshCw size={15} color="#B8860B" />}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "18px", display: "block" }}>
-                {liveResult.blocking ? "Availability changed since you saved" : "Live prices updated"}
-              </span>
-              <span style={{ display: "block", fontSize: 12, color: C.sub, lineHeight: "16px", marginTop: 2 }}>
-                {liveResult.blocking
-                  ? `${liveResult.soldOut.length} stay${liveResult.soldOut.length > 1 ? "s" : ""} sold out (${liveResult.soldOut.map(s => s.city).join(", ")}). Pick another to lock your price.`
-                  : `+₹${liveResult.hotelDelta.toLocaleString("en-IN")}/person at today's rates. Your total reflects this.`}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Special inclusions live behind a per-hotel CTA on the card (drawer),
+            keeping this area free for the hotel-upgrade banner below. */}
+
+        {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
 
         {/* Single hotel-upgrade banner (per-card chips removed) */}
         {upgradeInfo.upgradeCount >= 1 && (
@@ -1582,13 +1602,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         )}
 
-        {/* Activity price change — sits just above the action bar */}
-        {liveResult && liveResult.tour?.delta > 0 && !fetchingPrice && (
-          <div style={{ background: "#FFF8E7", borderTop: "1px solid #E8D5A3", padding: "9px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-            <RefreshCw size={13} color="#B8860B" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: C.head, lineHeight: "16px" }}>
-              <b style={{ fontWeight: 700 }}>{liveResult.tour.name}</b> rose +₹{liveResult.tour.delta.toLocaleString("en-IN")}/person at today's rates. Included in your total.
-            </span>
+        {/* Price changes (hotel + activity) — orange warning just above the action bar */}
+        {liveResult && (liveResult.hotelDelta > 0 || liveResult.tour?.delta > 0) && !fetchingPrice && (
+          <div style={{ background: "#FFF4ED", borderTop: "1px solid #FED7AA", padding: "9px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+            {liveResult.hotelDelta > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: C.head, lineHeight: "16px" }}>
+                  <b style={{ fontWeight: 700 }}>Hotel price</b> rose +₹{liveResult.hotelDelta.toLocaleString("en-IN")}/person at today's rates. Included in your total.
+                </span>
+              </div>
+            )}
+            {liveResult.tour?.delta > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: C.head, lineHeight: "16px" }}>
+                  <b style={{ fontWeight: 700 }}>{liveResult.tour.name}</b> rose +₹{liveResult.tour.delta.toLocaleString("en-IN")}/person at today's rates. Included in your total.
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -1632,6 +1664,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             <>
               <p style={{ margin: 0, fontSize: 11, color: C.sub }}>Indicative total</p>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact }}>Not saved yet, your consultant can't see this</p>
             </>
           )}
         </div>
@@ -1900,6 +1933,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             </div>
           </div>
         </div>
+      )}
+
+      {/* ═══ Special Inclusions Drawer ═══ */}
+      {inclHotel && (
+        <InclusionsDrawer
+          hotelName={inclHotel.name}
+          city={inclHotel.city}
+          inclusions={inclHotel.inclusions}
+          onClose={() => setInclHotel(null)}
+        />
       )}
 
       {/* ═══ Hotel Upgrade Drawer ═══ */}
@@ -3348,90 +3391,40 @@ function DayWiseScreen({ days, dest, itineraryId, hotels, activeDay, setActiveDa
             "Ha Giang": "Old Town",
           };
           const neighborhood = NEIGHBORHOODS[dayHotel.city] || dayHotel.city;
-          const ratingOutOf10 = (parseFloat(dayHotel.rating) * 2).toFixed(1);
           const altCount = 3;
           return (
             <div style={{ padding: "16px 16px 0" }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "0 0 4px" }}>Tonight's stay</p>
-              <p style={{ fontSize: 12, color: C.sub, margin: "0 0 10px" }}>{dayHotel.dayRange} · {dayHotel.city}</p>
-              <Link
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: "0 0 10px" }}>Tonight's stay</p>
+              <HotelStayCard
+                image={dayHotel.img}
+                imageAlt={dayHotel.name}
+                imageHeight={180}
+                dayLabel={dayHotel.dayRange}
+                recommendedBadge
+                stars={dayHotel.stars}
+                ratingScore={dayHotel.rating}
+                name={dayHotel.name}
+                roomType={dayHotel.type}
+                city={`${neighborhood}, ${dayHotel.city}`}
+                showChevron={false}
                 to={`/hotel-detail/${itineraryId}/${dayHotelIdx}/${encodeURIComponent(dayHotel.hotelId || "")}?current=${encodeURIComponent(dayHotel.hotelId || "")}`}
-                style={{ borderRadius: 14, border: `1px solid ${C.div}`, overflow: "hidden", background: C.white, textDecoration: "none", color: "inherit", display: "block" }}
-              >
-                {/* Image */}
-                <div style={{ height: 200, overflow: "hidden" }}>
-                  <img src={dayHotel.img} alt={dayHotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                </div>
-
-                {/* Body */}
-                <div style={{ padding: "12px 14px 14px" }}>
-                  {/* 30 Sundays Recommended badge */}
-                  <div style={{
-                    display: "inline-flex", alignItems: "center",
-                    background: C.p100, color: C.p600,
-                    borderRadius: 999, padding: "4px 10px",
-                    fontSize: 11, fontWeight: 600,
-                    marginBottom: 10,
-                  }}>
-                    30 Sundays Recommended
-                  </div>
-
-                  {/* Star class + Booking rating row */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                      <Star size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#027A48" }}>5 star hotel</span>
-                    </div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                      <span style={{
-                        background: "#003B95", color: "#fff",
-                        fontSize: 11, fontWeight: 700,
-                        padding: "2px 5px", borderRadius: 4,
-                        fontFamily: "system-ui, sans-serif", letterSpacing: -0.2,
-                      }}>B.</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: C.head }}>{ratingOutOf10}</span>
-                      <span style={{ fontSize: 11, color: C.sub }}>/ 10</span>
-                    </div>
-                  </div>
-
-                  {/* Name */}
-                  <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: "0 0 2px", lineHeight: "20px" }}>{dayHotel.name}</p>
-
-                  {/* Room type */}
-                  <p style={{ fontSize: 12, color: C.sub, margin: "0 0 6px" }}>{dayHotel.type}</p>
-
-                  {/* Address */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14 }}>
-                    <MapPin size={11} color={C.sub} />
-                    <span style={{ fontSize: 12, color: C.sub }}>{neighborhood}, {dayHotel.city}</span>
-                  </div>
-
-                  {/* Two CTAs - text links */}
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 16,
-                    paddingTop: 10, borderTop: `1px solid ${C.div}`,
-                  }}>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 4,
-                      fontSize: 13, fontWeight: 600, color: C.p600,
-                    }}>
+                footer={
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, paddingTop: 10, marginTop: 6, borderTop: `1px solid ${C.div}` }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: C.p600 }}>
                       View details
                       <ChevronRight size={13} color={C.p600} />
                     </span>
                     <span style={{ width: 1, height: 14, background: C.div }} />
                     <span
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/hotels/${itineraryId}/${dayHotelIdx}?current=${encodeURIComponent(dayHotel.hotelId || "")}`; }}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer",
-                      }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer" }}
                     >
                       <RefreshCw size={12} color={C.p600} />
                       See {altCount} alternatives
                     </span>
                   </div>
-                </div>
-              </Link>
+                }
+              />
             </div>
           );
         })()}

@@ -25,6 +25,11 @@ const EXTRA_COORDS = {
   Waiheke: { lat: -36.8000, lng: 175.1080 }, Milford: { lat: -44.6680, lng: 167.9250 },
   // Maldives
   Fuvahmulah: { lat: -0.2980, lng: 73.4240 },
+  // Mauritius
+  "Grand Baie": { lat: -20.0064, lng: 57.5804 }, "Belle Mare": { lat: -20.1900, lng: 57.7700 },
+  "Flic en Flac": { lat: -20.2740, lng: 57.3670 }, "Le Morne": { lat: -20.4560, lng: 57.3120 },
+  "Trou aux Biches": { lat: -20.0350, lng: 57.5460 }, "South Coast": { lat: -20.5000, lng: 57.4000 },
+  "East Coast": { lat: -20.2400, lng: 57.7800 }, Mauritius: { lat: -20.3480, lng: 57.5520 },
 };
 
 const coordsFor = (city) => cityCoords[city] || EXTRA_COORDS[city] || null;

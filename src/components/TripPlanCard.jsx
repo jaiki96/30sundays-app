@@ -1,6 +1,21 @@
 import { useState } from "react";
-import { ChevronDown, ArrowRight, Download, User, Baby } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, ArrowRight, User, Baby, Heart, ArrowLeftRight } from "lucide-react";
 import { C, allItineraries } from "../data";
+import { useDeals } from "../data/deals";
+
+// Wishlist toggle shown on every version row (prototype: local state only).
+function WishHeart({ on, onToggle }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      aria-label={on ? "Remove from wishlist" : "Save to wishlist"}
+      style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
+    >
+      <Heart size={16} color={C.p600} fill={on ? C.p600 : "none"} />
+    </button>
+  );
+}
 
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
 
@@ -12,23 +27,30 @@ const ppPrice = (v) => v.livePrice ?? v.indicativePrice ?? 0;
 const fmt = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 const total = (perPerson, t) => (perPerson || 0) * t;
 const shortDate = (ts) => ts ? new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
+// Travel window as a compact range, e.g. "26-31 Aug" or "28 Aug - 3 Sep".
+const travelRange = (from, nights) => {
+  if (!from) return null;
+  const a = new Date(from);
+  if (isNaN(a.getTime())) return null;
+  const b = new Date(a.getTime() + (nights || 0) * 86400000);
+  const mo = (d) => d.toLocaleDateString("en-IN", { month: "short" });
+  return a.getMonth() === b.getMonth()
+    ? `${a.getDate()}-${b.getDate()} ${mo(a)}`
+    : `${a.getDate()} ${mo(a)} - ${b.getDate()} ${mo(b)}`;
+};
 
-// Status pill (Draft / Quote / Expired).
+// Every plan is a finalised version now, so a normal plan needs no status label.
+// Only an expired plan still calls it out.
 function StatusChip({ kind }) {
-  const map = {
-    draft: { label: "Draft", fg: C.p600, bg: C.p100 },
-    quote: { label: "Quote", fg: C.sText, bg: C.sBg },
-    expired: { label: "Expired", fg: C.inact, bg: C.bg },
-  };
-  const s = map[kind] || map.draft;
-  return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg, flexShrink: 0 }}>{s.label}</span>;
+  if (kind !== "expired") return null;
+  return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: C.bg, color: C.inact, flexShrink: 0 }}>Expired</span>;
 }
 
-// The one action affordance per item: quote → View PDF, draft → Continue editing.
+// The one action affordance per item: quote → View, draft → Continue editing.
 function ActionLink({ quote }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, color: C.p600, whiteSpace: "nowrap" }}>
-      {quote ? <><Download size={13} /> PDF</> : <>Continue editing <ArrowRight size={14} /></>}
+      {quote ? <>View <ArrowRight size={14} /></> : <>Continue editing <ArrowRight size={14} /></>}
     </span>
   );
 }
@@ -36,8 +58,16 @@ function ActionLink({ quote }) {
 // ONE card template per deal. Header (destination, version, status) + the
 // itinerary facts (route with nights, dates, travellers, generated-on) + the
 // price(s) with their action. Maldives shows one priced row per property.
-export default function TripPlanCard({ deal, onOpen, onStartNew }) {
+export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved }) {
   const [open, setOpen] = useState(false);
+  const { isWished, toggleWish } = useDeals();
+  const navigate = useNavigate();
+  // Toggle the heart and, when it turns ON, let the parent raise a "saved" toast.
+  const handleWish = (id) => {
+    const nowOn = !isWished(id);
+    toggleWish(id);
+    if (nowOn) onSaved?.(dest);
+  };
   const lost = deal.status === "lost";
   const sorted = [...deal.versions].sort((a, b) => b.num - a.num);
   const latest = sorted[0];
@@ -53,7 +83,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
   const itin = allItineraries.find(i => i.id === (primary.itineraryId ?? deal.itineraryId));
   const td = primary.customizations?.travelDates;
   const t = travellersOf(primary);
-  const nights = td?.nights ?? itin?.nights;
+  const nights = td?.nights ?? itin?.nights ?? itin?.route?.reduce((s, r) => s + (r.n || 0), 0);
   const route = itin?.route?.length
     ? itin.route.map(r => `${r.city} ${r.n}N`).join(" · ")
     : (primary.title ?? deal.title);
@@ -62,11 +92,12 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
   const dateStr = shortDate(td?.fromDate);
   const generatedOn = shortDate(primaryIsQuote ? primary.pricedAt : primary.createdAt);
 
-  // Maldives cards are per-property: title = resort, with the destination + route
-  // on the line below. (Same property's quotes are its versions.)
+  // Every list card leads with destination + nights, like the others. Maldives is
+  // per-property, so the resort name moves to the subtitle. (Same property's quotes
+  // are its versions; the resort-centric detail screen keeps its full treatment.)
   const property = deal.property;
-  const titleText = property ? property : `${destFlags[dest] || ""} ${dest}${nights ? ` · ${nights}N` : ""}`;
-  const routeText = property ? `${destFlags[dest] || ""} ${dest} · ${route}` : route;
+  const titleText = `${destFlags[dest] || ""} ${dest}${nights ? ` · ${nights}N` : ""}`;
+  const routeText = property ? property : route;
   const earlier = sorted.filter(v => v.id !== primary.id);
 
   const Header = (
@@ -77,7 +108,8 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
           <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {titleText}
           </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            {!lost && <WishHeart on={isWished(primary.id)} onToggle={() => handleWish(primary.id)} />}
             <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, letterSpacing: ".3px" }}>V{primary.num}</span>
             <StatusChip kind={stateKind} />
           </div>
@@ -109,6 +141,16 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
 
   const priceCaption = <span style={{ fontSize: 11, fontWeight: 500, color: C.sub }}> incl. taxes</span>;
 
+  // Compare is only offered when two or more versions share a destination.
+  const comparable = Object.values(
+    sorted.reduce((m, v) => { const d = v.destination || deal.dest; m[d] = (m[d] || 0) + 1; return m; }, {})
+  ).some(n => n >= 2);
+  const goCompare = (e) => {
+    e.stopPropagation();
+    const p = deal.property ? `?prop=${encodeURIComponent(deal.property)}` : "";
+    navigate(`/compare/${deal.dealId ?? deal.id}${p}`);
+  };
+
   return (
     <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden", background: C.white }}>
       {Header}
@@ -122,19 +164,38 @@ export default function TripPlanCard({ deal, onOpen, onStartNew }) {
       {/* Quiet expander — earlier versions (V1, V2 …) */}
       {earlier.length > 0 && (
         <>
-          <button onClick={() => setOpen(o => !o)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "9px 12px", borderTop: `1px solid ${C.bg}`, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>{earlier.length} earlier version{earlier.length !== 1 ? "s" : ""}</span>
-            <ChevronDown size={15} color={C.sub} style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }} />
-          </button>
-          {open && earlier.map(v => (
-            <div key={v.id} onClick={() => onOpen(v)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px 9px 18px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, flexShrink: 0 }}>V{v.num}</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {isQuote(v) ? "Quote" : "Draft"} · {fmt(total(ppPrice(v), travellersOf(v)))} · {shortDate(isQuote(v) ? v.pricedAt : v.createdAt)}
-              </span>
-              <ArrowRight size={13} color={C.inact} />
+          <div style={{ display: "flex", alignItems: "center", width: "100%", borderTop: `1px solid ${C.bg}` }}>
+            <div onClick={() => setOpen(o => !o)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, padding: "9px 12px", cursor: "pointer" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>{earlier.length} earlier version{earlier.length !== 1 ? "s" : ""}</span>
+              <ChevronDown size={15} color={C.sub} style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }} />
             </div>
-          ))}
+            {comparable && (
+              <button onClick={goCompare} style={{ display: "flex", alignItems: "center", gap: 5, padding: "9px 12px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                <ArrowLeftRight size={14} color={C.head} />
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>Compare</span>
+              </button>
+            )}
+          </div>
+          {open && earlier.map(v => {
+            const vItin = allItineraries.find(i => i.id === (v.itineraryId ?? deal.itineraryId));
+            const vTd = v.customizations?.travelDates;
+            const vNights = vTd?.nights ?? vItin?.nights ?? vItin?.route?.reduce((s, r) => s + (r.n || 0), 0);
+            const vRoute = vItin?.route?.length ? vItin.route.map(r => r.city).join(" · ") : (v.title ?? deal.title);
+            const vDates = travelRange(vTd?.fromDate, vNights);
+            return (
+              <div key={v.id} onClick={() => onOpen(v)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px 9px 14px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
+                <WishHeart on={isWished(v.id)} onToggle={() => handleWish(v.id)} />
+                <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, flexShrink: 0 }}>V{v.num}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vRoute}</p>
+                  <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {vDates ? `${vDates} · ` : ""}{fmt(total(ppPrice(v), travellersOf(v)))}
+                  </p>
+                </div>
+                <ArrowRight size={13} color={C.inact} style={{ flexShrink: 0 }} />
+              </div>
+            );
+          })}
         </>
       )}
     </div>

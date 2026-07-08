@@ -49,6 +49,8 @@ export const airports = {
   KBV: { city: "Krabi", country: "Thailand", code: "KBV" },
   // Maldives
   MLE: { city: "Malé", country: "Maldives", code: "MLE" },
+  // Mauritius (single international airport serves the whole island)
+  MRU: { city: "Mauritius", country: "Mauritius", code: "MRU" },
   // Sri Lanka
   CMB: { city: "Colombo", country: "Sri Lanka", code: "CMB" },
   // New Zealand
@@ -81,6 +83,10 @@ export const cityToAirport = {
   "Krabi": "KBV", "Koh Samui": "USM", "Pai": "CNX",
   // Maldives
   "Malé": "MLE", "Addu": "MLE", "Baa Atoll": "MLE", "S.Ari": "MLE", "Fuvahmulah": "MLE",
+  // Mauritius regions all use MRU (one island, one airport, transfers by road)
+  "Grand Baie": "MRU", "Belle Mare": "MRU", "Flic en Flac": "MRU",
+  "Le Morne": "MRU", "Trou aux Biches": "MRU", "South Coast": "MRU",
+  "East Coast": "MRU", "Mauritius": "MRU",
   // Sri Lanka
   "Colombo": "CMB", "Kandy": "CMB", "Ella": "CMB", "Mirissa": "CMB",
   "Sigiriya": "CMB", "Galle": "CMB", "Trincomalee": "CMB", "Yala": "CMB",

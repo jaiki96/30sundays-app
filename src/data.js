@@ -105,6 +105,11 @@ export const maldivesImgs = [
 // Pick from a pool, deterministic by index
 const pick = (arr, i) => arr[i % arr.length];
 
+// Mauritius content + itineraries live in their own module (built from the
+// hotels sheet, with per-hotel inclusions). Folded into destData/allItineraries
+// below so every shared screen (destination page, trip page) picks it up.
+import { MAURITIUS_DEST, MAURITIUS_ITINERARIES } from "./data/mauritiusData";
+
 // ─── Destination Data ───
 export const destData = {
   Bali: {
@@ -170,6 +175,7 @@ export const destData = {
     activities: ["Milford Sound Cruise", "Bungee at Queenstown", "Hobbiton Tour", "Glacier Walk", "Rotorua Geothermals", "Stargazing at Tekapo"],
     actImgs: nzImgs.slice(0, 6),
   },
+  Mauritius: MAURITIUS_DEST,
 };
 
 export const destinations = Object.keys(destData).map(name => ({
@@ -361,6 +367,9 @@ export const allItineraries = [
   { id: 48, dest: "New Zealand", vibe: "Offbeat", name: "Wild Coast", nights: 14, price: "2,42,498", route: [{ city: "Kaikoura", n: 3 }, { city: "Stewart Island", n: 4 }, { city: "Catlins", n: 3 }, { city: "Dunedin", n: 4 }], veg: false, img: nzImgs[6],
     days: [{ city: "Kaikoura", n: 3, sub: "Whale watch · Seals · Peninsula" }, { city: "Stewart Island", n: 4, sub: "Kiwi spotting · Bush walks" }, { city: "Catlins", n: 3, sub: "Waterfalls · Seal bay · Lighthouse" }, { city: "Dunedin", n: 4, sub: "Penguins · Otago · Albatross" }],
     pace: "Balanced", crowds: "Low", vegFood: "Medium" },
+
+  // Mauritius (ids 500-503) - content + real hotels with inclusions in mauritiusData.js
+  ...MAURITIUS_ITINERARIES,
 ];
 
 // Group itineraries by vibe for home carousels

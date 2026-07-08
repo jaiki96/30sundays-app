@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useParams } from "react-router-dom";
 import PhoneFrame from "./components/PhoneFrame";
 import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
@@ -13,6 +13,7 @@ import HomeV6 from "./pages/HomeV6";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
+import MaldivesQuote from "./pages/MaldivesQuote";
 import ResortDetail from "./pages/ResortDetail";
 import Listing from "./pages/Listing";
 import Detail from "./pages/Detail";
@@ -22,6 +23,7 @@ import Build from "./pages/Build";
 import LoginV2 from "./pages/LoginV2";
 import LogoAnim from "./pages/LogoAnim";
 import MediaLab from "./pages/MediaLab";
+import RouteCardLab from "./pages/RouteCardLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -46,15 +48,30 @@ import RoutesCouples from "./pages/RoutesCouples";
 import DiscoverWF from "./pages/DiscoverWF";
 import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
+import CompareVersions from "./pages/CompareVersions";
+import SavedWishlist from "./pages/SavedWishlist";
+import WishlistHotelDetail from "./pages/WishlistHotelDetail";
+import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
 import { SavesProvider } from "./data/saves";
+import { WishlistProvider } from "./data/wishlist";
+
+// Destination pages: new discover-style layout everywhere except Maldives and
+// Mauritius, which keep their existing layouts.
+function DestinationLayout() {
+  const { name } = useParams();
+  const dn = decodeURIComponent(name || "");
+  if (dn === "Maldives") return <MaldivesDestination />;
+  if (dn === "Mauritius") return <Destination />;
+  return <DiscoverWF />;
+}
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -68,10 +85,10 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
     <PhoneFrame>
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
-        <Route path="/" element={<HomeV2 />} />
+        <Route path="/" element={<HomeV5 userState={userState} />} />
         <Route path="/v3" element={<HomeV3 />} />
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
-        <Route path="/v5" element={<HomeV5 userState={userState} />} />
+        <Route path="/v5" element={<HomeV2 />} />
         <Route path="/v6" element={<HomeV6 userState={userState} />} />
         <Route path="/discover/:name" element={<Discover />} />
         <Route path="/discover/:name/routes" element={<DiscoverRoutes />} />
@@ -82,18 +99,24 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/wf/:name/routes" element={<RoutesWF />} />
         <Route path="/v1" element={<Home userState={userState} />} />
         <Route path="/chat" element={<ChatScreen />} />
-        <Route path="/destination/Maldives" element={<MaldivesDestination />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
-        <Route path="/destination/:name" element={<Destination />} />
+        <Route path="/maldives-quote" element={<MaldivesQuote />} />
+        <Route path="/destination/:name" element={<DestinationLayout />} />
+        <Route path="/old-bali-page" element={<Destination name="Bali" />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
         <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
+        <Route path="/compare/:dealId" element={<CompareVersions />} />
+        <Route path="/saved" element={<SavedWishlist />} />
+        <Route path="/saved/hotel/:id" element={<WishlistHotelDetail />} />
+        <Route path="/saved/activity/:id" element={<WishlistActivityDetail />} />
         <Route path="/build" element={<Build />} />
         <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/media-lab" element={<MediaLab />} />
+        <Route path="/route-lab" element={<RouteCardLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
@@ -131,6 +154,7 @@ export default function App() {
     <ErrorBoundary>
     <DealsProvider>
     <SavesProvider>
+    <WishlistProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -143,6 +167,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </WishlistProvider>
     </SavesProvider>
     </DealsProvider>
     </ErrorBoundary>

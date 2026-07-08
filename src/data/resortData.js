@@ -45,6 +45,10 @@ export const resorts = [
     hero_image: maldivesImgs[0],
     images: [maldivesImgs[0], maldivesImgs[1], maldivesImgs[2], maldivesImgs[3], maldivesImgs[4]],
     video_url: null,
+    booking_rating: 9.0,
+    booking_rating_count: 412,
+    website: "https://www.cocogiri.com",
+    location: { lat: 3.377, lng: 73.412 },
     visa_info: "Visa on arrival, Free",
     green_tax_note: "Green Tax is a mandatory country tax. All resorts charge USD 6.00 per person, per night. It's included in your total price.",
     amenities: ["Pool", "Spa", "Gym", "WiFi", "Bar", "Beach Towel", "Mini Bar", "Laundry", "Restaurant", "Dive Centre", "Snorkeling Gear", "Kayaks"],
@@ -84,6 +88,7 @@ export const resorts = [
     ],
     inclusions: {
       standard: ["Return speedboat transfers", "All meals as per selected plan", "Welcome drink on arrival", "Complimentary snorkeling gear", "WiFi throughout the resort", "Beach towels & sun loungers", "Access to gym & infinity pool"],
+      special: ["Room upgrade on arrival (subject to availability)", "Early check-in & late check-out on request", "One complimentary sunset fishing trip per stay", "20% off spa treatments"],
       honeymoon: ["In-villa flower decoration", "Honeymoon cake", "Sparkling wine on arrival", "Couple spa session (30 min)", "Candlelight dinner on the beach"],
       anniversary: ["Room decoration", "Anniversary cake", "Sparkling wine", "Couple photoshoot (15 min)"],
       birthday: ["Room decoration", "Birthday cake", "Complimentary dessert at dinner"],
@@ -123,6 +128,10 @@ export const resorts = [
     hero_image: maldivesImgs[3],
     images: [maldivesImgs[3], maldivesImgs[4], maldivesImgs[5], maldivesImgs[6], maldivesImgs[7]],
     video_url: null,
+    booking_rating: 9.4,
+    booking_rating_count: 638,
+    website: "https://www.soneva.com/soneva-fushi",
+    location: { lat: 5.129, lng: 73.070 },
     visa_info: "Visa on arrival, Free",
     green_tax_note: "Green Tax is a mandatory country tax. All resorts charge USD 6.00 per person, per night. It's included in your total price.",
     amenities: ["Private Pool", "Spa", "Gym", "WiFi", "Bar", "Observatory", "Cinema", "Chocolate Room", "Ice Cream Parlour", "Dive Centre", "Library", "Tennis Court"],
@@ -160,6 +169,7 @@ export const resorts = [
     ],
     inclusions: {
       standard: ["Return seaplane transfers", "All meals as per selected plan", "Welcome champagne on arrival", "Complimentary bicycles", "WiFi throughout the resort", "Open-air cinema", "Observatory access", "Ice cream parlour & chocolate room"],
+      special: ["One complimentary excursion per stay", "In-villa breakfast any morning", "Priority daylight seaplane slots", "Personal Mr/Ms Friday host"],
       honeymoon: ["Overwater villa decoration with flowers", "Honeymoon cake & champagne", "Couple spa ritual (60 min)", "Private sandbank dinner", "Stargazing session for two"],
       anniversary: ["Villa decoration", "Anniversary cake & wine", "Couple photoshoot (30 min)", "Sunset cruise for two"],
     },
@@ -198,6 +208,10 @@ export const resorts = [
     hero_image: maldivesImgs[6],
     images: [maldivesImgs[6], maldivesImgs[7], maldivesImgs[8], maldivesImgs[9], maldivesImgs[10]],
     video_url: null,
+    booking_rating: 9.2,
+    booking_rating_count: 720,
+    website: "https://www.ozen-collection.com/ozenlife-maadhoo",
+    location: { lat: 3.936, lng: 73.470 },
     visa_info: "Visa on arrival, Free",
     green_tax_note: "Green Tax is a mandatory country tax. All resorts charge USD 6.00 per person, per night. It's included in your total price.",
     amenities: ["Pool", "Spa by Clarins", "Gym", "WiFi", "Bar", "Underwater Restaurant", "Mini Bar", "Laundry", "4 Restaurants", "Dive Centre", "Water Sports Centre"],
@@ -235,6 +249,7 @@ export const resorts = [
     ],
     inclusions: {
       standard: ["Return speedboat transfers", "INDULGENCE all-inclusive plan", "Unlimited dining across 4 restaurants", "Premium beverages all day", "One spa treatment per person", "One excursion per person", "WiFi & mini bar", "Snorkeling gear & non-motorized water sports"],
+      special: ["One premium dinner at M6m underwater restaurant", "Complimentary floating breakfast once per stay", "Late check-out on request", "Daily replenished in-villa mini bar"],
       honeymoon: ["Overwater villa floral decoration", "Honeymoon cake", "Champagne on arrival", "Couple spa session (45 min)", "Candlelight dinner at M6m underwater restaurant"],
       anniversary: ["Villa decoration", "Anniversary cake & champagne", "Sunset dolphin cruise for two"],
     },
@@ -272,6 +287,10 @@ export const resorts = [
     hero_image: maldivesImgs[9],
     images: [maldivesImgs[9], maldivesImgs[10], maldivesImgs[11], maldivesImgs[12], maldivesImgs[13]],
     video_url: null,
+    booking_rating: 9.5,
+    booking_rating_count: 401,
+    website: "https://www.marriott.com/en-us/hotels/mlexr-the-st-regis-maldives-vommuli-resort",
+    location: { lat: 2.845, lng: 72.895 },
     visa_info: "Visa on arrival, Free",
     green_tax_note: "Green Tax is a mandatory country tax. All resorts charge USD 6.00 per person, per night. It's included in your total price.",
     amenities: ["Private Pool", "Butler Service", "Iridium Spa", "Gym", "WiFi", "Whale Bar", "Tennis Court", "Library", "Dive Centre", "Kids Club", "Yoga Pavilion"],
@@ -308,6 +327,7 @@ export const resorts = [
     ],
     inclusions: {
       standard: ["Return seaplane transfers", "All meals as per selected plan", "Dedicated butler service", "Welcome amenities", "WiFi throughout the resort", "Non-motorized water sports", "Access to gym & yoga pavilion"],
+      special: ["24/7 dedicated personal butler", "Complimentary pressing of two garments", "House buggy on call", "Sunrise in-villa breakfast once per stay"],
       honeymoon: ["Romantic villa setup with roses & candles", "Champagne & chocolate on arrival", "Couple spa journey (90 min)", "Private overwater dinner", "Sunrise breakfast in-villa"],
       anniversary: ["Villa decoration", "Anniversary cake & Moët", "Couple photoshoot (45 min)", "Private sunset cruise"],
       birthday: ["Villa decoration with balloons", "Custom birthday cake", "Complimentary bottle of wine at dinner"],
@@ -346,6 +366,10 @@ export const resorts = [
     hero_image: maldivesImgs[12],
     images: [maldivesImgs[12], maldivesImgs[13], maldivesImgs[14], maldivesImgs[0], maldivesImgs[1]],
     video_url: null,
+    booking_rating: 8.8,
+    booking_rating_count: 1102,
+    website: "https://www.centarahotelsresorts.com/centaragrand/cgi",
+    location: { lat: 3.489, lng: 72.855 },
     visa_info: "Visa on arrival, Free",
     green_tax_note: "Green Tax is a mandatory country tax. All resorts charge USD 6.00 per person, per night. It's included in your total price.",
     amenities: ["Pool", "SPA Cenvaree", "Gym", "WiFi", "Bar", "Kids Club", "Mini Bar", "Laundry", "3 Restaurants", "Dive Centre", "Tennis Court", "Games Room"],
@@ -384,6 +408,7 @@ export const resorts = [
     ],
     inclusions: {
       standard: ["Return seaplane transfers", "All meals as per selected plan", "Welcome drink on arrival", "Complimentary snorkeling gear", "WiFi throughout the resort", "Non-motorized water sports", "Access to pools, gym & tennis"],
+      special: ["One complimentary whale shark excursion per stay", "Late check-out on request", "One glass-bottom boat ride", "10% off spa treatments"],
       honeymoon: ["Villa flower decoration", "Honeymoon cake", "Sparkling wine on arrival", "Couple spa session (30 min)", "Candlelight dinner on the beach"],
       anniversary: ["Room decoration", "Anniversary cake", "Champagne", "Sunset cruise for two"],
     },
@@ -421,6 +446,10 @@ export const resorts = [
     hero_image: maldivesImgs[14],
     images: [maldivesImgs[14], maldivesImgs[0], maldivesImgs[1], maldivesImgs[2], maldivesImgs[3]],
     video_url: null,
+    booking_rating: 9.1,
+    booking_rating_count: 690,
+    website: "https://www.anantara.com/en/veli-maldives",
+    location: { lat: 3.977, lng: 73.514 },
     visa_info: "Visa on arrival, Free",
     green_tax_note: "Green Tax is a mandatory country tax. All resorts charge USD 6.00 per person, per night. It's included in your total price.",
     amenities: ["Pool", "Anantara Spa", "Gym", "WiFi", "Bar", "Adults Only", "Mini Bar", "Laundry", "2 Restaurants", "Dive Centre", "House Reef Access"],
@@ -460,6 +489,7 @@ export const resorts = [
     ],
     inclusions: {
       standard: ["Return speedboat transfers", "All meals as per selected plan", "Welcome drink on arrival", "Complimentary snorkeling gear", "WiFi throughout the resort", "Access to Dhigu sister resort", "Non-motorized water sports"],
+      special: ["Full access to sister resort Anantara Dhigu", "One complimentary sunset cruise per stay", "In-villa breakfast any morning", "15% off spa treatments"],
       honeymoon: ["Villa decoration with flowers & candles", "Honeymoon cake", "Sparkling wine on arrival", "Couple spa treatment (45 min)", "Candlelight beach dinner"],
       anniversary: ["Villa decoration", "Anniversary cake & wine", "Couple photoshoot (20 min)"],
       birthday: ["Villa decoration", "Birthday cake", "Complimentary cocktails at dinner"],
@@ -510,6 +540,44 @@ export function getStartingPrice(resort) {
   if (min === null) return null;
   return min.toLocaleString("en-IN");
 }
+
+// ─── Budget tiers (for the guided customise flow) ───
+// Groups resorts by price band. Each tier shortlists 1-2 resorts.
+export const TIER_META = {
+  budget: { label: "Budget", blurb: "Great value, still gorgeous", resortIds: ["cocogiri", "anantara-veli"] },
+  mid: { label: "Mid-range", blurb: "More space, more service", resortIds: ["centara-grand", "ozen-life-maadhoo"] },
+  ultra: { label: "Ultra-luxury", blurb: "The very best islands", resortIds: ["soneva-fushi", "st-regis"] },
+};
+export const TIER_ORDER = ["budget", "mid", "ultra"];
+
+export function getResortsByTier(tierKey) {
+  const ids = TIER_META[tierKey]?.resortIds || [];
+  return ids.map(getResortById).filter(Boolean);
+}
+
+// Lowest per-person price across a tier's resorts (formatted INR string).
+export function getTierFromPrice(tierKey) {
+  const nums = getResortsByTier(tierKey)
+    .map(r => parseInt((getStartingPrice(r) || "0").replace(/,/g, ""), 10))
+    .filter(Boolean);
+  if (!nums.length) return null;
+  return Math.min(...nums).toLocaleString("en-IN");
+}
+
+// ─── Meal plan coverage ───
+// Plain-language coverage per plan family, with drinks/alcohol called out.
+// Shared by the wizard meal step and the resort page meal section.
+export const MEAL_INFO = {
+  bo: { label: "Breakfast only", covers: ["Breakfast daily", "Lunch & dinner not included", "No drinks included"] },
+  hb: { label: "Half board", covers: ["Breakfast & dinner daily", "Lunch not included", "Drinks not included"] },
+  fb: { label: "Full board", covers: ["Breakfast, lunch & dinner", "Soft drinks with meals", "Alcohol not included"] },
+  fbp: { label: "Full board plus", covers: ["Breakfast, lunch & dinner", "Select beverages included", "Some alcohol with meals"] },
+  ai: { label: "All inclusive", covers: ["All meals & snacks", "Soft drinks all day", "House beer, wine & spirits"] },
+  aip: { label: "All inclusive premium", covers: ["All meals & snacks", "Premium spirits & wines", "In-villa minibar"] },
+};
+
+// The four meal families we explain in the wizard (a preference, not a booking).
+export const MEAL_PREF_KEYS = ["bo", "hb", "fb", "ai"];
 
 // Maldives customer photos for reviews section
 export const maldivesCustomerPhotos = customerPhotos.Maldives || [];

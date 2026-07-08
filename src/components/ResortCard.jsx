@@ -4,7 +4,7 @@ import { C } from "../data";
 import { CATEGORY_COLORS, CATEGORY_META, getRoomSplitLabel } from "../data/resortData";
 
 // Each card represents ONE night config for a resort (no toggles)
-export default function ResortCard({ resort, nights, showCategoryBadge }) {
+export default function ResortCard({ resort, nights, showCategoryBadge, query }) {
   const config = resort.night_configs.find(c => c.nights === nights) || resort.night_configs[0];
   const defaultCombo = config ? (config.combos.find(c => c.is_default) || config.combos[0]) : null;
   const roomSplit = defaultCombo ? getRoomSplitLabel(defaultCombo) : "";
@@ -16,7 +16,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge }) {
 
   return (
     <Link
-      to={`/resort/${resort.id}?nights=${displayNights}`}
+      to={`/resort/${resort.id}?nights=${displayNights}${query ? `&${query}` : ""}`}
       style={{ textDecoration: "none", color: "inherit", flexShrink: 0, display: "block" }}
     >
       <div style={{

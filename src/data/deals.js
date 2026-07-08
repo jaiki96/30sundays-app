@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, createElement } from "react";
 import { allItineraries } from "../data";
+import { demoCompareDeals } from "./compareData";
 
 // ─── Versioned deals store ───
 // Mirrors the back-office model: a deal holds versions. A version is an
@@ -8,7 +9,7 @@ import { allItineraries } from "../data";
 // stale after QUOTE_VALID_DAYS and surface as Expired.
 
 const KEY = "30s_deals_v1";
-const SEED_KEY = "30s_deals_seeded_v6";
+const SEED_KEY = "30s_deals_seeded_v9";
 export const QUOTE_VALID_DAYS = 7;
 
 const DAY = 86400000;
@@ -55,7 +56,7 @@ function demoDeals() {
       ver("demo_bali_v1", 1, { num: 1, status: "quote", ageDays: 6, pdfAgo: 5 }),
       ver("demo_bali_v2", 100, { num: 2, status: "quote", ageDays: 4, priceAdj: 4000, pdfAgo: 3 }),
       ver("demo_bali_v3", 3, { num: 3, status: "quote", ageDays: 2, priceAdj: 8000, pdfAgo: 1 }),
-      ver("demo_bali_v4", 1, { num: 4, status: "draft", ageDays: 0.4, priceAdj: 12000 }),
+      ver("demo_bali_v4", 1, { num: 4, status: "quote", ageDays: 0.4, priceAdj: 12000, pdfAgo: 0 }),
     ],
   };
 
@@ -89,14 +90,25 @@ function demoDeals() {
     ],
   };
 
-  // 4. Lost vacation — sinks to the bottom, muted. (Customer would start a new one.)
+  // 4. Active Mauritius deal — two finalised quotes on the same honeymoon route.
+  const mauImg = byId(500)?.img;
+  const dealMau = {
+    id: "demo_mauritius", status: "active", itineraryId: 500, dest: "Mauritius", title: routeTitle(500), img: mauImg,
+    customItinerary: null, createdAt: now - 2 * DAY,
+    versions: [
+      ver("demo_mau_v1", 500, { num: 1, status: "quote", ageDays: 2, pdfAgo: 1 }),
+      ver("demo_mau_v2", 502, { num: 2, status: "quote", ageDays: 0.5, priceAdj: 9000, pdfAgo: 0 }),
+    ],
+  };
+
+  // 5. Lost vacation — sinks to the bottom, muted. (Customer would start a new one.)
   const dealLost = {
     id: "demo_lost", status: "lost", itineraryId: 10, dest: "Vietnam", title: routeTitle(10), img: byId(10)?.img,
     customItinerary: null, createdAt: now - 30 * DAY,
     versions: [ver("demo_lost_v1", 10, { num: 1, status: "quote", ageDays: 30, pdfAgo: 24 })],
   };
 
-  return [dealBali, dealSpan, dealMal, dealLost];
+  return [dealBali, dealSpan, dealMal, dealMau, dealLost, ...demoCompareDeals()];
 }
 
 function load() {
@@ -116,6 +128,16 @@ function load() {
 }
 function persist(deals) {
   try { localStorage.setItem(KEY, JSON.stringify(deals)); } catch { /* ignore */ }
+}
+
+// Wishlist is a single shared set of version ids, so a heart toggled in My Plans
+// shows up in Compare (and anywhere else a version is listed).
+const WISH_KEY = "30s_wished_versions_v1";
+function loadWished() {
+  try { return JSON.parse(localStorage.getItem(WISH_KEY)) || {}; } catch { return {}; }
+}
+function persistWished(w) {
+  try { localStorage.setItem(WISH_KEY, JSON.stringify(w)); } catch { /* ignore */ }
 }
 
 let seq = 0;
@@ -142,6 +164,12 @@ const DealsContext = createContext(null);
 export function DealsProvider({ children }) {
   const [deals, setDeals] = useState(load);
   useEffect(() => { persist(deals); }, [deals]);
+
+  // Shared wishlist (version id -> true).
+  const [wished, setWished] = useState(loadWished);
+  useEffect(() => { persistWished(wished); }, [wished]);
+  const toggleWish = useCallback((id) => setWished(w => ({ ...w, [id]: !w[id] })), []);
+  const isWished = useCallback((id) => !!wished[id], [wished]);
 
   // Create a brand-new deal with an editable Draft (Version 1).
   const createDeal = useCallback((init) => {
@@ -294,6 +322,7 @@ export function DealsProvider({ children }) {
     deals, createDeal, updateDraft, requestPricing, forkVersion,
     deleteDeal, discardVersion, getDeal, getVersion,
     findCustomItinerary, setCustomItinerary,
+    wished, toggleWish, isWished,
   };
   return createElement(DealsContext.Provider, { value }, children);
 }
