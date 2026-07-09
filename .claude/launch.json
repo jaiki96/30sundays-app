@@ -1,11 +1,12 @@
 {
   "version": "0.0.1",
+  "autoPort": true,
   "configurations": [
     {
       "name": "30sundays-app",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5188", "--strictPort"],
-      "port": 5188
+      "runtimeArgs": ["vite"],
+      "port": 5190
     }
   ]
 }

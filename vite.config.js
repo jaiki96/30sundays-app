@@ -17,4 +17,9 @@ const fullReloadOnChange = {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), fullReloadOnChange],
+  server: {
+    // Listen on the port assigned by the harness (via PORT), falling back to
+    // Vite's default when run manually.
+    port: process.env.PORT ? Number(process.env.PORT) : undefined,
+  },
 })

@@ -1052,7 +1052,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
     return <span style={{ fontSize: 10, fontWeight: 700, color: light ? "#fff" : col, background: light ? "rgba(255,255,255,0.22)" : `${col}14`, padding: "2px 7px", borderRadius: 6 }}>{label}</span>;
   };
 
-  const sectionHead = { margin: "26px 0 12px", fontSize: 13, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" };
+  const sectionHead = { margin: "26px 0 12px", fontSize: 18, fontWeight: 800, color: C.head, letterSpacing: "-0.3px" };
 
   // One route card, reused for the default 3 and the "more routes" accordion.
   // A div, not a button, since each region thumbnail is its own tappable
@@ -1070,15 +1070,25 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
         border: `${selected ? 1.5 : 1}px solid ${selected ? C.p600 : C.div}`,
         background: C.white, boxShadow: "0 1px 3px rgba(24,29,39,0.05)",
       }}>
-        {/* Header: route number + how many couples picked this one */}
+        {/* Header: route number + a "view on map" link, then how many couples picked this one */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>Route {idx + 1}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>Route {idx + 1}</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); setRoute(r); setMapOpen(true); }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: 0, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: 400, color: C.sub, flexShrink: 0 }}
+            >
+              <MapIcon size={12} color={C.sub} /> View on map
+            </button>
+          </div>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.p600, flexShrink: 0 }}>{pct}% chose this</span>
         </div>
 
-        {/* Region rows */}
+        {/* Region rows: city + nights inline, and a short tag for what it's about */}
         <div style={{ margin: "6px 0 10px" }}>
-          {r.map((s, i) => (
+          {r.map((s, i) => {
+            const tag = areas.find(a => a.city === s.city)?.tag;
+            return (
             <div key={s.city} style={{ display: "flex", alignItems: "center", gap: 13, padding: "7px 0" }}>
               <button
                 onClick={(e) => { e.stopPropagation(); setCityView(s.city); }}
@@ -1092,10 +1102,13 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
                   <Play size={7} color="#fff" fill="#fff" style={{ marginLeft: 0.5 }} />
                 </span>
               </button>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>{s.city}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: C.sub, flexShrink: 0 }}>{s.n} night{s.n > 1 ? "s" : ""}</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>
+                {s.city} <span style={{ fontWeight: 600, fontSize: 13, color: C.sub }}>({s.n}N)</span>
+              </span>
+              {tag && <span style={{ fontSize: 11, fontWeight: 400, fontStyle: "italic", color: C.sub, flexShrink: 0, maxWidth: 108, textAlign: "right", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{tag}</span>}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Primary pink CTA on the selected route, secondary on the rest */}
@@ -1119,19 +1132,10 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
   return (
     <div style={{ padding: "18px 16px 24px" }}>
-      {/* Header: title + a small map CTA (opens the map with the recommended
-          routes alongside it, so a couple can pick straight from there). */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-        <h1 style={{ ...titleStyle, flex: 1 }}>{editRoute ? "Change your route" : "Choose your route"}</h1>
-        <button onClick={() => setMapOpen(true)} aria-label="Open map" style={{
-          flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, marginTop: 3,
-          padding: "7px 12px", borderRadius: 20, border: `1px solid ${C.div}`, background: C.white,
-          fontSize: 12.5, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit",
-        }}>
-          <MapIcon size={13} color={C.head} /> Map
-        </button>
-      </div>
-      <p style={{ ...subStyle, marginTop: 4 }}>Explore the regions, then pick the route that fits you best. {n} nights.</p>
+      {/* Header: pick where to base yourself first (the region carousel). Each
+          route card below has its own "view on map" link. */}
+      <h1 style={{ ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" }}>{editRoute ? "Change your route" : "Where will you base yourself"}</h1>
+      <p style={{ ...subStyle, marginTop: 4 }}>Explore each region, then choose your route below.</p>
 
       {/* ── Regions: watch (tap card) and wishlist (heart) only, no selecting here ── */}
       <div className="hs" style={{ gap: 11, margin: "18px -16px 0", paddingLeft: 16, paddingRight: 16, paddingTop: 3 }}>
@@ -1165,7 +1169,7 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
       {/* ── Section 2: curated routes (or an edge-case nudge) ── */}
       <div ref={routesRef}>
-      <p style={sectionHead}>Routes we recommend</p>
+      <p style={sectionHead}>Choose your route for {n} Night{n > 1 ? "s" : ""}</p>
 
       {tooShort ? (
         <div style={{ padding: 16, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}` }}>

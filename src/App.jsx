@@ -24,6 +24,7 @@ import LoginV2 from "./pages/LoginV2";
 import LogoAnim from "./pages/LogoAnim";
 import MediaLab from "./pages/MediaLab";
 import RouteCardLab from "./pages/RouteCardLab";
+import TransferLab from "./pages/TransferLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -41,6 +42,7 @@ import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
 import WatchDeepLink from "./pages/WatchDeepLink";
+import Offline from "./pages/Offline";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Discover from "./pages/Discover";
 import DiscoverRoutes from "./pages/DiscoverRoutes";
@@ -117,6 +119,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/logo-anim" element={<LogoAnim />} />
         <Route path="/media-lab" element={<MediaLab />} />
         <Route path="/route-lab" element={<RouteCardLab />} />
+        <Route path="/offline" element={<Offline />} />
+        <Route path="/transfer-lab" element={<TransferLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
