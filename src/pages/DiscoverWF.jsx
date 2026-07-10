@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Heart, Play, Check, ChevronRight, Star, MapPin, FileCheck, Plane, Clock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Heart, Play, Check, ChevronRight, Star, MapPin, FileCheck, Plane, Clock, ShieldCheck, Sun } from "lucide-react";
 import { C, destData, destinations, reviews, getCustomerPhotos, couplePhotoNames, getItinerariesForDest, customerPhotos } from "../data";
 import { useSaves } from "../data/saves";
 import { destHero } from "../data/buildData";
@@ -275,7 +275,7 @@ function MoreFromDest({ dest, navigate }) {
   const coupleNames = couplePhotoNames[dest] || [];
   const facts = [
     { icon: FileCheck, label: "Visa", value: d.visa, color: C.p600 },
-    { icon: Plane, label: "Direct flights", value: d.flights, color: "#1570EF" },
+    { icon: Sun, label: "Best months to visit", value: d.bestMonths, color: "#1570EF" },
     { icon: Clock, label: "Ideal duration", value: d.idealNights, color: "#6938EF" },
   ];
 

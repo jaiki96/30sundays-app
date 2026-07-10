@@ -269,7 +269,9 @@ export function compareVersions(a, b) {
     let status = "same";
     if (ha && !hb) status = "removed";
     else if (!ha && hb) status = "added";
-    else if (ha && hb && (ha.hotel !== hb.hotel || ha.star !== hb.star || ha.nights !== hb.nights || ha.room !== hb.room)) status = "swapped";
+    // Same hotel = unchanged, even if the dates or nights shift. Only a different
+    // property, room, or star rating counts as a swap.
+    else if (ha && hb && (ha.hotel !== hb.hotel || ha.star !== hb.star || ha.room !== hb.room)) status = "swapped";
     return { city, a: ha, b: hb, status };
   });
   // A plain-English headline of what moved between the two stays, so the reader

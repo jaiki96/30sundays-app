@@ -28,6 +28,9 @@ const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩",
 const inr = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 const signed = (n) => `${n > 0 ? "+" : n < 0 ? "-" : ""}${inr(Math.abs(n))}`;
 const shortDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "";
+const ddmm = (d) => { if (!d) return ""; const x = new Date(d); return `${String(x.getDate()).padStart(2, "0")}/${String(x.getMonth() + 1).padStart(2, "0")}`; };
+const DIFF_RED = "#D92D20";
+const DIFF_GREEN = "#067647";
 const genDate = (v) => shortDate(v.status === "quote" ? v.pricedAt : v.createdAt);
 const verPrice = (v) => (v.livePrice ?? v.indicativePrice ?? 0) * (v.customizations?.travelDates?.travelers ?? 2);
 
@@ -41,14 +44,25 @@ function ChangedTag({ label = "Changed" }) {
   return <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: ".3px", color: SLATE, background: SLATE_BG, padding: "2px 7px", borderRadius: 999, textTransform: "uppercase" }}>{label}</span>;
 }
 
-function Block({ icon, title, changed, tagLabel, children }) {
+// Subtle colored bold text (no pill): green "Added", red "Removed". Component-level.
+function DiffTag({ kind }) {
+  if (kind !== "added" && kind !== "removed") return null;
+  const added = kind === "added";
+  return (
+    <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".2px", color: added ? DIFF_GREEN : DIFF_RED, flexShrink: 0 }}>
+      {added ? "Added" : "Removed"}
+    </span>
+  );
+}
+
+function Block({ icon, title, changed, tagLabel, showTag = true, children }) {
   const Icon = icon;
   return (
     <div style={{ marginBottom: 14, borderRadius: 14, border: `1px solid ${C.div}`, background: C.white, overflow: "hidden", borderLeft: changed ? `3px solid ${C.p600}` : `1px solid ${C.div}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 13px 9px" }}>
         <Icon size={16} color={C.sub} />
         <span style={{ fontSize: 13.5, fontWeight: 700, color: C.head, flex: 1 }}>{title}</span>
-        {changed && <ChangedTag label={tagLabel} />}
+        {changed && showTag && <ChangedTag label={tagLabel} />}
       </div>
       <div style={{ padding: `0 13px 13px` }}>{children}</div>
     </div>
@@ -187,7 +201,7 @@ export default function CompareVersions() {
   const snapB = getVersionSnapshot(deal, vB);
   const diff = compareVersions(snapA, snapB);
 
-  const facets = [diff.route.changed, diff.flights.changed, diff.stay.changed, diff.dayPlans.changed, diff.dates.changed];
+  const facets = [diff.dates.changed, diff.route.changed, diff.flights.changed, diff.stay.changed, diff.dayPlans.changed];
   const changedCount = facets.filter(Boolean).length;
   const hidden = mode === "diff" ? facets.length - changedCount : 0;
   const identical = !diff.price.changed && changedCount === 0;
@@ -236,11 +250,11 @@ export default function CompareVersions() {
           </p>
         )}
 
+        {show(diff.dates.changed) && <DatesBlock dates={diff.dates} />}
         {show(diff.route.changed) && <RouteBlock route={diff.route} />}
-        {show(diff.flights.changed) && <FlightsBlock flights={diff.flights} labelA={vA.label || `V${vA.num}`} labelB={vB.label || `V${vB.num}`} onOpen={(item, label) => setSheet({ type: "flight", item, label })} />}
+        {show(diff.flights.changed) && <FlightsBlock flights={diff.flights} mode={mode} labelA={vA.label || `V${vA.num}`} labelB={vB.label || `V${vB.num}`} onOpen={(item, label) => setSheet({ type: "flight", item, label })} />}
         {show(diff.stay.changed) && <StayBlock stay={diff.stay} mode={mode} labelA={vA.label || `V${vA.num}`} labelB={vB.label || `V${vB.num}`} onOpen={(item, label) => setSheet({ type: "hotel", item, label })} />}
         {show(diff.dayPlans.changed) && <DaysBlock dp={diff.dayPlans} mode={mode} />}
-        {show(diff.dates.changed) && <DatesBlock dates={diff.dates} />}
       </div>
 
       {sheet?.type === "flight" && <FlightSheet f={sheet.item} label={sheet.label} onClose={() => setSheet(null)} />}
@@ -337,13 +351,14 @@ function flightTimes(f) {
   const arr = depMin + legMin + (f.via && f.stops ? 70 : 0);
   return { from, to, dep: depMin, arr };
 }
-function FlightCol({ f, dir, onClick }) {
+function FlightCol({ f, dir, onClick, tagKind }) {
   const t = flightTimes({ ...f, dir });
   return (
     <div onClick={onClick} style={{ cursor: "pointer" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <p style={{ fontSize: 12.5, fontWeight: 700, color: C.head, margin: 0, flex: 1 }}>{f.airline}</p>
-        <ChevronRight size={14} color={C.inact} />
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <p style={{ fontSize: 12.5, fontWeight: 700, color: C.head, margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.airline}</p>
+        <DiffTag kind={tagKind} />
+        <ChevronRight size={14} color={C.inact} style={{ flexShrink: 0 }} />
       </div>
       <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>
         {t.from} {fmtTime(t.dep)} → {t.to} {fmtTime(t.arr)}{t.arr >= 1440 ? <span style={{ color: C.inact }}> +1</span> : ""}
@@ -351,18 +366,19 @@ function FlightCol({ f, dir, onClick }) {
     </div>
   );
 }
-function FlightsBlock({ flights, labelA, labelB, onOpen }) {
+function FlightsBlock({ flights, labelA, labelB, onOpen, mode }) {
+  // "What changed" lists only the legs that moved; "Everything" shows both.
+  const dirs = mode === "diff" ? flights.dirs.filter((d) => d.changed) : flights.dirs;
   return (
-    <Block icon={Plane} title="Flights" changed={flights.changed}>
-      {flights.dirs.map((d, i) => (
+    <Block icon={Plane} title="Flights" changed={flights.changed} showTag={false}>
+      {dirs.map((d, i) => (
         <div key={d.dir} style={{ paddingTop: i ? 10 : 0, marginTop: i ? 10 : 0, borderTop: i ? `1px solid ${C.div}` : "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
             <span style={{ fontSize: 10.5, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: ".3px" }}>{d.dir}</span>
-            {d.changed && <ChangedTag />}
           </div>
           <TwoCol
-            a={<FlightCol f={d.a} dir={d.dir} onClick={() => onOpen({ ...d.a, dir: d.dir }, `${labelA} · ${d.dir}`)} />}
-            b={<FlightCol f={d.b} dir={d.dir} onClick={() => onOpen({ ...d.b, dir: d.dir }, `${labelB} · ${d.dir}`)} />}
+            a={<FlightCol f={d.a} dir={d.dir} tagKind={d.changed ? "removed" : null} onClick={() => onOpen({ ...d.a, dir: d.dir }, `${labelA} · ${d.dir}`)} />}
+            b={<FlightCol f={d.b} dir={d.dir} tagKind={d.changed ? "added" : null} onClick={() => onOpen({ ...d.b, dir: d.dir }, `${labelB} · ${d.dir}`)} />}
           />
         </div>
       ))}
@@ -371,15 +387,26 @@ function FlightsBlock({ flights, labelA, labelB, onOpen }) {
 }
 
 // ── Stay ──
-// One stop on a version's stay timeline: dates + place lead, hotel detail below.
-function StayStop({ h, onClick, first, mode }) {
-  if (!h) return null;
+// One stop on a version's stay timeline: region + dates/nights lead, an Added or
+// Removed tag on the top right, hotel detail below. An empty slot (a stop that
+// exists in only one version) reads as a faint dash so the columns stay aligned.
+function StayStop({ h, onClick, tagKind }) {
+  if (!h) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: C.inact }}>Not included</span>
+        <DiffTag kind={tagKind} />
+      </div>
+    );
+  }
   const selfBooked = h.selfBooked || h.hotel?.includes("booked by guest");
   return (
-    <div onClick={selfBooked ? undefined : onClick} style={{ cursor: selfBooked ? "default" : "pointer", paddingTop: first ? 0 : 9, marginTop: first ? 0 : 9, borderTop: first ? "none" : `1px solid ${C.div}` }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: C.sub, margin: "0 0 3px" }}>
-        {mode === "diff" ? h.city : `${shortDate(h.checkIn)} - ${shortDate(h.checkOut)} · ${h.city}`}
-      </p>
+    <div onClick={selfBooked ? undefined : onClick} style={{ cursor: selfBooked ? "default" : "pointer" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: C.sub, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.city}</span>
+        <DiffTag kind={tagKind} />
+      </div>
+      <p style={{ fontSize: 10.5, color: C.inact, margin: "1px 0 3px" }}>{ddmm(h.checkIn)} - {ddmm(h.checkOut)} · {h.nights}N</p>
       {selfBooked ? (
         <p style={{ fontSize: 12, color: C.sub, margin: 0 }}>Booked by guest</p>
       ) : (
@@ -389,37 +416,65 @@ function StayStop({ h, onClick, first, mode }) {
             <ChevronRight size={14} color={C.inact} style={{ flexShrink: 0, marginTop: 1 }} />
           </div>
           <p style={{ fontSize: 11, color: C.sub, margin: "2px 0 0" }}>{h.room}</p>
-          <p style={{ fontSize: 11, color: C.inact, margin: "2px 0 0" }}><span style={{ color: "#F5A623" }}>{"★".repeat(h.star)}</span> · {h.nights}N</p>
+          <p style={{ fontSize: 11, color: C.inact, margin: "2px 0 0" }}><span style={{ color: "#F5A623" }}>{"★".repeat(h.star)}</span></p>
         </>
       )}
     </div>
   );
 }
+// Which side carries which tag: a swap reads as Removed (old, left) + Added
+// (new, right); an added or removed stop tags only the side it appears on.
+function stayTagFor(status, side) {
+  if (status === "added") return side === "b" ? "added" : null;
+  if (status === "removed") return side === "a" ? "removed" : null;
+  if (status === "swapped") return side === "a" ? "removed" : "added";
+  return null;
+}
 function StayBlock({ stay, labelA, labelB, onOpen, mode }) {
-  const Timeline = ({ hotels, label }) => (
-    <div>{hotels.map((h, i) => <StayStop key={h.seq ?? i} h={h} first={i === 0} mode={mode} onClick={() => onOpen(h, label)} />)}</div>
-  );
+  // Each version lists its own stays top to bottom (no head-on city alignment).
+  // A tag marks the ones that moved; "What changed" shows only those.
+  const statusByCity = Object.fromEntries(stay.rows.map((r) => [r.city, r.status]));
+  const Col = ({ hotels, side, label }) => {
+    const rows = hotels
+      .map((h) => ({ h, tag: stayTagFor(statusByCity[h.city], side) }))
+      .filter((r) => mode !== "diff" || r.tag);
+    return (
+      <div>
+        {rows.map(({ h, tag }, i) => (
+          <div key={h.seq ?? h.city} style={{ paddingTop: i ? 10 : 0, marginTop: i ? 10 : 0, borderTop: i ? `1px solid ${C.div}` : "none" }}>
+            <StayStop h={h} tagKind={tag} onClick={() => onOpen(h, label)} />
+          </div>
+        ))}
+      </div>
+    );
+  };
   return (
-    <Block icon={BedDouble} title="Stay" changed={stay.changed}>
+    <Block icon={BedDouble} title="Stay" changed={stay.changed} showTag={false}>
       <TwoCol
-        a={<Timeline hotels={stay.aHotels} label={labelA} />}
-        b={<Timeline hotels={stay.bHotels} label={labelB} />}
+        a={<Col hotels={stay.aHotels} side="a" label={labelA} />}
+        b={<Col hotels={stay.bHotels} side="b" label={labelB} />}
       />
     </Block>
   );
 }
 
 // ── Day plans (day by day, two columns) ──
-function ActsCol({ day }) {
-  if (!day) return <p style={{ fontSize: 15, fontWeight: 700, color: C.inact, margin: 0 }}>—</p>;
+function ActsCol({ day, addedCodes, removedCodes }) {
+  if (!day) return <p style={{ fontSize: 15, fontWeight: 700, color: C.inact, margin: 0 }}>-</p>;
   return (
     <div>
-      {day.activities.map((act, i) => (
-        <p key={i} style={{ fontSize: 12, color: act.category === "Tour" ? C.head : C.sub, margin: i ? "4px 0 0" : 0, lineHeight: "16px" }}>
-          {act.title}
-          {act.category !== "Tour" && <span style={{ color: C.inact }}> · {act.category.toLowerCase()}</span>}
-        </p>
-      ))}
+      {day.activities.map((act, i) => {
+        const kind = addedCodes?.has(act.code) ? "added" : removedCodes?.has(act.code) ? "removed" : null;
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, margin: i ? "4px 0 0" : 0 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: act.category === "Tour" ? C.head : C.sub, lineHeight: "16px" }}>
+              {act.title}
+              {act.category !== "Tour" && <span style={{ color: C.inact }}> · {act.category.toLowerCase()}</span>}
+            </span>
+            <DiffTag kind={kind} />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -454,17 +509,23 @@ function DaysBlock({ dp, mode }) {
     );
   }
   const rows = dp.rows;
+  // Trip-level added / removed codes, so a tour that simply moves to another day
+  // is not flagged; only a genuinely new or dropped item gets a tag.
+  const addedCodes = new Set((dp.added || []).map((a) => a.code));
+  const removedCodes = new Set((dp.removed || []).map((a) => a.code));
   return (
-    <Block icon={MapPin} title="Day plans" changed={dp.changed}>
+    <Block icon={MapPin} title="Day plans" changed={dp.changed} showTag={false}>
       {rows.map((row, i) => {
         const date = (row.a || row.b)?.date;
         return (
           <div key={row.day} style={{ paddingTop: i ? 10 : 0, marginTop: i ? 10 : 0, borderTop: i ? `1px solid ${C.div}` : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
               <span style={{ fontSize: 10.5, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: ".3px" }}>Day {row.day}{date ? ` · ${shortDate(date)}` : ""}</span>
-              {row.changed && <ChangedTag />}
             </div>
-            <TwoCol a={<ActsCol day={row.a} />} b={<ActsCol day={row.b} />} />
+            <TwoCol
+              a={<ActsCol day={row.a} addedCodes={addedCodes} removedCodes={removedCodes} />}
+              b={<ActsCol day={row.b} addedCodes={addedCodes} removedCodes={removedCodes} />}
+            />
           </div>
         );
       })}
