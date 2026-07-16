@@ -351,6 +351,23 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                       <MapPin size={10} color={C.inact} />
                       <span style={{ fontSize: 11, color: C.inact }}>{hotel.neighbourhood}</span>
                     </div>
+
+                    {/* Policy tags: refundability always, checkin/checkout perks when included */}
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: hotel.freeCancellation ? (C.sText || "#027A48") : C.inact }}>
+                        {hotel.freeCancellation ? "Free cancellation" : "Non-refundable"}
+                      </span>
+                      {(hotel.earlyCheckIn || hotel.lateCheckOut) && (
+                        <>
+                          <span style={{ fontSize: 11, color: C.inact }}>·</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: C.sText || "#027A48" }}>
+                            {hotel.earlyCheckIn && hotel.lateCheckOut
+                              ? "Early check-in + late checkout"
+                              : hotel.earlyCheckIn ? "Early check-in included" : "Late checkout included"}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Link>
