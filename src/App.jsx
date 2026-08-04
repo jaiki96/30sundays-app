@@ -9,6 +9,7 @@ import HomeV2 from "./pages/HomeV2";
 import HomeV3 from "./pages/HomeV3";
 import HomeV4 from "./pages/HomeV4";
 import HomeV5 from "./pages/HomeV5";
+import HomeAI from "./pages/HomeAI";
 import HomeV6 from "./pages/HomeV6";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
@@ -68,6 +69,14 @@ function DestinationLayout() {
   return <DiscoverWF />;
 }
 
+// True only on the AI Couple Photos deployment, which is served from its own
+// ai-photos subdomain. Reading the hostname keeps the two deployments building
+// from one branch with no per-environment config. VITE_APP_VARIANT overrides it
+// when running locally.
+const AI_PHOTOS_VARIANT =
+  import.meta.env.VITE_APP_VARIANT === "aiphotos" ||
+  (typeof window !== "undefined" && window.location.hostname.includes("ai-photos"));
+
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
   const showNudge = pathname === "/";
@@ -87,7 +96,11 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
     <PhoneFrame>
       <UserToggle userState={userState} setUserState={setUserState} />
       <Routes>
-        <Route path="/" element={<HomeV5 userState={userState} />} />
+        {/* The AI Couple Photos build is deployed on its own subdomain, where
+            VITE_APP_VARIANT makes it the home. On the main site it stays a
+            parallel variant at /ai and nothing about / changes. */}
+        <Route path="/" element={AI_PHOTOS_VARIANT ? <HomeAI userState={userState} /> : <HomeV5 userState={userState} />} />
+        <Route path="/ai" element={<HomeAI userState={userState} />} />
         <Route path="/v3" element={<HomeV3 />} />
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />

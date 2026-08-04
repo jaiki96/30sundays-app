@@ -78,6 +78,25 @@
   to { transform: rotate(360deg); }
 }
 
+/* AI Couple Photos: one-time reveal on the personalized hero slide */
+@keyframes aiRevealVeil {
+  0%   { opacity: 1; }
+  55%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+@keyframes aiRevealSweep {
+  0%   { transform: translateX(-120%); opacity: 0; }
+  25%  { opacity: 0.85; }
+  80%  { opacity: 0.5; }
+  100% { transform: translateX(320%); opacity: 0; }
+}
+@keyframes aiRevealKicker {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.96); }
+  35%  { opacity: 1; transform: translateY(0) scale(1); }
+  72%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
 @keyframes kenBurns {
   0%   { transform: scale(1.06) translate(0, 0); }
   50%  { transform: scale(1.18) translate(-2%, -1.5%); }
