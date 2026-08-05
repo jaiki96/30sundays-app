@@ -211,6 +211,164 @@ function OptionD() {
   );
 }
 
+/* ── D revisions: show the transformation, not a travel photo ── */
+
+// The plain side. Real uploads are ordinary phone photos, so this is
+// desaturated and softened to read as an input rather than a brochure shot.
+const PLAIN = { filter: "saturate(0.35) brightness(1.04) blur(0.4px)" };
+
+function Chip({ children, dark }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: dark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.2)",
+      border: `1px solid rgba(255,255,255,${dark ? 0.2 : 0.32})`,
+      borderRadius: 999, padding: "4px 9px", backdropFilter: "blur(6px)",
+      fontSize: 9.5, fontWeight: 800, letterSpacing: ".5px", color: "#fff", whiteSpace: "nowrap",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function HeroCta({ label = "Add our photo" }) {
+  return (
+    <button style={{
+      display: "inline-flex", alignItems: "center", gap: 7, marginTop: 11,
+      background: C.p600, color: "#fff", border: "none", borderRadius: 999,
+      padding: "11px 18px", fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+      boxShadow: "0 6px 20px rgba(227,27,83,0.4)",
+    }}>
+      <Plus size={15} /> {label}
+    </button>
+  );
+}
+
+function Dots() {
+  return (
+    <div style={{ position: "absolute", left: 0, right: 0, bottom: 14, display: "flex", justifyContent: "center", gap: 5 }}>
+      {[0, 1, 2, 3].map((i) => (
+        <span key={i} style={{ width: i === 0 ? 18 : 6, height: 6, borderRadius: 3, background: i === 0 ? "#fff" : "rgba(255,255,255,0.45)" }} />
+      ))}
+    </div>
+  );
+}
+
+// D1. Held split. Both states on screen at once, permanently.
+function OptionD1() {
+  return (
+    <div style={{ position: "relative", height: 280, overflow: "hidden" }}>
+      <img src={BALI[9]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", ...PLAIN }} />
+      <img src={BALI[0]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", clipPath: "inset(0 0 0 46%)" }} />
+      <div style={{ position: "absolute", top: 0, bottom: 0, left: "46%", width: 2, background: "rgba(255,255,255,0.9)", boxShadow: "0 0 12px rgba(0,0,0,0.4)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.74) 100%)" }} />
+
+      <div style={{ position: "absolute", top: 12, left: 12 }}><Chip dark>YOUR PHOTO</Chip></div>
+      <div style={{ position: "absolute", top: 12, right: 12 }}><Chip><Sparkles size={10} color="#fff" /> AI, IN BALI</Chip></div>
+
+      <div style={{ position: "absolute", left: PAD, right: PAD, bottom: 40 }}>
+        <h4 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: "-0.5px", textShadow: "0 2px 14px rgba(0,0,0,0.45)" }}>
+          See yourselves in Bali
+        </h4>
+        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.9)", margin: "5px 0 0", lineHeight: "17px" }}>
+          We make it from one photo of you two.
+        </p>
+        <HeroCta />
+      </div>
+      <Dots />
+    </div>
+  );
+}
+
+// D2. The split sweeps across on a loop, so the change happens in front of them.
+function OptionD2() {
+  return (
+    <div style={{ position: "relative", height: 280, overflow: "hidden" }}>
+      <style>{`
+        @keyframes nudgeWipe {
+          0%, 10%   { clip-path: inset(0 0 0 100%); }
+          42%, 80%  { clip-path: inset(0 0 0 0%); }
+          96%, 100% { clip-path: inset(0 0 0 100%); }
+        }
+        @keyframes nudgeWipeLine {
+          0%, 10%   { left: 100%; opacity: 1; }
+          42%       { left: 0%;   opacity: 0; }
+          80%       { left: 0%;   opacity: 0; }
+          96%, 100% { left: 100%; opacity: 0; }
+        }
+        .nudge-wipe { animation: nudgeWipe 5.5s cubic-bezier(.6,0,.35,1) infinite; }
+        .nudge-line { animation: nudgeWipeLine 5.5s cubic-bezier(.6,0,.35,1) infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .nudge-wipe { animation: none; clip-path: inset(0 0 0 46%); }
+          .nudge-line { animation: none; left: 46%; opacity: 1; }
+        }
+      `}</style>
+
+      <img src={BALI[9]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", ...PLAIN }} />
+      <img className="nudge-wipe" src={BALI[0]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      <div className="nudge-line" style={{ position: "absolute", top: 0, bottom: 0, width: 2, marginLeft: -1, background: "rgba(255,255,255,0.95)", boxShadow: "0 0 16px rgba(255,255,255,0.6)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.74) 100%)" }} />
+
+      <div style={{ position: "absolute", top: 12, left: 12 }}><Chip dark>YOUR PHOTO</Chip></div>
+      <div style={{ position: "absolute", top: 12, right: 12 }}><Chip><Sparkles size={10} color="#fff" /> AI, IN BALI</Chip></div>
+
+      <div style={{ position: "absolute", left: PAD, right: PAD, bottom: 40 }}>
+        <h4 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: "-0.5px", textShadow: "0 2px 14px rgba(0,0,0,0.45)" }}>
+          See yourselves in Bali
+        </h4>
+        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.9)", margin: "5px 0 0", lineHeight: "17px" }}>
+          One photo of you two is all we need.
+        </p>
+        <HeroCta />
+      </div>
+      <Dots />
+    </div>
+  );
+}
+
+// D3. The upload stays pinned in the corner as proof of where it came from.
+function OptionD3() {
+  return (
+    <div style={{ position: "relative", height: 280, overflow: "hidden" }}>
+      <img src={BALI[0]} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.78) 100%)" }} />
+
+      <div style={{ position: "absolute", top: 12, right: 12 }}><Chip><Sparkles size={10} color="#fff" /> AI GENERATED</Chip></div>
+
+      {/* The upload, tilted, with a dashed run into the scene. */}
+      <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ position: "relative" }}>
+          <img src={BALI[9]} alt="" style={{
+            width: 50, height: 62, borderRadius: 8, objectFit: "cover",
+            border: "2.5px solid #fff", boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+            transform: "rotate(-6deg)", ...PLAIN,
+          }} />
+          <span style={{
+            position: "absolute", bottom: -7, left: -3, fontSize: 8, fontWeight: 800, letterSpacing: ".3px",
+            color: C.head, background: "#fff", borderRadius: 4, padding: "2px 5px", transform: "rotate(-6deg)",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+          }}>YOURS</span>
+        </div>
+        <svg width="42" height="26" viewBox="0 0 42 26" fill="none" style={{ marginTop: -6 }}>
+          <path d="M2 20 C 14 20, 20 6, 34 6" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" strokeDasharray="3 3" fill="none" />
+          <path d="M30 2.5 L 35.5 6 L 30 9.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+
+      <div style={{ position: "absolute", left: PAD, right: PAD, bottom: 40 }}>
+        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.2px", color: "rgba(255,255,255,0.82)", margin: 0 }}>
+          MADE FROM ONE PHOTO OF YOU TWO
+        </p>
+        <h4 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: "6px 0 0", letterSpacing: "-0.5px", textShadow: "0 2px 14px rgba(0,0,0,0.45)" }}>
+          See yourselves in Bali
+        </h4>
+        <HeroCta />
+      </div>
+      <Dots />
+    </div>
+  );
+}
+
 const NOTES = [
   ["Two floating buttons at once", "The reviewer button and the \"Already in touch with our team?\" banner both sit over the content, and over each other. The reviewer button is ours and goes away in the real build, but the banner still lands on top of the invitation."],
   ["Two persuasion blocks in a row", "The invitation sits directly above \"Couples only / Transparent pricing / No tourist traps\". Both ask for belief at the same moment, so neither gets read."],
@@ -225,8 +383,8 @@ export default function NudgeOptions() {
           Making the invitation image first
         </h1>
         <p style={{ fontSize: 13, color: C.sub, lineHeight: "19px", margin: "8px 0 0" }}>
-          Four options, each at its real size. Nothing here is live and the
-          prototype is unchanged. Pick one and I'll build it.
+          Each one at its real size. Nothing here is live and the prototype is
+          unchanged. Pick one and I'll build it.
         </p>
       </div>
 
@@ -271,10 +429,49 @@ export default function NudgeOptions() {
       <Section
         letter="D"
         title="Inside the hero, no strip at all"
-        blurb="The invitation becomes the first slide of the hero carousel. Adds no height, removes a block from the screen, and puts the idea in the biggest space we have. Their generated image later takes this same slot, so the before and after is the screen itself. My pick."
+        blurb="The invitation becomes the first slide of the hero carousel. Adds no height and removes a block from the screen. But it reads as a stock travel photo: nothing says the picture will be them, made by AI, somewhere they have not been. Three fixes below."
         cost="zero, it replaces a slide"
       >
         <OptionD />
+      </Section>
+
+      <div style={{ padding: `0 ${PAD}px 18px` }}>
+        <div style={{ background: C.wBg || "#FFFAEB", border: "1px solid #FEDF89", borderRadius: 14, padding: "13px 15px" }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: C.wText || "#B54708", margin: 0 }}>The problem with D as drawn</p>
+          <p style={{ fontSize: 12.5, color: C.sub, lineHeight: "18px", margin: "5px 0 0" }}>
+            A single beautiful photo of a couple is what every travel app already
+            shows. It has to be obvious that the picture is made from their own
+            photo, so they can imagine themselves in it. Two states, or a visible
+            change, does that. One picture cannot.
+          </p>
+        </div>
+      </div>
+
+      <Section
+        letter="D1"
+        title="Held split"
+        blurb="Their photo on the left, the AI version on the right, both on screen the whole time. Reads instantly and never moves, so nobody has to wait to understand it. Costs half the hero to a dull image."
+        cost="zero, it replaces a slide"
+      >
+        <OptionD1 />
+      </Section>
+
+      <Section
+        letter="D2"
+        title="The change happens in front of them"
+        blurb="Same split, but it sweeps across on a loop, so the transformation is something they watch rather than work out. This is what PhotoAI and Remini use on their own front pages. The full hero is beautiful most of the cycle. My pick."
+        cost="zero, it replaces a slide"
+      >
+        <OptionD2 />
+      </Section>
+
+      <Section
+        letter="D3"
+        title="Upload pinned in the corner"
+        blurb="Full scene, with their photo tucked in the corner and a dashed run into it. Keeps the whole hero beautiful and still shows where the image came from. Quieter than D2, and the corner card is small on a phone."
+        cost="zero, it replaces a slide"
+      >
+        <OptionD3 />
       </Section>
 
       <div style={{ padding: `4px ${PAD}px 0` }}>
@@ -297,9 +494,10 @@ export default function NudgeOptions() {
         <div style={{ background: C.p100, borderRadius: 14, padding: "14px 15px", margin: "14px 0 0" }}>
           <p style={{ fontSize: 13.5, fontWeight: 700, color: C.head, margin: 0 }}>What I would do</p>
           <p style={{ fontSize: 12.5, color: C.sub, lineHeight: "18px", margin: "5px 0 0" }}>
-            Take D, so the invitation costs nothing and nothing new sits under
-            the hero. Then move the trust row below the first section, so the
-            hero and the invitation get the top of the screen to themselves.
+            Take D2. It costs no height, nothing new sits under the hero, and
+            the change plays out in front of them so the AI part needs no
+            explaining. Then move the trust row below the first section, so the
+            hero gets the top of the screen to itself.
           </p>
         </div>
       </div>
