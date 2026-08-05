@@ -63,6 +63,13 @@ destination (restarts the cycle at spot 1 and regenerates), replace photo
 thumbs up and thumbs down (one vote only), and a "Plan my [destination] trip"
 button that opens that destination.
 
+**Share.** Calls the Web Share API, so on a phone it opens the real iOS or
+Android share drawer and the couple picks the app themselves, WhatsApp included.
+Dismissing that drawer does nothing, as it should. Where the API does not exist
+(desktop review) a stand-in sheet opens instead, WhatsApp first, labelled as a
+stand-in. The share carries a title, a line of text and the app link. Attaching
+the image itself needs a real file, so that comes with real generation.
+
 ## Carousel
 
 Auto-advances every 10 seconds. The personalized slide is always first when
@@ -91,5 +98,5 @@ the whole home every 10 seconds and reset the scroll position.
 ## Not built
 
 Real generation, real face detection, real auth, notifications, backend
-persistence, the 30 day nudge timer, and analytics delivery. Share confirms the
-tap but produces no link.
+persistence, the 30 day nudge timer, and analytics delivery. Share hands off to
+the OS for real, but sends a link rather than the image file.

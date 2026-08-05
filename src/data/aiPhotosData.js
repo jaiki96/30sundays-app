@@ -103,6 +103,12 @@ export const COPY = {
   surpriseSub: "We'll pick a place for you two",
 
   planTripCta: (destName) => `Plan my ${destName} trip`,
+
+  // What goes out with the share. Kept short: on WhatsApp the preview card
+  // carries the image, so the message only has to set it up.
+  shareTitle: (destName) => `Us two in ${destName}`,
+  shareText: (destName, location) => `Look at us at ${location}. ${destName} is next. Made on 30 Sundays.`,
+  shareSheetTitle: "Share this",
   shareCopied: "Link copied",
 
   generatingTitle: (destName) => `Painting you both into ${destName}`,

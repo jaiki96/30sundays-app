@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X as XIcon, Share2, ThumbsDown, ThumbsUp, Sparkles, Check } from "lucide-react";
+import { X as XIcon, Share2, ThumbsDown, ThumbsUp, Sparkles } from "lucide-react";
 import { C } from "../../data";
 import { FrameLayer } from "./Sheet";
+import ShareFallbackSheet from "./ShareFallbackSheet";
 import { useAIPhotos } from "../../state/useAIPhotos";
 import { COPY, track } from "../../data/aiPhotosData";
 
@@ -19,10 +20,10 @@ export default function FullScreenView() {
   const { fullScreen, setFullScreen, image, onThumbsUp, onThumbsDown } = useAIPhotos();
   const openedAt = useRef(0);
   const [vote, setVote] = useState(null); // "up" | "down"
-  const [shared, setShared] = useState(false);
+  const [shareFallback, setShareFallback] = useState(false);
 
   useEffect(() => {
-    if (fullScreen) { openedAt.current = Date.now(); setVote(null); setShared(false); }
+    if (fullScreen) { openedAt.current = Date.now(); setVote(null); setShareFallback(false); }
   }, [fullScreen]);
 
   if (!fullScreen || !image) return null;
@@ -32,11 +33,27 @@ export default function FullScreenView() {
     setFullScreen(false);
   };
 
-  // Prototype share: no sheet, no real link. Confirms the tap and moves on.
-  const share = () => {
-    track("ai_photos_shared", { destination: image.slug, location_index: image.locationIndex });
-    setShared(true);
-    setTimeout(() => setShared(false), 1800);
+  // Hands off to the OS share drawer, so the couple picks the app themselves
+  // and WhatsApp sits where their phone already puts it. Only where that does
+  // not exist (desktop review) does the stand-in sheet open instead.
+  const share = async () => {
+    track("ai_photos_share_tapped", { destination: image.slug, location_index: image.locationIndex });
+    const data = {
+      title: COPY.shareTitle(image.destination),
+      text: COPY.shareText(image.destination, image.location),
+      url: window.location.origin,
+    };
+    if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+      try {
+        await navigator.share(data);
+        track("ai_photos_shared", { channel: "native", destination: image.slug, location_index: image.locationIndex });
+      } catch (e) {
+        // Dismissing the OS drawer is a normal outcome, not a failure.
+        if (e?.name !== "AbortError") setShareFallback(true);
+      }
+      return;
+    }
+    setShareFallback(true);
   };
 
   const castVote = (kind) => {
@@ -62,18 +79,9 @@ export default function FullScreenView() {
           <XIcon size={20} color="#fff" />
         </button>
         <button onClick={share} aria-label="Share" style={ROUND_BTN}>
-          {shared ? <Check size={20} color="#fff" /> : <Share2 size={19} color="#fff" />}
+          <Share2 size={19} color="#fff" />
         </button>
       </div>
-
-      {/* Share confirmation */}
-      {shared && (
-        <div style={{ position: "absolute", top: 100, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-          <span style={{ background: "rgba(0,0,0,0.72)", color: "#fff", fontSize: 12.5, fontWeight: 600, padding: "8px 14px", borderRadius: 999 }}>
-            {COPY.shareCopied}
-          </span>
-        </div>
-      )}
 
       {/* Bottom block */}
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 18px calc(24px + env(safe-area-inset-bottom))" }}>
@@ -121,6 +129,8 @@ export default function FullScreenView() {
           {COPY.planTripCta(image.destination)}
         </button>
       </div>
+
+      <ShareFallbackSheet open={shareFallback} onClose={() => setShareFallback(false)} image={image} />
     </FrameLayer>
   );
 }
