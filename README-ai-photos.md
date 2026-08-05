@@ -26,15 +26,15 @@ generation delay.
 
 | State | What renders | How to reach it |
 |---|---|---|
-| Logged out | Marketing slides plus the nudge. Tapping opens the app's own login screen, which lands on the upload sheet, not back on home. | Dev panel, Logged out |
-| Logged in, no photo | Marketing slides plus the nudge. Tapping opens the upload sheet directly. | Dev panel, No photo |
+| Logged out | Invitation slide in hero slot 0. Its button opens the app's own login screen, which lands on the upload sheet, not back on home. | Dev panel, Logged out |
+| Logged in, no photo | Invitation slide in hero slot 0. Its button opens the upload sheet directly. | Dev panel, No photo |
 | Generating | In-progress slide in slot 0. The carousel keeps rotating and the whole home stays interactive. | Dev panel, Generating |
 | Generated, unseen | Reveal plays once in slot 0, then settles into the carousel. Never replays. | Dev panel, Generated unseen |
 | Generated, seen | Personalized slide in slot 0. Tap opens full screen. | Dev panel, Generated seen |
 | Generation failed | Retry sits in the slot. Retry re-runs the delay and succeeds. | Dev panel, Generation failed |
 | Hidden | Slide pulled from the carousel. The nudge does not come back. Unhide from Account, "Your photos (hidden)". | Dev panel, Hidden |
 | Removed | Back to no photo. The nudge does not come back. | Dev panel, Removed |
-| Nudge dismissed | Closes instantly, no confirmation. | Tap the X, or dev panel, Nudge |
+| Nudge dismissed | The invitation slide leaves the carousel instantly, no confirmation, and does not come back. | Tap the X on the slide, or dev panel, Nudge |
 | Offline | The cached image still renders, with the offline treatment. | Dev panel, Offline |
 | Upload rejections | Copy for no face, moderation and minor detected. No real detection behind any of them. | Dev panel, Upload rejection, then open the upload sheet |
 
@@ -43,7 +43,17 @@ panel.
 
 ## Flows
 
-**Upload.** Nudge, then a half-modal upload sheet. Any file is accepted, with no
+**The invitation.** Hero slot 0 until a photo exists, so it costs no extra
+height and nothing sits between the hero and the content below it. Their plain
+photo is under a destination photo that sweeps across on a loop, so the change
+is watched rather than read. The destination after "See yourselves in" cycles
+through Bali, Vietnam, Thailand and Maldives, and the image changes with the
+word while it is clipped out of view. Reduced motion gets a held split instead.
+
+New Zealand is not in the cycle: every entry needs a real couple photo and
+there are none for it in the library. One line to add when there is.
+
+**Upload.** The invitation button, then a half-modal upload sheet. Any file is accepted, with no
 person-count check: solo, couple and group all work. Consent must be ticked
 before Continue enables. Then the destination picker, then generating, then the
 reveal.
@@ -72,8 +82,8 @@ the image itself needs a real file, so that comes with real generation.
 
 ## Carousel
 
-Auto-advances every 10 seconds. The personalized slide is always first when
-present. Swipe or drag moves it a slide at a time, in either direction, with a
+Auto-advances every 10 seconds. Slot 0 is the couple's own image once they have
+one, and the invitation until then. Only one of the two ever applies. Swipe or drag moves it a slide at a time, in either direction, with a
 40px threshold so a tap is never read as a swipe and a swipe never opens what is
 under the finger. Interacting pauses it, and it resumes after 15 seconds idle. A
 newly generated image pins to the first slot and plays its reveal before normal

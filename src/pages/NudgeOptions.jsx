@@ -1,6 +1,5 @@
 import { Sparkles, ChevronRight, ArrowRight, X as XIcon, Plus, ImagePlus } from "lucide-react";
-import { C, customerPhotos, destData } from "../data";
-import { COPY } from "../data/aiPhotosData";
+import { C, customerPhotos } from "../data";
 
 // Review page only. Nothing here is wired to the feature and nothing on the
 // live prototype changes. Each option is the real size it would be on the
@@ -67,9 +66,9 @@ function Current() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 14, fontWeight: 700, color: C.head, margin: 0 }}>
-            {COPY.nudgeTitle}<ChevronRight size={16} color={C.p600} />
+            Picture you two there.<ChevronRight size={16} color={C.p600} />
           </p>
-          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0", lineHeight: "16px" }}>{COPY.nudgeSub}</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0", lineHeight: "16px" }}>One photo, and pick where you're dreaming of.</p>
         </div>
         <Dismiss />
       </div>

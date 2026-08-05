@@ -63,6 +63,21 @@ export const AI_DESTINATIONS = [
 
 export const LOCATIONS_PER_DESTINATION = 7;
 
+// Destinations the invitation hero cycles through. This is a teaser of reach,
+// not the picker, so it is not limited to destinations with all 7 locations
+// ready. Every entry does need a real couple photo, which is why New Zealand is
+// missing: there is nothing in customerPhotos for it yet.
+export const TEASER_DESTINATIONS = [
+  { name: "Bali", photo: (customerPhotos.Bali || [])[0] },
+  { name: "Vietnam", photo: (customerPhotos.Vietnam || [])[3] },
+  { name: "Thailand", photo: (customerPhotos.Thailand || [])[1] },
+  { name: "Maldives", photo: (customerPhotos.Maldives || [])[1] },
+];
+
+// The couple's own photo, standing in for whatever they upload. It stays put
+// while the destinations change, which is the point: one photo, many places.
+export const TEASER_PLAIN_PHOTO = (customerPhotos.Bali || [])[9];
+
 export function getDestination(slug) {
   return AI_DESTINATIONS.find((d) => d.slug === slug) || null;
 }
@@ -85,9 +100,11 @@ export function getGeneratedImage(slug, locationIndex) {
 // ─── Copy ───
 // Couples-anchored throughout. Never "package", "deal", "cheap", "standard".
 export const COPY = {
-  // Destination-agnostic: the couple picks where after they add the photo.
-  nudgeTitle: "Picture you two there.",
-  nudgeSub: "One photo, and pick where you're dreaming of.",
+  // The invitation hero. The destination after the lead line cycles, so the
+  // promise is about reach rather than one place.
+  invitationLead: "See yourselves in",
+  invitationCta: "Add your photo",
+  invitationNote: "*Your images will be AI generated",
 
   uploadTitle: "See you both there",
   uploadSub: "Add one photo of you two. We'll place you at a new spot every day.",

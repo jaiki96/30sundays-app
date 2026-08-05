@@ -4,6 +4,7 @@ import { HERO_HEIGHT, HERO_MIN_HEIGHT } from "./SlideShell";
 import MarketingSlide from "./MarketingSlide";
 import PersonalizedSlide from "./PersonalizedSlide";
 import GeneratingSlide from "./GeneratingSlide";
+import InvitationSlide from "./InvitationSlide";
 import { useAIPhotos, useReducedMotion } from "../../state/useAIPhotos";
 import { track } from "../../data/aiPhotosData";
 
@@ -42,12 +43,14 @@ function useAutoAdvance(count, enabled) {
 }
 
 export default function HeroCarousel({ marketingSlides, onOpenVideo }) {
-  const { showPersonalized, status } = useAIPhotos();
+  const { showPersonalized, showNudge, status } = useAIPhotos();
   const reduced = useReducedMotion();
 
-  // The personalized slot always sits first when it is present.
+  // Slot 0 is the couple's own image once they have one, and the invitation to
+  // make one until then. Only one of the two can ever apply.
   const slides = [
     ...(showPersonalized ? [{ type: "personalized", key: "ai" }] : []),
+    ...(showNudge ? [{ type: "invitation", key: "invite" }] : []),
     ...marketingSlides.map((s, i) => ({ type: "marketing", key: `m${i}`, slide: s })),
   ];
   const count = slides.length;
@@ -131,6 +134,7 @@ export default function HeroCarousel({ marketingSlides, onOpenVideo }) {
       if (status === "failed") return <GeneratingSlide failed />;
       return <PersonalizedSlide />;
     }
+    if (s.type === "invitation") return <InvitationSlide />;
     return <MarketingSlide slide={s.slide} onOpenVideo={onOpenVideo} />;
   };
 

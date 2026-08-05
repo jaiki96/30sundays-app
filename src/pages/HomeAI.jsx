@@ -16,7 +16,6 @@ import {
 
 import { useAIPhotos } from "../state/useAIPhotos";
 import HeroCarousel from "../components/HomeHero/HeroCarousel";
-import NudgeStrip from "../components/HomeHero/NudgeStrip";
 import AIPhotosDevPanel, { DevPanelButton } from "../components/AIPhotos/AIPhotosDevPanel";
 
 const PAD = 18;
@@ -80,10 +79,6 @@ export default function HomeAI({ userState = "new" }) {
       <div onClick={onHeroTap}>
         <HeroCarousel marketingSlides={MARKETING_SLIDES} onOpenVideo={() => setShowVideo(true)} />
       </div>
-
-      {/* Prompt to start, below the hero. Never returns once hidden or removed.
-          The controls themselves live in Account, not here. */}
-      <NudgeStrip />
 
       {!isNew && draftVer && (
         <div style={{ padding: `18px ${PAD}px 0` }}>
