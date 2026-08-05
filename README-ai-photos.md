@@ -26,13 +26,13 @@ generation delay.
 
 | State | What renders | How to reach it |
 |---|---|---|
-| Logged out | Marketing slides plus the nudge. Tapping opens a mock login, which lands on the upload sheet, not back on home. | Dev panel, Logged out |
+| Logged out | Marketing slides plus the nudge. Tapping opens the app's own login screen, which lands on the upload sheet, not back on home. | Dev panel, Logged out |
 | Logged in, no photo | Marketing slides plus the nudge. Tapping opens the upload sheet directly. | Dev panel, No photo |
 | Generating | In-progress slide in slot 0. The carousel keeps rotating and the whole home stays interactive. | Dev panel, Generating |
 | Generated, unseen | Reveal plays once in slot 0, then settles into the carousel. Never replays. | Dev panel, Generated unseen |
 | Generated, seen | Personalized slide in slot 0. Tap opens full screen. | Dev panel, Generated seen |
 | Generation failed | Retry sits in the slot. Retry re-runs the delay and succeeds. | Dev panel, Generation failed |
-| Hidden | Slide pulled from the carousel. The nudge does not come back. Unhide from settings. | Dev panel, Hidden |
+| Hidden | Slide pulled from the carousel. The nudge does not come back. Unhide from Account, "Your photos (hidden)". | Dev panel, Hidden |
 | Removed | Back to no photo. The nudge does not come back. | Dev panel, Removed |
 | Nudge dismissed | Closes instantly, no confirmation. | Tap the X, or dev panel, Nudge |
 | Offline | The cached image still renders, with the offline treatment. | Dev panel, Offline |
@@ -48,18 +48,27 @@ person-count check: solo, couple and group all work. Consent must be ticked
 before Continue enables. Then the destination picker, then generating, then the
 reveal.
 
-**Settings.** Reachable from "Your photos" under the hero once a photo exists.
-Four rows: change destination (restarts the cycle at spot 1 and regenerates),
-replace photo (regenerates the current spot), hide (instant), remove (asks
-first).
+**Login.** The app's existing phone and OTP screen, shown over the frame.
+Nothing about it is reinvented for this feature. Any code except 0000 verifies.
 
-**Full screen.** Image fills the frame. Close, hide, a subtle AI generated tag
-and a thumbs-down.
+**Destination.** The three live destinations plus "Surprise us", which picks one
+for the couple and never repeats the one they are already on.
+
+**Settings.** Reachable from "Your photos" in the Account tab. Nothing for the
+feature sits on the home screen except the hero and the nudge. Four rows: change
+destination (restarts the cycle at spot 1 and regenerates), replace photo
+(regenerates the current spot), hide (instant), remove (asks first).
+
+**Full screen.** Image fills the frame. Close, share, a subtle AI generated tag,
+thumbs up and thumbs down (one vote only), and a "Plan my [destination] trip"
+button that opens that destination.
 
 ## Carousel
 
 Auto-advances every 10 seconds. The personalized slide is always first when
-present. Swiping or tapping pauses it, and it resumes after 15 seconds idle. A
+present. Swipe or drag moves it a slide at a time, in either direction, with a
+40px threshold so a tap is never read as a swipe and a swipe never opens what is
+under the finger. Interacting pauses it, and it resumes after 15 seconds idle. A
 newly generated image pins to the first slot and plays its reveal before normal
 rotation starts. A single item renders as a static hero with no dots. Every
 slide carries the same scrim, since generated image brightness varies.
@@ -81,5 +90,6 @@ the whole home every 10 seconds and reset the scroll position.
 
 ## Not built
 
-Real generation, real face detection, real auth, notifications, sharing, backend
-persistence, the 30 day nudge timer, and analytics delivery.
+Real generation, real face detection, real auth, notifications, backend
+persistence, the 30 day nudge timer, and analytics delivery. Share confirms the
+tap but produces no link.

@@ -9,7 +9,7 @@ const PAD = 18;
 
 // The AI image slot. Always index 0 when present. Tapping opens full screen.
 export default function PersonalizedSlide() {
-  const { image, seen, offline, locationCount, onHeroTapped } = useAIPhotos();
+  const { image, seen, offline, onHeroTapped } = useAIPhotos();
   // Captured once on mount. The reveal marks itself seen straight away, so
   // reading `seen` live here would tear the animation down on its first frame.
   const [playReveal] = useState(() => !seen);
@@ -34,13 +34,8 @@ export default function PersonalizedSlide() {
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: "-0.5px", lineHeight: "26px", textShadow: "0 2px 14px rgba(0,0,0,0.4)" }}>
           {image.location}
         </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
-            Spot {image.locationIndex} of {locationCount}
-          </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 12, fontWeight: 700, color: "#fff" }}>
-            · Tap to open <ChevronRight size={13} color="#fff" />
-          </span>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 2, marginTop: 10, fontSize: 12, fontWeight: 700, color: "#fff" }}>
+          Tap to open <ChevronRight size={13} color="#fff" />
         </div>
       </div>
     </SlideShell>

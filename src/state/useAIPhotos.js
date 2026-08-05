@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo, createElement } from "react";
-import { getGeneratedImage, track, LOCATIONS_PER_DESTINATION } from "../data/aiPhotosData";
+import { getGeneratedImage, track, LOCATIONS_PER_DESTINATION, AI_DESTINATIONS } from "../data/aiPhotosData";
 
 // Mocked real-time generation. The PRD expects 5 to 15 seconds in production.
 const GENERATION_MS = 6000;
@@ -135,6 +135,15 @@ export function AIPhotosProvider({ children }) {
     runGeneration(slug, state.destination ? "destination_change" : "first_upload", { resetCycle: true });
   }, [runGeneration, state.destination]);
 
+  // Couples who have not picked a place yet get one chosen for them. Never
+  // repeats the destination they are already on.
+  const onSurpriseMe = useCallback(() => {
+    const pool = AI_DESTINATIONS.filter((d) => d.slug !== state.destination);
+    const pick = pool[Math.floor(Math.random() * pool.length)] || AI_DESTINATIONS[0];
+    track("ai_photos_surprise_me_tapped", { destination: pick.slug });
+    onDestinationSelected(pick.slug);
+  }, [onDestinationSelected, state.destination]);
+
   // ─── Slide interactions ───
   const onRevealPlayed = useCallback(() => {
     track("ai_photos_reveal_played", {});
@@ -152,10 +161,14 @@ export function AIPhotosProvider({ children }) {
     if (state.destination) runGeneration(state.destination, "first_upload");
   }, [runGeneration, state.destination]);
 
-  const onThumbsDown = useCallback(() => {
+  // Both signals carry the same properties, so quality can be read per location.
+  const rate = useCallback((event) => {
     const img = state.status === "generated" ? getGeneratedImage(state.destination, state.locationIndex) : null;
-    track("ai_photos_thumbs_down", { destination: state.destination, location_index: img?.locationIndex ?? null });
+    track(event, { destination: state.destination, location_index: img?.locationIndex ?? null });
   }, [state.destination, state.locationIndex, state.status]);
+
+  const onThumbsUp = useCallback(() => rate("ai_photos_thumbs_up"), [rate]);
+  const onThumbsDown = useCallback(() => rate("ai_photos_thumbs_down"), [rate]);
 
   // ─── Settings ───
   const onPhotoReplaced = useCallback(() => {
@@ -234,8 +247,8 @@ export function AIPhotosProvider({ children }) {
     patch, forceState,
     onNudgeTapped, onNudgeDismissed, onLoginCompleted,
     onPhotoSelected, onConsentChecked, onUploadSubmitted, onUploadAbandoned,
-    onDestinationSelected,
-    onRevealPlayed, onHeroTapped, onGenerationRetried, onThumbsDown,
+    onDestinationSelected, onSurpriseMe,
+    onRevealPlayed, onHeroTapped, onGenerationRetried, onThumbsUp, onThumbsDown,
     onPhotoReplaced, onHidden, onUnhidden, onRemoved, onRemoveCancelled,
   };
 

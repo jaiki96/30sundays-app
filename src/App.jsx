@@ -58,6 +58,9 @@ import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
 import { SavesProvider } from "./data/saves";
 import { WishlistProvider } from "./data/wishlist";
+import { AIPhotosProvider } from "./state/useAIPhotos";
+import AIPhotoSurfaces from "./components/AIPhotos/AIPhotoSurfaces";
+import { AI_PHOTOS_VARIANT } from "./data/aiPhotosVariant";
 
 // Destination pages: new discover-style layout everywhere except Maldives and
 // Mauritius, which keep their existing layouts.
@@ -68,14 +71,6 @@ function DestinationLayout() {
   if (dn === "Mauritius") return <Destination />;
   return <DiscoverWF />;
 }
-
-// True only on the AI Couple Photos deployment, which is served from its own
-// ai-photos subdomain. Reading the hostname keeps the two deployments building
-// from one branch with no per-environment config. VITE_APP_VARIANT overrides it
-// when running locally.
-const AI_PHOTOS_VARIANT =
-  import.meta.env.VITE_APP_VARIANT === "aiphotos" ||
-  (typeof window !== "undefined" && window.location.hostname.includes("ai-photos"));
 
 function AppContent({ userState, setUserState, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
   const { pathname } = useLocation();
@@ -157,6 +152,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
       </Routes>
       {showNudge && <TripNudge userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
+      {/* Mounted for the whole shell so Account can open them. Inert until then. */}
+      <AIPhotoSurfaces />
     </PhoneFrame>
   );
 }
@@ -172,6 +169,7 @@ export default function App() {
     <DealsProvider>
     <SavesProvider>
     <WishlistProvider>
+    <AIPhotosProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -184,6 +182,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </AIPhotosProvider>
     </WishlistProvider>
     </SavesProvider>
     </DealsProvider>

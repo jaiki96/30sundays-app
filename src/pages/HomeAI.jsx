@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Images } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { C, destData, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
@@ -14,14 +14,9 @@ import {
   AllSixCountries, TravellerMomentsReels, LovedByCouples,
 } from "./HomeV5";
 
-import { AIPhotosProvider, useAIPhotos } from "../state/useAIPhotos";
+import { useAIPhotos } from "../state/useAIPhotos";
 import HeroCarousel from "../components/HomeHero/HeroCarousel";
 import NudgeStrip from "../components/HomeHero/NudgeStrip";
-import UploadSheet from "../components/AIPhotos/UploadSheet";
-import DestinationPicker from "../components/AIPhotos/DestinationPicker";
-import MockLoginSheet from "../components/AIPhotos/MockLoginSheet";
-import AIPhotoSettings from "../components/AIPhotos/AIPhotoSettings";
-import FullScreenView from "../components/AIPhotos/FullScreenView";
 import AIPhotosDevPanel, { DevPanelButton } from "../components/AIPhotos/AIPhotosDevPanel";
 
 const PAD = 18;
@@ -54,12 +49,12 @@ const MARKETING_SLIDES = [
   },
 ];
 
-function HomeAIInner({ userState }) {
+export default function HomeAI({ userState = "new" }) {
   const { deals } = useDeals();
   const isNew = userState === "new";
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
   const [showVideo, setShowVideo] = useState(false);
-  const { setSheet, hasPhoto, showPersonalized, hidden } = useAIPhotos();
+  const { setSheet } = useAIPhotos();
 
   // Triple tap the hero to reach the reviewer panel without the floating button.
   const taps = useRef([]);
@@ -86,23 +81,9 @@ function HomeAIInner({ userState }) {
         <HeroCarousel marketingSlides={MARKETING_SLIDES} onOpenVideo={() => setShowVideo(true)} />
       </div>
 
-      {/* Prompt to start, below the hero. Never returns once hidden or removed. */}
-      <NudgeStrip destName="Bali" />
-
-      {/* Way back into the controls once a photo exists. */}
-      {hasPhoto && (showPersonalized || hidden) && (
-        <div style={{ padding: `12px ${PAD}px 0` }}>
-          <button
-            onClick={() => setSheet("settings")}
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 48, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-          >
-            <Images size={15} color={C.p600} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.p600 }}>
-              {hidden ? "Your photos are hidden" : "Your photos"}
-            </span>
-          </button>
-        </div>
-      )}
+      {/* Prompt to start, below the hero. Never returns once hidden or removed.
+          The controls themselves live in Account, not here. */}
+      <NudgeStrip />
 
       {!isNew && draftVer && (
         <div style={{ padding: `18px ${PAD}px 0` }}>
@@ -128,23 +109,8 @@ function HomeAIInner({ userState }) {
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
 
-      {/* Feature surfaces. All half-modal, all scoped to the phone frame. */}
-      <MockLoginSheet />
-      <UploadSheet />
-      <DestinationPicker />
-      <AIPhotoSettings />
-      <FullScreenView />
-
       <DevPanelButton onClick={() => setSheet("dev")} />
       <AIPhotosDevPanel />
     </div>
-  );
-}
-
-export default function HomeAI({ userState = "new" }) {
-  return (
-    <AIPhotosProvider>
-      <HomeAIInner userState={userState} />
-    </AIPhotosProvider>
   );
 }

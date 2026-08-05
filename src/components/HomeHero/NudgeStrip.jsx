@@ -6,7 +6,7 @@ import { COPY, track } from "../../data/aiPhotosData";
 
 // Sits below the hero, not inside it. Visible to everyone: the login gate is
 // on the action, not on the nudge.
-export default function NudgeStrip({ destName = "Bali" }) {
+export default function NudgeStrip() {
   const { showNudge, loggedIn, onNudgeTapped, onNudgeDismissed } = useAIPhotos();
   const fired = useRef(false);
 
@@ -39,12 +39,13 @@ export default function NudgeStrip({ destName = "Bali" }) {
             <Sparkles size={18} color={C.p600} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: C.head, margin: 0, letterSpacing: "-0.2px" }}>
-              {COPY.nudgeTitle(destName)}
+            {/* Chevron sits on the title line, not floating in the middle. */}
+            <p style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 14, fontWeight: 700, color: C.head, margin: 0, letterSpacing: "-0.2px" }}>
+              {COPY.nudgeTitle}
+              <ChevronRight size={16} color={C.p600} style={{ flexShrink: 0 }} />
             </p>
             <p style={{ fontSize: 12, color: C.sub, margin: "2px 0 0", lineHeight: "16px" }}>{COPY.nudgeSub}</p>
           </div>
-          <ChevronRight size={18} color={C.p600} style={{ flexShrink: 0 }} />
         </div>
 
         {/* Instant dismiss, no confirmation. */}

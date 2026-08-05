@@ -7,11 +7,13 @@ import {
   Instagram, Youtube, Linkedin, X as XIcon, Send, Check,
   ArrowLeft, Phone, Mail, Calendar, MapPin, Trash2, AlertTriangle,
   Gift, Megaphone, Palmtree, UserPlus, Plus, BookUser,
-  ChevronDown, CreditCard, Copy, AlertCircle,
+  ChevronDown, CreditCard, Copy, AlertCircle, Images,
 } from "lucide-react";
 import { C } from "../data";
 import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
+import { useAIPhotos } from "../state/useAIPhotos";
+import { AI_PHOTOS_VARIANT } from "../data/aiPhotosVariant";
 
 // Document builders - fields mimic OCR-extracted passport / PAN data.
 const passportDoc = (file, { no, dob, issue, expiry, place }) => ({
@@ -118,6 +120,11 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   const { counts } = useWishlist();
   const wishlistTotal = Object.values(wished || {}).filter(Boolean).length + (counts?.poiTotal || 0);
 
+  // AI Couple Photos. This is where the couple configures the feature: nothing
+  // for it sits on the home screen.
+  const { hasPhoto: aiHasPhoto, hidden: aiHidden, setSheet: setAISheet, onNudgeTapped } = useAIPhotos();
+  const showAIPhotos = AI_PHOTOS_VARIANT || aiHasPhoto;
+
   const [feedback, setFeedback] = useState(null); // "feature" | "problem" | null
   const [showDetails, setShowDetails] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
@@ -133,6 +140,12 @@ export default function Account({ userState, leadData, setUserState, setLeadData
   };
 
   const accountGroup = [
+    // Only on the AI Couple Photos build, or once a couple actually has a photo.
+    ...(showAIPhotos ? [{
+      icon: Images,
+      label: aiHidden ? "Your photos (hidden)" : "Your photos",
+      onClick: () => (aiHasPhoto ? setAISheet("settings") : onNudgeTapped()),
+    }] : []),
     { icon: Wallet, label: "Wallet", onClick: () => setShowWallet(true) },
     { icon: Gift, label: "Refer & Earn", onClick: () => setShowRefer(true) },
     { icon: Bookmark, label: "Saved & Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },

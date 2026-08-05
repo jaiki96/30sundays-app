@@ -72,7 +72,8 @@ export default function HeroCarousel({ marketingSlides, onOpenVideo }) {
 
   useEffect(() => { if (pinned) setIndex(0); }, [pinned, setIndex]);
 
-  const touchX = useRef(null);
+  const dragX = useRef(null);
+  const swipedAt = useRef(0);
   const advanceType = useRef("auto");
   const viewed = useRef(new Set());
   const sawPersonalized = useRef(false);
@@ -109,13 +110,19 @@ export default function HeroCarousel({ marketingSlides, onOpenVideo }) {
     markInteraction();
   };
 
-  const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; };
-  const onTouchEnd = (e) => {
-    if (touchX.current == null) return;
-    const dx = e.changedTouches[0].clientX - touchX.current;
-    touchX.current = null;
+  // Pointer events, so a finger swipe and a mouse drag both move the hero.
+  const onPointerDown = (e) => { dragX.current = e.clientX; markInteraction(); };
+  const onPointerUp = (e) => {
+    if (dragX.current == null) return;
+    const dx = e.clientX - dragX.current;
+    dragX.current = null;
     if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+    swipedAt.current = Date.now();
     goTo(index + (dx < 0 ? 1 : -1), dx < 0 ? "next" : "previous");
+  };
+  // A swipe must not also open the link or the full screen view under the finger.
+  const onClickCapture = (e) => {
+    if (Date.now() - swipedAt.current < 350) { e.preventDefault(); e.stopPropagation(); }
   };
 
   const renderSlide = (s) => {
@@ -129,10 +136,11 @@ export default function HeroCarousel({ marketingSlides, onOpenVideo }) {
 
   return (
     <div
-      style={{ position: "relative", height: HERO_HEIGHT, minHeight: HERO_MIN_HEIGHT, overflow: "hidden" }}
-      onPointerDown={markInteraction}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
+      style={{ position: "relative", height: HERO_HEIGHT, minHeight: HERO_MIN_HEIGHT, overflow: "hidden", touchAction: "pan-y" }}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => { dragX.current = null; }}
+      onClickCapture={onClickCapture}
     >
       <div style={{
         display: "flex", height: "100%", width: `${count * 100}%`,

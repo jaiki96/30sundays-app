@@ -85,19 +85,25 @@ export function getGeneratedImage(slug, locationIndex) {
 // ─── Copy ───
 // Couples-anchored throughout. Never "package", "deal", "cheap", "standard".
 export const COPY = {
-  nudgeTitle: (destName) => `Picture you both in ${destName}.`,
-  nudgeSub: "One photo of you two, and we'll take it from there.",
+  // Destination-agnostic: the couple picks where after they add the photo.
+  nudgeTitle: "Picture you two there.",
+  nudgeSub: "One photo, and pick where you're dreaming of.",
 
   uploadTitle: "See you both there",
   uploadSub: "Add one photo of you two. We'll place you at a new spot every day.",
   uploadHint: "Blurry, sunglasses, side profile: all fine. Faces just need to be visible.",
   uploadPickCta: "Choose a photo",
   uploadChangeCta: "Choose a different photo",
-  consent: "We'll use this photo to create images of you two. Both of you agreed to this.",
+  consent: "We'll use this photo to create images of you two.",
   uploadSubmitCta: "Continue",
 
   destTitle: "Where are you dreaming of?",
   destSub: "Pick one. You'll see you both somewhere new there each day.",
+  surpriseTitle: "Surprise us",
+  surpriseSub: "We'll pick a place for you two",
+
+  planTripCta: (destName) => `Plan my ${destName} trip`,
+  shareCopied: "Link copied",
 
   generatingTitle: (destName) => `Painting you both into ${destName}`,
   generatingSub: "This takes a few seconds.",
