@@ -11,6 +11,7 @@ import HomeV4 from "./pages/HomeV4";
 import HomeV5 from "./pages/HomeV5";
 import HomeAI from "./pages/HomeAI";
 import HomeV6 from "./pages/HomeV6";
+import NudgeOptions from "./pages/NudgeOptions";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -96,6 +97,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
             parallel variant at /ai and nothing about / changes. */}
         <Route path="/" element={AI_PHOTOS_VARIANT ? <HomeAI userState={userState} /> : <HomeV5 userState={userState} />} />
         <Route path="/ai" element={<HomeAI userState={userState} />} />
+        {/* Review page for the invitation options. Not part of the feature. */}
+        <Route path="/nudge-options" element={<NudgeOptions />} />
         <Route path="/v3" element={<HomeV3 />} />
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />
