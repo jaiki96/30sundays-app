@@ -122,7 +122,7 @@ export default function Account({ userState, leadData, setUserState, setLeadData
 
   // AI Couple Photos. This is where the couple configures the feature: nothing
   // for it sits on the home screen.
-  const { hasPhoto: aiHasPhoto, hidden: aiHidden, setSheet: setAISheet, onNudgeTapped } = useAIPhotos();
+  const { hasPhoto: aiHasPhoto, status: aiStatus } = useAIPhotos();
   const showAIPhotos = AI_PHOTOS_VARIANT || aiHasPhoto;
 
   const [feedback, setFeedback] = useState(null); // "feature" | "problem" | null
@@ -143,8 +143,8 @@ export default function Account({ userState, leadData, setUserState, setLeadData
     // Only on the AI Couple Photos build, or once a couple actually has a photo.
     ...(showAIPhotos ? [{
       icon: Images,
-      label: aiHidden ? "Your photos (hidden)" : "Your photos",
-      onClick: () => (aiHasPhoto ? setAISheet("settings") : onNudgeTapped()),
+      label: aiStatus === "generated" ? "Your photos" : "See yourselves there",
+      onClick: () => navigate("/ai-photos"),
     }] : []),
     { icon: Wallet, label: "Wallet", onClick: () => setShowWallet(true) },
     { icon: Gift, label: "Refer & Earn", onClick: () => setShowRefer(true) },

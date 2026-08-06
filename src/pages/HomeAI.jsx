@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { C, destData, allItineraries } from "../data";
@@ -14,9 +14,7 @@ import {
   AllSixCountries, TravellerMomentsReels, LovedByCouples,
 } from "./HomeV5";
 
-import { useAIPhotos } from "../state/useAIPhotos";
 import HeroCarousel from "../components/HomeHero/HeroCarousel";
-import AIPhotosDevPanel, { DevPanelButton } from "../components/AIPhotos/AIPhotosDevPanel";
 
 const PAD = 18;
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
@@ -53,15 +51,6 @@ export default function HomeAI({ userState = "new" }) {
   const isNew = userState === "new";
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
   const [showVideo, setShowVideo] = useState(false);
-  const { setSheet } = useAIPhotos();
-
-  // Triple tap the hero to reach the reviewer panel without the floating button.
-  const taps = useRef([]);
-  const onHeroTap = () => {
-    const now = Date.now();
-    taps.current = [...taps.current, now].filter((t) => now - t < 600);
-    if (taps.current.length >= 3) { taps.current = []; setSheet("dev"); }
-  };
 
   const draftDeal = deals.find((d) => (d.versions || []).some((v) => v.status === "draft"));
   const draftVer = draftDeal && [...draftDeal.versions].reverse().find((v) => v.status === "draft");
@@ -76,9 +65,7 @@ export default function HomeAI({ userState = "new" }) {
     <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.white }}>
       <DestCircles />
 
-      <div onClick={onHeroTap}>
-        <HeroCarousel marketingSlides={MARKETING_SLIDES} onOpenVideo={() => setShowVideo(true)} />
-      </div>
+      <HeroCarousel marketingSlides={MARKETING_SLIDES} onOpenVideo={() => setShowVideo(true)} />
 
       {!isNew && draftVer && (
         <div style={{ padding: `18px ${PAD}px 0` }}>
@@ -104,8 +91,6 @@ export default function HomeAI({ userState = "new" }) {
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
 
-      <DevPanelButton onClick={() => setSheet("dev")} />
-      <AIPhotosDevPanel />
     </div>
   );
 }

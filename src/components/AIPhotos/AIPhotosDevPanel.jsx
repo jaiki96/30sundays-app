@@ -2,7 +2,7 @@ import { FlaskConical } from "lucide-react";
 import { C } from "../../data";
 import Sheet from "./Sheet";
 import { useAIPhotos } from "../../state/useAIPhotos";
-import { AI_DESTINATIONS, LOCATIONS_PER_DESTINATION } from "../../data/aiPhotosData";
+import { AI_DESTINATIONS } from "../../data/aiPhotosData";
 
 // Reviewer tool, not part of the feature. Jumps straight to any state so nobody
 // has to sit through the mock generation delay to see a screen.
@@ -10,10 +10,8 @@ const STATES = [
   ["loggedOut", "Logged out"],
   ["noPhoto", "No photo"],
   ["generating", "Generating"],
-  ["generatedUnseen", "Generated, unseen"],
-  ["generatedSeen", "Generated, seen"],
+  ["generated", "Gallery ready"],
   ["failed", "Generation failed"],
-  ["hidden", "Hidden"],
   ["removed", "Removed"],
   ["offline", "Offline"],
 ];
@@ -21,6 +19,8 @@ const STATES = [
 const REJECTIONS = [
   [null, "None"],
   ["no_face", "No face"],
+  ["group_photo", "Group photo"],
+  ["too_far", "Too far away"],
   ["moderation", "Moderation"],
   ["minor_detected", "Minor detected"],
 ];
@@ -71,20 +71,17 @@ export function DevPanelButton({ onClick }) {
 export default function AIPhotosDevPanel() {
   const s = useAIPhotos();
   const {
-    sheet, setSheet, forceState, patch,
-    status, hidden, loggedIn, offline, destination, locationIndex,
-    nudgeDismissed, nudgeSuppressed, rejection,
+    sheet, setSheet, forceState, patch, setStep,
+    status, loggedIn, offline, destination, rejection,
   } = s;
 
   // Which preset best describes where we are right now.
   const current =
     !loggedIn ? "loggedOut"
     : offline ? "offline"
-    : hidden ? "hidden"
     : status === "generating" ? "generating"
     : status === "failed" ? "failed"
-    : status === "generated" ? (s.seen ? "generatedSeen" : "generatedUnseen")
-    : nudgeSuppressed ? "removed"
+    : status === "generated" ? "generated"
     : "noPhoto";
 
   return (
@@ -101,20 +98,15 @@ export default function AIPhotosDevPanel() {
         ))}
       </Group>
 
-      <Group label="Spot in the cycle">
-        {Array.from({ length: LOCATIONS_PER_DESTINATION }).map((_, i) => (
-          <Chip key={i} active={locationIndex === i} onClick={() => patch({ locationIndex: i, seen: true })}>{i + 1}</Chip>
+      <Group label="Screen">
+        {[["upload", "Upload"], ["destination", "Destination"], ["generating", "Generating"], ["gallery", "Gallery"]].map(([k, l]) => (
+          <Chip key={k} onClick={() => { setSheet(null); setStep(k); }}>{l}</Chip>
         ))}
-      </Group>
-
-      <Group label="Nudge">
-        <Chip active={!nudgeDismissed && !nudgeSuppressed} onClick={() => patch({ nudgeDismissed: false, nudgeSuppressed: false })}>Show</Chip>
-        <Chip active={nudgeDismissed} onClick={() => patch({ nudgeDismissed: true })}>Dismissed</Chip>
       </Group>
 
       <Group label="Upload rejection">
         {REJECTIONS.map(([key, label]) => (
-          <Chip key={label} active={rejection === key} onClick={() => patch({ rejection: key })}>{label}</Chip>
+          <Chip key={label} active={rejection === key} onClick={() => { patch({ rejection: key }); setSheet(null); setStep("upload"); }}>{label}</Chip>
         ))}
       </Group>
 
@@ -124,7 +116,7 @@ export default function AIPhotosDevPanel() {
       </Group>
 
       <p style={{ fontSize: 11.5, color: C.inact, margin: "0 2px 4px", lineHeight: "16px" }}>
-        Triple tap the hero to open this panel again.
+        Rejections open the upload screen so the wording can be read in place.
       </p>
     </Sheet>
   );

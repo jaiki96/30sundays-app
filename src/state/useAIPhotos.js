@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo, createElement } from "react";
-import { getGeneratedImage, track, LOCATIONS_PER_DESTINATION, AI_DESTINATIONS } from "../data/aiPhotosData";
+import { getGeneratedBatch, track, AI_DESTINATIONS, IMAGES_PER_BATCH } from "../data/aiPhotosData";
 
-// Mocked real-time generation. The PRD expects 5 to 15 seconds in production.
+// Mocked generation. The PRD expects 5 to 15 seconds in production.
 const GENERATION_MS = 6000;
 
 // Mock persistence layer. Module scope on purpose: it survives component
@@ -11,16 +11,12 @@ const INITIAL = {
   loggedIn: true,
   hasPhoto: false,
   photoName: null,
+  photoPreview: null,
   destination: null,      // destination slug
   status: "none",         // none | generating | generated | failed
-  locationIndex: 0,       // 0-based position in the 7 location cycle
-  seen: false,            // reveal has played
-  hidden: false,
-  nudgeDismissed: false,
-  nudgeSuppressed: false, // set by hide and remove, nudge never returns
-  dismissalCount: 0,
+  seen: false,            // gallery has been opened once
   offline: false,
-  rejection: null,        // no_face | moderation | minor_detected
+  rejection: null,        // no_face | group_photo | too_far | moderation | minor_detected
 };
 
 let mockStore = { ...INITIAL };
@@ -43,8 +39,10 @@ export function useReducedMotion() {
 
 export function AIPhotosProvider({ children }) {
   const [state, setState] = useState(mockStore);
-  const [sheet, setSheet] = useState(null);       // login | upload | destination | settings | removeConfirm | dev
-  const [fullScreen, setFullScreen] = useState(false);
+  // Which screen of the module is showing. Full screen now, not sheets.
+  const [step, setStep] = useState(null);   // upload | destination | generating | gallery
+  const [sheet, setSheet] = useState(null); // login | removeConfirm | dev
+  const [viewerIndex, setViewerIndex] = useState(null);
   const timerRef = useRef(null);
 
   // Mirror every change into the mock store so state survives a remount.
@@ -54,59 +52,48 @@ export function AIPhotosProvider({ children }) {
   const patch = useCallback((p) => setState((s) => ({ ...s, ...(typeof p === "function" ? p(s) : p) })), []);
 
   // ─── Generation ───
-  const runGeneration = useCallback((slug, triggerType, { resetCycle = false } = {}) => {
+  const runGeneration = useCallback((slug, triggerType) => {
     clearTimeout(timerRef.current);
     const startedAt = Date.now();
-    track("ai_photos_generation_requested", { trigger_type: triggerType, destination: slug });
-    setState((s) => ({
-      ...s,
-      destination: slug,
-      status: "generating",
-      hidden: false,
-      seen: false,
-      locationIndex: resetCycle ? 0 : s.locationIndex,
-    }));
+    track("ai_photos_generation_requested", { trigger_type: triggerType, destination: slug, image_count: IMAGES_PER_BATCH });
+    setState((s) => ({ ...s, destination: slug, status: "generating", seen: false }));
+    setStep("generating");
     timerRef.current = setTimeout(() => {
       track("ai_photos_generation_succeeded", { duration_ms: Date.now() - startedAt, trigger_type: triggerType });
-      setState((s) => (s.status === "generating" ? { ...s, status: "generated", seen: false } : s));
+      setState((s) => (s.status === "generating" ? { ...s, status: "generated" } : s));
+      setStep("gallery");
     }, GENERATION_MS);
   }, []);
 
   // ─── Entry ───
-  // Nudge is visible to everyone. The gate is here, at the action.
-  const onNudgeTapped = useCallback(() => {
-    track("ai_photos_nudge_tapped", { login_state: state.loggedIn ? "logged_in" : "logged_out", entry_source: "home_hero" });
+  // The section on the home screen is visible to everyone. The login gate is
+  // here, at the action, so nobody is asked to sign in before they see why.
+  const onStart = useCallback(() => {
+    track("ai_photos_entry_tapped", { login_state: state.loggedIn ? "logged_in" : "logged_out", entry_source: "home_section" });
     if (!state.loggedIn) {
       track("ai_photos_login_prompted", {});
       setSheet("login");
       return;
     }
-    track("ai_photos_upload_sheet_viewed", {});
-    setSheet("upload");
-  }, [state.loggedIn]);
-
-  const onNudgeDismissed = useCallback(() => {
-    setState((s) => {
-      track("ai_photos_nudge_dismissed", { dismissal_count: s.dismissalCount + 1 });
-      return { ...s, nudgeDismissed: true, dismissalCount: s.dismissalCount + 1 };
-    });
-  }, []);
+    track("ai_photos_upload_viewed", {});
+    setStep(state.status === "generated" ? "gallery" : "upload");
+  }, [state.loggedIn, state.status]);
 
   // Intent is preserved through login, so the couple lands on upload, not home.
   const onLoginCompleted = useCallback(() => {
     track("ai_photos_login_completed", { intent_preserved: true });
     setState((s) => ({ ...s, loggedIn: true }));
-    track("ai_photos_upload_sheet_viewed", {});
-    setSheet("upload");
+    setSheet(null);
+    setStep("upload");
   }, []);
 
   // ─── Upload ───
-  const onPhotoSelected = useCallback((file) => {
+  const onPhotoSelected = useCallback((file, previewUrl) => {
     track("ai_photos_photo_selected", {
       file_size_kb: file?.size ? Math.round(file.size / 1024) : null,
       file_type: file?.type || null,
     });
-    setState((s) => ({ ...s, photoName: file?.name || "your photo", rejection: null }));
+    setState((s) => ({ ...s, photoName: file?.name || "your photo", photoPreview: previewUrl || null, rejection: null }));
   }, []);
 
   const onConsentChecked = useCallback(() => track("ai_photos_consent_checked", {}), []);
@@ -114,29 +101,22 @@ export function AIPhotosProvider({ children }) {
   const onUploadSubmitted = useCallback(() => {
     track("ai_photos_upload_submitted", {});
     setState((s) => ({ ...s, hasPhoto: true }));
-    track("ai_photos_destination_picker_viewed", {});
-    setSheet("destination");
-  }, []);
-
-  const onUploadAbandoned = useCallback((lastStep) => {
-    track("ai_photos_upload_abandoned", { last_step: lastStep });
-    setSheet(null);
+    track("ai_photos_destination_viewed", {});
+    setStep("destination");
   }, []);
 
   // ─── Destination ───
   const onDestinationSelected = useCallback((slug) => {
-    setSheet(null);
     setState((s) => {
       const isChange = Boolean(s.destination) && s.destination !== slug;
       track("ai_photos_destination_selected", { destination: slug, is_change: isChange, previous_destination: s.destination });
       return s;
     });
-    // Changing destination restarts the cycle at location 1.
-    runGeneration(slug, state.destination ? "destination_change" : "first_upload", { resetCycle: true });
+    runGeneration(slug, state.destination ? "destination_change" : "first_upload");
   }, [runGeneration, state.destination]);
 
-  // Couples who have not picked a place yet get one chosen for them. Never
-  // repeats the destination they are already on.
+  // For couples who have not settled on a place. Never repeats the one they
+  // are already on.
   const onSurpriseMe = useCallback(() => {
     const pool = AI_DESTINATIONS.filter((d) => d.slug !== state.destination);
     const pick = pool[Math.floor(Math.random() * pool.length)] || AI_DESTINATIONS[0];
@@ -144,112 +124,89 @@ export function AIPhotosProvider({ children }) {
     onDestinationSelected(pick.slug);
   }, [onDestinationSelected, state.destination]);
 
-  // ─── Slide interactions ───
-  const onRevealPlayed = useCallback(() => {
-    track("ai_photos_reveal_played", {});
+  const onGenerationRetried = useCallback(() => {
+    track("ai_photos_generation_retried", {});
+    if (state.destination) runGeneration(state.destination, "retry");
+  }, [runGeneration, state.destination]);
+
+  // ─── Gallery ───
+  const onGallerySeen = useCallback(() => {
     setState((s) => (s.seen ? s : { ...s, seen: true }));
   }, []);
 
-  const onHeroTapped = useCallback(() => {
-    track("ai_photos_hero_tapped", {});
-    track("ai_photos_fullscreen_viewed", {});
-    setFullScreen(true);
+  const onChangePhoto = useCallback(() => {
+    track("ai_photos_change_photo_tapped", {});
+    setStep("upload");
   }, []);
 
-  const onGenerationRetried = useCallback(() => {
-    track("ai_photos_generation_retried", {});
-    if (state.destination) runGeneration(state.destination, "first_upload");
-  }, [runGeneration, state.destination]);
-
-  // Both signals carry the same properties, so quality can be read per location.
-  const rate = useCallback((event) => {
-    const img = state.status === "generated" ? getGeneratedImage(state.destination, state.locationIndex) : null;
-    track(event, { destination: state.destination, location_index: img?.locationIndex ?? null });
-  }, [state.destination, state.locationIndex, state.status]);
-
-  const onThumbsUp = useCallback(() => rate("ai_photos_thumbs_up"), [rate]);
-  const onThumbsDown = useCallback(() => rate("ai_photos_thumbs_down"), [rate]);
-
-  // ─── Settings ───
-  const onPhotoReplaced = useCallback(() => {
-    track("ai_photos_photo_replaced", {});
-    setSheet(null);
-    if (state.destination) runGeneration(state.destination, "photo_replace");
-  }, [runGeneration, state.destination]);
-
-  const onHidden = useCallback(() => {
-    track("ai_photos_hidden", {});
-    setFullScreen(false);
-    setSheet(null);
-    patch({ hidden: true, nudgeSuppressed: true });
-  }, [patch]);
-
-  const onUnhidden = useCallback(() => {
-    track("ai_photos_unhidden", {});
-    patch({ hidden: false });
-  }, [patch]);
+  const onChangePlace = useCallback(() => {
+    track("ai_photos_change_place_tapped", {});
+    setStep("destination");
+  }, []);
 
   const onRemoved = useCallback(() => {
     track("ai_photos_removed", {});
     clearTimeout(timerRef.current);
     setSheet(null);
-    setFullScreen(false);
-    patch({
-      hasPhoto: false, photoName: null, destination: null, status: "none",
-      locationIndex: 0, seen: false, hidden: false, nudgeSuppressed: true,
-    });
-  }, [patch]);
+    setViewerIndex(null);
+    setStep(null);
+    setState({ ...INITIAL, loggedIn: true });
+  }, []);
 
   const onRemoveCancelled = useCallback(() => {
     track("ai_photos_remove_cancelled", {});
-    setSheet("settings");
-  }, []);
-
-  // ─── Dev panel ───
-  // Reviewers need to land on any state without waiting out the 6s delay.
-  const forceState = useCallback((name) => {
-    clearTimeout(timerRef.current);
-    setFullScreen(false);
     setSheet(null);
-    const base = { rejection: null };
-    const presets = {
-      loggedOut:       { ...INITIAL, loggedIn: false },
-      noPhoto:         { ...INITIAL },
-      generating:      { ...INITIAL, hasPhoto: true, destination: "bali", status: "generating" },
-      generatedUnseen: { ...INITIAL, hasPhoto: true, destination: "bali", status: "generated", seen: false },
-      generatedSeen:   { ...INITIAL, hasPhoto: true, destination: "bali", status: "generated", seen: true },
-      failed:          { ...INITIAL, hasPhoto: true, destination: "bali", status: "failed" },
-      hidden:          { ...INITIAL, hasPhoto: true, destination: "bali", status: "generated", seen: true, hidden: true, nudgeSuppressed: true },
-      removed:         { ...INITIAL, nudgeSuppressed: true },
-      offline:         { ...INITIAL, hasPhoto: true, destination: "bali", status: "generated", seen: true, offline: true },
-    };
-    if (presets[name]) setState({ ...presets[name], ...base });
   }, []);
 
-  const image = useMemo(
-    () => (state.status === "generated" && state.destination ? getGeneratedImage(state.destination, state.locationIndex) : null),
-    [state.status, state.destination, state.locationIndex]
+  // ─── Viewer ───
+  const images = useMemo(
+    () => (state.status === "generated" && state.destination ? getGeneratedBatch(state.destination) : []),
+    [state.status, state.destination]
   );
 
-  // Generating, generated and failed all occupy carousel slot 0. Hiding pulls
-  // it out of the carousel without deleting anything.
-  const showPersonalized = state.status !== "none" && !state.hidden;
-  const showNudge = state.status === "none" && !state.nudgeDismissed && !state.nudgeSuppressed;
+  const openViewer = useCallback((i) => {
+    track("ai_photos_fullscreen_opened", { image_index: i });
+    setViewerIndex(i);
+  }, []);
+
+  const rate = useCallback((event, i) => {
+    track(event, { destination: state.destination, image_index: i });
+  }, [state.destination]);
+
+  // ─── Dev panel ───
+  // Reviewers need to land on any state without waiting out the delay.
+  const forceState = useCallback((name) => {
+    clearTimeout(timerRef.current);
+    setViewerIndex(null);
+    setSheet(null);
+    const withPhoto = { ...INITIAL, loggedIn: true, hasPhoto: true, photoName: "our-photo.jpg", destination: "bali" };
+    const presets = {
+      loggedOut:  [{ ...INITIAL, loggedIn: false }, null],
+      noPhoto:    [{ ...INITIAL }, "upload"],
+      generating: [{ ...withPhoto, status: "generating" }, "generating"],
+      generated:  [{ ...withPhoto, status: "generated", seen: false }, "gallery"],
+      failed:     [{ ...withPhoto, status: "failed" }, "generating"],
+      removed:    [{ ...INITIAL }, null],
+      offline:    [{ ...withPhoto, status: "generated", seen: true, offline: true }, "gallery"],
+    };
+    const preset = presets[name];
+    if (!preset) return;
+    setState(preset[0]);
+    setStep(preset[1]);
+  }, []);
 
   const value = {
     ...state,
-    image,
-    showPersonalized,
-    showNudge,
-    locationCount: LOCATIONS_PER_DESTINATION,
+    images,
+    imageCount: IMAGES_PER_BATCH,
+    step, setStep,
     sheet, setSheet,
-    fullScreen, setFullScreen,
-    patch, forceState,
-    onNudgeTapped, onNudgeDismissed, onLoginCompleted,
-    onPhotoSelected, onConsentChecked, onUploadSubmitted, onUploadAbandoned,
-    onDestinationSelected, onSurpriseMe,
-    onRevealPlayed, onHeroTapped, onGenerationRetried, onThumbsUp, onThumbsDown,
-    onPhotoReplaced, onHidden, onUnhidden, onRemoved, onRemoveCancelled,
+    viewerIndex, setViewerIndex, openViewer,
+    patch, forceState, rate,
+    onStart, onLoginCompleted,
+    onPhotoSelected, onConsentChecked, onUploadSubmitted,
+    onDestinationSelected, onSurpriseMe, onGenerationRetried,
+    onGallerySeen, onChangePhoto, onChangePlace, onRemoved, onRemoveCancelled,
   };
 
   return createElement(AIPhotosContext.Provider, { value }, children);

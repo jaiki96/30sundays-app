@@ -13,6 +13,7 @@ import HomeAI from "./pages/HomeAI";
 import HomeV6 from "./pages/HomeV6";
 import NudgeOptions from "./pages/NudgeOptions";
 import AISectionOptions from "./pages/AISectionOptions";
+import AIPhotos from "./pages/AIPhotos";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -61,7 +62,6 @@ import { DealsProvider } from "./data/deals";
 import { SavesProvider } from "./data/saves";
 import { WishlistProvider } from "./data/wishlist";
 import { AIPhotosProvider } from "./state/useAIPhotos";
-import AIPhotoSurfaces from "./components/AIPhotos/AIPhotoSurfaces";
 import { AI_PHOTOS_VARIANT } from "./data/aiPhotosVariant";
 
 // Destination pages: new discover-style layout everywhere except Maldives and
@@ -79,7 +79,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -101,6 +101,8 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         {/* Review page for the invitation options. Not part of the feature. */}
         <Route path="/nudge-options" element={<NudgeOptions />} />
         <Route path="/ai-section-options" element={<AISectionOptions />} />
+        {/* The AI photos module. Full screen, its own shell. */}
+        <Route path="/ai-photos" element={<AIPhotos />} />
         <Route path="/v3" element={<HomeV3 />} />
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />
@@ -157,8 +159,6 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
       </Routes>
       {showNudge && <TripNudge userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
-      {/* Mounted for the whole shell so Account can open them. Inert until then. */}
-      <AIPhotoSurfaces />
     </PhoneFrame>
   );
 }

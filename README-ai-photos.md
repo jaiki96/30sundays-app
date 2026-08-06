@@ -1,112 +1,87 @@
 # AI Couple Photos - prototype
 
-A clickable prototype of the home hero feature: a couple uploads one photo and
-sees themselves at a new spot in their chosen destination each day.
+A clickable prototype: a couple uploads one photo, picks a place, and gets five
+pictures of the two of them there.
 
 This is for design review. There is no image generation, no face detection and
-no real auth. Generation is a 6 second delay that swaps in a real couple photo
-from the app's existing library, paired with a curated location name.
+no real auth. Generation is a 6 second delay that swaps in real couple photos
+from the app's existing library, paired with curated location names.
 
 ## Where it runs
 
 | Where | Address |
 |---|---|
-| Its own deployment | the ai-photos subdomain, where this is the home at `/` |
-| The main prototype | `/ai`, so the live home at `/` is untouched |
-| Locally | `npm run dev`, then `/ai` |
+| Its own deployment | the ai-photos subdomain, where the AI home is `/` |
+| The module itself | `/ai-photos` |
+| Section designs, for review | `/ai-section-options` |
+| The main prototype | untouched |
 
 The two share one branch. The app checks the hostname, so nothing needs
 configuring per environment.
 
+## The flow
+
+Full screen throughout. No bottom sheets.
+
+1. **Upload.** One photo of the two of them. Guidance is shown as pictures, not
+   just a list: one example of what works with three rules beside it, then three
+   examples of what won't. Consent must be ticked before Continue enables.
+2. **Rejection.** If the photo is wrong, the reason appears against the picker,
+   Continue locks, and a "Choose another photo" button sits inside the message.
+   Five reasons are written: no face, group photo, too far, moderation, minor
+   detected. Nothing detects any of them; the dev panel forces each one.
+3. **Destination.** Four places plus "Surprise us", which picks for them and
+   never repeats the one they are already on.
+4. **Generating.** Five tiles land one at a time over the delay, so the wait has
+   a shape. Failure gets its own screen with a retry.
+5. **Gallery.** Five images in a 9:16 grid. Two chips at the top change the
+   photo or the place. Bin icon removes everything, and asks first.
+6. **Viewer.** Tap any image for full screen. Swipe or drag between the five,
+   arrow keys on desktop. Close, share, an AI generated tag, thumbs up and down
+   (one vote per image), a counter, dots, and "Plan my [place] trip".
+
+**Share** calls the Web Share API, so on a phone it opens the real iOS or
+Android drawer and the couple picks the app themselves, WhatsApp included.
+Dismissing that drawer does nothing. Where the API does not exist (desktop
+review) a labelled stand-in sheet opens, WhatsApp first. The share carries a
+title, a line of text and the app link; attaching the image itself needs a real
+file, so that comes with real generation.
+
 ## Reaching every state
 
-Open the dev panel: tap the flask button at the bottom left, or triple tap the
-hero. Every state below is one tap away, so nobody has to wait out the
-generation delay.
+Open the dev panel with the flask button at the bottom left of `/ai-photos`.
 
-| State | What renders | How to reach it |
-|---|---|---|
-| Logged out | Invitation slide in hero slot 0. Its button opens the app's own login screen, which lands on the upload sheet, not back on home. | Dev panel, Logged out |
-| Logged in, no photo | Invitation slide in hero slot 0. Its button opens the upload sheet directly. | Dev panel, No photo |
-| Generating | In-progress slide in slot 0. The carousel keeps rotating and the whole home stays interactive. | Dev panel, Generating |
-| Generated, unseen | Reveal plays once in slot 0, then settles into the carousel. Never replays. | Dev panel, Generated unseen |
-| Generated, seen | Personalized slide in slot 0. Tap opens full screen. | Dev panel, Generated seen |
-| Generation failed | Retry sits in the slot. Retry re-runs the delay and succeeds. | Dev panel, Generation failed |
-| Hidden | Slide pulled from the carousel. The nudge does not come back. Unhide from Account, "Your photos (hidden)". | Dev panel, Hidden |
-| Removed | Back to no photo. The nudge does not come back. | Dev panel, Removed |
-| Nudge dismissed | The invitation slide leaves the carousel instantly, no confirmation, and does not come back. | Tap the X on the slide, or dev panel, Nudge |
-| Offline | The cached image still renders, with the offline treatment. | Dev panel, Offline |
-| Upload rejections | Copy for no face, moderation and minor detected. No real detection behind any of them. | Dev panel, Upload rejection, then open the upload sheet |
+| State | How to reach it |
+|---|---|
+| Logged out | Dev panel, Logged out. The entry point opens the app's own login screen, which lands on upload, not home. |
+| No photo | Dev panel, No photo |
+| Generating | Dev panel, Generating |
+| Gallery ready | Dev panel, Gallery ready |
+| Generation failed | Dev panel, Generation failed |
+| Removed | Dev panel, Removed |
+| Offline | Dev panel, Offline |
+| Any upload rejection | Dev panel, Upload rejection. Each one opens the upload screen so the wording reads in place. |
+| Any screen directly | Dev panel, Screen |
 
-Destination and the spot in the 7 location cycle are also switchable from the
-panel.
+## Entry points
 
-## Flows
-
-**The invitation.** Hero slot 0 until a photo exists, so it costs no extra
-height and nothing sits between the hero and the content below it. Their plain
-photo is under a destination photo that sweeps across on a loop, so the change
-is watched rather than read. The destination after "See yourselves in" cycles
-through Bali, Vietnam, Thailand and Maldives, and the image changes with the
-word while it is clipped out of view. Reduced motion gets a held split instead.
-
-New Zealand is not in the cycle: every entry needs a real couple photo and
-there are none for it in the library. One line to add when there is.
-
-**Upload.** The invitation button, then a half-modal upload sheet. Any file is accepted, with no
-person-count check: solo, couple and group all work. Consent must be ticked
-before Continue enables. Then the destination picker, then generating, then the
-reveal.
-
-**Login.** The app's existing phone and OTP screen, shown over the frame.
-Nothing about it is reinvented for this feature. Any code except 0000 verifies.
-
-**Destination.** The three live destinations plus "Surprise us", which picks one
-for the couple and never repeats the one they are already on.
-
-**Settings.** Reachable from "Your photos" in the Account tab. Nothing for the
-feature sits on the home screen except the hero and the nudge. Four rows: change
-destination (restarts the cycle at spot 1 and regenerates), replace photo
-(regenerates the current spot), hide (instant), remove (asks first).
-
-**Full screen.** Image fills the frame. Close, share, a subtle AI generated tag,
-thumbs up and thumbs down (one vote only), and a "Plan my [destination] trip"
-button that opens that destination.
-
-**Share.** Calls the Web Share API, so on a phone it opens the real iOS or
-Android share drawer and the couple picks the app themselves, WhatsApp included.
-Dismissing that drawer does nothing, as it should. Where the API does not exist
-(desktop review) a stand-in sheet opens instead, WhatsApp first, labelled as a
-stand-in. The share carries a title, a line of text and the app link. Attaching
-the image itself needs a real file, so that comes with real generation.
-
-## Carousel
-
-Auto-advances every 10 seconds. Slot 0 is the couple's own image once they have
-one, and the invitation until then. Only one of the two ever applies. Swipe or drag moves it a slide at a time, in either direction, with a
-40px threshold so a tap is never read as a swipe and a swipe never opens what is
-under the finger. Interacting pauses it, and it resumes after 15 seconds idle. A
-newly generated image pins to the first slot and plays its reveal before normal
-rotation starts. A single item renders as a static hero with no dots. Every
-slide carries the same scrim, since generated image brightness varies.
-
-The auto-advance timer is local to the carousel. Lifting it up would re-render
-the whole home every 10 seconds and reset the scroll position.
+Account, under the Account group. The home screen section that will be the main
+entry point is still being chosen: five designs are at `/ai-section-options`.
+Once one is picked it sits under the three USPs and opens `/ai-photos`.
 
 ## Notes for whoever builds this for real
 
-- Analytics fire nothing. Handlers are named to match the event names in section
-  15 of the PRD, so wiring the real layer is mechanical. In dev they log to the
-  console with the event name and properties.
+- Analytics fire nothing. Handlers are named to match the event names in the
+  PRD, so wiring the real layer is mechanical. In dev they log to the console.
 - State lives in React plus a small in-memory store, so it survives navigation
   and resets on reload. No browser storage, deliberately.
-- Reduced motion is respected: both the reveal and the auto-scroll have a
-  reduced variant.
-- Only Bali, Thailand and Maldives appear in the picker, matching the rule that
-  a destination needs all 7 locations before it goes live.
+- Reduced motion is respected.
+- The photos are candid customer snaps, not shot for this. Indices are hand
+  picked so every one actually shows a couple; plenty of the library is solo.
+  A real launch wants proper generated samples.
 
 ## Not built
 
 Real generation, real face detection, real auth, notifications, backend
-persistence, the 30 day nudge timer, and analytics delivery. Share hands off to
-the OS for real, but sends a link rather than the image file.
+persistence, and analytics delivery. Share hands off to the OS for real, but
+sends a link rather than the image file.
