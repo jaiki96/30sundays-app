@@ -1041,8 +1041,10 @@ function StepRoute({ dest, nights, route, setRoute, setNights, editRoute }) {
 
   // Filtering runs off the applied set, not the live one. The recommendation is
   // pinned separately above, so it is left out of the list to avoid a duplicate.
+  // Every applied region must appear in the route, so the chips read as "build
+  // me this combination" rather than "widen the list".
   const filtered = (appliedCities.length
-    ? variants.filter(r => r.some(s => appliedCities.includes(s.city)))
+    ? variants.filter(r => appliedCities.every(c => r.some(s => s.city === c)))
     : variants
   ).filter(r => sigOf(r) !== recSig);
   const shownRoutes = filtered.slice(0, 3);

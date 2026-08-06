@@ -12,6 +12,7 @@ import HomeV5 from "./pages/HomeV5";
 import HomeAI from "./pages/HomeAI";
 import HomeV6 from "./pages/HomeV6";
 import NudgeOptions from "./pages/NudgeOptions";
+import AISectionOptions from "./pages/AISectionOptions";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
 import MaldivesDestination from "./pages/MaldivesDestination";
@@ -99,6 +100,7 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/ai" element={<HomeAI userState={userState} />} />
         {/* Review page for the invitation options. Not part of the feature. */}
         <Route path="/nudge-options" element={<NudgeOptions />} />
+        <Route path="/ai-section-options" element={<AISectionOptions />} />
         <Route path="/v3" element={<HomeV3 />} />
         <Route path="/v4" element={<HomeV4 userState={userState} />} />
         <Route path="/v5" element={<HomeV2 />} />
