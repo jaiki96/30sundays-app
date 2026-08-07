@@ -101,6 +101,19 @@ export const BAD_EXAMPLES = [
   { src: (CP.Maldives || [])[1], caption: "Too far to see who you are" },
 ];
 
+// ─── Home section ───
+// The couple's own photo stays put while four destinations sweep over it, so
+// "one photo in, many places out" is shown rather than explained. Hand picked
+// so every one is clearly a couple.
+export const SECTION_OWN_PHOTO = (CP.Bali || [])[11];
+
+export const SECTION_SHOTS = [
+  { src: (CP.Bali || [])[0], place: "Bali" },
+  { src: (CP.Maldives || [])[6], place: "Maldives" },
+  { src: (CP.Thailand || [])[0], place: "Thailand" },
+  { src: (CP.Vietnam || [])[7], place: "Vietnam" },
+];
+
 export const GUIDELINES = [
   "Both of your faces clearly visible",
   "Head to toe, standing together",
@@ -110,6 +123,14 @@ export const GUIDELINES = [
 // ─── Copy ───
 // Couples-anchored throughout. Never "package", "deal", "cheap", "standard".
 export const COPY = {
+  // Home section
+  sectionKicker: "NEW",
+  sectionTitleLead: "See yourselves",
+  sectionTitleAccent: "there",
+  sectionSub: "One photo of you two. Five pictures of you both at the place you pick.",
+  sectionCta: "Add your photo",
+  sectionCtaReturning: "See your photos",
+
   // Upload
   uploadTitle: "Add one photo of you two",
   uploadSub: "We'll use it to make five pictures of you both at the place you pick.",
@@ -118,7 +139,9 @@ export const COPY = {
   uploadEmpty: "One photo with both of you in it",
   goodTitle: "What works",
   badTitle: "What won't work",
-  consent: "We'll use this photo to create images of you two.",
+  // Consent is carried by the act of continuing, so there is no checkbox to
+  // tick before the button will work.
+  consentInline: "By continuing, you agree we can use this photo to create images of you two with AI.",
   uploadSubmitCta: "Continue",
   aiNote: "*Your images will be AI generated",
 

@@ -91,9 +91,8 @@ function ExampleCard({ src, caption, good }) {
 }
 
 function UploadStep() {
-  const { photoName, photoPreview, rejection, onPhotoSelected, onConsentChecked, onUploadSubmitted, setStep, status } = useAIPhotos();
+  const { photoName, photoPreview, rejection, onPhotoSelected, onUploadSubmitted, setStep, status } = useAIPhotos();
   const inputRef = useRef(null);
-  const [consent, setConsent] = useState(false);
   const objectUrl = useRef(null);
 
   useEffect(() => () => { if (objectUrl.current) URL.revokeObjectURL(objectUrl.current); }, []);
@@ -109,11 +108,9 @@ function UploadStep() {
     onPhotoSelected(file, objectUrl.current);
   };
 
-  const toggle = () => setConsent((c) => { if (!c) onConsentChecked(); return !c; });
-
   const rejected = rejection ? COPY.rejections[rejection] : null;
   const hasPhoto = Boolean(photoName);
-  const canContinue = hasPhoto && consent && !rejected;
+  const canContinue = hasPhoto && !rejected;
 
   return (
     <>
@@ -149,20 +146,21 @@ function UploadStep() {
           </div>
         </button>
 
-        {/* Rejection. Forced from the dev panel, never from real detection. */}
+        {/* Rejection. No panel of its own: a box here competes with the photo
+            card right above it. Forced from the dev panel, never detection. */}
         {rejected && (
-          <div style={{ display: "flex", gap: 10, marginTop: 12, background: "#FEF3F2", border: "1px solid #FDA29B", borderRadius: 12, padding: "12px 13px" }}>
-            <AlertCircle size={17} color="#D92D20" style={{ flexShrink: 0, marginTop: 1 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#B42318", margin: 0 }}>{rejected.title}</p>
-              <p style={{ fontSize: 12, color: C.sub, margin: "3px 0 8px", lineHeight: "17px" }}>{rejected.body}</p>
-              <button
-                onClick={() => inputRef.current?.click()}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 38, padding: "0 13px", borderRadius: 999, background: C.white, border: "1px solid #FDA29B", color: "#B42318", fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
-              >
-                <RefreshCw size={13} /> Choose another photo
-              </button>
-            </div>
+          <div style={{ marginTop: 12 }}>
+            <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 700, color: "#B42318", margin: 0 }}>
+              <AlertCircle size={15} color="#D92D20" style={{ flexShrink: 0 }} />
+              {rejected.title}
+            </p>
+            <p style={{ fontSize: 12.5, color: C.sub, margin: "4px 0 10px", lineHeight: "17px" }}>{rejected.body}</p>
+            <button
+              onClick={() => inputRef.current?.click()}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 40, padding: "0 15px", borderRadius: 999, background: C.white, border: `1.5px solid ${C.p600}`, color: C.p600, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}
+            >
+              <RefreshCw size={14} /> Choose another photo
+            </button>
           </div>
         )}
 
@@ -189,27 +187,14 @@ function UploadStep() {
           </div>
         </div>
 
-        {/* Consent gate. */}
-        <div
-          onClick={toggle}
-          role="checkbox"
-          aria-checked={consent}
-          style={{ display: "flex", alignItems: "flex-start", gap: 11, marginTop: 20, cursor: "pointer", minHeight: 48 }}
-        >
-          <span style={{
-            width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1,
-            border: `1.5px solid ${consent ? C.p600 : C.inact}`, background: consent ? C.p600 : C.white,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            {consent && <Check size={14} color="#fff" strokeWidth={3} />}
-          </span>
-          <span style={{ fontSize: 12.5, color: C.sub, lineHeight: "18px" }}>{COPY.consent}</span>
-        </div>
       </div>
 
       <Footer>
+        {/* Consent rides on the button, so there is nothing to tick first. */}
+        <p style={{ fontSize: 11, color: C.inact, lineHeight: "15px", textAlign: "center", margin: "0 0 10px" }}>
+          {COPY.consentInline}
+        </p>
         <Primary disabled={!canContinue} onClick={onUploadSubmitted}>{COPY.uploadSubmitCta}</Primary>
-        <AiNote />
       </Footer>
     </>
   );

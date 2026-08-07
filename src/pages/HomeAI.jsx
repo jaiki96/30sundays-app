@@ -15,6 +15,7 @@ import {
 } from "./HomeV5";
 
 import HeroCarousel from "../components/HomeHero/HeroCarousel";
+import AIPhotosHomeSection from "../components/AIPhotos/HomeSection";
 
 const PAD = 18;
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
@@ -80,7 +81,7 @@ export default function HomeAI({ userState = "new" }) {
         </div>
       )}
 
-      <div style={{ paddingTop: 14 }}><LowerSections groups={groups} /></div>
+      <div style={{ paddingTop: 14 }}><LowerSections groups={groups} afterUsps={<AIPhotosHomeSection />} /></div>
       <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />
       <AllSixCountries />
       <TravellerMomentsReels />

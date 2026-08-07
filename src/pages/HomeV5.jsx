@@ -168,7 +168,9 @@ function SeasonCard({ d }) {
   );
 }
 
-export function LowerSections({ groups }) {
+// `afterUsps` is an optional slot for a section that belongs directly under
+// the proof line. Nothing on / passes it.
+export function LowerSections({ groups, afterUsps }) {
   return (
     <div style={{ paddingTop: 4, background: C.white, position: "relative" }}>
       {/* Compact proof line */}
@@ -184,6 +186,8 @@ export function LowerSections({ groups }) {
           </span>
         ))}
       </div>
+
+      {afterUsps}
 
       {groups.map((g, i) => (
         <div key={i} style={{ marginBottom: 28 }}>

@@ -117,6 +117,24 @@
 .hero-wipe      { animation: heroWipe 5.5s cubic-bezier(.6,0,.35,1) infinite; }
 .hero-wipe-line { animation: heroWipeLine 5.5s cubic-bezier(.6,0,.35,1) infinite; }
 
+/* Home section: the destination sweeps in over the couple's own photo, holds
+   for two seconds so it can be taken in, then sweeps back off. 4.4s a lap. */
+@keyframes aiSecWipe {
+  0%        { clip-path: inset(0 0 0 100%); }
+  18%, 64%  { clip-path: inset(0 0 0 0%); }
+  82%, 100% { clip-path: inset(0 0 0 100%); }
+}
+@keyframes aiSecLine {
+  0%        { left: 100%; opacity: 0.95; }
+  16%       { opacity: 0.95; }
+  18%, 64%  { left: 0%;   opacity: 0; }
+  66%       { opacity: 0.95; }
+  82%       { left: 100%; opacity: 0.95; }
+  84%, 100% { left: 100%; opacity: 0; }
+}
+.ai-sec-wipe { animation: aiSecWipe 4.4s cubic-bezier(.65,0,.35,1) infinite; }
+.ai-sec-line { animation: aiSecLine 4.4s cubic-bezier(.65,0,.35,1) infinite; }
+
 @keyframes kenBurns {
   0%   { transform: scale(1.06) translate(0, 0); }
   50%  { transform: scale(1.18) translate(-2%, -1.5%); }

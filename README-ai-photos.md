@@ -25,11 +25,14 @@ Full screen throughout. No bottom sheets.
 
 1. **Upload.** One photo of the two of them. Guidance is shown as pictures, not
    just a list: one example of what works with three rules beside it, then three
-   examples of what won't. Consent must be ticked before Continue enables.
-2. **Rejection.** If the photo is wrong, the reason appears against the picker,
-   Continue locks, and a "Choose another photo" button sits inside the message.
-   Five reasons are written: no face, group photo, too far, moderation, minor
-   detected. Nothing detects any of them; the dev panel forces each one.
+   examples of what won't. Continue enables as soon as a usable photo is in.
+   Consent rides on the button: a line above it says that continuing means the
+   photo can be used to make their images with AI. There is nothing to tick.
+2. **Rejection.** If the photo is wrong, the reason sits flat under the picker
+   with no panel of its own, so it does not compete with the photo card above
+   it, and a "Choose another photo" button follows. Continue locks. Five reasons
+   are written: no face, group photo, too far, moderation, minor detected.
+   Nothing detects any of them; the dev panel forces each one.
 3. **Destination.** Four places plus "Surprise us", which picks for them and
    never repeats the one they are already on.
 4. **Generating.** Five tiles land one at a time over the delay, so the wait has
@@ -65,9 +68,18 @@ Open the dev panel with the flask button at the bottom left of `/ai-photos`.
 
 ## Entry points
 
-Account, under the Account group. The home screen section that will be the main
-entry point is still being chosen: five designs are at `/ai-section-options`.
-Once one is picked it sits under the three USPs and opens `/ai-photos`.
+**The home section**, directly under the three USPs. A blush panel with the
+title, one line, and one image: the couple's own photo stays put while four
+destinations sweep over it in turn, each holding for two seconds before sweeping
+back off. The place name arrives clipped with its own picture. Reduced motion
+gets a held split instead. The button opens `/ai-photos`.
+
+It is slotted into the shared lower sections through an optional prop that only
+the AI home passes, so the live home at `/` is untouched.
+
+**Account**, under the Account group.
+
+The six designs that were considered are still at `/ai-section-options`.
 
 ## Notes for whoever builds this for real
 
