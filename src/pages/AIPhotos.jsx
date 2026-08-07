@@ -408,7 +408,9 @@ function GalleryStep() {
         </div>
 
         <div style={{ padding: `16px ${PAD}px 0` }}>
-          <Primary onClick={() => { track("ai_photos_plan_trip_tapped", { destination }); navigate(`/destination/${dest?.name}`); }}>
+          {/* Straight into the wizard with the place already chosen, so the
+              destination step is skipped. */}
+          <Primary onClick={() => { track("ai_photos_plan_trip_tapped", { destination, source: "gallery" }); navigate(`/build?dest=${encodeURIComponent(dest?.name || "")}`); }}>
             <Wand2 size={16} /> {COPY.planTripCta(dest?.name || "")}
           </Primary>
           <AiNote />

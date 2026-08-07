@@ -95,10 +95,12 @@ export default function PhotoViewer() {
     rate(kind === "up" ? "ai_photos_thumbs_up" : "ai_photos_thumbs_down", viewerIndex);
   };
 
+  // Straight into the wizard with this picture's place already chosen, so the
+  // destination step is skipped.
   const planTrip = () => {
-    track("ai_photos_plan_trip_tapped", { destination, source: "viewer" });
+    track("ai_photos_plan_trip_tapped", { destination: image.destination, source: "viewer" });
     setViewerIndex(null);
-    navigate(`/destination/${image.destination}`);
+    navigate(`/build?dest=${encodeURIComponent(image.destination)}`);
   };
 
   return (

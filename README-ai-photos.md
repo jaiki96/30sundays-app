@@ -41,10 +41,12 @@ Full screen throughout. No bottom sheets.
 5. **Gallery.** All five images in a 9:16 grid, the picked destination's own
    pictures leading. Each tile carries its real spot and country. Two chips at
    the top change the photo or the place. Bin icon removes everything, and asks
-   first.
+   first. "Plan my [place] trip" opens the trip wizard with that destination
+   already chosen, so the destination step is skipped.
 6. **Viewer.** Tap any image for full screen. Swipe or drag between the five,
    arrow keys on desktop. Close, share, an AI generated tag, thumbs up and down
-   (one vote per image), a counter, dots, and "Plan my [place] trip".
+   (one vote per image), a counter, dots, and "Plan my [place] trip", which
+   follows the picture on screen rather than the destination they picked.
 
 **Share** calls the Web Share API, so on a phone it opens the real iOS or
 Android drawer and the couple picks the app themselves, WhatsApp included.
