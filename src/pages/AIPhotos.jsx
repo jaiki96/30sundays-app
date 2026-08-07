@@ -271,15 +271,16 @@ function GeneratingStep() {
   const { destination, status, onGenerationRetried, setStep } = useAIPhotos();
   const reduced = useReducedMotion();
   const dest = getDestination(destination);
+  const count = dest?.images.length || IMAGES_PER_BATCH;
   const [filled, setFilled] = useState(0);
 
   // Tiles land one by one, so the wait has a shape instead of a spinner.
   useEffect(() => {
     if (status !== "generating") return;
     setFilled(0);
-    const t = setInterval(() => setFilled((n) => Math.min(n + 1, IMAGES_PER_BATCH)), 1100);
+    const t = setInterval(() => setFilled((n) => Math.min(n + 1, count)), 1100);
     return () => clearInterval(t);
-  }, [status]);
+  }, [status, count]);
 
   if (status === "failed") {
     return (
@@ -309,7 +310,7 @@ function GeneratingStep() {
         <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "6px 0 20px" }}>{COPY.generatingSub}</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {Array.from({ length: IMAGES_PER_BATCH }).map((_, i) => (
+          {Array.from({ length: count }).map((_, i) => (
             <div key={i} style={{
               position: "relative", width: "100%", aspectRatio: "9 / 16",
               borderRadius: 14, overflow: "hidden",
@@ -389,7 +390,7 @@ function GalleryStep() {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: `12px ${PAD}px 0` }}>
+        <div style={{ display: "grid", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr", gap: 10, padding: `12px ${PAD}px 0` }}>
           {images.map((img, i) => (
             <button
               key={img.id}

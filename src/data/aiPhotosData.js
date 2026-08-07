@@ -5,68 +5,60 @@
 // location name so the gallery reads the way the real feature would.
 import { customerPhotos, destData } from "../data";
 
-// One batch per destination. No daily rotation: a couple uploads once, picks a
-// place, and gets the whole set back at once.
+// No daily rotation: a couple uploads once, picks a place, and gets the whole
+// set back at once. A set holds whatever has been generated for that
+// destination, so this is the target rather than a promise the data can keep.
 export const IMAGES_PER_BATCH = 5;
 
-// Indices are hand picked so every image actually shows a couple. Most of the
-// library is candid holiday snaps, plenty of them solo.
+// The real generated set. Same couple, same clothes, placed at real spots, so
+// the prototype finally shows what the feature actually produces.
+//
+// Only these five exist today, spread over four countries, so a destination has
+// as many pictures as were made for it rather than a padded five. Adding more
+// is a matter of dropping files in public/ai-photos and listing them here.
+const IMG = "/ai-photos";
+
+// What the couple uploaded. Plain wall, daylight, both faces, head to toe:
+// exactly what the upload screen asks for, so it doubles as the good example.
+export const ORIGINAL_PHOTO = `${IMG}/original.jpg`;
+
 export const AI_DESTINATIONS = [
   {
     slug: "bali",
     name: "Bali",
     hero: destData.Bali?.hero,
     blurb: "Rice terraces, cliff temples, warm evenings",
-    locations: [
-      "Tegallalang Rice Terraces",
-      "Uluwatu Cliff Temple",
-      "Kelingking Beach",
-      "Handara Gate",
-      "Tanah Lot at sunset",
+    images: [
+      { src: `${IMG}/bali-kelingking.jpg`, location: "Kelingking Beach" },
     ],
-    photos: [0, 2, 3, 13, 7].map((i) => (customerPhotos.Bali || [])[i]),
   },
   {
     slug: "thailand",
     name: "Thailand",
     hero: destData.Thailand?.hero,
     blurb: "Island water, temple mornings, night markets",
-    locations: [
-      "Phi Phi Viewpoint",
-      "Wat Arun",
-      "Railay Beach",
-      "Doi Suthep",
-      "Maya Bay",
+    images: [
+      { src: `${IMG}/thailand-railay.jpg`, location: "Railay Beach at sunset" },
+      { src: `${IMG}/thailand-white-temple.jpg`, location: "Wat Rong Khun" },
     ],
-    photos: [0, 3, 2, 6, 10].map((i) => (customerPhotos.Thailand || [])[i]),
   },
   {
     slug: "maldives",
     name: "Maldives",
     hero: destData.Maldives?.hero,
     blurb: "Overwater mornings and very quiet evenings",
-    locations: [
-      "Your overwater deck",
-      "A private sandbank",
-      "Sunset on the shore",
-      "The coral garden",
-      "Dinner on the sand",
+    images: [
+      { src: `${IMG}/maldives-jetty.jpg`, location: "Your overwater deck" },
     ],
-    photos: [6, 12, 14, 8, 0].map((i) => (customerPhotos.Maldives || [])[i]),
   },
   {
     slug: "vietnam",
     name: "Vietnam",
     hero: destData.Vietnam?.hero,
     blurb: "Bays, lantern streets, mountain mornings",
-    locations: [
-      "Ha Long Bay",
-      "Golden Bridge",
-      "Hoi An lanterns",
-      "Ninh Binh by boat",
-      "Sapa terraces",
+    images: [
+      { src: `${IMG}/vietnam-golden-bridge.jpg`, location: "The Golden Bridge" },
     ],
-    photos: [7, 5, 0, 12, 2].map((i) => (customerPhotos.Vietnam || [])[i]),
   },
 ];
 
@@ -78,10 +70,10 @@ export function getDestination(slug) {
 export function getGeneratedBatch(slug) {
   const dest = getDestination(slug);
   if (!dest) return [];
-  return dest.locations.slice(0, IMAGES_PER_BATCH).map((location, i) => ({
+  return dest.images.map((img, i) => ({
     id: `${slug}-${i}`,
-    src: dest.photos[i],
-    location,
+    src: img.src,
+    location: img.location,
     destination: dest.name,
     slug: dest.slug,
     index: i,
@@ -93,7 +85,7 @@ export function getGeneratedBatch(slug) {
 // worth more than a sentence about it.
 const CP = customerPhotos;
 
-export const GOOD_EXAMPLE = { src: (CP.Thailand || [])[0], caption: "Both faces, standing together" };
+export const GOOD_EXAMPLE = { src: ORIGINAL_PHOTO, caption: "Both faces, head to toe" };
 
 export const BAD_EXAMPLES = [
   { src: (CP.Thailand || [])[14], caption: "More than two people" },
@@ -105,13 +97,13 @@ export const BAD_EXAMPLES = [
 // The couple's own photo stays put while four destinations sweep over it, so
 // "one photo in, many places out" is shown rather than explained. Hand picked
 // so every one is clearly a couple.
-export const SECTION_OWN_PHOTO = (CP.Bali || [])[11];
+export const SECTION_OWN_PHOTO = ORIGINAL_PHOTO;
 
 export const SECTION_SHOTS = [
-  { src: (CP.Bali || [])[0], place: "Bali" },
-  { src: (CP.Maldives || [])[6], place: "Maldives" },
-  { src: (CP.Thailand || [])[0], place: "Thailand" },
-  { src: (CP.Vietnam || [])[7], place: "Vietnam" },
+  { src: `${IMG}/bali-kelingking.jpg`, place: "Bali" },
+  { src: `${IMG}/thailand-railay.jpg`, place: "Thailand" },
+  { src: `${IMG}/maldives-jetty.jpg`, place: "Maldives" },
+  { src: `${IMG}/vietnam-golden-bridge.jpg`, place: "Vietnam" },
 ];
 
 export const GUIDELINES = [
@@ -127,13 +119,13 @@ export const COPY = {
   sectionKicker: "NEW",
   sectionTitleLead: "See yourselves",
   sectionTitleAccent: "there",
-  sectionSub: "One photo of you two. Five pictures of you both at the place you pick.",
+  sectionSub: "One photo of you two. Pictures of you both at the place you pick.",
   sectionCta: "Add your photo",
   sectionCtaReturning: "See your photos",
 
   // Upload
   uploadTitle: "Add one photo of you two",
-  uploadSub: "We'll use it to make five pictures of you both at the place you pick.",
+  uploadSub: "We'll use it to make pictures of you both at the place you pick.",
   uploadPickCta: "Choose a photo",
   uploadChangeCta: "Choose a different photo",
   uploadEmpty: "One photo with both of you in it",
@@ -147,7 +139,7 @@ export const COPY = {
 
   // Destination
   destTitle: "Where are you dreaming of?",
-  destSub: "Pick one. We'll place you both at five spots there.",
+  destSub: "Pick one. We'll place you both at the best spots there.",
   surpriseTitle: "Surprise us",
   surpriseSub: "We'll pick a place for you two",
 

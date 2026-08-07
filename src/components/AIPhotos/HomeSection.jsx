@@ -7,10 +7,6 @@ import { COPY, SECTION_OWN_PHOTO, SECTION_SHOTS, track } from "../../data/aiPhot
 
 const PAD = 18;
 
-// The couple's own photo. Muted a touch so it reads as the before without
-// needing a label on it.
-const OWN = { filter: "saturate(0.42) brightness(1.04)" };
-
 // The entry point to the AI photos module. Sits directly under the three USPs.
 // One constant photo with four destinations sweeping over it in turn, so the
 // idea lands without being read.
@@ -58,7 +54,7 @@ export default function AIPhotosHomeSection() {
 
         {/* One photo, four places sweeping over it. */}
         <div style={{ position: "relative", margin: "14px 16px 0", height: 250, borderRadius: 16, overflow: "hidden", background: C.div, boxShadow: "0 8px 24px rgba(140,10,50,0.18)" }}>
-          <img src={SECTION_OWN_PHOTO} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", ...OWN }} />
+          <img src={SECTION_OWN_PHOTO} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
 
           {/* Clipped together, so the place name arrives with its picture. */}
           <div

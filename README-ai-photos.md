@@ -4,8 +4,9 @@ A clickable prototype: a couple uploads one photo, picks a place, and gets five
 pictures of the two of them there.
 
 This is for design review. There is no image generation, no face detection and
-no real auth. Generation is a 6 second delay that swaps in real couple photos
-from the app's existing library, paired with curated location names.
+no real auth. Generation is a 6 second delay that swaps in a real generated set:
+the same couple, in the same clothes, placed at real spots. The photo they
+"upload" is the real source photo those were made from.
 
 ## Where it runs
 
@@ -88,9 +89,14 @@ The six designs that were considered are still at `/ai-section-options`.
 - State lives in React plus a small in-memory store, so it survives navigation
   and resets on reload. No browser storage, deliberately.
 - Reduced motion is respected.
-- The photos are candid customer snaps, not shot for this. Indices are hand
-  picked so every one actually shows a couple; plenty of the library is solo.
-  A real launch wants proper generated samples.
+- **Five generated images exist so far, across four countries**: Bali 1,
+  Thailand 2, Maldives 1, Vietnam 1. So a gallery holds what was actually made
+  for that place, not a padded five, and Thailand is the only one that shows
+  the grid properly. Copy no longer promises a number. Roughly five per
+  destination would make every gallery land. Drop files in `public/ai-photos`
+  and list them in `AI_DESTINATIONS`.
+- The three "what won't work" examples are still library snaps, deliberately:
+  they need to look wrong.
 
 ## Not built
 
