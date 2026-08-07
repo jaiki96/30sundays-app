@@ -38,8 +38,10 @@ Full screen throughout. No bottom sheets.
    never repeats the one they are already on.
 4. **Generating.** Five tiles land one at a time over the delay, so the wait has
    a shape. Failure gets its own screen with a retry.
-5. **Gallery.** Five images in a 9:16 grid. Two chips at the top change the
-   photo or the place. Bin icon removes everything, and asks first.
+5. **Gallery.** All five images in a 9:16 grid, the picked destination's own
+   pictures leading. Each tile carries its real spot and country. Two chips at
+   the top change the photo or the place. Bin icon removes everything, and asks
+   first.
 6. **Viewer.** Tap any image for full screen. Swipe or drag between the five,
    arrow keys on desktop. Close, share, an AI generated tag, thumbs up and down
    (one vote per image), a counter, dots, and "Plan my [place] trip".
@@ -90,11 +92,14 @@ The six designs that were considered are still at `/ai-section-options`.
   and resets on reload. No browser storage, deliberately.
 - Reduced motion is respected.
 - **Five generated images exist so far, across four countries**: Bali 1,
-  Thailand 2, Maldives 1, Vietnam 1. So a gallery holds what was actually made
-  for that place, not a padded five, and Thailand is the only one that shows
-  the grid properly. Copy no longer promises a number. Roughly five per
-  destination would make every gallery land. Drop files in `public/ai-photos`
-  and list them in `AI_DESTINATIONS`.
+  Thailand 2, Maldives 1, Vietnam 1. A per-destination set would therefore be
+  one or two pictures long, so the gallery shows all five with the picked
+  destination leading, and each tile names its real spot and country. The
+  header is "Your photos" rather than "You two in X", because the set spans
+  places. Once there are roughly five per destination, `getGeneratedBatch`
+  goes back to returning just that destination's slice and the header can name
+  it again. Drop files in `public/ai-photos` and list them in
+  `AI_DESTINATIONS`.
 - The three "what won't work" examples are still library snaps, deliberately:
   they need to look wrong.
 

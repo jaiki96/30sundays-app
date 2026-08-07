@@ -66,18 +66,27 @@ export function getDestination(slug) {
   return AI_DESTINATIONS.find((d) => d.slug === slug) || null;
 }
 
-// The whole set for a destination, in the order it is shown in the gallery.
+// Every generated image there is, as one flat set. The picked destination's own
+// pictures lead, the rest follow.
+//
+// The five that exist span four countries, so a per-destination set would be
+// one or two pictures long. Showing all five and labelling each with its real
+// place beats showing one: the gallery reads the way it will read once there
+// are five for every destination.
 export function getGeneratedBatch(slug) {
-  const dest = getDestination(slug);
-  if (!dest) return [];
-  return dest.images.map((img, i) => ({
-    id: `${slug}-${i}`,
-    src: img.src,
-    location: img.location,
-    destination: dest.name,
-    slug: dest.slug,
-    index: i,
-  }));
+  const ordered = [
+    ...AI_DESTINATIONS.filter((d) => d.slug === slug),
+    ...AI_DESTINATIONS.filter((d) => d.slug !== slug),
+  ];
+  return ordered.flatMap((dest) =>
+    dest.images.map((img, i) => ({
+      id: `${dest.slug}-${i}`,
+      src: img.src,
+      location: img.location,
+      destination: dest.name,
+      slug: dest.slug,
+    }))
+  ).map((img, index) => ({ ...img, index }));
 }
 
 // ─── Upload guidance ───
@@ -119,13 +128,13 @@ export const COPY = {
   sectionKicker: "NEW",
   sectionTitleLead: "See yourselves",
   sectionTitleAccent: "there",
-  sectionSub: "One photo of you two. Pictures of you both at the place you pick.",
+  sectionSub: "One photo of you two. Five pictures of you both somewhere new.",
   sectionCta: "Add your photo",
   sectionCtaReturning: "See your photos",
 
   // Upload
   uploadTitle: "Add one photo of you two",
-  uploadSub: "We'll use it to make pictures of you both at the place you pick.",
+  uploadSub: "We'll use it to make five pictures of you both away.",
   uploadPickCta: "Choose a photo",
   uploadChangeCta: "Choose a different photo",
   uploadEmpty: "One photo with both of you in it",
@@ -139,7 +148,7 @@ export const COPY = {
 
   // Destination
   destTitle: "Where are you dreaming of?",
-  destSub: "Pick one. We'll place you both at the best spots there.",
+  destSub: "Pick where you're dreaming of. We'll start there.",
   surpriseTitle: "Surprise us",
   surpriseSub: "We'll pick a place for you two",
 
@@ -152,7 +161,7 @@ export const COPY = {
   failedCta: "Try again",
 
   // Gallery
-  galleryTitle: "You two in",
+  galleryTitle: "Your photos",
   changePhoto: "Change photo",
   changePlace: "Change place",
   removeAll: "Remove my photos",

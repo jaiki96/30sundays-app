@@ -8,7 +8,7 @@ import { C } from "../data";
 import { useAIPhotos, useReducedMotion } from "../state/useAIPhotos";
 import {
   COPY, AI_DESTINATIONS, GUIDELINES, GOOD_EXAMPLE, BAD_EXAMPLES,
-  getDestination, IMAGES_PER_BATCH, track,
+  getDestination, getGeneratedBatch, IMAGES_PER_BATCH, track,
 } from "../data/aiPhotosData";
 import PhotoViewer from "../components/AIPhotos/PhotoViewer";
 import LoginLayer from "../components/AIPhotos/LoginLayer";
@@ -271,7 +271,7 @@ function GeneratingStep() {
   const { destination, status, onGenerationRetried, setStep } = useAIPhotos();
   const reduced = useReducedMotion();
   const dest = getDestination(destination);
-  const count = dest?.images.length || IMAGES_PER_BATCH;
+  const count = getGeneratedBatch(destination).length || IMAGES_PER_BATCH;
   const [filled, setFilled] = useState(0);
 
   // Tiles land one by one, so the wait has a shape instead of a spinner.
@@ -348,7 +348,7 @@ function GalleryStep() {
   return (
     <>
       <TopBar
-        title={`${COPY.galleryTitle} ${dest?.name || ""}`}
+        title={COPY.galleryTitle}
         onBack={() => { setStep(null); navigate(-1); }}
         right={
           <button
@@ -390,7 +390,7 @@ function GalleryStep() {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr", gap: 10, padding: `12px ${PAD}px 0` }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: `12px ${PAD}px 0` }}>
           {images.map((img, i) => (
             <button
               key={img.id}
@@ -399,8 +399,9 @@ function GalleryStep() {
             >
               <img src={img.src} alt={`You both at ${img.location}`} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
               <span style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 58%, rgba(0,0,0,0.72) 100%)" }} />
-              <span style={{ position: "absolute", left: 9, right: 9, bottom: 8, fontSize: 11.5, fontWeight: 700, color: "#fff", textAlign: "left", lineHeight: "15px", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>
-                {img.location}
+              <span style={{ position: "absolute", left: 9, right: 9, bottom: 7, textAlign: "left", textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>
+                <span style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "#fff", lineHeight: "15px" }}>{img.location}</span>
+                <span style={{ display: "block", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.82)", lineHeight: "13px" }}>{img.destination}</span>
               </span>
             </button>
           ))}
