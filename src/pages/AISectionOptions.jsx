@@ -39,6 +39,11 @@ const DEEP = "linear-gradient(150deg, #2B0512 0%, #780C2F 48%, #C11049 100%)";
 const GLOW = "radial-gradient(circle at 82% 8%, rgba(255,90,135,0.55) 0%, rgba(255,90,135,0) 58%)";
 const BLUSH = `linear-gradient(155deg, #FFD9E1 0%, ${C.p100} 40%, #FFF6F8 100%)`;
 
+// No black anywhere: brand pink at the top for white display type, running down
+// to light pink where the solid coral button sits.
+const PINK = "linear-gradient(158deg, #C11049 0%, #E31B53 20%, #FF6E96 48%, #FFC2D2 78%, #FFEEF2 100%)";
+const PINK_GLOW = "radial-gradient(circle at 88% 4%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 52%)";
+
 /* ── Shared ── */
 
 function Usps() {
@@ -272,6 +277,38 @@ function E() {
   );
 }
 
+/* ── F. Pink gradient ── */
+function F() {
+  return (
+    <div style={{ position: "relative", background: PINK, padding: "18px 0", borderRadius: 24, margin: `0 ${PAD}px`, overflow: "hidden", boxShadow: "0 16px 40px rgba(227,27,83,0.28)" }}>
+      <div style={{ position: "absolute", inset: 0, background: PINK_GLOW }} />
+
+      <div style={{ position: "relative", padding: "0 16px" }}>
+        <Chip dark />
+        <h2 style={{ fontSize: 25, fontWeight: 900, color: "#fff", margin: "10px 0 0", letterSpacing: "-0.9px", lineHeight: "28px", textShadow: "0 1px 12px rgba(140,10,50,0.22)" }}>
+          {T.title}
+        </h2>
+        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.9)", lineHeight: "18px", margin: "7px 0 0" }}>{T.sub}</p>
+      </div>
+
+      {/* Runs off the right edge, so it reads as scrollable with no hint. */}
+      <div className="hide-scrollbar" style={{ position: "relative", display: "flex", gap: 9, overflowX: "auto", padding: "14px 16px 0" }}>
+        {SHOTS.map((s) => (
+          <Portrait key={s.place} {...s} w={116} style={{ border: "2.5px solid rgba(255,255,255,0.85)", boxShadow: "0 6px 18px rgba(140,10,50,0.22)" }} />
+        ))}
+      </div>
+
+      {/* The panel is pale down here, so the button goes solid coral. */}
+      <div style={{ position: "relative", padding: "14px 16px 0" }}>
+        <Pill />
+        <p style={{ fontSize: 10.5, fontStyle: "italic", color: "#8A0E36", opacity: 0.66, textAlign: "center", margin: "10px 0 0" }}>
+          {T.note}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ── Page ── */
 
 const VARIATIONS = [
@@ -280,6 +317,7 @@ const VARIATIONS = [
   ["C", "Blush poster", "The same energy in the light direction: warm blush, a fanned deck, coral pill. Keeps the home screen bright, which the rest of the app is.", CVar],
   ["D", "Panel with a bleeding rail", "District's shape. Title and copy in the panel, a rail of 9:16 cards running off the right edge so it reads as scrollable with no hint needed. Most compact of the dark ones.", D],
   ["E", "Your photo, five places", "Leads with the transformation instead of the results. The sweep is the hook and the headline carries the bargain. Shows one place, not four.", E],
+  ["F", "Pink gradient", "D's shape with no black in it: brand pink at the top for the white headline, running down to light pink where a solid coral button sits. Same layout as D on purpose, so the colour is the only thing you are judging.", F],
 ];
 
 function Frame({ code, title, blurb, children }) {
@@ -312,17 +350,17 @@ export default function AISectionOptions() {
           The AI photos section
         </h1>
         <p style={{ fontSize: 13, color: C.sub, lineHeight: "19px", margin: "8px 0 12px" }}>
-          Five designs, each shown where it would sit: under the three USPs,
-          above "Sep to Nov". Same words in all five so the choice is about the
+          Six designs, each shown where it would sit: under the three USPs,
+          above "Sep to Nov". Same words in all six so the choice is about the
           design. The hero is already back to marketing only.
         </p>
         <div style={{ background: C.wBg || "#FFFAEB", border: "1px solid #FEDF89", borderRadius: 12, padding: "11px 13px" }}>
           <p style={{ fontSize: 12, color: C.sub, lineHeight: "17px", margin: 0 }}>
             <b style={{ color: C.wText || "#B54708" }}>Worth knowing.</b> The
             build brief for this feature says never put a block on a dark
-            background. Four of these break that on purpose, because the
-            references you sent all earn their attention with a rich panel. C is
-            the same energy kept light if you would rather hold the rule.
+            background. A, B, D and E break that on purpose, because the
+            references you sent all earn their attention with a rich panel. C
+            and F hold the rule: F has the same loudness with no black in it.
           </p>
         </div>
       </div>
@@ -337,11 +375,13 @@ export default function AISectionOptions() {
         <div style={{ background: C.p100, borderRadius: 14, padding: "14px 15px" }}>
           <p style={{ fontSize: 13.5, fontWeight: 700, color: C.head, margin: 0 }}>What I would pick</p>
           <p style={{ fontSize: 12.5, color: C.sub, lineHeight: "18px", margin: "5px 0 0" }}>
-            D. The panel and the display type do the shouting, the rail still
-            shows four real results in their true 9:16 shape, and it costs the
-            least height of the dark ones. A is the prettiest if the extra
-            height is fine. B is the boldest and the riskiest: a full bleed dark
-            band that high up changes the feel of the whole home screen.
+            F, now that it exists. It is D's shape, so it keeps the display type
+            and the rail of four real results in their true 9:16 shape, but it
+            is warm brand pink the whole way down instead of near black. That
+            suits a couples product better than a dark panel does, and it is the
+            only loud one that does not break the no-dark-blocks rule. Take D if
+            you want the section to feel like a separate, premium thing rather
+            than part of the app. A is the prettiest if the extra height is fine.
           </p>
         </div>
       </div>
