@@ -135,6 +135,40 @@
 .ai-sec-wipe { animation: aiSecWipe 4.4s cubic-bezier(.65,0,.35,1) infinite; }
 .ai-sec-line { animation: aiSecLine 4.4s cubic-bezier(.65,0,.35,1) infinite; }
 
+/* Generating: a tile still waiting keeps a sheen moving across it, and the
+   picture fades up in place the moment it lands. */
+@keyframes aiTileWait {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes aiTileIn {
+  0%   { opacity: 0; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes aiFactIn {
+  0%   { opacity: 0; transform: translateY(5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.ai-tile-wait {
+  background: linear-gradient(100deg, rgba(255,255,255,0) 20%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 80%);
+  animation: aiTileWait 1.6s ease-in-out infinite;
+}
+.ai-tile-in { animation: aiTileIn 0.45s cubic-bezier(.2,.7,.3,1) both; }
+.ai-fact-in { animation: aiFactIn 0.4s ease both; }
+
+/* Generation failed: the belt keeps turning and the bag rides along with it,
+   so the picture says "coming round again" on its own. */
+@keyframes bagBelt {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-24px); }
+}
+@keyframes bagBob {
+  0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+  50%      { transform: translateY(-3px) rotate(1.2deg); }
+}
+.bag-belt { animation: bagBelt 1.1s linear infinite; }
+.bag-bob  { animation: bagBob 2.6s ease-in-out infinite; transform-origin: 100px 98px; }
+
 @keyframes kenBurns {
   0%   { transform: scale(1.06) translate(0, 0); }
   50%  { transform: scale(1.18) translate(-2%, -1.5%); }

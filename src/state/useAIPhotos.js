@@ -1,8 +1,11 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo, createElement } from "react";
 import { getGeneratedBatch, track, AI_DESTINATIONS, IMAGES_PER_BATCH } from "../data/aiPhotosData";
 
-// Mocked generation. The PRD expects 5 to 15 seconds in production.
-const GENERATION_MS = 6000;
+// Mocked generation. The PRD expects 5 to 15 seconds in production. Pictures
+// land one at a time rather than all at the end, so there is something to watch.
+const PER_IMAGE_MS = 1500;
+// A beat after the last one lands, so it is seen before the gallery takes over.
+const SETTLE_MS = 800;
 
 // Mock persistence layer. Module scope on purpose: it survives component
 // remounts and route changes, and resets on reload. Browser storage is ruled
@@ -14,6 +17,7 @@ const INITIAL = {
   photoPreview: null,
   destination: null,      // destination slug
   status: "none",         // none | generating | generated | failed
+  ready: 0,               // how many pictures have landed so far
   seen: false,            // gallery has been opened once
   offline: false,
   rejection: null,        // no_face | group_photo | too_far | moderation | minor_detected
@@ -47,23 +51,39 @@ export function AIPhotosProvider({ children }) {
 
   // Mirror every change into the mock store so state survives a remount.
   useEffect(() => { mockStore = state; }, [state]);
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(() => () => clearInterval(timerRef.current), []);
 
   const patch = useCallback((p) => setState((s) => ({ ...s, ...(typeof p === "function" ? p(s) : p) })), []);
 
   // ─── Generation ───
+  // One picture at a time. `ready` is the only progress counter, so the home
+  // section and the generating screen always agree on how far along it is.
   const runGeneration = useCallback((slug, triggerType) => {
-    clearTimeout(timerRef.current);
+    clearInterval(timerRef.current);
+    const count = getGeneratedBatch(slug).length || IMAGES_PER_BATCH;
     const startedAt = Date.now();
-    track("ai_photos_generation_requested", { trigger_type: triggerType, destination: slug, image_count: IMAGES_PER_BATCH });
-    setState((s) => ({ ...s, destination: slug, status: "generating", seen: false }));
+    track("ai_photos_generation_requested", { trigger_type: triggerType, destination: slug, image_count: count });
+    setState((s) => ({ ...s, destination: slug, status: "generating", ready: 0, seen: false }));
     setStep("generating");
-    timerRef.current = setTimeout(() => {
-      track("ai_photos_generation_succeeded", { duration_ms: Date.now() - startedAt, trigger_type: triggerType });
-      setState((s) => (s.status === "generating" ? { ...s, status: "generated" } : s));
-      setStep("gallery");
-    }, GENERATION_MS);
+    timerRef.current = setInterval(() => {
+      setState((s) => {
+        if (s.status !== "generating") return s;
+        const ready = s.ready + 1;
+        if (ready < count) return { ...s, ready };
+        clearInterval(timerRef.current);
+        track("ai_photos_generation_succeeded", { duration_ms: Date.now() - startedAt, trigger_type: triggerType });
+        return { ...s, ready: count, status: "generated" };
+      });
+    }, PER_IMAGE_MS);
   }, []);
+
+  // Hand over to the gallery only if they stayed to watch. If they wandered off
+  // to the home screen, the section tells them it is done instead.
+  useEffect(() => {
+    if (state.status !== "generated" || step !== "generating") return;
+    const t = setTimeout(() => setStep("gallery"), SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [state.status, step]);
 
   // ─── Entry ───
   // The section on the home screen is visible to everyone. The login gate is
@@ -146,7 +166,7 @@ export function AIPhotosProvider({ children }) {
 
   const onRemoved = useCallback(() => {
     track("ai_photos_removed", {});
-    clearTimeout(timerRef.current);
+    clearInterval(timerRef.current);
     setSheet(null);
     setViewerIndex(null);
     setStep(null);
@@ -159,10 +179,14 @@ export function AIPhotosProvider({ children }) {
   }, []);
 
   // ─── Viewer ───
-  const images = useMemo(
-    () => (state.status === "generated" && state.destination ? getGeneratedBatch(state.destination) : []),
-    [state.status, state.destination]
+  // The whole set for this destination, whether or not it has finished. The
+  // generating screen fills it in as it goes; the gallery only ever sees a
+  // finished set.
+  const batch = useMemo(
+    () => (state.destination ? getGeneratedBatch(state.destination) : []),
+    [state.destination]
   );
+  const images = useMemo(() => (state.status === "generated" ? batch : []), [state.status, batch]);
 
   const openViewer = useCallback((i) => {
     track("ai_photos_fullscreen_opened", { image_index: i });
@@ -176,18 +200,20 @@ export function AIPhotosProvider({ children }) {
   // ─── Dev panel ───
   // Reviewers need to land on any state without waiting out the delay.
   const forceState = useCallback((name) => {
-    clearTimeout(timerRef.current);
+    clearInterval(timerRef.current);
     setViewerIndex(null);
     setSheet(null);
     const withPhoto = { ...INITIAL, loggedIn: true, hasPhoto: true, photoName: "our-photo.jpg", destination: "bali" };
+    const total = getGeneratedBatch("bali").length || IMAGES_PER_BATCH;
     const presets = {
       loggedOut:  [{ ...INITIAL, loggedIn: false }, null],
       noPhoto:    [{ ...INITIAL }, "upload"],
-      generating: [{ ...withPhoto, status: "generating" }, "generating"],
-      generated:  [{ ...withPhoto, status: "generated", seen: false }, "gallery"],
+      // Parked mid way, so the half-done look can be reviewed on its own.
+      generating: [{ ...withPhoto, status: "generating", ready: 2 }, "generating"],
+      generated:  [{ ...withPhoto, status: "generated", ready: total, seen: false }, "gallery"],
       failed:     [{ ...withPhoto, status: "failed" }, "generating"],
       removed:    [{ ...INITIAL }, null],
-      offline:    [{ ...withPhoto, status: "generated", seen: true, offline: true }, "gallery"],
+      offline:    [{ ...withPhoto, status: "generated", ready: total, seen: true, offline: true }, "gallery"],
     };
     const preset = presets[name];
     if (!preset) return;
@@ -198,7 +224,8 @@ export function AIPhotosProvider({ children }) {
   const value = {
     ...state,
     images,
-    imageCount: IMAGES_PER_BATCH,
+    batch,
+    imageCount: batch.length || IMAGES_PER_BATCH,
     step, setStep,
     sheet, setSheet,
     viewerIndex, setViewerIndex, openViewer,

@@ -16,6 +16,7 @@ import {
 
 import HeroCarousel from "../components/HomeHero/HeroCarousel";
 import AIPhotosHomeSection from "../components/AIPhotos/HomeSection";
+import FundingBanner from "../components/FundingBanner";
 
 const PAD = 18;
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
@@ -65,6 +66,8 @@ export default function HomeAI({ userState = "new" }) {
   return (
     <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.white }}>
       <DestCircles />
+
+      <FundingBanner />
 
       <HeroCarousel marketingSlides={MARKETING_SLIDES} onOpenVideo={() => setShowVideo(true)} />
 

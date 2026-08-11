@@ -28,6 +28,12 @@ export const AI_DESTINATIONS = [
     name: "Bali",
     hero: destData.Bali?.hero,
     blurb: "Rice terraces, cliff temples, warm evenings",
+    facts: [
+      "Kelingking Beach is on Nusa Penida, a boat ride off Bali's east coast.",
+      "Ubud is green and quiet. The south coast is where the beach clubs are.",
+      "Most couples need six or seven nights to see both sides without rushing.",
+      "The west coast is the sunset side. Book dinner late and eat facing the sea.",
+    ],
     images: [
       { src: `${IMG}/bali-kelingking.jpg`, location: "Kelingking Beach" },
     ],
@@ -37,6 +43,12 @@ export const AI_DESTINATIONS = [
     name: "Thailand",
     hero: destData.Thailand?.hero,
     blurb: "Island water, temple mornings, night markets",
+    facts: [
+      "Railay has no roads. The only way in is by longtail boat.",
+      "Chiang Mai in the north is cooler and quieter than the islands.",
+      "Most couples split the trip: a few nights in a city, then the islands.",
+      "Wat Rong Khun, the white temple, sits near Chiang Rai in the far north.",
+    ],
     images: [
       { src: `${IMG}/thailand-railay.jpg`, location: "Railay Beach at sunset" },
       { src: `${IMG}/thailand-white-temple.jpg`, location: "Wat Rong Khun" },
@@ -47,6 +59,12 @@ export const AI_DESTINATIONS = [
     name: "Maldives",
     hero: destData.Maldives?.hero,
     blurb: "Overwater mornings and very quiet evenings",
+    facts: [
+      "There are no roads. You move between islands by speedboat or seaplane.",
+      "Most resorts have an island to themselves, so it stays quiet all week.",
+      "Overwater rooms cost a good bit more than the ones on the beach.",
+      "Seaplanes only fly in daylight, so your landing time decides your first day.",
+    ],
     images: [
       { src: `${IMG}/maldives-jetty.jpg`, location: "Your overwater deck" },
     ],
@@ -56,6 +74,12 @@ export const AI_DESTINATIONS = [
     name: "Vietnam",
     hero: destData.Vietnam?.hero,
     blurb: "Bays, lantern streets, mountain mornings",
+    facts: [
+      "The Golden Bridge sits in the hills above Da Nang, reached by cable car.",
+      "North to south is over 1,600 km, so most couples fly between stops.",
+      "Ha Long Bay is best as an overnight on the water, not a day trip.",
+      "Hoi An turns its lanterns on every evening once it gets dark.",
+    ],
     images: [
       { src: `${IMG}/vietnam-golden-bridge.jpg`, location: "The Golden Bridge" },
     ],
@@ -128,13 +152,24 @@ export const COPY = {
   sectionKicker: "NEW",
   sectionTitleLead: "See yourselves",
   sectionTitleAccent: "there",
-  sectionSub: "One photo of you two. Five pictures of you both somewhere new.",
+  sectionSub: "One photo now. Five holiday pictures you have not taken yet.",
   sectionCta: "Add your photo",
-  sectionCtaReturning: "See your photos",
+
+  // The section mirrors the module. Once a couple starts, this is where they
+  // come back to, so it has to say where things stand without them tapping in.
+  sectionBusyKicker: "IN PROGRESS",
+  sectionBusyTitle: "Your pictures are on the way",
+  sectionBusySub: "We are making them now. They will show up right here.",
+  sectionBusyCta: "View gallery",
+  sectionReadyKicker: "READY",
+  sectionReadyTitle: "Your photos are ready",
+  sectionReadySub: (destName) => `You two in ${destName}, and a few more places.`,
+  sectionReadyCta: "View your photos",
+  sectionProgress: (n, total) => `${n} of ${total} ready`,
 
   // Upload
   uploadTitle: "Add one photo of you two",
-  uploadSub: "We'll use it to make five pictures of you both away.",
+  uploadSub: "This one photo is going to five places.",
   uploadPickCta: "Choose a photo",
   uploadChangeCta: "Choose a different photo",
   uploadEmpty: "One photo with both of you in it",
@@ -153,15 +188,22 @@ export const COPY = {
   surpriseSub: "We'll pick a place for you two",
 
   // Generating
+  generatingTopBar: "In transit",
   generatingTitle: (destName) => `Painting you both into ${destName}`,
-  generatingSub: "This takes a few seconds. You can stay on this screen.",
+  generatingSub: "Each one lands as it finishes. This takes a few seconds.",
+  // Something to read while the pictures land, so the wait is never a blank
+  // screen with a spinner on it.
+  factLabel: (destName) => `While you wait, about ${destName}`,
 
-  failedTitle: "That didn't come through",
-  failedSub: "Nothing lost. Give it another go.",
+  // The baggage belt line. It says "delayed, not lost", which is the thing they
+  // actually want to know: the photo is still there and nothing needs redoing.
+  failedTopBar: "Small hiccup",
+  failedTitle: "Your pictures missed the belt",
+  failedSub: "They come round again. Give it one more go.",
   failedCta: "Try again",
 
   // Gallery
-  galleryTitle: "Your photos",
+  galleryTitle: "Yayy! Your vacation pics are here.",
   changePhoto: "Change photo",
   changePlace: "Change place",
   removeAll: "Remove my photos",
@@ -170,7 +212,7 @@ export const COPY = {
   planTripCta: (destName) => `Plan my ${destName} trip`,
 
   // Share
-  shareTitle: (destName) => `Us two in ${destName}`,
+  shareTitle: (destName) => `Look at us in ${destName}`,
   shareText: (destName, location) => `Look at us at ${location}. ${destName} is next. Made on 30 Sundays.`,
   shareSheetTitle: "Share this",
   shareCopied: "Link copied",

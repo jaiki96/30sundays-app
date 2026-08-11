@@ -2,20 +2,33 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ImagePlus, Check, X as XIcon, Shuffle, AlertCircle,
-  RefreshCw, MapPin, Trash2, Wand2, Sparkles, CloudOff,
+  RefreshCw, MapPin, Trash2, Wand2, Sparkles, CloudOff, Lightbulb,
 } from "lucide-react";
 import { C } from "../data";
+import { AI_PHOTOS_VARIANT } from "../data/aiPhotosVariant";
 import { useAIPhotos, useReducedMotion } from "../state/useAIPhotos";
 import {
   COPY, AI_DESTINATIONS, GUIDELINES, GOOD_EXAMPLE, BAD_EXAMPLES,
-  getDestination, getGeneratedBatch, IMAGES_PER_BATCH, track,
+  getDestination, track,
 } from "../data/aiPhotosData";
 import PhotoViewer from "../components/AIPhotos/PhotoViewer";
+import LuggageBelt from "../components/AIPhotos/LuggageBelt";
 import LoginLayer from "../components/AIPhotos/LoginLayer";
 import AIPhotosDevPanel, { DevPanelButton } from "../components/AIPhotos/AIPhotosDevPanel";
 
 const PAD = 18;
 // Every tile is 9:16, the shape every generated image comes back in.
+
+// Backing out of the first screen leaves the module. Landing on /ai-photos
+// directly has nothing to go back to, so that case gets sent to the home the
+// section lives on.
+function useLeaveModule() {
+  const navigate = useNavigate();
+  return () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate(AI_PHOTOS_VARIANT ? "/" : "/ai");
+  };
+}
 
 /* ── Chrome ── */
 
@@ -92,6 +105,7 @@ function ExampleCard({ src, caption, good }) {
 
 function UploadStep() {
   const { photoName, photoPreview, rejection, onPhotoSelected, onUploadSubmitted, setStep, status } = useAIPhotos();
+  const leave = useLeaveModule();
   const inputRef = useRef(null);
   const objectUrl = useRef(null);
 
@@ -114,7 +128,7 @@ function UploadStep() {
 
   return (
     <>
-      <TopBar title={COPY.uploadTitle} onBack={() => setStep(status === "generated" ? "gallery" : null)} />
+      <TopBar title={COPY.uploadTitle} onBack={() => (status === "generated" ? setStep("gallery") : leave())} />
 
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: `16px ${PAD}px 20px` }}>
         <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "0 0 16px" }}>{COPY.uploadSub}</p>
@@ -267,29 +281,69 @@ function DestinationStep() {
 
 /* ── 3. Generating ── */
 
+// Something to read while the pictures land, rotating on its own so nobody is
+// left staring at a progress bar.
+const FACT_MS = 4200;
+
+function QuickFact({ dest }) {
+  const reduced = useReducedMotion();
+  const facts = dest?.facts || [];
+  const [i, setI] = useState(0);
+
+  useEffect(() => {
+    if (facts.length < 2) return;
+    const t = setInterval(() => setI((n) => (n + 1) % facts.length), FACT_MS);
+    return () => clearInterval(t);
+  }, [facts.length]);
+
+  if (!facts.length) return null;
+
+  return (
+    <div style={{
+      display: "flex", gap: 11, padding: 14, borderRadius: 16,
+      background: C.p100, border: `1px solid ${C.p300}66`,
+    }}>
+      <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Lightbulb size={15} color={C.p600} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.9px", textTransform: "uppercase", color: C.p600, margin: 0 }}>
+          {COPY.factLabel(dest.name)}
+        </p>
+        {/* Keyed on the index so each fact replays the fade as it arrives. */}
+        <p
+          key={i}
+          className={reduced ? undefined : "ai-fact-in"}
+          style={{ fontSize: 13, color: C.head, lineHeight: "19px", margin: "5px 0 0", minHeight: 38 }}
+        >
+          {facts[i]}
+        </p>
+        <div style={{ display: "flex", gap: 4, marginTop: 9 }}>
+          {facts.map((f, n) => (
+            <span key={f} style={{
+              width: n === i ? 14 : 5, height: 5, borderRadius: 3,
+              background: n === i ? C.p600 : `${C.p600}38`,
+              transition: reduced ? "none" : "width 0.3s ease, background 0.3s ease",
+            }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GeneratingStep() {
-  const { destination, status, onGenerationRetried, setStep } = useAIPhotos();
+  const { destination, status, ready, batch, imageCount, onGenerationRetried, setStep } = useAIPhotos();
   const reduced = useReducedMotion();
   const dest = getDestination(destination);
-  const count = getGeneratedBatch(destination).length || IMAGES_PER_BATCH;
-  const [filled, setFilled] = useState(0);
-
-  // Tiles land one by one, so the wait has a shape instead of a spinner.
-  useEffect(() => {
-    if (status !== "generating") return;
-    setFilled(0);
-    const t = setInterval(() => setFilled((n) => Math.min(n + 1, count)), 1100);
-    return () => clearInterval(t);
-  }, [status, count]);
+  const count = imageCount;
 
   if (status === "failed") {
     return (
       <>
-        <TopBar title="Something went wrong" onBack={() => setStep("destination")} />
+        <TopBar title={COPY.failedTopBar} onBack={() => setStep("destination")} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `0 ${PAD}px`, textAlign: "center" }}>
-          <div style={{ width: 62, height: 62, borderRadius: "50%", background: C.p100, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-            <AlertCircle size={28} color={C.p600} />
-          </div>
+          <div style={{ marginBottom: 14 }}><LuggageBelt /></div>
           <h2 style={{ fontSize: 19, fontWeight: 800, color: C.head, margin: "0 0 6px" }}>{COPY.failedTitle}</h2>
           <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "0 0 22px" }}>{COPY.failedSub}</p>
           <div style={{ width: "100%", maxWidth: 280 }}>
@@ -302,33 +356,65 @@ function GeneratingStep() {
 
   return (
     <>
-      <TopBar title="Making your pictures" onBack={() => setStep("destination")} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: `22px ${PAD}px` }}>
+      <TopBar title={COPY.generatingTopBar} onBack={() => setStep("destination")} />
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: `22px ${PAD}px` }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: C.head, margin: 0, letterSpacing: "-0.4px" }}>
           {COPY.generatingTitle(dest?.name || "your place")}
         </h2>
-        <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "6px 0 20px" }}>{COPY.generatingSub}</p>
+        <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "6px 0 14px" }}>{COPY.generatingSub}</p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {Array.from({ length: count }).map((_, i) => (
-            <div key={i} style={{
-              position: "relative", width: "100%", aspectRatio: "9 / 16",
-              borderRadius: 14, overflow: "hidden",
-              background: i < filled ? `linear-gradient(150deg, ${C.p300} 0%, ${C.p600} 100%)` : C.bg,
-              border: `1px solid ${C.div}`,
-              transition: reduced ? "none" : "background 0.5s ease",
-            }}>
-              <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {i < filled
-                  ? <Check size={22} color="#fff" strokeWidth={3} />
-                  : <Sparkles size={18} color={C.inact} style={{ animation: reduced ? "none" : `pulse 1.4s ease-in-out ${i * 0.18}s infinite` }} />}
-              </span>
-            </div>
-          ))}
+        {/* How far along, in words and as a bar. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>{COPY.sectionProgress(ready, count)}</span>
+          <Sparkles size={14} color={C.p600} style={{ animation: reduced ? "none" : "pulse 1.4s ease-in-out infinite" }} />
+        </div>
+        <div style={{ height: 4, borderRadius: 2, background: C.div, overflow: "hidden", marginBottom: 18 }}>
+          <div style={{
+            height: "100%", width: `${(ready / count) * 100}%`, background: C.p600,
+            transition: reduced ? "none" : "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+          }} />
+        </div>
+
+        {/* Three across, so the whole set and the fact below it fit on one
+            screen without scrolling. */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {Array.from({ length: count }).map((_, i) => {
+            const img = i < ready ? batch[i] : null;
+            return (
+              <div key={i} style={{
+                position: "relative", width: "100%", aspectRatio: "9 / 16",
+                borderRadius: 12, overflow: "hidden", background: C.bg,
+                border: `1px solid ${img ? "transparent" : C.div}`,
+              }}>
+                {img ? (
+                  <img
+                    src={img.src}
+                    alt={`You both at ${img.location}`}
+                    className={reduced ? undefined : "ai-tile-in"}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <>
+                    {/* A sheen crossing an empty tile reads as working, not stuck. */}
+                    <div className={reduced ? undefined : "ai-tile-wait"} style={{ position: "absolute", inset: 0 }} />
+                    <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Sparkles size={18} color={C.inact} style={{ animation: reduced ? "none" : `pulse 1.4s ease-in-out ${i * 0.18}s infinite` }} />
+                    </span>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <AiNote />
       </div>
+
+      {/* Pinned, so there is always something to read no matter how far the
+          grid has been scrolled. */}
+      <Footer>
+        <QuickFact dest={dest} />
+      </Footer>
     </>
   );
 }
@@ -338,9 +424,10 @@ function GeneratingStep() {
 function GalleryStep() {
   const {
     destination, images, offline, seen, onGallerySeen,
-    onChangePhoto, onChangePlace, openViewer, setSheet, setStep,
+    onChangePhoto, onChangePlace, openViewer, setSheet,
   } = useAIPhotos();
   const navigate = useNavigate();
+  const leave = useLeaveModule();
   const dest = getDestination(destination);
 
   useEffect(() => { if (!seen) onGallerySeen(); }, [seen, onGallerySeen]);
@@ -349,7 +436,7 @@ function GalleryStep() {
     <>
       <TopBar
         title={COPY.galleryTitle}
-        onBack={() => { setStep(null); navigate(-1); }}
+        onBack={leave}
         right={
           <button
             onClick={() => setSheet("removeConfirm")}
@@ -451,8 +538,8 @@ function RemoveConfirm() {
 /* ── Page ── */
 
 export default function AIPhotos() {
-  const navigate = useNavigate();
   const { step, setStep, status, loggedIn, setSheet } = useAIPhotos();
+  const leave = useLeaveModule();
 
   // Landing here directly picks up wherever the couple left off.
   useEffect(() => {
@@ -460,11 +547,6 @@ export default function AIPhotos() {
     if (!loggedIn) { setSheet("login"); return; }
     setStep(status === "generated" ? "gallery" : "upload");
   }, [step, status, loggedIn, setStep, setSheet]);
-
-  // Leaving the last screen leaves the module.
-  useEffect(() => {
-    if (step === null && loggedIn) return;
-  }, [step, loggedIn]);
 
   return (
     // Fills the frame's scroll area rather than the frame itself, so the
@@ -476,7 +558,7 @@ export default function AIPhotos() {
       {step === "gallery" && <GalleryStep />}
       {!step && (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <button onClick={() => navigate("/")} style={{ background: "none", border: "none", color: C.p600, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+          <button onClick={leave} style={{ background: "none", border: "none", color: C.p600, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
             Back to home
           </button>
         </div>
