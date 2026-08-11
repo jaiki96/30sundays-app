@@ -162,7 +162,7 @@ export const COPY = {
   sectionBusySub: "We are making them now. They will show up right here.",
   sectionBusyCta: "View gallery",
   sectionReadyKicker: "READY",
-  sectionReadyTitle: "Your photos are ready",
+  sectionReadyTitle: "Yayy! Your vacation pics are here.",
   sectionReadySub: (destName) => `You two in ${destName}, and a few more places.`,
   sectionReadyCta: "View your photos",
   sectionProgress: (n, total) => `${n} of ${total} ready`,
@@ -203,7 +203,7 @@ export const COPY = {
   failedCta: "Try again",
 
   // Gallery
-  galleryTitle: "Yayy! Your vacation pics are here.",
+  galleryTitle: "Just landed",
   changePhoto: "Change photo",
   changePlace: "Change place",
   removeAll: "Remove my photos",

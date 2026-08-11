@@ -43,7 +43,8 @@ function Heading({ chip, title, sub }) {
   return (
     <div style={{ position: "relative", padding: "18px 18px 0", textAlign: "center" }}>
       {chip}
-      <h2 style={{ fontSize: 25, fontWeight: 900, color: C.head, margin: "11px 0 0", letterSpacing: "-0.9px", lineHeight: "29px" }}>
+      {/* Balanced, so a two line title never drops a single orphan word. */}
+      <h2 style={{ fontSize: 25, fontWeight: 900, color: C.head, margin: "11px 0 0", letterSpacing: "-0.9px", lineHeight: "29px", textWrap: "balance" }}>
         {title}
       </h2>
       <p style={{ fontSize: 12.5, color: C.sub, lineHeight: "18px", margin: "8px auto 0", maxWidth: 268 }}>
