@@ -304,17 +304,12 @@ function QuickFact({ dest }) {
   const Icon = fact.icon || Lightbulb;
 
   return (
-    <div style={{
-      width: "100%", maxWidth: 300, textAlign: "center",
-      padding: "22px 20px 18px", borderRadius: 20,
-      background: C.p100, border: `1px solid ${C.p300}66`,
-    }}>
+    <div style={{ width: "100%", maxWidth: 300, textAlign: "center" }}>
       {/* Keyed on the index so the icon and its sentence arrive together. */}
       <div key={i} className={reduced ? undefined : "ai-fact-in"}>
         <div style={{
-          width: 48, height: 48, borderRadius: "50%", background: C.white, margin: "0 auto",
+          width: 48, height: 48, borderRadius: "50%", background: C.p100, margin: "0 auto",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 3px 10px rgba(137,18,62,0.14)",
         }}>
           <Icon size={22} color={C.p600} />
         </div>
@@ -326,7 +321,7 @@ function QuickFact({ dest }) {
         </p>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 4 }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 6 }}>
         {facts.map((f, n) => (
           <span key={f.text} style={{
             width: n === i ? 14 : 5, height: 5, borderRadius: 3,
