@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ImagePlus, Check, X as XIcon, Shuffle, AlertCircle,
-  RefreshCw, MapPin, Trash2, Wand2, CloudOff, Lightbulb,
+  RefreshCw, MapPin, Trash2, Wand2, CloudOff,
 } from "lucide-react";
 import { C } from "../data";
 import { AI_PHOTOS_VARIANT } from "../data/aiPhotosVariant";
@@ -298,37 +298,27 @@ function QuickFact({ dest }) {
 
   if (!facts.length) return null;
 
-  const fact = facts[i];
-  // Each fact brings its own icon: a boat for a boat ride, a sunset for the
-  // sunset side. The picture lands before the sentence is read.
-  const Icon = fact.icon || Lightbulb;
-
   return (
     <div style={{ width: "100%", maxWidth: 300, textAlign: "center" }}>
-      {/* Keyed on the index so the icon and its sentence arrive together. */}
-      <div key={i} className={reduced ? undefined : "ai-fact-in"}>
-        <div style={{
-          width: 48, height: 48, borderRadius: "50%", background: C.p100, margin: "0 auto",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <Icon size={22} color={C.p600} />
-        </div>
-        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.9px", textTransform: "uppercase", color: C.p600, margin: "12px 0 0" }}>
-          {COPY.factLabel(dest.name)}
-        </p>
-        <p style={{ fontSize: 14, color: C.head, lineHeight: "20px", margin: "6px 0 0", minHeight: 60, textWrap: "balance" }}>
-          {fact.text}
-        </p>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 6 }}>
-        {facts.map((f, n) => (
-          <span key={f.text} style={{
-            width: n === i ? 14 : 5, height: 5, borderRadius: 3,
-            background: n === i ? C.p600 : `${C.p600}38`,
-            transition: reduced ? "none" : "width 0.3s ease, background 0.3s ease",
+      {/* The one working signal on the screen, and it sits in the same place
+          for every message. Three dots, so nothing is being counted. */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
+        {[0, 1, 2].map((n) => (
+          <span key={n} style={{
+            width: 7, height: 7, borderRadius: "50%", background: C.p600,
+            animation: reduced ? "none" : `pulse 1.3s ease-in-out ${n * 0.2}s infinite`,
           }} />
         ))}
+      </div>
+
+      {/* Keyed on the index so each fact fades in as it arrives. */}
+      <div key={i} className={reduced ? undefined : "ai-fact-in"}>
+        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.9px", textTransform: "uppercase", color: C.p600, margin: 0 }}>
+          {COPY.factLabel(dest.name)}
+        </p>
+        <p style={{ fontSize: 14, color: C.head, lineHeight: "20px", margin: "8px 0 0", minHeight: 60, textWrap: "balance" }}>
+          {facts[i]}
+        </p>
       </div>
     </div>
   );
@@ -336,7 +326,6 @@ function QuickFact({ dest }) {
 
 function GeneratingStep() {
   const { destination, status, onGenerationRetried, setStep } = useAIPhotos();
-  const reduced = useReducedMotion();
   const dest = getDestination(destination);
 
   if (status === "failed") {
@@ -364,20 +353,9 @@ function GeneratingStep() {
         </h2>
         <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "6px 0 0" }}>{COPY.generatingSub}</p>
 
-        {/* The whole set comes back at once, so there is nothing to count.
-            Three dots say "still working" without promising a position. */}
-        <div style={{ display: "flex", gap: 6, margin: "16px 0 0" }}>
-          {[0, 1, 2].map((n) => (
-            <span key={n} style={{
-              width: 7, height: 7, borderRadius: "50%", background: C.p600,
-              animation: reduced ? "none" : `pulse 1.3s ease-in-out ${n * 0.2}s infinite`,
-            }} />
-          ))}
-        </div>
-
-        {/* The fact takes the middle of the screen now the tiles are gone, so
-            the wait has something worth reading at eye level. */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* The fact takes the middle of the screen now the tiles are gone, and
+            sits a little above centre so it reads closer to the heading. */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 96 }}>
           <QuickFact dest={dest} />
         </div>
 
