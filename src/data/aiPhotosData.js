@@ -3,6 +3,10 @@
 // Prototype only. There is no image generation here. Each "generated" image is
 // a real couple photo already in the app's library, paired with a curated
 // location name so the gallery reads the way the real feature would.
+import {
+  Sailboat, TreePalm, CalendarDays, Sunset, Mountain, Route, Landmark,
+  Plane, Waves, BedDouble, Sun, CableCar, Ship, Lamp,
+} from "lucide-react";
 import { customerPhotos, destData } from "../data";
 
 // No daily rotation: a couple uploads once, picks a place, and gets the whole
@@ -29,10 +33,10 @@ export const AI_DESTINATIONS = [
     hero: destData.Bali?.hero,
     blurb: "Rice terraces, cliff temples, warm evenings",
     facts: [
-      "Kelingking Beach is on Nusa Penida, a boat ride off Bali's east coast.",
-      "Ubud is green and quiet. The south coast is where the beach clubs are.",
-      "Most couples need six or seven nights to see both sides without rushing.",
-      "The west coast is the sunset side. Book dinner late and eat facing the sea.",
+      { icon: Sailboat, text: "Kelingking Beach is on Nusa Penida, a boat ride off Bali's east coast." },
+      { icon: TreePalm, text: "Ubud is green and quiet. The south coast is where the beach clubs are." },
+      { icon: CalendarDays, text: "Most couples need six or seven nights to see both sides without rushing." },
+      { icon: Sunset, text: "The west coast is the sunset side. Book dinner late and eat facing the sea." },
     ],
     images: [
       { src: `${IMG}/bali-kelingking.jpg`, location: "Kelingking Beach" },
@@ -44,10 +48,10 @@ export const AI_DESTINATIONS = [
     hero: destData.Thailand?.hero,
     blurb: "Island water, temple mornings, night markets",
     facts: [
-      "Railay has no roads. The only way in is by longtail boat.",
-      "Chiang Mai in the north is cooler and quieter than the islands.",
-      "Most couples split the trip: a few nights in a city, then the islands.",
-      "Wat Rong Khun, the white temple, sits near Chiang Rai in the far north.",
+      { icon: Sailboat, text: "Railay has no roads. The only way in is by longtail boat." },
+      { icon: Mountain, text: "Chiang Mai in the north is cooler and quieter than the islands." },
+      { icon: Route, text: "Most couples split the trip: a few nights in a city, then the islands." },
+      { icon: Landmark, text: "Wat Rong Khun, the white temple, sits near Chiang Rai in the far north." },
     ],
     images: [
       { src: `${IMG}/thailand-railay.jpg`, location: "Railay Beach at sunset" },
@@ -60,10 +64,10 @@ export const AI_DESTINATIONS = [
     hero: destData.Maldives?.hero,
     blurb: "Overwater mornings and very quiet evenings",
     facts: [
-      "There are no roads. You move between islands by speedboat or seaplane.",
-      "Most resorts have an island to themselves, so it stays quiet all week.",
-      "Overwater rooms cost a good bit more than the ones on the beach.",
-      "Seaplanes only fly in daylight, so your landing time decides your first day.",
+      { icon: Plane, text: "There are no roads. You move between islands by speedboat or seaplane." },
+      { icon: Waves, text: "Most resorts have an island to themselves, so it stays quiet all week." },
+      { icon: BedDouble, text: "Overwater rooms cost a good bit more than the ones on the beach." },
+      { icon: Sun, text: "Seaplanes only fly in daylight, so your landing time decides your first day." },
     ],
     images: [
       { src: `${IMG}/maldives-jetty.jpg`, location: "Your overwater deck" },
@@ -75,10 +79,10 @@ export const AI_DESTINATIONS = [
     hero: destData.Vietnam?.hero,
     blurb: "Bays, lantern streets, mountain mornings",
     facts: [
-      "The Golden Bridge sits in the hills above Da Nang, reached by cable car.",
-      "North to south is over 1,600 km, so most couples fly between stops.",
-      "Ha Long Bay is best as an overnight on the water, not a day trip.",
-      "Hoi An turns its lanterns on every evening once it gets dark.",
+      { icon: CableCar, text: "The Golden Bridge sits in the hills above Da Nang, reached by cable car." },
+      { icon: Plane, text: "North to south is over 1,600 km, so most couples fly between stops." },
+      { icon: Ship, text: "Ha Long Bay is best as an overnight on the water, not a day trip." },
+      { icon: Lamp, text: "Hoi An turns its lanterns on every evening once it gets dark." },
     ],
     images: [
       { src: `${IMG}/vietnam-golden-bridge.jpg`, location: "The Golden Bridge" },
@@ -159,13 +163,12 @@ export const COPY = {
   // come back to, so it has to say where things stand without them tapping in.
   sectionBusyKicker: "IN PROGRESS",
   sectionBusyTitle: "Your pictures are on the way",
-  sectionBusySub: "We are making them now. They will show up right here.",
+  sectionBusySub: "This takes two to three minutes. They will show up right here.",
   sectionBusyCta: "View gallery",
   sectionReadyKicker: "READY",
   sectionReadyTitle: "Yayy! Your vacation pics are here.",
   sectionReadySub: (destName) => `You two in ${destName}, and a few more places.`,
   sectionReadyCta: "View your photos",
-  sectionProgress: (n, total) => `${n} of ${total} ready`,
 
   // Upload
   uploadTitle: "Add one photo of you two",
@@ -190,7 +193,9 @@ export const COPY = {
   // Generating
   generatingTopBar: "In transit",
   generatingTitle: (destName) => `Painting you both into ${destName}`,
-  generatingSub: "Each one lands as it finishes. This takes a few seconds.",
+  // The whole set comes back together, so there is nothing to count down. What
+  // they need instead is how long, and that they do not have to wait here.
+  generatingSub: "This takes two to three minutes. We will let you know as soon as they are ready.",
   // Something to read while the pictures land, so the wait is never a blank
   // screen with a spinner on it.
   factLabel: (destName) => `While you wait, about ${destName}`,

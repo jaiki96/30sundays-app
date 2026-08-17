@@ -169,15 +169,6 @@ function Working({ onGo, reduced, batch, ready, count }) {
       <Tray batch={batch} ready={ready} count={count} reduced={reduced} />
 
       <div style={{ position: "relative", padding: "14px 16px 18px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>{COPY.sectionProgress(ready, count)}</span>
-        </div>
-        <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.7)", overflow: "hidden", marginBottom: 14 }}>
-          <div style={{
-            height: "100%", width: `${(ready / count) * 100}%`, background: C.p600,
-            transition: reduced ? "none" : "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-          }} />
-        </div>
         <Cta onClick={onGo}>{COPY.sectionBusyCta} <ArrowRight size={16} color="#fff" /></Cta>
       </div>
     </>

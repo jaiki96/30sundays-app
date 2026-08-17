@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ImagePlus, Check, X as XIcon, Shuffle, AlertCircle,
-  RefreshCw, MapPin, Trash2, Wand2, Sparkles, CloudOff, Lightbulb,
+  RefreshCw, MapPin, Trash2, Wand2, CloudOff, Lightbulb,
 } from "lucide-react";
 import { C } from "../data";
 import { AI_PHOTOS_VARIANT } from "../data/aiPhotosVariant";
@@ -298,45 +298,51 @@ function QuickFact({ dest }) {
 
   if (!facts.length) return null;
 
+  const fact = facts[i];
+  // Each fact brings its own icon: a boat for a boat ride, a sunset for the
+  // sunset side. The picture lands before the sentence is read.
+  const Icon = fact.icon || Lightbulb;
+
   return (
     <div style={{
-      display: "flex", gap: 11, padding: 14, borderRadius: 16,
+      width: "100%", maxWidth: 300, textAlign: "center",
+      padding: "22px 20px 18px", borderRadius: 20,
       background: C.p100, border: `1px solid ${C.p300}66`,
     }}>
-      <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <Lightbulb size={15} color={C.p600} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.9px", textTransform: "uppercase", color: C.p600, margin: 0 }}>
+      {/* Keyed on the index so the icon and its sentence arrive together. */}
+      <div key={i} className={reduced ? undefined : "ai-fact-in"}>
+        <div style={{
+          width: 48, height: 48, borderRadius: "50%", background: C.white, margin: "0 auto",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 3px 10px rgba(137,18,62,0.14)",
+        }}>
+          <Icon size={22} color={C.p600} />
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.9px", textTransform: "uppercase", color: C.p600, margin: "12px 0 0" }}>
           {COPY.factLabel(dest.name)}
         </p>
-        {/* Keyed on the index so each fact replays the fade as it arrives. */}
-        <p
-          key={i}
-          className={reduced ? undefined : "ai-fact-in"}
-          style={{ fontSize: 13, color: C.head, lineHeight: "19px", margin: "5px 0 0", minHeight: 38 }}
-        >
-          {facts[i]}
+        <p style={{ fontSize: 14, color: C.head, lineHeight: "20px", margin: "6px 0 0", minHeight: 60, textWrap: "balance" }}>
+          {fact.text}
         </p>
-        <div style={{ display: "flex", gap: 4, marginTop: 9 }}>
-          {facts.map((f, n) => (
-            <span key={f} style={{
-              width: n === i ? 14 : 5, height: 5, borderRadius: 3,
-              background: n === i ? C.p600 : `${C.p600}38`,
-              transition: reduced ? "none" : "width 0.3s ease, background 0.3s ease",
-            }} />
-          ))}
-        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 4 }}>
+        {facts.map((f, n) => (
+          <span key={f.text} style={{
+            width: n === i ? 14 : 5, height: 5, borderRadius: 3,
+            background: n === i ? C.p600 : `${C.p600}38`,
+            transition: reduced ? "none" : "width 0.3s ease, background 0.3s ease",
+          }} />
+        ))}
       </div>
     </div>
   );
 }
 
 function GeneratingStep() {
-  const { destination, status, ready, batch, imageCount, onGenerationRetried, setStep } = useAIPhotos();
+  const { destination, status, onGenerationRetried, setStep } = useAIPhotos();
   const reduced = useReducedMotion();
   const dest = getDestination(destination);
-  const count = imageCount;
 
   if (status === "failed") {
     return (
@@ -357,64 +363,31 @@ function GeneratingStep() {
   return (
     <>
       <TopBar title={COPY.generatingTopBar} onBack={() => setStep("destination")} />
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: `22px ${PAD}px` }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: `22px ${PAD}px 8px` }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: C.head, margin: 0, letterSpacing: "-0.4px" }}>
           {COPY.generatingTitle(dest?.name || "your place")}
         </h2>
-        <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "6px 0 14px" }}>{COPY.generatingSub}</p>
+        <p style={{ fontSize: 13.5, color: C.sub, lineHeight: "19px", margin: "6px 0 0" }}>{COPY.generatingSub}</p>
 
-        {/* How far along, in words and as a bar. */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>{COPY.sectionProgress(ready, count)}</span>
-          <Sparkles size={14} color={C.p600} style={{ animation: reduced ? "none" : "pulse 1.4s ease-in-out infinite" }} />
-        </div>
-        <div style={{ height: 4, borderRadius: 2, background: C.div, overflow: "hidden", marginBottom: 18 }}>
-          <div style={{
-            height: "100%", width: `${(ready / count) * 100}%`, background: C.p600,
-            transition: reduced ? "none" : "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-          }} />
+        {/* The whole set comes back at once, so there is nothing to count.
+            Three dots say "still working" without promising a position. */}
+        <div style={{ display: "flex", gap: 6, margin: "16px 0 0" }}>
+          {[0, 1, 2].map((n) => (
+            <span key={n} style={{
+              width: 7, height: 7, borderRadius: "50%", background: C.p600,
+              animation: reduced ? "none" : `pulse 1.3s ease-in-out ${n * 0.2}s infinite`,
+            }} />
+          ))}
         </div>
 
-        {/* Three across, so the whole set and the fact below it fit on one
-            screen without scrolling. */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {Array.from({ length: count }).map((_, i) => {
-            const img = i < ready ? batch[i] : null;
-            return (
-              <div key={i} style={{
-                position: "relative", width: "100%", aspectRatio: "9 / 16",
-                borderRadius: 12, overflow: "hidden", background: C.bg,
-                border: `1px solid ${img ? "transparent" : C.div}`,
-              }}>
-                {img ? (
-                  <img
-                    src={img.src}
-                    alt={`You both at ${img.location}`}
-                    className={reduced ? undefined : "ai-tile-in"}
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <>
-                    {/* A sheen crossing an empty tile reads as working, not stuck. */}
-                    <div className={reduced ? undefined : "ai-tile-wait"} style={{ position: "absolute", inset: 0 }} />
-                    <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Sparkles size={18} color={C.inact} style={{ animation: reduced ? "none" : `pulse 1.4s ease-in-out ${i * 0.18}s infinite` }} />
-                    </span>
-                  </>
-                )}
-              </div>
-            );
-          })}
+        {/* The fact takes the middle of the screen now the tiles are gone, so
+            the wait has something worth reading at eye level. */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <QuickFact dest={dest} />
         </div>
 
         <AiNote />
       </div>
-
-      {/* Pinned, so there is always something to read no matter how far the
-          grid has been scrolled. */}
-      <Footer>
-        <QuickFact dest={dest} />
-      </Footer>
     </>
   );
 }

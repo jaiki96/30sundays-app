@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo, createElement } from "react";
 import { getGeneratedBatch, track, AI_DESTINATIONS, IMAGES_PER_BATCH } from "../data/aiPhotosData";
 
-// Mocked generation. The PRD expects 5 to 15 seconds in production. Pictures
-// land one at a time rather than all at the end, so there is something to watch.
-const PER_IMAGE_MS = 1500;
-// A beat after the last one lands, so it is seen before the gallery takes over.
+// Mocked generation. The API hands back the whole set in one response, so there
+// is nothing to show landing one by one. Production is two to three minutes;
+// the prototype keeps it short so the wait screen can be reviewed without one.
+const GENERATION_MS = 7000;
+// A beat after the set arrives, so the screen is not yanked away instantly.
 const SETTLE_MS = 800;
 
 // Mock persistence layer. Module scope on purpose: it survives component
@@ -17,7 +18,7 @@ const INITIAL = {
   photoPreview: null,
   destination: null,      // destination slug
   status: "none",         // none | generating | generated | failed
-  ready: 0,               // how many pictures have landed so far
+  ready: 0,               // pictures in hand: 0 while waiting, the whole set after
   seen: false,            // gallery has been opened once
   offline: false,
   rejection: null,        // no_face | group_photo | too_far | moderation | minor_detected
@@ -51,30 +52,26 @@ export function AIPhotosProvider({ children }) {
 
   // Mirror every change into the mock store so state survives a remount.
   useEffect(() => { mockStore = state; }, [state]);
-  useEffect(() => () => clearInterval(timerRef.current), []);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const patch = useCallback((p) => setState((s) => ({ ...s, ...(typeof p === "function" ? p(s) : p) })), []);
 
   // ─── Generation ───
-  // One picture at a time. `ready` is the only progress counter, so the home
-  // section and the generating screen always agree on how far along it is.
+  // The whole set arrives at once, so this is one wait and then everything.
   const runGeneration = useCallback((slug, triggerType) => {
-    clearInterval(timerRef.current);
+    clearTimeout(timerRef.current);
     const count = getGeneratedBatch(slug).length || IMAGES_PER_BATCH;
     const startedAt = Date.now();
     track("ai_photos_generation_requested", { trigger_type: triggerType, destination: slug, image_count: count });
     setState((s) => ({ ...s, destination: slug, status: "generating", ready: 0, seen: false }));
     setStep("generating");
-    timerRef.current = setInterval(() => {
+    timerRef.current = setTimeout(() => {
       setState((s) => {
         if (s.status !== "generating") return s;
-        const ready = s.ready + 1;
-        if (ready < count) return { ...s, ready };
-        clearInterval(timerRef.current);
         track("ai_photos_generation_succeeded", { duration_ms: Date.now() - startedAt, trigger_type: triggerType });
         return { ...s, ready: count, status: "generated" };
       });
-    }, PER_IMAGE_MS);
+    }, GENERATION_MS);
   }, []);
 
   // Hand over to the gallery only if they stayed to watch. If they wandered off
@@ -166,7 +163,7 @@ export function AIPhotosProvider({ children }) {
 
   const onRemoved = useCallback(() => {
     track("ai_photos_removed", {});
-    clearInterval(timerRef.current);
+    clearTimeout(timerRef.current);
     setSheet(null);
     setViewerIndex(null);
     setStep(null);
@@ -180,8 +177,7 @@ export function AIPhotosProvider({ children }) {
 
   // ─── Viewer ───
   // The whole set for this destination, whether or not it has finished. The
-  // generating screen fills it in as it goes; the gallery only ever sees a
-  // finished set.
+  // gallery only ever sees a finished set.
   const batch = useMemo(
     () => (state.destination ? getGeneratedBatch(state.destination) : []),
     [state.destination]
@@ -200,7 +196,7 @@ export function AIPhotosProvider({ children }) {
   // ─── Dev panel ───
   // Reviewers need to land on any state without waiting out the delay.
   const forceState = useCallback((name) => {
-    clearInterval(timerRef.current);
+    clearTimeout(timerRef.current);
     setViewerIndex(null);
     setSheet(null);
     const withPhoto = { ...INITIAL, loggedIn: true, hasPhoto: true, photoName: "our-photo.jpg", destination: "bali" };
@@ -208,8 +204,7 @@ export function AIPhotosProvider({ children }) {
     const presets = {
       loggedOut:  [{ ...INITIAL, loggedIn: false }, null],
       noPhoto:    [{ ...INITIAL }, "upload"],
-      // Parked mid way, so the half-done look can be reviewed on its own.
-      generating: [{ ...withPhoto, status: "generating", ready: 2 }, "generating"],
+      generating: [{ ...withPhoto, status: "generating", ready: 0 }, "generating"],
       generated:  [{ ...withPhoto, status: "generated", ready: total, seen: false }, "gallery"],
       failed:     [{ ...withPhoto, status: "failed" }, "generating"],
       removed:    [{ ...INITIAL }, null],
