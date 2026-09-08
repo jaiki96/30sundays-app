@@ -44,9 +44,17 @@ import ActivityDetail from "./pages/ActivityDetail";
 import PaymentDetails from "./pages/PaymentDetails";
 import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
+import Wallet from "./pages/Wallet";
+import GiftCards from "./pages/GiftCards";
+import GiftCardBuy from "./pages/GiftCardBuy";
+import GiftCardClaim from "./pages/GiftCardClaim";
+import GiftRegistry from "./pages/GiftRegistry";
+import RegistryCreate from "./pages/RegistryCreate";
+import RegistryPage from "./pages/RegistryPage";
 import HotelUpgradeNudge from "./prototypes/HotelUpgradeNudge";
 import WatchDeepLink from "./pages/WatchDeepLink";
 import Offline from "./pages/Offline";
+import AILab from "./pages/AILab";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Discover from "./pages/Discover";
 import DiscoverRoutes from "./pages/DiscoverRoutes";
@@ -62,7 +70,9 @@ import { DealsProvider } from "./data/deals";
 import { SavesProvider } from "./data/saves";
 import { WishlistProvider } from "./data/wishlist";
 import { AIPhotosProvider } from "./state/useAIPhotos";
+import { GiftingProvider } from "./state/useGifting";
 import { AI_PHOTOS_VARIANT } from "./data/aiPhotosVariant";
+import { LAB_VARIANT } from "./data/labVariant";
 
 // Destination pages: new discover-style layout everywhere except Maldives and
 // Mauritius, which keep their existing layouts.
@@ -79,12 +89,24 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
       <Routes>
         <Route path="/prototype/hotel-upgrade" element={<HotelUpgradeNudge />} />
+      </Routes>
+    );
+  }
+
+  // The photo lab is a desktop testing tool that talks to Gemini for real, so
+  // it sits outside the phone frame and outside the app shell entirely. On its
+  // own subdomain it is the home page.
+  if (pathname === "/lab" || (LAB_VARIANT && pathname === "/")) {
+    return (
+      <Routes>
+        <Route path="*" element={<AILab />} />
       </Routes>
     );
   }
@@ -155,6 +177,15 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/itinerary/:id/day/:dayIdx/activity/:actIdx" element={<ActivityDetail />} />
         <Route path="/trips/:tripId/payments" element={<PaymentDetails />} />
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
+        <Route path="/wallet" element={<Wallet userState={userState} leadData={leadData} />} />
+        <Route path="/gift-cards" element={<GiftCards />} />
+        <Route path="/gift-cards/buy" element={<GiftCardBuy />} />
+        <Route path="/gift/:code" element={<GiftCardClaim />} />
+        {/* The short link printed on a card: 30sundays.club/g/<code> */}
+        <Route path="/g/:code" element={<GiftCardClaim />} />
+        <Route path="/registry" element={<GiftRegistry />} />
+        <Route path="/registry/new" element={<RegistryCreate />} />
+        <Route path="/registry/:id" element={<RegistryPage />} />
         <Route path="/watch/:videoId" element={<WatchDeepLink />} />
       </Routes>
       {showNudge && <TripNudge userState={userState} />}
@@ -175,6 +206,7 @@ export default function App() {
     <SavesProvider>
     <WishlistProvider>
     <AIPhotosProvider>
+    <GiftingProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -187,6 +219,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </GiftingProvider>
     </AIPhotosProvider>
     </WishlistProvider>
     </SavesProvider>

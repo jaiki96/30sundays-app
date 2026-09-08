@@ -6,7 +6,6 @@ import { useDeals } from "../data/deals";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
-import FundingBanner from "../components/FundingBanner";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -248,8 +247,6 @@ export default function HomeV5({ userState = "new" }) {
     <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.white }}>
       {/* Circular destination tabs, above the hero */}
       <DestCircles />
-
-      <FundingBanner />
 
       {/* ─── Cinematic full-bleed hero ─── */}
       <div style={{ position: "relative", height: "50vh", minHeight: 400, overflow: "hidden" }}>
