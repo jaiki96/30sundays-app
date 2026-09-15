@@ -46,6 +46,13 @@ import PaymentPlan from "./pages/PaymentPlan";
 import Account from "./pages/Account";
 import Wallet from "./pages/Wallet";
 import GiftCards from "./pages/GiftCards";
+import CommunityIndex from "./pages/CommunityIndex";
+import CommunityFeed from "./pages/CommunityFeed";
+import CommunityQuestion from "./pages/CommunityQuestion";
+import CommunityChat from "./pages/CommunityChat";
+import CommunityGuidelines from "./pages/CommunityGuidelines";
+import CommunityBookingConfirmed from "./pages/CommunityBookingConfirmed";
+import MyTripsCommunity from "./pages/MyTripsCommunity";
 import GiftCardBuy from "./pages/GiftCardBuy";
 import GiftCardClaim from "./pages/GiftCardClaim";
 import GiftRegistry from "./pages/GiftRegistry";
@@ -71,6 +78,7 @@ import { SavesProvider } from "./data/saves";
 import { WishlistProvider } from "./data/wishlist";
 import { AIPhotosProvider } from "./state/useAIPhotos";
 import { GiftingProvider } from "./state/useGifting";
+import { CommunityProvider } from "./state/useCommunity";
 import { AI_PHOTOS_VARIANT } from "./data/aiPhotosVariant";
 import { LAB_VARIANT } from "./data/labVariant";
 
@@ -89,8 +97,9 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
+  const communityPaths = pathname.startsWith("/community");
   const giftPaths = pathname === "/wallet" || pathname.startsWith("/gift-cards") || pathname.startsWith("/gift/") || pathname.startsWith("/g/") || pathname.startsWith("/registry");
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/build" || pathname === "/ai-photos" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || giftPaths || communityPaths || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -178,6 +187,15 @@ function AppContent({ userState, setUserState, leadData, setLeadData, selectedFl
         <Route path="/trips/:tripId/payments" element={<PaymentDetails />} />
         <Route path="/account" element={<Account userState={userState} leadData={leadData} setUserState={setUserState} setLeadData={setLeadData} />} />
         <Route path="/wallet" element={<Wallet userState={userState} leadData={leadData} />} />
+        {/* Community: Q&A, the cohort, and the parallel My Trips with the card on it */}
+        <Route path="/community" element={<CommunityIndex />} />
+        <Route path="/community/booking-confirmed" element={<CommunityBookingConfirmed />} />
+        <Route path="/community/:dest" element={<CommunityFeed />} />
+        <Route path="/community/:dest/q/:qid" element={<CommunityQuestion />} />
+        <Route path="/community/:dest/chat" element={<CommunityChat />} />
+        <Route path="/community/:dest/guidelines" element={<CommunityGuidelines />} />
+        <Route path="/trips-community" element={<MyTripsCommunity userState={userState} leadData={leadData} />} />
+
         <Route path="/gift-cards" element={<GiftCards />} />
         <Route path="/gift-cards/buy" element={<GiftCardBuy />} />
         <Route path="/gift/:code" element={<GiftCardClaim />} />
@@ -207,6 +225,7 @@ export default function App() {
     <WishlistProvider>
     <AIPhotosProvider>
     <GiftingProvider>
+    <CommunityProvider>
       <BrowserRouter>
         <AppContent
           userState={userState}
@@ -219,6 +238,7 @@ export default function App() {
           setSelectedHotels={setSelectedHotels}
         />
       </BrowserRouter>
+    </CommunityProvider>
     </GiftingProvider>
     </AIPhotosProvider>
     </WishlistProvider>
