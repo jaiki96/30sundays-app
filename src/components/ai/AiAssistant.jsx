@@ -155,7 +155,7 @@ export default function AiAssistant({ hidden = false, mode = "", userState = "ne
   const [title, setTitle] = useState("Trip assistant"); const [subtitle, setSubtitle] = useState("AI MODE");
   const [menu, setMenu] = useState(false); const [drawer, setDrawer] = useState(false); const [confirm, setConfirm] = useState(null); const [toastMsg, setToastMsg] = useState(""); const [listening, setListening] = useState(false); const [leaving, setLeaving] = useState(false);
   const [chats, setChats] = useState([{ id: 1, title: "Bali · November", sub: "Today", img: "kelingking", active: true }, { id: 2, title: "Thailand — island ideas", sub: "Yesterday", img: "pileh" }, { id: 3, title: "Ubud hotel change", sub: "3 Oct", img: "villa_ubud" }]);
-  const S = useRef({ flow: null, slots: {}, cur: null, await: null, name: "", trip: JSON.parse(JSON.stringify(TRIP)), hotels: null, booted: false, lastState: null }).current;
+  const S = useRef({ flow: null, slots: {}, cur: null, await: null, name: "", trip: JSON.parse(JSON.stringify(TRIP)), hotels: null, built: null, booted: false, lastState: null }).current;
   const threadRef = useRef(null); const [inp, setInp] = useState("");
   const toast = useCallback((t) => { setToastMsg(t); setTimeout(() => setToastMsg(""), 2200); }, []);
   const scroll = () => requestAnimationFrame(() => { const el = threadRef.current; if (el) el.scrollTop = el.scrollHeight; });
@@ -164,7 +164,7 @@ export default function AiAssistant({ hidden = false, mode = "", userState = "ne
   const remove = useCallback((id) => setBlocks((x) => x.filter((b) => b.id !== id)), []);
   const setContext = (p) => { setCtx((c) => ({ ...c, ...p })); setFlash((f) => f + 1); };
   const slotsCtx = () => ({ slots: { ...S.slots, _cur: S.cur } });
-  const ctxTrip = () => trip && trip.title ? { title: `${trip.title}`, sub: `${trip.dest} · ${trip.nights} nights · from ₹${trip.price} pp`, img: trip.img || "swing" } : { title: "Bali · Seminyak + Ubud", sub: "6 nights · 6–12 Nov · 2 adults + 1 child", img: "kelingking" };
+  const ctxTrip = () => S.built ? S.built : trip && trip.title ? { title: `${trip.title}`, sub: `${trip.dest} · ${trip.nights} nights · from ₹${trip.price} pp`, img: trip.img || "swing" } : { title: "Bali · Seminyak + Ubud", sub: "6 nights · 6–12 Nov · 2 adults + 1 child", img: "kelingking" };
   const ppPrice = () => (trip && trip.price ? "₹" + trip.price : "₹1,22,500");
   // chat primitives
   const user = (t) => push({ type: "user", text: t });
@@ -174,7 +174,8 @@ export default function AiAssistant({ hidden = false, mode = "", userState = "ne
   const cards = (list, onChoose, onFocus) => push({ type: "cards", cards: list, onChoose, onFocus });
   const feedback = () => push({ type: "feedback" });
   const leaveTo = (to) => { setLeaving(true); setTimeout(() => { setLeaving(false); aiStore.close(); navigate(to); }, RM ? 0 : 320); };
-  const tripTarget = () => (trip && trip.target) || "/itinerary/3?dealId=demo_draft_bali&versionId=demo_draft_bali_v1";
+  // Open the itinerary itself, without the customisation onboarding tour (`tour=1`) on top of it.
+  const tripTarget = () => ((trip && trip.target) || "/itinerary/3?dealId=demo_draft_bali&versionId=demo_draft_bali_v1").replace(/[&?]tour=1/, "");
   const pdf = () => { const c = ctxTrip(); if (!openPdf(c, S.trip)) toast("Allow pop-ups to save the PDF"); else toast("Opening your itinerary — choose Save as PDF"); };
   const versionCard = (what, d) => { S.trip.ver++; setContext({ ver: S.trip.ver, newVer: true }); push({ type: "version", ver: S.trip.ver, d, what, onView: () => leaveTo(tripTarget()), onPdf: pdf }); };
   const monthChips = (dest) => { const w = weatherData[dest] || weatherData.Bali; const now = new Date(); const out = []; for (let i = 1; i <= 6; i++) { const m = (now.getMonth() + i) % 12; out.push({ l: MON[m], w: `${w.high[m]}° · ${seasonLabel(w.rain[m])}` }); } return out; };
@@ -227,7 +228,8 @@ export default function AiAssistant({ hidden = false, mode = "", userState = "ne
     const keys = t.days.map((d) => d.img).filter(Boolean).slice(0, 6); const id = push({ type: "build", stages, tiles: keys.map(() => null), progress: 4 });
     for (let i = 0; i < stages.length; i++) { stages[i].state = "on"; patch(id, { stages: [...stages], progress: 10 + i * 22 }); await wait(800); if (i < keys.length) { for (let j = Math.floor(i * keys.length / stages.length); j < Math.floor((i + 1) * keys.length / stages.length); j++) { await wait(260); patch(id, { tiles: keys.map((k, q) => (q <= j ? k : null)) }); } } stages[i].state = "ok"; patch(id, { stages: [...stages] }); }
     patch(id, { progress: 100, tiles: keys }); await wait(400); S.trip = t;
-    setContext({ title: `${S.slots.dest || "Bali"} · ${S.slots.route || "Seminyak 3N · Ubud 3N"}`, sub: `${S.slots.who || "2 adults"} · ${S.slots.when || "Nov · 6 nights"}`, img: S.slots.dest === "Thailand" ? "pileh" : S.slots.dest === "Vietnam" ? "kayak" : "swing", ver: 1, newVer: true, slots: null });
+    S.built = { title: `${S.slots.dest || "Bali"} · ${S.slots.route || "Seminyak 3N · Ubud 3N"}`, sub: `${S.slots.who || "2 adults"} · ${S.slots.when || "Nov · 6 nights"}`, img: S.slots.dest === "Thailand" ? "pileh" : S.slots.dest === "Vietnam" ? "kayak" : "swing" };
+    setContext({ ...S.built, ver: 1, newVer: true, slots: null });
     await ai(`Here's a first version${S.name ? ", " + S.name : ""}. Everything on it is bookable — your consultant adds live flight fares from your city.`, { ms: 400 }); push({ type: "itin", t: JSON.parse(JSON.stringify(t)), pp: "₹1,22,500" });
     chips(["Save as my trip", "Make it cheaper", "Change a day", "Change a hotel"], (l) => { user(l); if (l.startsWith("Save")) { push({ type: "version", ver: 1, d: 0, what: "Saved to My Trips. Your consultant will call about flights.", onView: () => leaveTo(tripTarget()), onPdf: pdf }); } else if (l === "Make it cheaper") savings(); else if (l === "Change a day") dayFlow(); else hotelFlow(); }); };
   // Maldives / Mauritius / New Zealand — the lead form, conversationally
