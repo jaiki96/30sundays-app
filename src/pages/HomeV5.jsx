@@ -7,6 +7,8 @@ import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
 import HomeBanners, { BANNERS } from "../components/HomeBanners";
+import AiAskBar from "../components/ai/AiAskBar";
+import AiAssistant from "../components/ai/AiAssistant";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -288,6 +290,10 @@ export default function HomeV5({ userState = "new" }) {
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
   const [hero, setHero] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
+  // AI trip assistant (overlay): opened from the ask bar above the nav.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiMode, setAiMode] = useState("");
+  const openAi = (m) => { setAiMode(m || ""); setAiOpen(true); };
 
   useEffect(() => {
     const t = setInterval(() => setHero(h => (h + 1) % HERO_IMGS.length), 4500);
@@ -392,6 +398,8 @@ export default function HomeV5({ userState = "new" }) {
       <div style={{ height: 80 }} />
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
+      <AiAskBar onOpen={openAi} hidden={aiOpen} />
+      {aiOpen && <AiAssistant mode={aiMode} onClose={() => setAiOpen(false)} />}
     </div>
   );
 }
