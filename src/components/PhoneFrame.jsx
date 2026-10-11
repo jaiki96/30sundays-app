@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { C } from "../data";
 import { HOME_LAB_ROUTES } from "../data/homeLabData";
+import AiDock from "./ai/AiDock";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -34,6 +35,9 @@ export default function PhoneFrame({ children }) {
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: navPad, WebkitOverflowScrolling: "touch" }} className="hide-scrollbar">
           {children}
         </div>
+        <AiDock />
+        <div style={{ display: "none" }}>
+        </div>
       </div>
     );
   }
@@ -57,6 +61,9 @@ export default function PhoneFrame({ children }) {
         {/* Scrollable content */}
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: navPad }} className="hide-scrollbar">
           {children}
+        </div>
+        <AiDock />
+        <div style={{ display: "none" }}>
         </div>
 
         {/* Home indicator */}

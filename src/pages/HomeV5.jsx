@@ -7,8 +7,7 @@ import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
 import HomeBanners, { BANNERS } from "../components/HomeBanners";
-import AiAskBar from "../components/ai/AiAskBar";
-import AiAssistant from "../components/ai/AiAssistant";
+import { aiStore } from "../components/ai/aiStore";
 import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
@@ -290,10 +289,6 @@ export default function HomeV5({ userState = "new" }) {
   const groups = useMemo(() => getSeasonGroups(new Date()), []);
   const [hero, setHero] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
-  // AI trip assistant (overlay): opened from the ask bar above the nav.
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiMode, setAiMode] = useState("");
-  const openAi = (m) => { setAiMode(m || ""); setAiOpen(true); };
 
   useEffect(() => {
     const t = setInterval(() => setHero(h => (h + 1) % HERO_IMGS.length), 4500);
@@ -324,6 +319,9 @@ export default function HomeV5({ userState = "new" }) {
       })()
     : "Mar 31 - Apr 6";
   const tourTarget = `/itinerary/${tourItinId}?dealId=${tourDealId}&versionId=${tourVerId}&tour=1`;
+  // Hand the demo state and the draft trip to the AI assistant dock (mounted in PhoneFrame).
+  useEffect(() => { aiStore.set({ userState, trip: { dest: tripDest, nights: tripNights, img: tripImg, dates: tripDates, title: draftIt?.name, price: draftIt?.price, route: draftIt?.route, days: draftIt?.days, target: tourTarget } }); },
+    [userState, tripDest, tripNights, tripImg, tripDates, draftIt, tourTarget]);
 
   // "Torn between two?" comparison reels, shown in the Sunday School style.
   const seriesLessons = COMPARE_REELS.map((c) => ({
@@ -398,9 +396,6 @@ export default function HomeV5({ userState = "new" }) {
       <div style={{ height: 80 }} />
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
-      <AiAskBar onOpen={openAi} hidden={aiOpen} />
-      {aiOpen && <AiAssistant mode={aiMode} userState={userState} onClose={() => setAiOpen(false)}
-        trip={{ dest: tripDest, nights: tripNights, img: tripImg, dates: tripDates, title: draftIt?.name, price: draftIt?.price, route: draftIt?.route, target: tourTarget }} />}
     </div>
   );
 }
