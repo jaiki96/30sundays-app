@@ -399,7 +399,8 @@ export default function HomeV5({ userState = "new" }) {
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
       <AiAskBar onOpen={openAi} hidden={aiOpen} />
-      {aiOpen && <AiAssistant mode={aiMode} onClose={() => setAiOpen(false)} />}
+      {aiOpen && <AiAssistant mode={aiMode} userState={userState} onClose={() => setAiOpen(false)}
+        trip={{ dest: tripDest, nights: tripNights, img: tripImg, dates: tripDates, title: draftIt?.name, price: draftIt?.price, route: draftIt?.route, target: tourTarget }} />}
     </div>
   );
 }

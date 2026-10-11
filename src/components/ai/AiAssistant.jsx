@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useFrameRect } from "../useFrameRect";
 import { Orb } from "./AiAskBar";
-import { IMG, TRIP, UBUD, SEMI, BEACH, SWING, DEST, ROUTES, SAY, SLOTS, rupee, delta, dcls } from "../../data/aiAssistantData";
+import { useNavigate } from "react-router-dom";
+import { generateHotelsForCity } from "../../data/hotelData";
+import { IMG, TRIP, BEACH, SWING, DEST, ROUTES, SAY, SLOTS, rupee, delta, dcls } from "../../data/aiAssistantData";
+const src = (k) => (/^https?:/.test(k) ? k : IMG[k]);
 
 // ─── AI mode: a dark surface over the app. A live "board" behind a draggable
 // chat sheet (same shape as ChatScreen's sheet-over-backdrop). Scripted flows:
@@ -33,6 +36,7 @@ const CSS = `
 .ai-sheet{position:absolute;left:0;right:0;bottom:0;background:#152322;border-radius:26px 26px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;z-index:6;animation:aiSheet .5s cubic-bezier(.2,.8,.2,1)}
 .ai-handle{display:flex;justify-content:center;padding:10px 0 4px;cursor:ns-resize;touch-action:none;user-select:none;flex:none}.ai-handle i{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)}
 .ai-thread{flex:1;overflow:auto;padding:6px 14px 12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;scrollbar-width:none}.ai-thread::-webkit-scrollbar{display:none}
+.ai-thread>*{flex-shrink:0}
 .ai-msg{max-width:88%;padding:10px 13px;border-radius:18px;font-size:13.5px;line-height:1.45;animation:aiRise .28s ease-out both}
 .ai-msg.a{align-self:flex-start;background:#223433;border-bottom-left-radius:6px}.ai-msg.u{align-self:flex-end;background:linear-gradient(135deg,#FD014F,#C7013E);color:#fff;border-bottom-right-radius:6px}
 .ai-msg b{font-weight:600}.ai-msg .mut{color:#9FB3B0;font-size:12px;display:block;margin-top:4px}
@@ -129,7 +133,7 @@ function PhotoCard({ c, selected, dimmed, onChoose, onFocus }) {
   return (
     <div className={"ai-card" + (selected ? " sel" : "") + (dimmed ? " dim" : "")} onMouseEnter={onFocus} onClick={onFocus}>
       <div className="ph">
-        {imgs.map((key, i) => <img key={key} src={IMG[key]} alt="" className={i === k ? "on" : ""} loading="lazy" />)}
+        {imgs.map((key, i) => <img key={key} src={src(key)} alt="" className={i === k ? "on" : ""} loading="lazy" />)}
         {c.rec ? <span className="tag rec">RECOMMENDED</span> : c.tag ? <span className="tag">{c.tag}</span> : null}
         <div className="acts"><button aria-label="Save" onClick={(e) => { e.stopPropagation(); c.toast("Saved to wishlist"); }}>♡</button><button aria-label="Add" onClick={(e) => { e.stopPropagation(); c.toast("Added to compare"); }}>＋</button></div>
         {imgs.length > 1 && <div className="dots">{imgs.map((_, i) => <i key={i} className={i === k ? "on" : ""} onClick={(e) => { e.stopPropagation(); setK(i); }} />)}</div>}
@@ -174,7 +178,7 @@ function ItinCard({ t, changed = [] }) {
   return (
     <div className="ai-itin">
       <div className="stay">{t.stays.map((s) => <div key={s.id}><span>Nights {s.nights} · {s.city}</span><b>{s.name}</b></div>)}</div>
-      {t.days.map((d) => <div className={"ai-day" + (changed.includes(d.d) ? " chg" : "")} key={d.d}><div className="im">{d.img ? <img src={IMG[d.img]} alt="" loading="lazy" /> : "D" + d.d}</div><div><b>{d.t}{d.sep ? <span className="ai-badge sep">separable</span> : d.type === "Tour" ? <span className="ai-badge">bundled</span> : null}</b><span>Day {d.d} · {d.dt} · {d.h}</span></div><span className="p">{d.p ? rupee(d.p) : "—"}</span></div>)}
+      {t.days.map((d) => <div className={"ai-day" + (changed.includes(d.d) ? " chg" : "")} key={d.d}><div className="im">{d.img ? <img src={src(d.img)} alt="" loading="lazy" /> : "D" + d.d}</div><div><b>{d.t}{d.sep ? <span className="ai-badge sep">separable</span> : d.type === "Tour" ? <span className="ai-badge">bundled</span> : null}</b><span>Day {d.d} · {d.dt} · {d.h}</span></div><span className="p">{d.p ? rupee(d.p) : "—"}</span></div>)}
       <div className="total"><div><b>{rupee(t.total)}</b><br /><span>{t.flights ? "incl. flights " + rupee(t.flights) + " · TCS · GST" : "for two · excludes flights"}</span></div><span>v{t.ver}</span></div>
     </div>
   );
@@ -185,8 +189,9 @@ function Feedback({ toast }) {
 }
 
 // ─── the overlay ───
-export default function AiAssistant({ mode = "", onClose }) {
+export default function AiAssistant({ mode = "", userState = "new", trip = null, onClose }) {
   const rect = useFrameRect();
+  const navigate = useNavigate();
   const [blocks, setBlocks] = useState([]);
   const [board, setBoard] = useState({ eyebrow: "", h2: "", sub: "", img: "kelingking", slots: null, tiles: null });
   const [bgStack, setBgStack] = useState(["kelingking"]);
@@ -223,19 +228,57 @@ export default function AiAssistant({ mode = "", onClose }) {
   const feedback = () => push({ type: "feedback" });
 
   // ─── flows ───
-  const welcome = async () => { setBlocks([]); S.flow = null; S.slots = {}; S.cur = null; setTitle("Trip assistant"); setSubtitle("AI MODE · BALI · THAILAND · VIETNAM");
+  const welcome = async () => { setBlocks([]); S.flow = null; S.slots = {}; S.cur = null; setTitle("Trip assistant"); setSubtitle("AI MODE");
+    if (userState === "lead") return welcomeLead(); if (userState === "customer") return welcomeCustomer(); if (userState === "done") return welcomeDone(); return welcomeNew(); };
+  // NEW — no itinerary yet: planning questions, recommendations, never "we only do X".
+  const welcomeNew = async () => { boardText("HEY THERE", "Where are we off to?", "Tell me a place, or I can suggest a few.", "swing");
+    await ai("Hey 👋 Planning a trip? Do you already have a destination in mind?", { ms: 600 });
+    chips(["Yes, I know where", "Help me choose", "Just browsing"], async (l) => { user(l); if (l === "Help me choose") return guide(); if (l === "Just browsing") return explore();
+      S.flow = "new"; S.cur = "dest"; boardTrip(); await ai("Where to?", { ms: 400 }); chips(["Bali", "Thailand", "Vietnam", "Somewhere else"], async (d) => { user(d); if (d === "Somewhere else") { await ai("Tell me the place and I'll take it from there.", { ms: 400 }); return; } setDest(d); }); }); };
+  // LEAD — the app's own draft itinerary: see it, download it, customise it.
+  const welcomeLead = async () => { const t = trip || { dest: "Bali", title: "Swing & Sanur", nights: 7, price: "62,498", img: "swing" }; setTitle(`${t.dest} · ${t.nights} nights`); setSubtitle("YOUR TRIP · DRAFT");
+    boardText(t.dest.toUpperCase() + " · YOUR TRIP", t.title || `${t.dest} · ${t.nights} nights`, `${t.nights} nights · ₹${t.price} per person${t.dates ? " · " + t.dates : ""}`, t.img || "swing");
+    await ai(`Your ${t.dest} trip is already here — <b>${t.title || t.dest}</b>, ${t.nights} nights, from ₹${t.price} per person. What would you like to do with it?`, { ms: 600 });
+    chips(["See the trip", "Download itinerary", "Customise my trip", "Share with partner"], (l) => { user(l);
+      if (l === "See the trip") { onClose(); if (t.target) navigate(t.target); return; }
+      if (l === "Download itinerary") { toast("Itinerary PDF is on its way"); ai("Sent — the PDF will be in your downloads in a moment.", { ms: 300 }); return; }
+      if (l === "Share with partner") { toast("Share link copied"); ai("Copied a link your partner can open without logging in.", { ms: 300 }); return; }
+      customiseMenu(); }); };
+  const customiseMenu = async () => { await ai("What would you like to change?", { ms: 400 }); chips(["Change a day", "Change a hotel", "Add a day", "Make it cheaper"], (x) => { user(x); x === "Change a day" ? dayFlow() : x === "Change a hotel" ? hotelFlow() : x === "Add a day" ? addDay() : savings(S.trip); }); };
+  // CUSTOMER — booked, before the trip: information and documents only.
+  const welcomeCustomer = async () => { setTitle("Bali · booked"); setSubtitle("26 DAYS TO GO"); boardText("BOOKED · 26 DAYS TO GO", "Bali, 6–12 Nov", "Vouchers ready · visa approved · tickets issued", "kelingking");
+    await ai("Your Bali trip is booked — <b>26 days to go</b> 🎉 What do you need?", { ms: 600 });
+    chips(["Download documents", "Download itinerary", "Payment status", "Hotel & transfer details", "Packing checklist"], async (l) => { user(l);
+      if (l === "Download documents") { toast("Preparing your documents"); await ai("Hotel vouchers, flight tickets and your visa approval — all three are ready. Sending them to your downloads now.", { ms: 400 }); chips(["Hotel vouchers", "Flight tickets", "Visa"], (x) => { user(x); toast(x + " downloaded"); }); }
+      else if (l === "Download itinerary") { toast("Itinerary PDF is on its way"); await ai("Sent — the final itinerary PDF is on its way.", { ms: 300 }); }
+      else if (l === "Payment status") { await ai("₹1,80,000 of ₹2,32,000 is paid. The last installment of <b>₹52,000 is due on 12 Oct</b> — five days from now.", { ms: 500 }); chips(["Pay now", "Remind me later"], (x) => { user(x); toast(x === "Pay now" ? "Opening payment link" : "Reminder set for 11 Oct"); }); }
+      else if (l === "Hotel & transfer details") { await ai("<b>Umalas Suites, Seminyak</b> nights 1–3 (check-in 2 PM) · <b>D'Ethnic Ubud Joglo Villas</b> nights 4–6. Your driver meets you at arrivals on 6 Nov — the pickup time is confirmed once we have your flight landing time.", { ms: 500 }); feedback(); }
+      else { await ai("For Bali in November: light layers, a rain jacket for afternoon showers, reef-safe sunscreen, a universal plug (type C/F), and cash in IDR for small stalls. Your eSIM activates on landing.", { ms: 500 }); feedback(); }
+    }); };
+  const supportOnly = async () => { await ai("Changes on a booked trip go through our support team, who can check what the hotel and airline allow at this stage. They're on <b>1800-30-SUNDAY</b>, 9am–9pm. Want me to raise it for you?", { ms: 500 }); chips(["Raise it with support", "Not now"], (x) => { user(x); ai(x.startsWith("Raise") ? "Raised — support will call you today." : "Okay."); }); };
+  // DONE — after the trip.
+  const welcomeDone = async () => { setTitle("Welcome back"); setSubtitle("TRIP COMPLETED"); boardText("WELCOME BACK", "How was Bali?", "Your photos, your review, and the next one.", "tegallalang");
+    await ai("Welcome back! How was Bali? 🌴", { ms: 600 });
+    chips(["Rate the trip", "Plan my next trip", "Refer a friend", "See my photos"], async (l) => { user(l);
+      if (l === "Rate the trip") { await ai("Out of five?", { ms: 300 }); chips(["★★★★★", "★★★★", "★★★", "Less"], (x) => { user(x); ai(x.length >= 4 ? "Thank you — that means a lot to the team. Mansi will see this too." : "Thanks for being honest. Someone from the team will call to hear what went wrong."); }); }
+      else if (l === "Plan my next trip") { S.trip = JSON.parse(JSON.stringify(TRIP)); welcomeNew(); }
+      else if (l === "Refer a friend") { toast("Referral link copied"); await ai("Copied your referral link — your friend gets ₹2,000 off, and so do you.", { ms: 300 }); }
+      else { toast("Opening your trip album"); await ai("Your 42 photos from the trip are in the album — I've picked the eight best for a reel if you want it.", { ms: 300 }); }
+    }); };
+  const _welcomeOld = async () => { setTitle("Trip assistant");
     boardText("HEY ANANYA", "Where are we off to next?", "Your Bali trip is quoted at v6 — or start something new.", "kelingking");
     await ai("Hey Ananya 👋 Bali's still sitting at version 6. Carry on with it, or start something new?", { ms: 600 });
     chips(["Customise my Bali trip", "Plan a new trip", "Guide me", "Just exploring"], (l) => { user(l); l === "Customise my Bali trip" ? existing() : l === "Plan a new trip" ? startNew() : l === "Guide me" ? guide() : explore(); }); };
   const destCards = (fit) => cards(Object.entries(DEST).map(([n, d]) => ({ imgs: [d.img, d.cover], name: n, rt: "4.6", rec: n === fit, why: d.line, price: "From ₹" + d.from, sub: "for two", _k: n })), (c) => { user(c._k); setDest(c._k); }, (c) => boardImg(c.imgs[0]));
-  const explore = async () => { S.flow = "new"; setTitle("Exploring"); boardTrip(); await ai("No pressure. Here's what's good right now — tap anything that catches your eye.", { ms: 500 }); destCards(null); chips(["Maldives?", "Somewhere else"], (l) => { user(l); l === "Maldives?" ? maldives() : ai("Tell me the place and I'll say straight away whether we plan it."); }); };
+  const explore = async () => { S.flow = "new"; setTitle("Exploring"); boardTrip(); await ai("No pressure. Three places that are at their best right now — tap anything that catches your eye.", { ms: 500 }); destCards(null); chips(["Maldives?", "Somewhere else"], (l) => { user(l); l === "Maldives?" ? maldives() : ai("Tell me the place and I'll say straight away whether we plan it."); }); };
   const guide = async () => { S.flow = "new"; setTitle("New trip"); S.cur = "dest"; boardTrip(); await ai("Two quick things and I'll point you somewhere: <b>which month</b>, and <b>beaches, culture, or both</b>?", { ms: 500 });
     chips(["November · beaches", "December · both", "January · value"], async (l) => { user(l); await ai(`For ${l.split(" ·")[0]}, this is the honest comparison for a couple:`, { thinkLabel: "Comparing seasons", ms: 900 }); destCards(/bea/.test(l) ? "Bali" : /both/.test(l) ? "Thailand" : "Vietnam"); }); };
-  const startNew = async () => { S.flow = "new"; setTitle("New trip"); S.slots = {}; S.cur = "dest"; boardTrip(); await ai("Where to? Or tell me everything in one go — <i>“Bali, mid Nov, 6 nights, honeymoon”</i> works.", { ms: 500 }); chips(["Bali", "Thailand", "Vietnam", "Not sure yet"], (l) => { user(l); l === "Not sure yet" ? guide() : setDest(l); }); };
-  const maldives = async () => { boardText("MALDIVES", "Planned by a specialist.", "Every resort is its own island — Priya picks it personally.", "maldives_aerial"); await ai("Maldives we plan by hand — every resort is its own island, so the pick really matters and <b>Priya</b> does it personally. She can call you today before 7. So she's not starting cold: <b>when were you thinking?</b>", { ms: 600 });
-    chips(["Mid December", "January", "Flexible"], async (l) => { user(l); await ai("Noted. Priya will call today with two or three resorts that fit. Want me to keep a Bali or Thailand plan going alongside, to compare?"); chips(["Yes, Bali", "Yes, Thailand", "No thanks"], (x) => { user(x); /Bali|Thai/.test(x) ? setDest(x.replace("Yes, ", "")) : ai("No problem — I'm here whenever."); }); }); };
-  const unsupported = async (place) => { boardText("NOT YET", "We don't plan " + place + " yet.", "Bali, Thailand, Vietnam, Maldives, Mauritius and New Zealand are the six.", "nz"); await ai(`<b>${place}</b> isn't one we plan yet — we do Bali, Thailand, Vietnam, Maldives, Mauritius and New Zealand. Our support team can note the interest on <b>1800-30-SUNDAY</b>, 9am–9pm — or I can show you the nearest thing we do.`, { ms: 600 }); chips(["Show me the nearest", "Note my interest", "Okay"], (l) => { user(l); l.startsWith("Show") ? explore() : l.startsWith("Note") ? ai("Noted — support will reach out if we add it.") : ai("Okay."); }); };
-  const parseFree = (t) => { const s = t.toLowerCase(); const got = []; if (/maldiv/.test(s)) return maldives(); const bad = s.match(/\b(dubai|japan|europe|singapore|turkey|paris|london|goa|kashmir)\b/); if (bad) return unsupported(bad[1][0].toUpperCase() + bad[1].slice(1));
+  const startNew = async () => { S.flow = "new"; setTitle("New trip"); S.slots = {}; S.cur = "dest"; boardTrip(); await ai("Where to? Or tell me everything in one go — <i>“Bali, mid Nov, 6 nights, honeymoon”</i> works.", { ms: 500 }); chips(["Bali", "Thailand", "Vietnam", "Somewhere else", "Not sure yet"], (l) => { user(l); l === "Not sure yet" ? guide() : l === "Somewhere else" ? ai("Tell me the place and I'll take it from there.", { ms: 400 }) : setDest(l); }); };
+  const maldives = (place = "Maldives") => leadCapture(place);
+  const leadCapture = async (place) => { boardText(place.toUpperCase(), "Our team will plan this one with you.", "A quick call, then a tailored quote.", place === "New Zealand" ? "nz" : "maldives_aerial"); await ai(`${place} trips are put together personally by our sales team — they'll call you to plan it properly. So they're not starting cold: <b>when were you thinking of travelling?</b>`, { ms: 600 });
+    chips(["Mid December", "January", "Flexible"], async (l) => { user(l); await ai(`Noted — ${l.toLowerCase()}. Our team will call you today. Anything else I can help with meanwhile?`); chips(["Show me Bali as well", "Show me Thailand as well", "No, that's all"], (x) => { user(x); /Bali/.test(x) ? setDest("Bali") : /Thai/.test(x) ? setDest("Thailand") : ai("Okay — talk soon."); }); }); };
+  const unsupported = async (place) => { boardText("COMING SOON", place + " isn't available just yet.", "We're adding destinations through the year.", "nz"); await ai(`<b>${place}</b> isn't available just yet — we're adding new destinations through the year. For now I can plan Bali, Thailand and Vietnam, and our team handles Maldives, Mauritius and New Zealand. Want to see one of those?`, { ms: 600 }); chips(["Show me what's good now", "Tell me when it's added", "Okay"], (l) => { user(l); l.startsWith("Show") ? explore() : l.startsWith("Tell") ? ai("Will do — you'll hear from us the moment it's live.") : ai("Okay."); }); };
+  const parseFree = (t) => { const s = t.toLowerCase(); const got = []; if (/maldiv/.test(s)) return leadCapture("Maldives"); if (/mauriti/.test(s)) return leadCapture("Mauritius"); if (/new zealand|\bnz\b/.test(s)) return leadCapture("New Zealand"); const bad = s.match(/\b(dubai|japan|europe|singapore|turkey|paris|london|goa|kashmir|sri lanka|georgia|italy|switzerland|greece)\b/); if (bad) return unsupported(bad[1][0].toUpperCase() + bad[1].slice(1));
     const d = /bali/.test(s) ? "Bali" : /thai|phuket|krabi/.test(s) ? "Thailand" : /viet|hanoi|da nang/.test(s) ? "Vietnam" : null; if (d) { S.slots.dest = d; got.push(d); }
     const n = s.match(/(\d+)\s*(n\b|night|nights)/); const mo = s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*/); if (n || mo) { S.slots.when = [mo ? mo[0][0].toUpperCase() + mo[0].slice(1, 3) : "", n ? n[1] + " nights" : ""].filter(Boolean).join(" · "); got.push(S.slots.when); }
     if (/honeymoon|couple\b|two of us|just us/.test(s) && !/couples|2 couple/.test(s)) { S.slots.who = "2 adults"; got.push("2 adults"); } if (/couples|2 couple/.test(s)) { S.slots.who = "4 adults · two couples"; got.push("two couples"); } if (/child|kid/.test(s)) { S.slots.who = (S.slots.who || "2 adults") + " + 1 child"; got.push("+1 child"); }
@@ -263,10 +306,16 @@ export default function AiAssistant({ mode = "", onClose }) {
   const nonRefundable = async () => { boardText("HEADS UP", "Umalas is non-refundable.", "About ₹18,900 is already committed for those three nights.", "pool_sea"); await ai("One thing first: <b>Umalas Suites is on a non-refundable rate</b> — changing it means losing the ~₹18,900 already committed. The Ubud villa is free to cancel. Still want Seminyak options?", { ms: 600 });
     chips(["Show Seminyak options anyway", "Change the Ubud one instead", "Ask Mansi for an exception"], async (l) => { user(l); if (/Ubud/.test(l)) hotelPref("Ubud"); else if (/Mansi/.test(l)) { await ai("Sent to Mansi. She'll check with the hotel and call you back today."); feedback(); } else hotelPref("Seminyak", true); }); };
   const hotelPref = async (city, warn) => { await ai(`<b>What would make the ${city} stay better?</b>`, { ms: 400 }); chips(["Private pool villa", "Cheaper", "Closer to the centre", "4-star or above"], (l) => { user(l === "Private pool villa" ? SAY.villa : l); hotelOptions(city, l, warn); }); };
-  const hotelOptions = async (city, pref, warn) => { const cur = city === "Ubud" ? 7371 : 6312; const list = city === "Ubud" ? UBUD : SEMI; const sorted = pref === "Cheaper" ? [...list].sort((a, b) => a.pn - b.pn) : list;
-    boardText(city.toUpperCase() + " · OPTIONS", "Three that fit.", "All free to cancel · prices per night", sorted[0].imgs[0]);
+  const realHotels = (city, pref, cur) => { let hs = generateHotelsForCity(city, "Bali", "2026-11-06", "2026-11-12", 3);
+    if (pref === "Private pool villa") { const p = hs.filter((h) => h.viewTags.includes("Private pool") || h.rooms.some((r) => r.amenities.includes("Private Pool"))); if (p.length >= 2) hs = p; }
+    if (/4-star/.test(pref)) hs = hs.filter((h) => h.stars >= 4);
+    if (pref === "Cheaper") hs = hs.filter((h) => h.pricePerNight < cur).length >= 2 ? hs.filter((h) => h.pricePerNight < cur) : hs;
+    if (/centre/.test(pref)) hs = [...hs].sort((a, b) => a.distanceFromCenter - b.distanceFromCenter);
+    return hs.slice(0, 3).map((h, i) => ({ name: h.name, room: h.roomType, pn: h.pricePerNight, cx: h.freeCancellation ? "Free cancellation" : "Non-refundable", rec: i === 0, rt: (h.bookingScore / 2).toFixed(1), why: `${h.stars}-star in ${h.neighbourhood} · ${h.distanceFromCenter} km from the centre · ${h.mealPlan || "Breakfast"} · ${h.reviewCount} reviews`, imgs: h.images.slice(0, 3).map((x) => x.url) })); };
+  const hotelOptions = async (city, pref, warn) => { const cur = city === "Ubud" ? 7371 : 6312; const sorted = realHotels(city, pref, cur);
+    boardText(city.toUpperCase() + " · OPTIONS", "Three that fit.", "Prices per night · tap a card and the board follows", sorted[0].imgs[0]);
     await steps([`Reading your ${city} nights · ${rupee(cur)}/night`, pref === "Cheaper" ? "Searching under your current rate" : `Searching ${pref.toLowerCase()} within ₹2,000 of your rate`, "Checking cancellation terms", "Pricing three options"], 650);
-    await ai(`Three that fit${warn ? " — the ₹18,900 is included in every delta" : ""}. Swipe the photos; the board follows.`, { ms: 300 });
+    await ai(`Three that fit${warn ? " — the ₹18,900 is included in every delta" : ""}. Tap the dots to see more photos.`, { ms: 300 });
     cards(sorted.map((h) => ({ ...h, price: rupee(h.pn), sub: "/ night", d: (h.pn - cur) * 3 + (warn ? 18900 : 0), rec: h.rec && pref !== "Cheaper" })), (h) => { const d = h.d; user(h.name);
       summary({ title: "What changes", rows: [[`${city === "Ubud" ? "D'Ethnic Ubud Joglo Villas" : "Umalas Suites"} · ${rupee(cur)}/n`, `${h.name} · ${rupee(h.pn)}/n`], [city === "Ubud" ? "Free cancellation" : "Non-refundable", "Free cancellation"]], before: S.trip.total, after: S.trip.total + d, lose: d <= 0 ? null : warn ? "the ₹18,900 non-refundable amount" : "nothing — same nights, same board",
         onGo: async () => { S.trip.total += d; S.trip.ver++; const i = city === "Ubud" ? 1 : 0; S.trip.stays[i] = { ...S.trip.stays[i], name: h.name, pn: h.pn, img: h.imgs[0] }; toast(`Saved as version ${S.trip.ver}`); boardText("SAVED · V" + S.trip.ver, h.name, "Mansi can see it too", h.imgs[0]); await ai(`Saved as <b>version ${S.trip.ver}</b>. ${d > 0 ? "The extra " + rupee(d) + " goes on your next installment." : "You're " + rupee(d) + " lighter."}<span class="mut">Anything else you want changed, tell me now and I'll do it in one go.</span>`); feedback(); chips(["Change a day too", "Make it cheaper", "That's all"], (x) => { user(x); x === "Change a day too" ? dayFlow() : x === "Make it cheaper" ? savings(S.trip) : ai("Done. Have a lovely trip."); }); },
@@ -288,6 +337,7 @@ export default function AiAssistant({ mode = "", onClose }) {
   const addDay = async () => { boardText("ADD A DAY", "One more night.", "Seminyak or Ubud?", "tegallalang"); await ai("One more night — <b>Seminyak or Ubud?</b> I'll add the stay and a day to match, priced before anything changes.", { ms: 500 }); chips(["One more night in Ubud", "One more night in Seminyak"], (l) => { user(l); const ub = /Ubud/.test(l); summary({ title: "What changes", rows: [["6 nights · 6–12 Nov", "7 nights · 6–13 Nov"], [ub ? "Ubud 3N" : "Seminyak 3N", ub ? "Ubud 4N + leisure day" : "Seminyak 4N + beach day"]], before: S.trip.total, after: S.trip.total + (ub ? 7371 : 6312) + 2359, lose: "nothing — the return flight date needs Mansi to confirm", onGo: async () => { S.trip.total += (ub ? 7371 : 6312) + 2359; S.trip.ver++; toast(`Saved as version ${S.trip.ver}`); await ai(`Saved as <b>version ${S.trip.ver}</b>. I've flagged the return date to Mansi.`); feedback(); } }); }); };
   // intent matcher
   const handle = async (t) => { const s = t.toLowerCase(); user(t);
+    if (userState === "customer" && /change|swap|cancel|add|remove|upgrade|shift|reschedule/.test(s)) return supportOnly();
     if (/female|lady agent|male agent/.test(s)) { await ai("I can't pick your consultant by gender, but I can ask the team to call — Mansi's looking after your trip. Set that up?"); chips(["Yes, ask for a call", "No thanks"], (x) => { user(x); ai(x.startsWith("Yes") ? "Done — someone will call you today." : "Okay."); }); return; }
     if (/discount|offer|deal\b/.test(s)) { await ai("There's already a <b>2.5% discount</b> on this quote — ₹2,385 off. Anything beyond that is Mansi's call. Pass it on, or see where the cost sits?"); chips(["Pass it to Mansi", "Where the cost sits"], (x) => { user(x); x.startsWith("Pass") ? ai("Sent. She'll call today.") : savings(S.trip); }); return; }
     if (/flight|airline/.test(s)) { boardText("FLIGHTS", "That one's Mansi's.", "No live fares in here — anything I said would be out of date.", "sapa"); await ai("Flights I can't touch — no live fares in here, so anything I told you would be stale. <b>Mansi</b> can check real availability. Ask her to call? Everything else I can change now."); chips(["Ask Mansi to call", "Change something else"], (x) => { user(x); x.startsWith("Ask") ? ai("Sent. She'll call today.") : existing(); }); return; }
@@ -315,13 +365,13 @@ export default function AiAssistant({ mode = "", onClose }) {
 
   const send = () => { const v = inp.trim(); if (!v) return; setInp(""); handle(v); };
   const slotsNode = board.slots && <div className="ai-slots">{SLOTS.map(([k, l]) => <span key={k} className={"ai-slot" + (board.slots[k] ? " on" : board.slots._cur === k ? " cur" : "")}>{board.slots[k] ? l + " · " + String(board.slots[k]).split(" ·")[0].split(" +")[0] : l}</span>)}</div>;
-  const tilesNode = board.tiles && <div className="ai-tiles">{board.tiles.map((k, i) => <div key={i} className={"ai-tl" + (k ? "" : " sk")}>{k && <><img src={IMG[k]} alt="" /><span>Day {i + 2}</span></>}</div>)}</div>;
+  const tilesNode = board.tiles && <div className="ai-tiles">{board.tiles.map((k, i) => <div key={i} className={"ai-tl" + (k ? "" : " sk")}>{k && <><img src={src(k)} alt="" /><span>Day {i + 2}</span></>}</div>)}</div>;
 
   return (
     <div className="ai-root" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height, borderRadius: rect.width < 420 ? 0 : 44 }}>
       <style>{CSS}</style>
       <div className="ai-aurora" />
-      <div className="ai-bg">{bgStack.map((k, i) => <img key={k} src={IMG[k]} alt="" className={i === bgStack.length - 1 ? "on" : ""} />)}<div className="sh" /></div>
+      <div className="ai-bg">{bgStack.map((k, i) => <img key={k} src={src(k)} alt="" className={i === bgStack.length - 1 ? "on" : ""} />)}<div className="sh" /></div>
       <div className="ai-top">
         <button className="ai-ic" aria-label="Close" onClick={onClose}>✕</button>
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}><Orb size={26} /><div style={{ minWidth: 0 }}><b style={{ fontSize: 13.5, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</b><small style={{ display: "block", fontSize: 10, color: "#9FB3B0", fontWeight: 600, letterSpacing: ".04em" }}>{subtitle}</small></div></div>
@@ -329,7 +379,6 @@ export default function AiAssistant({ mode = "", onClose }) {
       </div>
       <div className="ai-focus"><div className="ai-eyebrow">{board.eyebrow}</div><h2 className="ai-h2">{board.h2}</h2>{board.sub && <div className="ai-sub">{board.sub}</div>}{slotsNode}{tilesNode}</div>
       <div className="ai-bigorb"><Orb size={120} /></div>
-      <button className="ai-map" style={{ bottom: `calc(${sheetPct}% + 12px)` }} onClick={() => toast("Map view — coming in v0.3")}>🗺 Map</button>
       {menu && <div className="ai-menu" onClick={(e) => e.stopPropagation()}>
         <button onClick={() => { setChats((c) => [{ id: Date.now(), title: "New chat", sub: "Just now", img: "swing", active: true }, ...c.map((x) => ({ ...x, active: false }))]); S.trip = JSON.parse(JSON.stringify(TRIP)); welcome(); toast("New chat"); setMenu(false); }}>＋ New chat</button>
         <button onClick={() => { setDrawer(true); setMenu(false); }}>🕘 Chat history</button>
@@ -365,7 +414,7 @@ export default function AiAssistant({ mode = "", onClose }) {
         </div>
       </div>
       {drawer && <div className="ai-drawer" onClick={(e) => { if (e.target === e.currentTarget) setDrawer(false); }}><div className="sh"><div className="ai-grab" /><h3>Your chats <button onClick={() => { setChats((c) => [{ id: Date.now(), title: "New chat", sub: "Just now", img: "swing", active: true }, ...c.map((x) => ({ ...x, active: false }))]); S.trip = JSON.parse(JSON.stringify(TRIP)); welcome(); setDrawer(false); toast("New chat"); }}>＋ New chat</button></h3>
-        {chats.map((c) => <div key={c.id} className={"ai-hrow" + (c.active ? " active" : "")}><div className="i"><img src={IMG[c.img]} alt="" /></div><div className="t" onClick={() => { setChats((cs) => cs.map((x) => ({ ...x, active: x.id === c.id }))); setTitle(c.title); setDrawer(false); toast("Opened “" + c.title + "”"); }}><b>{c.title}</b><span>{c.sub}</span></div><button className="del" aria-label="Delete" onClick={() => setConfirm(c)}>🗑</button></div>)}
+        {chats.map((c) => <div key={c.id} className={"ai-hrow" + (c.active ? " active" : "")}><div className="i"><img src={src(c.img)} alt="" /></div><div className="t" onClick={() => { setChats((cs) => cs.map((x) => ({ ...x, active: x.id === c.id }))); setTitle(c.title); setDrawer(false); toast("Opened “" + c.title + "”"); }}><b>{c.title}</b><span>{c.sub}</span></div><button className="del" aria-label="Delete" onClick={() => setConfirm(c)}>🗑</button></div>)}
       </div></div>}
       {confirm && <div className="ai-confirm"><div className="box"><b>Delete this chat?</b><p>Saved itinerary versions stay in My Trips.</p><div className="ai-act" style={{ marginTop: 0 }}><button onClick={() => setConfirm(null)}>Keep</button><button className="go" onClick={() => { const c = confirm; setConfirm(null); setChats((cs) => { const n = cs.filter((x) => x.id !== c.id); if (c.active && n[0]) n[0].active = true; return n; }); toast("Chat deleted"); if (c.active) welcome(); }}>Delete</button></div></div></div>}
       {toastMsg && <div className="ai-toast">{toastMsg}</div>}
