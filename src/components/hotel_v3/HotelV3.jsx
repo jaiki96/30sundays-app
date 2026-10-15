@@ -169,8 +169,9 @@ export default function HotelV3({
   // room prices and the picker come off.
   readOnly = false,
   nights = 3,
-  // Which paper the honest bit is written on.
-  honestVariant = "index",
+  // Which paper the honest bit is written on. The postcard is the one we
+  // picked, so it is what every screen gets unless it asks for the other.
+  honestVariant = "postcard",
 }) {
   const [gallery, setGallery] = useState(null);
   const scroller = useRef(null);

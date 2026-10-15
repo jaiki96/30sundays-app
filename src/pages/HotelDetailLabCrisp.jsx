@@ -25,6 +25,7 @@ export default function HotelDetailLabCrisp() {
     <HotelV3
       key={hotel.id}
       hotel={hotel}
+      honestVariant="index"
       onBack={() => (alt ? setAlt(null) : navigate(-1))}
       onPickRoom={setRoom}
       selectedRoomId={room?.id}
