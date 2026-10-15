@@ -28,7 +28,8 @@ export const ROOM_NOTES = {
   "Infinity-pool villa": "The pool and the horizon line up. Photographs better than it swims.",
   "Sea-view bungalow": "Penida has few proper hotels. A sea view is the one upgrade worth taking.",
   "Simple pool guesthouse": "The island is rough and ready. A clean room and a pool is enough.",
-  "Harbour-view room": "You will be leaving by boat at seven. Watching the harbour wake up is part of it.",
+  "Labuan Bajo::Harbour-view room": "You will be leaving by boat at seven. Watching the harbour wake up is part of it.",
+  "Harbour-view room": "Boats, cranes and ferries all morning. Never still, and never dull.",
   "Pool villa above the bay": "Up the hill, cooler at night, and the whole bay below you.",
   "Balcony cabin": "On a liveaboard, a balcony is the difference between a cabin and a room.",
 
@@ -47,7 +48,7 @@ export const ROOM_NOTES = {
   "Riverside city suite": "District 1, facing the water, away from the worst of the noise.",
   "Rooftop-pool hotel room": "Saigon is hot and loud. A pool on the roof fixes both for an hour.",
   "Heritage boutique room": "Colonial bones, small, and usually on a quiet street.",
-  "Beach villa with pool": "Long Beach is wide and flat. A villa on it needs nothing else.",
+  "Beach villa with pool": "Sand at the door and a pool of your own. In the Maldives this is the whole holiday.",
   "Sunset-facing beach villa": "The west coast gets the sunset. Face it.",
   "Guesthouse sea-view room": "The cheap way to be on the water here, and perfectly good.",
 
@@ -80,7 +81,7 @@ export const ROOM_NOTES = {
   "Rock-view room": "Sigiriya in the window at first light, before you climb it.",
   "Forest lodge": "Out among the trees, and the birds start early.",
   "Courtyard villa": "Cool in the middle of the day, which matters here.",
-  "Lake-view room": "Kandy is built round the lake. The walk round it starts at your door.",
+  "Kandy::Lake-view room": "Kandy is built round the lake. The walk round it starts at your door.",
   "Hillside colonial suite": "Above the town, cooler, and a short drive down.",
   "Tea-estate bungalow": "A planter's house on a working estate. The best night in the hills.",
   "Ella Gap view room": "The gap in the hills is the view. Rooms facing it cost more for a reason.",
@@ -96,16 +97,26 @@ export const ROOM_NOTES = {
   "Waiheke vineyard lodge": "Stay on the island rather than crossing twice in a day.",
   "Heritage suite": "Old Auckland, quiet streets, short walk in.",
   "Private thermal-pool suite": "Rotorua sits on hot water. A pool of it on your deck is the local luxury.",
-  "Lake-view room": "Lake Rotorua at dawn, with the steam coming off it.",
+  "Rotorua::Lake-view room": "Lake Rotorua at dawn, with the steam coming off it.",
+  "Lake-view room": "The water is the reason the town is here. Worth facing.",
   "Lakefront room": "Close enough to walk the lakefront before breakfast.",
   "Lake-and-mountain view room": "Wakatipu in front, the Remarkables behind. Queenstown's whole pitch in one window.",
   "Alpine chalet": "Out of town, with a car, and worth it for the quiet.",
   "Terrace suite": "Central, with somewhere outside to sit at the end of a long day.",
-  "Lake-view suite": "Wanaka is a lake town. Face the lake.",
+  "Lake-view suite": "Hoan Kiem out of the window, and the Old Quarter two streets behind it.",
   "Lakeside suite": "Steps from the water and the tree everyone photographs.",
   "Vineyard cottage": "Ten minutes out, among the vines, with the hills behind.",
   "Hillside infinity-pool suite": "Above the town, with the pool edge running into the view.",
   "Cliffside cabin": "Small, high, and all window.",
 };
 
-export const roomNote = (name) => ROOM_NOTES[name] || null;
+// ─── Keyed by room name, and by region where that is not enough ───
+//
+// Nine room names turn up in more than one region, which is fine while the
+// note is true of the type. It stopped being fine where a note named a place:
+// "Lake-view room" was written twice, once for Kandy and once for Rotorua, and
+// the second silently replaced the first, so Kandy's room came with Rotorua's
+// steam. A note for one region is keyed "Region::Room" and wins over the plain
+// one, which stays general.
+export const roomNote = (name, city) =>
+  (city && ROOM_NOTES[`${city}::${name}`]) || ROOM_NOTES[name] || null;
