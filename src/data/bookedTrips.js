@@ -49,8 +49,9 @@ const BOOKERS = [
 ];
 
 const WHEN = ["3h ago", "9h ago", "yesterday", "2d ago", "4d ago", "6d ago", "1w ago", "2w ago"];
-// Most trips are a couple. A few go as a family, so the party size on a card
-// means something when it is not two.
+// Most trips are two adults. A few go as a family, which is the same two
+// adults plus two children, so a card showing a child count means something
+// when it shows one at all.
 const FAMILIES = new Set([4, 11]);
 
 const num = (price) => Number(String(price).replace(/[^0-9]/g, ""));
@@ -118,6 +119,8 @@ export const BOOKED_TRIPS = pick().map((it, i) => {
     city,
     when: WHEN[i % WHEN.length],
     travellers: family ? 4 : 2,
+    adults: 2,
+    kids: family ? 2 : 0,
     party: family ? "Family" : "Couple",
   };
 });
@@ -194,6 +197,8 @@ export function tripsThroughCity(dest, city) {
         legs: (it.route || []).map((r) => ({ city: r.city, n: r.n })),
         who: BOOKERS[h % BOOKERS.length][0],
         when: WHEN[h % WHEN.length],
+        adults: 2,
+        kids: h % 5 === 0 ? 2 : 0,
         party: h % 5 === 0 ? "Family" : "Couple",
       };
     });

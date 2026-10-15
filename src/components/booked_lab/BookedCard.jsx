@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users } from "lucide-react";
+import { User, Baby } from "lucide-react";
 import { C } from "../../data";
 
 // ─── One booked trip ───
@@ -45,6 +45,11 @@ export function Route({ legs, max = 2, size = 11.5 }) {
 
 export default function BookedCard({ t, wide = false }) {
   const tone = TAG[t.style] || TAG.Relaxed;
+  // Who went, as a count rather than a label. "Couple" and "Family" both took
+  // a line to say something the numbers say better, and children only show up
+  // when there are any.
+  const kids = t.kids || 0;
+  const adults = t.adults || Math.max(1, (t.travellers || 2) - kids);
 
   return (
     <Link to={t.target} style={{
@@ -61,10 +66,19 @@ export default function BookedCard({ t, wide = false }) {
             <strong style={{ fontWeight: 800, color: C.head }}>{t.who}</strong> booked {t.when}
           </span>
           <span style={{
-            flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
+            flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
             padding: "3px 8px", borderRadius: 999, border: `1px solid ${C.div}`,
-            fontSize: 10, fontWeight: 700, color: C.sub, whiteSpace: "nowrap",
-          }}><Users size={10} /> {t.party}</span>
+            fontSize: 10.5, fontWeight: 700, color: C.sub, whiteSpace: "nowrap",
+          }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+              {adults}<User size={11} />
+            </span>
+            {kids > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+                {kids}<Baby size={11} />
+              </span>
+            )}
+          </span>
         </div>
 
         <p style={{ margin: "8px 0 0", fontSize: 15, fontWeight: 800, color: C.head, letterSpacing: "-0.3px" }}>
