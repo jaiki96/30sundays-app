@@ -18,6 +18,9 @@ export const TAG = {
   Offbeat: { bg: "#E5F6F5", fg: "#007E72" },
 };
 
+// Each stop carries its own nights, so the route says how the week was split
+// and not just where it went. The cities it has no room for are counted in
+// words, because a bare "+2" reads like two of something unnamed.
 export function Route({ legs, max = 2, size = 11.5 }) {
   const shown = legs.slice(0, max);
   const rest = legs.length - shown.length;
@@ -30,9 +33,12 @@ export function Route({ legs, max = 2, size = 11.5 }) {
         <span key={l.city ?? l}>
           {i > 0 && <span style={{ opacity: 0.45, margin: "0 4px" }}>→</span>}
           {l.city ?? l}
+          {l.n ? <span style={{ fontWeight: 600, color: C.head, opacity: 0.75 }}> {l.n}N</span> : null}
         </span>
       ))}
-      {rest > 0 && <span style={{ opacity: 0.7 }}> +{rest}</span>}
+      {rest > 0 && (
+        <span style={{ opacity: 0.7 }}> +{rest} {rest === 1 ? "city" : "cities"}</span>
+      )}
     </span>
   );
 }
