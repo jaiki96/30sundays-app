@@ -1,7 +1,5 @@
-import { destAreas, cityCoords, monthRating } from "./buildData";
+import { destAreas, cityCoords } from "./buildData";
 import { regionGuide } from "./regionGuide";
-import { generateHotelsForCity } from "./hotelData";
-import { monthWeather, SKY_WORD } from "./weatherData";
 
 // ─── What the route step needs to know about a place ───
 //
@@ -267,34 +265,6 @@ export function bestOrder(dest, cities) {
   return best || [...cities];
 }
 
-// ─── What a night costs here ───
-//
-// The median of the hotels we would actually show for this region, so the
-// figure on the route step and the prices on the region page come from the
-// same place. Generated rather than quoted, which is why it is always said as
-// "about".
-const nightlyCache = new Map();
-export function nightlyFrom(dest, city) {
-  const key = `${dest}::${city}`;
-  if (nightlyCache.has(key)) return nightlyCache.get(key);
-  let out = null;
-  try {
-    const hotels = generateHotelsForCity(city, dest, "2026-11-10", "2026-11-17", 7)
-      .filter((h) => Number(h.bookingScore) >= 8)
-      .map((h) => Number(h.pricePerNight))
-      .filter(Boolean)
-      .sort((a, b) => a - b);
-    if (hotels.length) {
-      const mid = hotels[Math.floor(hotels.length / 2)];
-      out = Math.round(mid / 500) * 500;
-    }
-  } catch {
-    out = null;
-  }
-  nightlyCache.set(key, out);
-  return out;
-}
-
 // How we choose the hotel once the region is in. Already written per region as
 // the stay headline, which is the honest answer: not a brand, a part of town.
 export function hotelRule(dest, city) {
@@ -332,31 +302,4 @@ export function pickTag(dest, city) {
   if (areas[i].crowd === "High") return "Most visited";
   if (areas[i].crowd === "Low") return "Offbeat";
   return cityTheme(areas[i]);
-}
-
-// How busy this city is, in the words the dates step already uses. Per city,
-// not per month: every card reading "Fewer people, cheaper" was the season
-// talking, and the season is the same everywhere in the country.
-export function crowdWord(dest, city) {
-  const a = (destAreas[dest] || []).find((x) => x.city === city);
-  if (!a) return null;
-  if (a.crowd === "High") return "Busiest";
-  if (a.crowd === "Low") return "Quietest, cheapest";
-  return "Fewer people, cheaper";
-}
-
-// The weather for the month they are actually travelling, not an average year.
-export function monthFor(dest, startDate) {
-  const m = startDate ? new Date(startDate).getMonth() : new Date().getMonth();
-  const w = monthWeather(dest, m);
-  return {
-    m,
-    name: ["January", "February", "March", "April", "May", "June", "July",
-      "August", "September", "October", "November", "December"][m],
-    season: monthRating(dest, m),
-    sky: w?.sky,
-    word: SKY_WORD[w?.sky] || null,
-    high: w?.high,
-    low: w?.low,
-  };
 }
