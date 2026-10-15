@@ -22,3 +22,4 @@
 - Parallel screen variants are kept on their own routes (e.g. /v3-/v6, /discover,
   /wf, /compare); nothing is merged onto `/` without explicit approval.
 - Commit or push only when explicitly asked.
+- Work on `main`. Develop and commit there, not on a side branch.
