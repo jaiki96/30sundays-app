@@ -22,6 +22,7 @@ import { useDeals } from "../data/deals";
 import LoginV2 from "./LoginV2";
 import NextStepNote from "../components/NextStepNote";
 import MonthWeather from "../components/MonthWeather";
+import DateRange from "../components/wizard/DateRange";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -831,137 +832,23 @@ function Stepper({ label, value, onChange, min = 0, last }) {
 
 
 function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
-  const today = new Date();
-  const monthsList = useMemo(() => {
-    const out = [];
-    for (let i = 0; i < 10; i++) {
-      const m = (today.getMonth() + i) % 12;
-      const y = today.getFullYear() + Math.floor((today.getMonth() + i) / 12);
-      out.push({ m, y });
-    }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const sel = startDate ? new Date(startDate) : null;
-  const [openMonth, setOpenMonth] = useState(() => sel ? { m: sel.getMonth(), y: sel.getFullYear() } : monthsList[1]);
-
   const minN = destMeta[dest]?.minNights || 3;
-  const DAY_MS = 86400000;
-  const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  // End is derived: a complete range means we have both a start and a nights count.
-  const hasRange = !!startDate && !!nights;
-  const endD = hasRange ? new Date(midnight(sel).getTime() + nights * DAY_MS) : null;
-
-  const pickDay = (day) => {
-    const d = new Date(openMonth.y, openMonth.m, day);
-    // Fresh start when nothing picked yet, or when a full range already exists.
-    if (!startDate || hasRange) {
-      setStartDate(d.toISOString());
-      setNights(null);
-      return;
-    }
-    // Second tap: anything on/before the start just resets the start.
-    if (d <= midnight(sel)) {
-      setStartDate(d.toISOString());
-      setNights(null);
-      return;
-    }
-    setNights(Math.round((midnight(d) - midnight(sel)) / DAY_MS));
-  };
-
-  const ndays = DAYS_IN_MONTH[openMonth.m] + (openMonth.m === 1 && openMonth.y % 4 === 0 ? 1 : 0);
-  const isPast = (day) => new Date(openMonth.y, openMonth.m, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const firstDow = new Date(openMonth.y, openMonth.m, 1).getDay(); // 0=Sun, for calendar alignment
-  const shortDate = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-
   return (
     <div style={{ padding: "18px 16px 24px" }}>
-      <h1 style={titleStyle}>When & how long?</h1>
-      <p style={subStyle}>Just a starting point, you can always change this later.</p>
-
-      {/* month strip - season label sits on each chip */}
-      <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "16px -16px 0", padding: "0 16px 4px" }}>
-        {monthsList.map(({ m, y }) => {
-          const r = monthRating(dest, m);
-          const on = openMonth.m === m && openMonth.y === y;
-          return (
-            <button key={`${m}-${y}`} onClick={() => setOpenMonth({ m, y })} style={{
-              flexShrink: 0, padding: "9px 14px 10px", borderRadius: 12, cursor: "pointer", textAlign: "center",
-              border: on ? `2px solid ${C.p600}` : `1px solid ${C.div}`, background: on ? C.p100 : C.white,
-            }}>
-              <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: on ? C.p600 : C.head }}>{MONTHS[m]}</span>
-              <span style={{ display: "block", fontSize: 9.5, fontWeight: 700, color: SEASON_COLOR[r], marginTop: 2 }}>{SEASON_LABEL[r]}</span>
-              <MonthWeather dest={dest} monthIdx={m} on={on} />
-            </button>
-          );
-        })}
-      </div>
-
-      {/* day grid — tap a start date, then an end date */}
-      <p style={{ margin: "18px 0 8px", fontSize: 13, fontWeight: 700, color: C.head }}>
-        {!startDate ? "Pick your start date" : !hasRange ? "Now pick your end date" : "Your travel dates"}
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 6 }}>
-        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-          <span key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: C.inact }}>{d}</span>
-        ))}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-        {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
-        {Array.from({ length: ndays }, (_, i) => i + 1).map(day => {
-          const past = isPast(day);
-          const d = new Date(openMonth.y, openMonth.m, day);
-          const isStart = sel && d.getTime() === midnight(sel).getTime();
-          const isEnd = endD && d.getTime() === midnight(endD).getTime();
-          const inRange = sel && endD && d > midnight(sel) && d < midnight(endD);
-          const cap = isStart || isEnd;
-          return (
-            <button key={day} disabled={past} onClick={() => pickDay(day)} style={{
-              aspectRatio: "1", borderRadius: 10, border: "none", cursor: past ? "default" : "pointer",
-              background: cap ? C.p600 : inRange ? C.p100 : past ? "transparent" : C.bg,
-              color: cap ? "#fff" : inRange ? C.p600 : past ? C.icon : C.head,
-              fontSize: 13, fontWeight: cap ? 800 : inRange ? 700 : 600, opacity: past ? 0.4 : 1,
-            }}>{day}</button>
-          );
-        })}
-      </div>
-
-      {/* Date range + nights + fit note as one block, pinned to the bottom of
-          the scroll area so it stays visible on small screens while the
-          calendar scrolls behind it. */}
-      <div style={{ position: "sticky", bottom: 0, margin: "20px -16px 0", padding: "10px 16px 0", background: C.white }}>
-        <div style={{ padding: "14px 16px", borderRadius: 14, background: C.bg, border: `1px solid ${C.div}` }}>
-          {hasRange ? (
-            <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>{shortDate(sel)} – {shortDate(endD)}</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: C.p600 }}>{nights} nights</span>
-              </div>
-              {nights >= minN ? (
-                <p style={{ margin: "8px 0 0", fontSize: 12, fontWeight: 600, color: C.sText }}>
-                  ✨ Perfect length for {dest}. Enough time to settle in and enjoy every bit, you'll love this trip.
-                </p>
-              ) : (
-                <p style={{ margin: "8px 0 0", fontSize: 12, color: C.wText }}>
-                  💡 We recommend at least {minN} nights for {dest}. A couple more and you'll enjoy it fully.
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.sub }}>
-                {startDate ? `Starts ${shortDate(sel)} · tap your return day` : "Tap a date to begin"}
-              </span>
-              <p style={{ margin: "8px 0 0", fontSize: 12, color: C.sub }}>💡 We recommend at least {minN} nights for {dest}.</p>
-            </>
-          )}
-        </div>
+      <h1 style={titleStyle}>Select trip dates</h1>
+      <div style={{ marginTop: 16 }}>
+        <DateRange
+          dest={dest}
+          minNights={minN}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          nights={nights}
+          setNights={setNights}
+        />
       </div>
     </div>
   );
 }
-
-// ════════════════════ Maldives Step 2: Dates (start + 3/4 nights) ════════════════════
 // Same month strip + calendar look, but a single start date and two night options.
 function StepDatesMaldives({ dest, startDate, setStartDate, nights, setNights }) {
   const today = new Date();
@@ -1009,7 +896,7 @@ function StepDatesMaldives({ dest, startDate, setStartDate, nights, setNights })
         })}
       </div>
 
-      {/* day grid — single start date */}
+      {/* day grid, single start date */}
       <p style={{ margin: "18px 0 8px", fontSize: 13, fontWeight: 700, color: C.head }}>Pick your start date</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 6 }}>
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (

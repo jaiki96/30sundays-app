@@ -148,3 +148,18 @@
   from { transform: translateX(0); opacity: 1; }
   to   { transform: translateX(-30px); opacity: 0; }
 }
+
+/* The flash a day gives when its box is tapped on the dates step, so the link
+   between the footer and the calendar is shown rather than assumed. */
+@keyframes datePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(227, 27, 83, 0.55); }
+  70%  { box-shadow: 0 0 0 11px rgba(227, 27, 83, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(227, 27, 83, 0); }
+}
+
+/* The day the recommended trip would end on, breathing gently so the eye
+   finds it. It is an invitation, not an alarm, so it stays slow and faint. */
+@keyframes ghostPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(227, 27, 83, 0.18); }
+  50%      { box-shadow: 0 0 0 6px rgba(227, 27, 83, 0); }
+}

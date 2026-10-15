@@ -9,3 +9,12 @@ export const SKY_STYLE = {
   rainy:  { Icon: CloudDrizzle, color: "#5B8DEF" },
   heavy:  { Icon: CloudRain,    color: "#3B6FD4" },
 };
+
+// The word for each sky, so a chip can say what the weather is rather than
+// leaving the icon to carry it alone.
+export const SKY_LABEL = {
+  sunny: "Sunny",
+  cloudy: "Cloudy",
+  rainy: "Rainy",
+  heavy: "Heavy rain",
+};
