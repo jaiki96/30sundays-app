@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ChevronDown, ChevronUp,
   Check, Star, User, Images, ChevronRight, Map, MapPin,
@@ -243,11 +243,19 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const { itineraryId, stayIndex } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentHotelId = params.get("current");
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
   const dealQS = dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : "";
   const backToItinerary = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
+
+  // Back goes back, and a link opened cold goes up to the trip. Sending this
+  // list to a fixed screen instead is what made it bounce with the hotel page.
+  const goBack = () => {
+    if (location.key !== "default") navigate(-1);
+    else navigate(backToItinerary, { replace: true });
+  };
 
   const [showSheet, setShowSheet] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -312,11 +320,12 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
       if (gallery) setGallery(null);
       else if (showSheet) setShowSheet(false);
       else if (mapOpen) setMapOpen(false);
-      else navigate(-1);
+      else goBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [gallery, showSheet, mapOpen, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gallery, showSheet, mapOpen]);
 
   if (!itinerary || !stayInfo) {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Stay not found</div>;
@@ -363,7 +372,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
       {/* ═══ Header: where this stay is, how long it runs, how much choice ═══ */}
       <div style={{ flexShrink: 0, background: C.white, borderBottom: `1px solid ${C.div}`, padding: "13px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => navigate(-1)} aria-label="Back" style={{
+          <button onClick={goBack} aria-label="Back" style={{
             width: 34, height: 34, borderRadius: "50%", border: "none", background: C.bg,
             display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
           }}>

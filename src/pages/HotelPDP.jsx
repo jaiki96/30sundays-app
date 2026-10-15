@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight, Sparkles, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
@@ -13,6 +13,7 @@ export default function HotelPDP() {
   const { itineraryId, stayIndex, hotelId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentHotelId = params.get("current");
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
@@ -58,6 +59,20 @@ export default function HotelPDP() {
   const storedDelta = (selectedRoom.pricePerNight - basePrice) * nights;
 
   const hotelsQS = `?current=${encodeURIComponent(currentHotelId || "")}${dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : ""}`;
+
+  // Back goes back. It used to always push the alternatives list, so opening
+  // this from the itinerary and pressing back landed you in a list you never
+  // asked for, and that list's own back button came straight here again: a
+  // loop with no way out.
+  //
+  // A link opened cold has nothing behind it, so that one goes up to the trip
+  // rather than across to the list, which is what made the loop in the first
+  // place.
+  const upToTrip = `/itinerary/${itineraryId}${dealId && versionId ? `?dealId=${dealId}&versionId=${versionId}` : ""}`;
+  const goBack = () => {
+    if (location.key !== "default") navigate(-1);
+    else navigate(upToTrip, { replace: true });
+  };
 
   // The single upgrade offered on this stay: the cheapest 5-star option in the
   // same city that isn't the hotel already shown. Only when viewing your own
@@ -365,7 +380,7 @@ export default function HotelPDP() {
   return (
     <HotelV3
       hotel={detail}
-      onBack={() => navigate(`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`)}
+      onBack={goBack}
       selectedRoomId={selectedRoomId}
       onPickRoom={(room) => setSelectedRoomId(room.id)}
       onOpenSimilar={(h) => navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(h.id)}${hotelsQS}`)}
