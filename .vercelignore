@@ -1,0 +1,11 @@
+# Requirement docs and working notes: never needed to build the app, and no
+# reason to upload internal writing to a deployment.
+*.docx
+*.xlsx
+*_RD.txt
+*_1Pager.txt
+/docs
+/exports
+/prototypes
+CLAUDE.md
+CLAUDE_CODE_BRIEF.md
