@@ -518,8 +518,26 @@ export const mockTrips = [
       { day: 1, city: "Ubud", activities: ["Arrive in Bali", "Check-in at Ubud resort", "Monkey Forest visit"] },
       { day: 2, city: "Ubud", activities: ["Tegallalang Rice Terraces", "Tirta Empul Temple", "Yoga session"] },
       { day: 3, city: "Ubud", activities: ["Mount Batur sunrise trek", "Coffee plantation visit", "Ubud art market"] },
-      { day: 4, city: "Seminyak", activities: ["Transfer to Seminyak", "Beach club afternoon", "Sunset at Tanah Lot"] },
-      { day: 5, city: "Seminyak", activities: ["Spa morning", "Shopping at Seminyak Square", "Beachfront dinner"] },
+      // Day 4 is a transfer plus a free afternoon, day 5 is free all through.
+      // No activities is how the app already marks a leisure day (see the day
+      // picker's "Transfer + free" and "Free day" tags), and `ideas` are the
+      // unbooked suggestions the day screen shows underneath.
+      { day: 4, city: "Seminyak", activities: [],
+        transfers: [
+          { from: "Komaneka at Bisma, Ubud", to: "The Legian, Seminyak", vehicle: "car", sharing: "Private", duration: "1 hr 20 min" },
+        ],
+        ideas: [
+          { title: "Seminyak Beach sunset", caption: "10 min walk from the hotel", photo: `${CDN}/bali/bali_swing_experience_1.jpg` },
+          { title: "Petitenget Temple", caption: "Sea temple, quiet at dusk", photo: `${CDN}/bali/handara_gate_63.jpg` },
+          { title: "Seminyak Square", caption: "Boutiques and cafes", photo: `${CDN}/bali/tegallalang_rice_fields_4.jpg` },
+        ] },
+      { day: 5, city: "Seminyak", activities: [],
+        ideas: [
+          { title: "Couple spa morning", caption: "Prana or Bodyworks", photo: `${CDN}/bali/tegallalang_rice_fields_4.jpg` },
+          { title: "Beach club afternoon", caption: "Potato Head or Ku De Ta", photo: `${CDN}/bali/bali_swing_experience_1.jpg` },
+          { title: "Double Six sunset", caption: "Best light around 6pm", photo: `${CDN}/bali/kelingking_beach_65.jpg` },
+          { title: "Dinner at La Lucciola", caption: "Beachfront, book ahead", photo: `${CDN}/bali/tree_house_nusa_penida_3.jpg` },
+        ] },
       { day: 6, city: "Nusa Penida", activities: ["Ferry to Nusa Penida", "Kelingking Beach", "Broken Beach & Angel's Billabong"] },
       { day: 7, city: "Nusa Penida", activities: ["Snorkeling with Manta Rays", "Crystal Bay", "Return ferry & departure"] },
     ],

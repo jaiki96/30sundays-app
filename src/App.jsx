@@ -41,6 +41,7 @@ import SaveVersionLab from "./pages/SaveVersionLab";
 import WeatherOptionsLab from "./pages/WeatherOptionsLab";
 import DestWeatherLab from "./pages/DestWeatherLab";
 import PastPlansLab from "./pages/PastPlansLab";
+import StageHomeLab from "./pages/StageHomeLab";
 import HotelDetailLab from "./pages/HotelDetailLab";
 import HotelDetailLabRefined from "./pages/HotelDetailLabRefined";
 import HotelDetailLabCrisp from "./pages/HotelDetailLabCrisp";
@@ -112,14 +113,14 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
 
   return (
     <PhoneFrame>
       <ProfileDemoSync userState={userState} />
       {!shareLink && <UserToggle userState={userState} setUserState={setUserState} />}
       <Routes>
-        <Route path="/" element={<HomeV5 userState={userState} />} />
+        <Route path="/" element={<HomeV5 />} />
         <Route path="/landing-clone" element={<HomeV5Clone userState={userState} />} />
         <Route path="/banner-lab" element={<HomeBannerLab userState={userState} />} />
         <Route path="/v3" element={<HomeV3 />} />
@@ -174,6 +175,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/weather-lab" element={<WeatherOptionsLab />} />
         <Route path="/dest-weather-lab" element={<DestWeatherLab />} />
         <Route path="/plans-lab" element={<PastPlansLab />} />
+        <Route path="/stage-home" element={<StageHomeLab />} />
         <Route path="/hotel-lab" element={<HotelDetailLab />} />
         <Route path="/hotel-lab-2" element={<HotelDetailLabRefined />} />
         <Route path="/hotel-lab-3" element={<HotelDetailLabCrisp />} />

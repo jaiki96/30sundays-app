@@ -17,7 +17,7 @@ const MOCK_CONTACTS = [
 
 // Normalize an Indian mobile to its parts: 10-digit national, +91 display, and
 // the bare 91XXXXXXXXXX that wa.me expects.
-function normalizeMobile(raw) {
+export function normalizeMobile(raw) {
   let d = (raw || "").replace(/\D/g, "");
   if (d.startsWith("91") && d.length === 12) d = d.slice(2);
   const national = d.slice(-10);
@@ -286,8 +286,14 @@ function ConfirmRemove({ name, onCancel, onConfirm }) {
   );
 }
 
-export default function InvitePartnerSection({ destination }) {
-  const [partners, setPartners] = useState([]);
+// `initialPartners`, `hideEntry`, `openKey` and `onPartnersChange` exist so
+// another screen (the trip card on Home) can open this exact flow instead of
+// building a second, slightly different one. Left alone, the component behaves
+// as it always has.
+export default function InvitePartnerSection({
+  destination, initialPartners, hideEntry = false, openKey = 0, onPartnersChange,
+}) {
+  const [partners, setPartners] = useState(initialPartners || []);
   const [view, setView] = useState(null); // 'manage' | 'add' | 'contacts'
   const [draftName, setDraftName] = useState("");
   const [draftMobile, setDraftMobile] = useState("");
@@ -300,6 +306,19 @@ export default function InvitePartnerSection({ destination }) {
   const openEntry = () => (partners.length ? setView("manage") : openAdd());
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3200); };
+
+  // Opened from outside: bump openKey and the same entry point runs.
+  useEffect(() => {
+    if (openKey) setView(partners.length ? "manage" : "add");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openKey]);
+
+  // Keep whoever opened us in step with the list. Deliberately keyed on the
+  // list alone: an inline callback would change identity every render.
+  useEffect(() => {
+    onPartnersChange?.(partners);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partners]);
 
   // Invite the guest currently in the draft form, then drop back to the
   // itinerary with a success toast.
@@ -332,10 +351,13 @@ export default function InvitePartnerSection({ destination }) {
   };
 
   return (
-    <div style={{ padding: "0 16px" }}>
+    <div style={{ padding: hideEntry ? 0 : "0 16px" }}>
+      {!hideEntry && (
       <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 12 }}>Plan together</p>
+      )}
 
-      {/* One compact, tappable row — no partners opens Add guest, else Manage */}
+      {/* One compact, tappable row - no partners opens Add guest, else Manage */}
+      {!hideEntry && (
       <button
         onClick={openEntry}
         aria-label={partners.length ? "View travel companions" : "Invite your travel partner"}
@@ -374,6 +396,7 @@ export default function InvitePartnerSection({ destination }) {
           </>
         )}
       </button>
+      )}
 
       {view === "manage" && (
         <ManageSheet

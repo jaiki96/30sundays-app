@@ -1,14 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck, Wand2, Calendar } from "lucide-react";
-import { C, destData, allItineraries, destinations, reviews, customerPhotos } from "../data";
-import { useDeals } from "../data/deals";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck } from "lucide-react";
+import { C, destData, reviews, customerPhotos } from "../data";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
-import HomeBanners, { BANNERS } from "../components/HomeBanners";
-import { aiStore } from "../components/ai/aiStore";
-import { SIX, getSeasonGroups, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
+import BookedTripsRail from "../components/BookedTripsRail";
+import { SIX, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
 const PAD = 18;
@@ -27,40 +25,12 @@ function FullscreenVideo({ src, onClose }) {
   );
 }
 
-// ─── Lower-fold pieces (clean, premium spacing) ───
-function SectionTitle({ title, sub }) {
-  return (
-    <div style={{ padding: `0 ${PAD}px`, marginBottom: 14 }}>
-      <h2 style={{ fontSize: 19, fontWeight: 700, color: C.head, margin: 0, letterSpacing: "-0.4px" }}>{title}</h2>
-      {sub && <p style={{ fontSize: 12.5, color: C.sub, margin: "4px 0 0", lineHeight: "17px" }}>{sub}</p>}
-    </div>
-  );
-}
-
-// Circular destination tabs (same set as the main home), shown above the hero.
-function DestCircles() {
-  return (
-    <div className="hs" style={{ gap: 14, padding: `12px ${PAD}px 14px`, background: C.white }}>
-      {destinations.map((d, i) => (
-        <Link key={i} to={`/destination/${encodeURIComponent(d.name)}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0, textDecoration: "none" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", border: `2.5px solid ${C.div}`, padding: 2 }}>
-            <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }} />
-          </div>
-          <span style={{ fontSize: 12.5, fontWeight: 500, color: C.sub, whiteSpace: "nowrap" }}>{d.name}</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
 // Traveller moments reels (same as HomeV2's "From the road").
 export function TravellerMomentsReels() {
   return (
     <div style={{ marginTop: 28 }}>
-      <div style={{ padding: `0 ${PAD}px`, marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1.4px", color: C.p600, textTransform: "uppercase", marginBottom: 4 }}>Couples who trusted us</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, letterSpacing: "-0.3px", margin: 0 }}>Traveller moments</h2>
-        <p style={{ fontSize: 13, color: C.sub, margin: "3px 0 0" }}>Real couples. Real reels.</p>
+      <div style={{ padding: `0 ${PAD}px`, marginBottom: 13 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>Traveller moments</h2>
       </div>
       <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD }}>
         {travellerReels.map((r, i) => <TravellerReel key={i} item={r} />)}
@@ -122,9 +92,8 @@ function CoupleFaces() {
 export function LovedByCouples() {
   return (
     <div style={{ margin: "28px 16px 0" }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1.4px", color: C.p600, textTransform: "uppercase", marginBottom: 4 }}>What couples say</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.head, letterSpacing: "-0.3px", margin: 0 }}>Loved by 1,000+ couples</h2>
+      <div style={{ marginBottom: 13 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>Loved by 1,000+ couples</h2>
       </div>
       <div style={{ background: `linear-gradient(135deg, ${C.p100} 0%, #fff 100%)`, border: `1px solid ${C.p100}`, borderRadius: 18, padding: "20px 18px", marginBottom: 16, boxShadow: "0 4px 18px rgba(137,18,62,0.08)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
@@ -150,70 +119,85 @@ export function LovedByCouples() {
   );
 }
 
-function SeasonCard({ d }) {
+// ─── The opening ───
+//
+// One picture, the name of the company on it, one promise, and the button. The
+// home used to spend its first two screens on shortcuts and a promo carousel
+// before it said what we do, so the photo now carries that weight on its own
+// and the proof line sits under the button where it backs the decision up.
+function Hero({ imgs, idx, onPlay }) {
   return (
-    <Link to={`/destination/${encodeURIComponent(d.name)}`} style={{ flexShrink: 0, width: 200, textDecoration: "none", borderRadius: 18, overflow: "hidden", background: C.white, boxShadow: "0 4px 20px rgba(0,0,0,0.07)" }}>
-      <div style={{ position: "relative", height: 150 }}>
-        <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 45%)" }} />
-        <span style={{ position: "absolute", top: 11, left: 11, display: "inline-flex", alignItems: "center", gap: 4, background: d.peakNow ? "#E6F4EC" : "rgba(255,255,255,0.95)", color: d.peakNow ? "#1B5E3A" : C.head, fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999 }}>
-          {d.peakNow && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2E7D52" }} />}
-          {d.badge}
-        </span>
-      </div>
-      <div style={{ padding: "12px 13px 13px" }}>
-        <p style={{ fontSize: 14.5, fontWeight: 700, color: C.head, margin: 0 }}>{d.flag} {d.name}</p>
-        <p style={{ fontSize: 11.5, color: C.sub, margin: "3px 0 7px", lineHeight: "15px" }}>{d.blurb}</p>
-        <p style={{ fontSize: 12, fontWeight: 600, color: C.head, margin: 0 }}>From {fromPrice(d.startPrice)} <span style={{ fontWeight: 500, color: C.inact }}>pp · 7 nights</span></p>
-      </div>
-    </Link>
-  );
-}
+    <div style={{ background: C.white }}>
+      <div style={{ position: "relative", height: 432, overflow: "hidden" }}>
+        {imgs.map((src, i) => (
+          <img key={i} src={src} alt="" style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+            opacity: i === idx ? 1 : 0, transition: "opacity 1.4s ease, transform 6s ease",
+            transform: i === idx ? "scale(1.08)" : "scale(1)",
+          }} />
+        ))}
+        <div onClick={onPlay} style={{ position: "absolute", inset: 0, cursor: "pointer", background: "linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.05) 34%, rgba(0,0,0,0.3) 72%, rgba(0,0,0,0.55) 100%)" }} />
 
-function LowerSections({ groups, showUsp = true }) {
-  return (
-    <div style={{ paddingTop: showUsp ? 4 : 24, background: C.white, position: "relative" }}>
-      {/* Compact proof line (hidden for leads, where the customisation card leads instead) */}
-      {showUsp && (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: `0 ${PAD}px`, marginBottom: 28 }}>
-          {[
-            { I: Heart, t: "Couples only" },
-            { I: IndianRupee, t: "Transparent pricing" },
-            { I: ShieldCheck, t: "No tourist traps" },
-          ].map((x, i) => (
-            <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <x.I size={13} color={C.p600} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.head, letterSpacing: "0.1px", whiteSpace: "nowrap" }}>{x.t}</span>
-            </span>
-          ))}
-        </div>
-      )}
+        <img src="/logo.png" alt="30 Sundays" style={{ position: "absolute", top: 16, left: PAD, height: 30, width: "auto", filter: "brightness(0) invert(1)", pointerEvents: "none" }} />
 
-      {groups.map((g, i) => (
-        <div key={i} style={{ marginBottom: 28 }}>
-          <SectionTitle title={g.label} sub={g.sub} />
-          <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD }}>
-            {g.dests.map(d => <SeasonCard key={d.name} d={d} />)}
-          </div>
+        <h1 style={{
+          position: "absolute", left: PAD, right: PAD, top: "52%", transform: "translateY(-50%)",
+          margin: 0, textAlign: "center", fontSize: 26, fontWeight: 800, lineHeight: "34px",
+          color: "#fff", letterSpacing: "-0.4px", textShadow: "0 2px 16px rgba(0,0,0,0.45)", pointerEvents: "none",
+        }}>Complete Picture of your Holiday</h1>
+
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 80, background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 100%)", pointerEvents: "none" }} />
+      </div>
+
+      <div style={{ padding: `0 ${PAD}px`, marginTop: -26, position: "relative", textAlign: "center" }}>
+        <Link to="/build" style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
+          background: C.p600, color: "#fff", borderRadius: 999, padding: "15px 44px",
+          fontSize: 16, fontWeight: 700, textDecoration: "none", boxShadow: "0 10px 26px rgba(227,27,83,0.32)",
+        }}>Plan my trip <ArrowRight size={17} /></Link>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 14 }}>
+          <GoogleMark />
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: C.head }}>4.6</span>
+          <Star size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+          <span style={{ color: C.div }}>|</span>
+          <span style={{ fontSize: 13.5, color: C.sub }}>25,000+ travellers</span>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
-export function AllSixCountries() {
+function GoogleMark() {
   return (
-    <div style={{ marginTop: 28, background: C.white }}>
-      <SectionTitle title="All six countries" sub="Every country, honestly priced." />
-      <div style={{ padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
-        {SIX.map(d => (
-          <Link key={d.name} to={`/destination/${encodeURIComponent(d.name)}`} style={{ textDecoration: "none", borderRadius: 16, overflow: "hidden", position: "relative", height: 128 }}>
-            <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.7) 100%)" }} />
-            <div style={{ position: "absolute", left: 12, right: 12, bottom: 11 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{d.name}</p>
-              <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.92)", margin: "1px 0 0", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>From {fromPrice(d.startPrice)} pp</p>
-            </div>
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-label="Google">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+// ─── Destinations ───
+//
+// Six countries, a photo and a name each, and no price. The price belongs on
+// the destination screen where there is room to say what it buys. Here the
+// only question being asked is where you fancy going.
+function Destinations() {
+  return (
+    <div style={{ marginTop: 30, background: C.white }}>
+      <h2 style={{ margin: `0 ${PAD}px 14px`, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
+        Destinations
+      </h2>
+      <div style={{ padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {SIX.map((d) => (
+          <Link key={d.name} to={`/destination/${encodeURIComponent(d.name)}`} style={{
+            textDecoration: "none", background: C.white, borderRadius: 16, padding: 8,
+            boxShadow: "0 4px 18px rgba(0,0,0,0.08)",
+          }}>
+            <img src={d.img} alt={d.name} style={{ width: "100%", height: 118, objectFit: "cover", borderRadius: 11, display: "block" }} />
+            <p style={{ margin: "10px 0 6px", textAlign: "center", fontSize: 15, fontWeight: 700, color: C.head }}>{d.name}</p>
           </Link>
         ))}
       </div>
@@ -221,72 +205,45 @@ export function AllSixCountries() {
   );
 }
 
-// A real Bali video file can be dropped in here later (keyed by destination);
-// until then the banner plays a photo reel that reads like a short clip.
-const DEST_VIDEO = {};
+// ─── Why we're the perfect match ───
+//
+// The three claims used to be a row of 11px captions under the hero, which is
+// the size you set a disclaimer in. They are the reasons to use us at all, so
+// they get a line of their own each and the question they answer above them.
+const MATCH = [
+  { I: Heart, t: "Made for Couples", s: "Vacations curated solely with couples in mind" },
+  { I: IndianRupee, t: "Price Transparency", s: "Only travel company to provide a split of Flights, Hotels & Activities" },
+  { I: ShieldCheck, t: "No Tourist Traps", s: "Only 8+ rated hotels; hand-picked authentic activities" },
+];
 
-// Customisation education card for leads. Sits in the top slot (below the
-// country circles, in place of the marketing banners). A moving destination
-// banner (a real video when available, otherwise a crossfading photo reel)
-// leads, with the trip name + dates over it, then a one-line benefit and a
-// "See how" action that starts the guided tour.
-function CustomiseHeroCard({ dest, dates, nights, img, onOpen }) {
-  const P = "#712BDA";
-  const video = DEST_VIDEO[dest];
-  // Build a small reel of destination photos (the trip image + itinerary shots).
-  const reel = useMemo(() => {
-    const shots = allItineraries.filter((it) => it.dest === dest).map((it) => it.img).filter(Boolean);
-    return [...new Set([img, ...shots].filter(Boolean))].slice(0, 5);
-  }, [dest, img]);
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (video || reel.length < 2) return;
-    const t = setInterval(() => setIdx((n) => (n + 1) % reel.length), 2800);
-    return () => clearInterval(t);
-  }, [video, reel.length]);
-
+function PerfectMatch() {
   return (
-    <div style={{ padding: `14px ${PAD}px 4px` }}>
-      <button onClick={onOpen} style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, border: `1px solid ${C.p300}`, borderRadius: 18, overflow: "hidden", background: C.white, boxShadow: "0 8px 24px rgba(113,43,218,0.16)" }}>
-        {/* Moving banner with the trip name + dates over it */}
-        <div style={{ position: "relative", height: 150, overflow: "hidden", background: "#1A0B33" }}>
-          {reel.map((src, n) => (
-            <img key={n} src={src} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: n === idx ? 1 : 0, transition: "opacity 1s ease" }} />
-          ))}
-          {video && (
-            <video src={video} autoPlay muted loop playsInline onError={(e) => { e.currentTarget.style.display = "none"; }}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          )}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(43,12,90,0.28) 0%, rgba(43,12,90,0) 34%, rgba(20,6,44,0.82) 100%)" }} />
-          {/* Kicker pill */}
-          <span style={{ position: "absolute", top: 12, left: 12, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.95)", color: P, fontSize: 10, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", padding: "5px 10px", borderRadius: 999, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
-            <Wand2 size={12} color={P} /> You're in control
+    <div style={{ marginTop: 32, padding: `0 ${PAD}px`, background: C.white }}>
+      <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
+        Why we&apos;re the perfect match
+      </h2>
+      <p style={{ margin: "0 0 20px", fontSize: 13.5, lineHeight: "20px", color: C.sub }}>
+        Overwhelmed by itineraries that leave you no time to relax together? Suspect your &apos;friendly&apos; travel agent isn&apos;t so friendly to your wallet? Then give us a try!
+      </p>
+      {MATCH.map(({ I, t, s }) => (
+        <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18 }}>
+          <span style={{
+            width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: C.p100,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <I size={21} color={C.p600} strokeWidth={2.1} />
           </span>
-          {/* Title + dates */}
-          <div style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
-            <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px", lineHeight: "23px", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>Customise your {dest} trip</p>
-            <p style={{ margin: "5px 0 0", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.95)", textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
-              <Calendar size={12} color="#fff" /> {dates} · {nights}N
-            </p>
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>{t}</p>
+            <p style={{ margin: "3px 0 0", fontSize: 13, lineHeight: "18px", color: C.sub }}>{s}</p>
           </div>
         </div>
-        {/* Benefit + CTA */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "12px 14px", background: "rgba(113,43,218,0.05)" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub, lineHeight: "16px" }}>Change days, hotels and dates yourself, save time.</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 800, color: P, flexShrink: 0 }}>
-            See how <ArrowRight size={14} />
-          </span>
-        </div>
-      </button>
+      ))}
     </div>
   );
 }
 
-export default function HomeV5({ userState = "new" }) {
-  const navigate = useNavigate();
-  const { deals } = useDeals();
-  const isLead = userState === "lead"; // customisation education is for leads only
-  const groups = useMemo(() => getSeasonGroups(new Date()), []);
+export default function HomeV5() {
   const [hero, setHero] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -294,34 +251,6 @@ export default function HomeV5({ userState = "new" }) {
     const t = setInterval(() => setHero(h => (h + 1) % HERO_IMGS.length), 4500);
     return () => clearInterval(t);
   }, []);
-
-  // Customisation education (leads only): a banner + a trip card that both open
-  // the lead's in-progress itinerary and start the guided tour there. We only
-  // use a draft whose itinerary is a resolvable base itinerary; a custom/edited
-  // draft has a synthesized id that would 404 the itinerary screen, so those
-  // fall back to the Bali demo, which always resolves.
-  const isSeedItinerary = (itId) => allItineraries.some(it => it.id === Number(itId));
-  const draftDeal = deals.find(d => (d.versions || []).some(v => v.status === "draft" && isSeedItinerary(v.itineraryId)));
-  const draftVer = draftDeal && [...draftDeal.versions].reverse().find(v => v.status === "draft" && isSeedItinerary(v.itineraryId));
-  const tourItinId = draftVer ? draftVer.itineraryId : 3;
-  const tourDealId = draftDeal ? draftDeal.id : "demo_draft_bali";
-  const tourVerId = draftVer ? draftVer.id : "demo_draft_bali_v1";
-  const draftIt = allItineraries.find(it => it.id === Number(tourItinId));
-  const tripDest = draftVer?.destination || draftIt?.dest || "Bali";
-  const tripNights = draftIt?.nights || 7;
-  const tripImg = (draftDeal && draftDeal.img) || draftIt?.img || destData.Bali?.hero;
-  // Match the date shown on the itinerary header (custom draft = real dates).
-  const tripDates = draftIt?.custom && draftIt.startDate
-    ? (() => {
-        const s = new Date(draftIt.startDate); const e = new Date(s); e.setDate(e.getDate() + (draftIt.nights || 0));
-        const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-        return `${f(s)} - ${f(e)}`;
-      })()
-    : "Mar 31 - Apr 6";
-  const tourTarget = `/itinerary/${tourItinId}?dealId=${tourDealId}&versionId=${tourVerId}&tour=1`;
-  // Hand the demo state and the draft trip to the AI assistant dock (mounted in PhoneFrame).
-  useEffect(() => { aiStore.set({ userState, trip: { dest: tripDest, nights: tripNights, img: tripImg, dates: tripDates, title: draftIt?.name, price: draftIt?.price, route: draftIt?.route, days: draftIt?.days, target: tourTarget } }); },
-    [userState, tripDest, tripNights, tripImg, tripDates, draftIt, tourTarget]);
 
   // "Torn between two?" comparison reels, shown in the Sunday School style.
   const seriesLessons = COMPARE_REELS.map((c) => ({
@@ -331,62 +260,16 @@ export default function HomeV5({ userState = "new" }) {
 
   return (
     <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.white }}>
-      {/* Circular destination tabs, above the hero */}
-      <DestCircles />
+      <Hero imgs={HERO_IMGS} idx={hero} onPlay={() => setShowVideo(true)} />
 
-      {/* Top slot below the circles. Leads see the customisation card here
-          (the marketing banners are hidden for them); everyone else sees the
-          marketing banner carousel. When a lead is no longer being educated,
-          the banners come back. */}
-      {isLead ? (
-        <CustomiseHeroCard dest={tripDest} dates={tripDates} nights={tripNights} img={tripImg} onOpen={() => navigate(tourTarget)} />
-      ) : (
-        <div style={{ padding: "2px 0 14px" }}>
-          <HomeBanners banners={BANNERS} />
-        </div>
-      )}
-
-      {/* ─── Cinematic full-bleed hero ─── (hidden for leads: they already
-          have a trip, so the customisation card is the focus for them) */}
-      {!isLead && (
-      <div style={{ position: "relative", height: "50vh", minHeight: 400, overflow: "hidden" }}>
-        {HERO_IMGS.map((src, i) => (
-          <img key={i} src={src} alt="" style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-            opacity: i === hero ? 1 : 0, transition: "opacity 1.4s ease, transform 6s ease",
-            transform: i === hero ? "scale(1.08)" : "scale(1)",
-          }} />
-        ))}
-        <div onClick={() => setShowVideo(true)} style={{ position: "absolute", inset: 0, cursor: "pointer", background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0.15) 52%, rgba(0,0,0,0.82) 100%)" }} />
-
-        {/* Bottom fade so the hero merges into the white content below */}
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 90, background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 100%)", pointerEvents: "none" }} />
-
-        {/* Bottom-anchored editorial block */}
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: `0 ${PAD}px 44px` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-            <Star size={13} fill="#FBBC05" color="#FBBC05" />
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.92)", letterSpacing: "0.2px" }}><b style={{ color: "#fff" }}>4.6</b> · 10,000+ couples have trusted us</span>
-          </div>
-          <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff", margin: "0 0 18px", letterSpacing: "-0.5px", lineHeight: "26px", whiteSpace: "nowrap", textShadow: "0 2px 14px rgba(0,0,0,0.4)" }}>
-            The one trip you'll both love.
-          </h1>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Link to="/build" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, background: C.p600, color: "#fff", borderRadius: 12, padding: "11px 22px", fontSize: 14, fontWeight: 700, textDecoration: "none", boxShadow: "0 6px 20px rgba(253,1,79,0.35)" }}>
-              <Sparkles size={16} color="#fff" /> Plan my trip
-            </Link>
-          </div>
-        </div>
-      </div>
-      )}
-
-      <div id="v5-rest"><LowerSections groups={groups} showUsp={!isLead} /></div>
+      <Destinations />
+      <PerfectMatch />
 
       {/* Torn between two? in the Sunday School multi-video style */}
       <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />
 
-      {/* All six countries, now below Torn between two */}
-      <AllSixCountries />
+      {/* Sunday School settles which country; this is what they ask for next. */}
+      <BookedTripsRail />
 
       {/* Traveller moments + reviews + closing lead-gen */}
       <TravellerMomentsReels />
