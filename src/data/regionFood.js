@@ -257,8 +257,16 @@ export const FOOD_TAG = {
   Jain: { bg: "#ECFDF3", fg: "#027A48" },
 };
 const RANK = ["Indian food", "Veg only", "Jain", "Street food", "Local food"];
+
+// ─── Tags that earn their place ───
+//
+// "Cafe" told a couple nothing: almost everywhere on these lists serves coffee,
+// and the places where it is the whole point already say so in their line. It
+// was taking a slot next to the tags that decide where somebody eats.
+const DROP = new Set(["Cafe"]);
+
 export const sortTags = (tags = []) =>
-  [...tags].sort((a, b) => {
+  [...tags].filter((t) => !DROP.has(t)).sort((a, b) => {
     const ia = RANK.indexOf(a), ib = RANK.indexOf(b);
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
   });
