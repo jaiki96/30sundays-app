@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { C } from "../data";
 import { BRAND } from "../data/brand";
 
@@ -41,7 +42,17 @@ function findScroller(el) {
   return null;
 }
 
-export default function SectionNav({ sections, elFor, onJump }) {
+// Two looks. The itinerary's chips are filled fuchsia; the hotel page already
+// has filter chips of its own inside Where you'll be, and two chip vocabularies
+// on one screen made the nav read as a different kind of control than it is.
+// "soft" is that page's chip, exactly.
+const LOOK = {
+  solid: { on: { bg: BRAND.sunsetFuchsiaSoft, bd: BRAND.sunsetFuchsiaSoft, fg: "#fff", ico: "#fff", shadow: "0 6px 14px -8px rgba(248,113,159,0.85)" } },
+  soft: { on: { bg: "#FFE6ED", bd: "#FD014F", fg: "#C00840", ico: "#C00840", shadow: "none" } },
+};
+
+export default function SectionNav({ sections, elFor, onJump, title, onBack, variant = "solid" }) {
+  const look = (LOOK[variant] || LOOK.solid).on;
   const wrapRef = useRef(null);
   const barRef = useRef(null);
   const railRef = useRef(null);
@@ -165,10 +176,33 @@ export default function SectionNav({ sections, elFor, onJump }) {
           transition: "opacity 0.22s ease, transform 0.22s ease",
         }}
       >
+        {title && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "9px 16px 0",
+          }}>
+            {onBack && (
+              <button
+                onClick={onBack}
+                aria-label="Back"
+                style={{
+                  width: 30, height: 30, borderRadius: "50%", border: "none", background: "none",
+                  display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0, padding: 0,
+                }}
+              >
+                <ArrowLeft size={18} color={C.head} />
+              </button>
+            )}
+            <span style={{
+              flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: C.head,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{title}</span>
+          </div>
+        )}
+
         <div
           ref={railRef}
           className="hide-scrollbar"
-          style={{ display: "flex", gap: 7, overflowX: "auto", padding: "9px 16px 15px" }}
+          style={{ display: "flex", gap: 7, overflowX: "auto", padding: title ? "10px 16px 15px" : "9px 16px 15px" }}
         >
           {sections.map(({ key, label, Icon }) => {
             const on = active === key;
@@ -182,14 +216,14 @@ export default function SectionNav({ sections, elFor, onJump }) {
                   display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0,
                   height: 34, padding: "0 13px", borderRadius: 999, cursor: "pointer",
                   fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
-                  border: `1px solid ${on ? BRAND.sunsetFuchsiaSoft : C.div}`,
-                  background: on ? BRAND.sunsetFuchsiaSoft : C.white,
-                  color: on ? "#fff" : C.sub,
-                  boxShadow: on ? "0 6px 14px -8px rgba(248,113,159,0.85)" : "none",
+                  border: `1px solid ${on ? look.bd : C.div}`,
+                  background: on ? look.bg : C.white,
+                  color: on ? look.fg : C.sub,
+                  boxShadow: on ? look.shadow : "none",
                   transition: "background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease",
                 }}
               >
-                <Icon size={14} color={on ? "#fff" : C.inact} />
+                <Icon size={14} color={on ? look.ico : C.inact} />
                 {label}
               </button>
             );
@@ -201,7 +235,8 @@ export default function SectionNav({ sections, elFor, onJump }) {
           aria-hidden="true"
           style={{
             position: "absolute", left: 0, bottom: 0, height: 2,
-            width: `${progress * 100}%`, background: BRAND.sunsetFuchsiaSoft,
+            width: `${progress * 100}%`,
+            background: variant === "soft" ? "#FD014F" : BRAND.sunsetFuchsiaSoft,
           }}
         />
       </div>

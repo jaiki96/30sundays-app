@@ -41,6 +41,11 @@ import SaveVersionLab from "./pages/SaveVersionLab";
 import WeatherOptionsLab from "./pages/WeatherOptionsLab";
 import DestWeatherLab from "./pages/DestWeatherLab";
 import PastPlansLab from "./pages/PastPlansLab";
+import HotelDetailLab from "./pages/HotelDetailLab";
+import HotelDetailLabRefined from "./pages/HotelDetailLabRefined";
+import HotelDetailLabCrisp from "./pages/HotelDetailLabCrisp";
+import HotelDetailLabPostcard from "./pages/HotelDetailLabPostcard";
+import ScoreStripLab from "./pages/ScoreStripLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -91,7 +96,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   const showNudge = pathname === "/";
   const isPrototype = pathname.startsWith("/prototype/");
   // Returning users see the tab bar on /plan (their plans); new users get the full-screen login.
-  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
+  const hideShell = pathname === "/login-v2" || pathname === "/logo-anim" || pathname === "/media-lab" || pathname === "/day-lab" || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/score-strip" || pathname.startsWith("/day-media") || pathname === "/build" || pathname.startsWith("/compare/") || pathname.startsWith("/saved") || (pathname === "/plan" && userState === "new");
 
   if (isPrototype) {
     return (
@@ -104,7 +109,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab";
+  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/score-strip";
 
   return (
     <PhoneFrame>
@@ -165,6 +170,11 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/weather-lab" element={<WeatherOptionsLab />} />
         <Route path="/dest-weather-lab" element={<DestWeatherLab />} />
         <Route path="/plans-lab" element={<PastPlansLab />} />
+        <Route path="/hotel-lab" element={<HotelDetailLab />} />
+        <Route path="/hotel-lab-2" element={<HotelDetailLabRefined />} />
+        <Route path="/hotel-lab-3" element={<HotelDetailLabCrisp />} />
+        <Route path="/hotel-lab-3b" element={<HotelDetailLabPostcard />} />
+        <Route path="/score-strip" element={<ScoreStripLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
