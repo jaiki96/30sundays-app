@@ -499,12 +499,13 @@ export function ChangeDayCTA() {
 }
 
 // The app's own activity detail screen, full screen over the day.
-export function ActivityScreen({ activity, city, dayNum, onClose }) {
+export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vietnam", isBooked = true }) {
   const detail = useMemo(
     // isBooked gates the video hero on the activity page. Reaching it from a
-    // day in your own itinerary is exactly the case that should get it.
-    () => buildActivityDetail(activity, { city, country: "Vietnam", isBooked: true, dayNum }),
-    [activity, city, dayNum]
+    // day in your own itinerary is exactly the case that should get it; a
+    // region page is browsing, so it asks for the version without.
+    () => buildActivityDetail(activity, { city, country, isBooked, dayNum }),
+    [activity, city, country, isBooked, dayNum]
   );
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 200, background: C.white, display: "flex", flexDirection: "column", overflow: "hidden" }}>

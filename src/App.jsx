@@ -47,6 +47,7 @@ import HotelDetailLabCrisp from "./pages/HotelDetailLabCrisp";
 import HotelDetailLabPostcard from "./pages/HotelDetailLabPostcard";
 import ConsultantLab from "./pages/ConsultantLab";
 import BookedTripsLab from "./pages/BookedTripsLab";
+import RegionDetail from "./pages/RegionDetail";
 import ScoreStripLab from "./pages/ScoreStripLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
@@ -144,6 +145,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/maldives-quote" element={<MaldivesQuote />} />
         <Route path="/destination/:name" element={<DestinationLayout />} />
+        <Route path="/destination/:name/region/:city" element={<RegionDetail />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />

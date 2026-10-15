@@ -96,15 +96,15 @@ export default function DiscoverWF() {
       <div style={{ marginTop: 20, marginBottom: 24 }}>
         <div style={{ padding: `0 ${PAD}px`, marginBottom: 12 }}>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: 0 }}>Where will you base yourself?</h2>
-          <p style={{ fontSize: 12, color: C.sub, margin: "3px 0 0", lineHeight: "16px" }}>Watch each region, save what you love.</p>
+          <p style={{ fontSize: 12, color: C.sub, margin: "3px 0 0", lineHeight: "16px" }}>Tap a region to see what it is really like.</p>
         </div>
         <div className="hs" style={{ gap: 11, paddingLeft: PAD, paddingRight: PAD }}>
           {regions.map((r, i) => (
-            <div key={r.city} onClick={() => setReel({ kind: "region", data: r })} style={{ flexShrink: 0, width: 148, position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "9 / 16", background: C.div, cursor: "pointer" }}>
+            <div key={r.city} onClick={() => navigate(`/destination/${encodeURIComponent(dest)}/region/${encodeURIComponent(r.city)}`)} style={{ flexShrink: 0, width: 148, position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "9 / 16", background: C.div, cursor: "pointer" }}>
               <img src={r.img} alt={r.city} className="wf-kb" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", animationDelay: `${(i % 4) * -3.5}s` }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.18) 28%, rgba(0,0,0,0.72) 100%)" }} />
-              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={14} color={C.head} fill={C.head} /></div>
-              <div style={{ position: "absolute", top: 8, right: 8 }}>
+              
+              <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: 8, right: 8 }}>
                 <SaveHeart saved={isRegionSaved(r.city)} onClick={() => toggleRegion(dest, r.city)} />
               </div>
               <div style={{ position: "absolute", left: 11, right: 11, bottom: 11 }}>
@@ -196,7 +196,7 @@ export default function DiscoverWF() {
 // Full-screen portrait reel opened from a region or activity card. Mirrors the
 // activity reel in Build.jsx: poster with a slow zoom, top/bottom gradients,
 // kicker, name and caption, traveller social proof. Back arrow + wishlist heart.
-function DestReel({ dest, reel, saved, onToggleSave, onClose }) {
+export function DestReel({ dest, reel, saved, onToggleSave, onClose }) {
   const { kind, data } = reel;
   const isRegion = kind === "region";
   const name = isRegion ? data.city : data.name;
