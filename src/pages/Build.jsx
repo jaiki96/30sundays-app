@@ -23,6 +23,7 @@ import LoginV2 from "./LoginV2";
 import NextStepNote from "../components/NextStepNote";
 import MonthWeather from "../components/MonthWeather";
 import DateRange from "../components/wizard/DateRange";
+import RoutePicker from "../components/wizard/RoutePicker";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -124,7 +125,7 @@ function seedFromCurated(deal, version) {
     .map((r) => ({ city: r.city, n: r.n }));
   return {
     id: it.id,
-    custom: false, // not a wizard-built itinerary — a save will mint a fresh id
+    custom: false, // not a wizard-built itinerary, a save mints a fresh id
     dest: it.dest || deal.dest,
     route,
     nights: td.nights ?? it.nights ?? routeNights(route),
@@ -222,16 +223,19 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     if (leadRedirect) navigate(`/plan?dest=${encodeURIComponent(seedDest)}`, { replace: true });
   }, [leadRedirect, seedDest]);
 
-  // When the route step is first reached, seed the recommended route.
+  // The route step starts empty. It used to arrive with our recommended route
+  // already filled in, and the screen recordings were plain about what that
+  // did: nobody changed it, because a list that is already ticked is a list
+  // nobody reads. The couple picks the places; we put them in order.
   // Maldives has no route step, so it never seeds one.
   useEffect(() => {
     if (!isMaldives && step >= 3 && dest && targetNights && !route) {
-      setRoute(recommendedRoute(dest, targetNights));
+      setRoute([]);
     }
   }, [isMaldives, step, dest, targetNights, route]);
 
   const runningTotal = dest && targetNights
-    ? estimatePerPerson(dest, route ? routeNights(route) : targetNights) * travellers
+    ? estimatePerPerson(dest, routeNights(route || []) || targetNights) * travellers
     : null;
 
   // ─── navigation ───
@@ -246,6 +250,11 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     setStep(s => Math.max(0, s - 1));
   };
   const goNext = () => setStep(s => s + 1);
+
+  // Tapping the greyed Continue on the route step asks the step to say what
+  // is missing, rather than the button simply not responding.
+  const [routeNudge, setRouteNudge] = useState(0);
+  const nudgeRoute = () => setRouteNudge((n) => n + 1);
 
   // Reset the trip to a freshly-picked destination (nights, route, activities).
   const resetForDest = (d) => {
@@ -358,11 +367,13 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     navigate(`/itinerary/${it.id}?dealId=${editDealId}&versionId=${newVer}`, { replace: true });
   };
 
-  // Route step is select-only. Short trips are allowed (a route is still shown
-  // and Continue stays enabled); only a too-long trip is routed to the team.
+  // The route has to spend every night the dates bought. Fewer nights in the
+  // cities than in the trip is not a shorter holiday, it is an itinerary with
+  // a hole in it, so Continue waits until the two agree.
   const routeMinN = destMeta[dest]?.minNights || 4;
   const ROUTE_LONG = 14;
-  const routeStepOk = !!route?.length && targetNights <= ROUTE_LONG;
+  const routeStepOk = !!route?.length && targetNights <= ROUTE_LONG
+    && routeNights(route) === targetNights;
 
   // ─── primary CTA per step ───
   // Couples only: groups must be an even number of adults (pairs of couples).
@@ -379,8 +390,9 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         : step === 3 ? (isMaldives ? (!!tier || !!pinnedResortId) : routeStepOk)
         : true;
       const editLast = isMaldives ? 4 : 3;
-      if (step >= editLast) return { label: "Save changes", onClick: applyEdit, enabled: stepValid };
-      return { label: "Continue", onClick: goNext, enabled: stepValid };
+      const blocked = step === 3 && !isMaldives ? nudgeRoute : undefined;
+      if (step >= editLast) return { label: "Save changes", onClick: applyEdit, enabled: stepValid, onBlocked: blocked };
+      return { label: "Continue", onClick: goNext, enabled: stepValid, onBlocked: blocked };
     }
     // Destination step: a sticky Select CTA once a place is chosen.
     if (step === 0) return dest ? { label: `Select ${dest}`, onClick: goNext, enabled: true } : null;
@@ -399,8 +411,8 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       case 1: return { label: "Continue", onClick: goNext, enabled: partyOk && nameOk };
       case 2: return { label: "Continue", onClick: goNext, enabled: !!startDate && !!nights };
       case 3: return skipActivities
-        ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: routeStepOk }
-        : { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk };
+        ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: routeStepOk, onBlocked: nudgeRoute }
+        : { label: "Looks good, continue", onClick: goNext, enabled: routeStepOk, onBlocked: nudgeRoute };
       case 4: return picks.size > 0
         ? { label: "Create my itinerary ✦", onClick: () => gatedBuild(doBuild), enabled: true }
         : { label: "Skip & build my trip", onClick: () => gatedBuild(doBuild), enabled: true };
@@ -529,7 +541,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         )}
         {step === 3 && (isMaldives
           ? <StepResortPref tier={tier} setTier={setTier} pinnedResortId={pinnedResortId} setPinnedResortId={setPinnedResortId} nights={nights} />
-          : (route && <StepRoute dest={dest} nights={targetNights} route={route} setRoute={setRoute} editRoute={editRoute} />)
+          : (route && <StepRoute dest={dest} nights={targetNights} startDate={startDate} route={route} setRoute={setRoute} setNights={setNights} editRoute={editRoute} nudge={routeNudge} />)
         )}
         {step === 4 && (isMaldives
           ? <StepMealPref mealPrefs={mealPrefs} setMealPrefs={setMealPrefs} />
@@ -543,10 +555,16 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white }}>
         {(step === 4 || (step === 3 && skipActivities)) && <NextStepNote />}
         <div style={{ padding: "12px 16px calc(12px + env(safe-area-inset-bottom))" }}>
+          {/* A greyed CTA that answers when it is tapped. A button that does
+              nothing at all leaves somebody guessing what is missing. */}
           <button
-            onClick={cta.enabled ? cta.onClick : undefined}
-            disabled={!cta.enabled}
-            style={{ ...primaryBtn, opacity: cta.enabled ? 1 : 0.4 }}
+            onClick={cta.enabled ? cta.onClick : cta.onBlocked}
+            disabled={!cta.enabled && !cta.onBlocked}
+            style={{
+              ...primaryBtn,
+              opacity: cta.enabled ? 1 : 0.4,
+              cursor: cta.enabled || cta.onBlocked ? "pointer" : "default",
+            }}
           >
             {cta.label}
           </button>
@@ -657,7 +675,7 @@ const GlassChip = ({ children }) => (
   <span style={{ display: "inline-flex", alignItems: "center", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "6px 11px", borderRadius: 20 }}>{children}</span>
 );
 
-// Social-proof stat, reused wherever we tell a couple "X% chose this" — on a
+// Social-proof stat, reused wherever we tell a couple "X% chose this": on a
 // route card (light background) or over a photo/video (dark, glassy).
 const TrustBadge = ({ pct, dark }) => (
   <span style={{
@@ -679,7 +697,7 @@ const TrustBadge = ({ pct, dark }) => (
 // bigger group reveals traveller + kids steppers inline.
 function StepParty({ name, setName, party, setParty, onContinue }) {
   const isGroup = party.couples === 0 && party.kids === 0 && !party.solo;
-  // Selecting "couple with kids" or "solo traveller" doesn't advance — we
+  // Selecting "couple with kids" or "solo traveller" doesn't advance, we
   // surface a couples-only note and disable Continue (Build reads these as
   // not-catered signals).
   const kidsBlocked = party.kids > 0;
@@ -1086,225 +1104,59 @@ function StepMealPref({ mealPrefs, setMealPrefs }) {
 // Select-only: get to know the regions (intro videos), then pick one of our
 // curated routes for the chosen nights. No manual route editing here. Too few
 // nights → nudge to add some; too many → hand off to the team.
-function StepRoute({ dest, nights, route, setRoute, editRoute }) {
+// ─── The route step ───
+//
+// Two questions used to live here: which regions, and which of five pre-built
+// routes. Screen recordings showed almost nobody touching the regions and
+// almost everybody taking Route 1, because "Route 2" is a name, not a reason.
+// It is one question now, in RoutePicker: where do you want to stay. The order
+// is ours to work out, and anyone who wants it different opens the builder.
+//
+// The one case the picker cannot answer stays here: a trip long enough that we
+// would rather a person designed it.
+function StepRoute({ dest, nights, startDate, route, setRoute, setNights, editRoute, nudge }) {
   const meta = destMeta[dest] || {};
-  const minN = meta.minNights || 4;
   const LONG = 14;
   const n = nights || routeNights(route) || meta.defaultNights || 7;
-  const areas = destAreas[dest] || [];
-
-  const [cityView, setCityView] = useState(null);
-  const [mapOpen, setMapOpen] = useState(false);
-  // Default filter = the first 2 areas in curated order, so the auto-picked
-  // route (variant #0, same order) is always visible under the default filter.
-  const [filterCities, setFilterCities] = useState(() => areas.slice(0, 2).map(a => a.city));
   const [leadSent, setLeadSent] = useState(false);
-  // Two rows of region chips are free; a third row is what "View more" is for.
-  // The cap is measured off a real chip, so it holds if the chip size changes.
-  const CHIP_GAP = 8;
-  const [regionsExpanded, setRegionsExpanded] = useState(false);
-  const regionChipsRef = useRef(null);
-  const [regionsOverflow, setRegionsOverflow] = useState(false);
-  const [twoRows, setTwoRows] = useState(null);
-  useEffect(() => {
-    const measure = () => {
-      const el = regionChipsRef.current;
-      const chip = el?.firstElementChild;
-      if (!el || !chip) return;
-      const cap = chip.offsetHeight * 2 + CHIP_GAP;
-      setTwoRows(cap);
-      setRegionsOverflow(el.scrollHeight > cap + 4);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [areas.length]);
-  const tooShort = n < minN;
-  const tooLong = n > LONG;
 
-  // Sticky "your route" summary: pinned above Continue, but gives way once the
-  // routes section itself scrolls into view (no duplicate of the same info).
-  const routesRef = useRef(null);
-  const [routesInView, setRoutesInView] = useState(false);
-  useEffect(() => {
-    const el = routesRef.current;
-    if (!el || tooShort || tooLong) { setRoutesInView(false); return; }
-    const io = new IntersectionObserver(([e]) => setRoutesInView(e.isIntersecting), { threshold: 0.01 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [tooShort, tooLong, dest, n]);
-  const totalN = route.reduce((s, x) => s + x.n, 0);
-
-  const variants = useMemo(() => routeVariants(dest, n), [dest, n]);
-  const filtered = filterCities.length
-    ? variants.filter(r => r.some(s => filterCities.includes(s.city)))
-    : variants;
-  const shownRoutes = filtered;
-
-  const sigOf = (r) => r.map(s => `${s.city}${s.n}`).join("|");
-  const selectedSig = sigOf(route);
-
-  const toggleFilterCity = (city) =>
-    setFilterCities(f => (f.includes(city) ? f.filter(c => c !== city) : [...f, city]));
-
-  const crowdChip = (crowd, light) => {
-    const label = CROWD_LABEL[crowd] || "Popular";
-    const col = LABEL_COLOR[label];
-    return <span style={{ fontSize: 10, fontWeight: 700, color: light ? "#fff" : col, background: light ? "rgba(255,255,255,0.22)" : `${col}14`, padding: "2px 7px", borderRadius: 6 }}>{label}</span>;
-  };
-
-  const stepTitle = { ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" };
-  const sectionHead = { margin: "26px 0 12px", fontSize: 18, fontWeight: 800, color: C.head, letterSpacing: "-0.3px" };
-
-  // One route card, reused for the default 3 and the "more routes" accordion.
-  // A div, not a button, since each region thumbnail is its own tappable
-  // button (opens that region's full-screen video) nested inside.
-  // Compact card (lab style 7): "Route N" + pink "X% chose this" up top, one
-  // small row per region (thumbnail with a corner play badge opens that
-  // region's video), then a Select / Selected CTA. The selected route gets the
-  // solid pink primary CTA; the rest get a white CTA with a pink border.
-  const renderRouteCard = (r, idx) => {
-    const selected = sigOf(r) === selectedSig;
-    const pct = couplePct(sigOf(r));
+  if (n > LONG) {
     return (
-      <div key={sigOf(r)} onClick={() => setRoute(r)} role="button" tabIndex={0} style={{
-        textAlign: "left", padding: 14, borderRadius: 16, cursor: "pointer", fontFamily: "inherit",
-        border: `${selected ? 1.5 : 1}px solid ${selected ? C.p600 : C.div}`,
-        background: C.white, boxShadow: "0 1px 3px rgba(24,29,39,0.05)",
-      }}>
-        {/* Header: route number + a "view on map" link, then how many couples picked this one */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>Route {idx + 1}</p>
-            <button
-              onClick={(e) => { e.stopPropagation(); setRoute(r); setMapOpen(true); }}
-              style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: 0, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: 400, color: C.sub, flexShrink: 0 }}
-            >
-              <MapIcon size={12} color={C.sub} /> View on map
-            </button>
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: C.p600, flexShrink: 0 }}>{pct}% chose this</span>
-        </div>
-
-        {/* Region rows: city + nights inline, and a short tag for what it's about */}
-        <div style={{ margin: "6px 0 10px" }}>
-          {r.map((s, i) => {
-            const tag = areas.find(a => a.city === s.city)?.tag;
-            return (
-            <div key={s.city} style={{ display: "flex", alignItems: "center", gap: 13, padding: "7px 0" }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setCityView(s.city); }}
-                aria-label={`Watch ${s.city}`}
-                style={{ position: "relative", flexShrink: 0, width: 34, height: 34, border: "none", padding: 0, cursor: "pointer", background: "transparent", display: "block" }}
-              >
-                <span style={{ position: "absolute", inset: 0, borderRadius: 9, overflow: "hidden", display: "block" }}>
-                  <img src={areaImg(dest, s.city, i)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                </span>
-                <span style={{ position: "absolute", right: -4, bottom: -4, width: 17, height: 17, borderRadius: "50%", background: C.p600, border: "2px solid #fff", display: "grid", placeItems: "center" }}>
-                  <Play size={7} color="#fff" fill="#fff" style={{ marginLeft: 0.5 }} />
-                </span>
-              </button>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>
-                {s.city} <span style={{ fontWeight: 600, fontSize: 13, color: C.sub }}>({s.n}N)</span>
-              </span>
-              {tag && <span style={{ fontSize: 11, fontWeight: 400, fontStyle: "italic", color: C.sub, flexShrink: 0, maxWidth: 108, textAlign: "right", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{tag}</span>}
-            </div>
-            );
-          })}
-        </div>
-
-        {/* Primary pink CTA on the selected route, secondary on the rest */}
-        <button
-          onClick={(e) => { e.stopPropagation(); setRoute(r); }}
-          style={{
-            width: "100%", padding: "10px 0", borderRadius: 22, fontSize: 14, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center",
-            justifyContent: "center", gap: 6,
-            border: selected ? "none" : `1.5px solid ${C.p600}`,
-            background: selected ? C.p600 : C.white,
-            color: selected ? "#fff" : C.p600,
-          }}
-        >
-          {selected && <Check size={15} strokeWidth={3} />}
-          {selected ? "Selected" : "Select"}
-        </button>
-      </div>
-    );
-  };
-
-  return (
-    <div style={{ padding: "18px 16px 24px" }}>
-      {/* Two questions, in the order they get answered: which places should be
-          in the trip, then which route through them. */}
-      <div ref={routesRef}>
-
-      {tooLong ? (
-        <>
-          <h1 style={stepTitle}>{editRoute ? "Change your route" : "Choose your route"}</h1>
-          {leadSent ? (
+      <div style={{ padding: "18px 16px 24px" }}>
+        <h1 style={{ ...titleStyle, fontSize: 18, letterSpacing: "-0.3px" }}>
+          {editRoute ? "Change your route" : "Choose your route"}
+        </h1>
+        {leadSent ? (
           <div style={{ padding: 16, borderRadius: 14, background: C.sBg || "#ECFDF3", border: `1px solid ${C.sBorder || "#C0E5D5"}` }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>Thanks, you're in good hands ✨</p>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>Thanks, you&apos;re in good hands ✨</p>
             <p style={{ margin: "6px 0 0", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>Our trip designers will reach out within 24 hours to craft your {n}-night {dest} journey.</p>
           </div>
         ) : (
           <div style={{ padding: 16, borderRadius: 14, background: C.p100, border: `1px solid ${C.p300}` }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head }}>A {n}-night trip deserves a personal touch</p>
-            <p style={{ margin: "6px 0 14px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>Longer journeys are hand-crafted by our team. Share your trip and we'll design the perfect route for you.</p>
+            <p style={{ margin: "6px 0 14px", fontSize: 13, color: C.sub, lineHeight: 1.5 }}>Longer journeys are hand-crafted by our team. Share your trip and we&apos;ll design the perfect route for you.</p>
             <button onClick={() => setLeadSent(true)} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
               Request a custom plan
             </button>
           </div>
-          )}
-        </>
-      ) : (
-        <>
-          {/* ── 1. The places ── */}
-          <h1 style={{ ...stepTitle, margin: "0 0 14px" }}>Pick the places you want</h1>
-
-          {/* Region filter pills — multi-select, 2 on by default, drive which routes show */}
-          <div ref={regionChipsRef} style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "0 0 8px", maxHeight: regionsExpanded || !twoRows ? "none" : twoRows, overflow: "hidden" }}>
-            {areas.map(a => {
-              const on = filterCities.includes(a.city);
-              return (
-                <button key={a.city} onClick={() => toggleFilterCity(a.city)} style={{
-                  display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20,
-                  border: `1px solid ${on ? C.sText : C.div}`, background: on ? C.sBg : C.white,
-                  color: on ? C.sText : C.head, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                }}>
-                  {on && <Check size={12} color={C.sText} strokeWidth={3} />} {a.city}
-                </button>
-              );
-            })}
-          </div>
-          {regionsOverflow && (
-            <button onClick={() => setRegionsExpanded(v => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 3, margin: "0 0 14px", padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, color: C.p600 }}>
-              {regionsExpanded ? "View less" : "View more"}
-              <ChevronDown size={14} color={C.p600} style={{ transition: "transform 0.2s", transform: regionsExpanded ? "rotate(180deg)" : "none" }} />
-            </button>
-          )}
-
-          {/* ── 2. The route ── */}
-          <p style={sectionHead}>{editRoute ? "Change your route" : "Choose your route"}</p>
-
-          {shownRoutes.length === 0 ? (
-            <p style={{ textAlign: "center", color: C.sub, fontSize: 13, margin: "24px 0" }}>No routes include those regions. Try fewer.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {shownRoutes.map(renderRouteCard)}
-            </div>
-          )}
-
-        </>
-      )}
-
+        )}
       </div>
+    );
+  }
 
-
-      {cityView && <CityDetail dest={dest} city={cityView} onClose={() => setCityView(null)} />}
-      {mapOpen && <RouteMapView dest={dest} nights={n} route={route} setRoute={setRoute} onClose={() => setMapOpen(false)} />}
-    </div>
+  return (
+    <RoutePicker
+      dest={dest}
+      nights={n}
+      startDate={startDate}
+      route={route}
+      setRoute={setRoute}
+      setNights={setNights}
+      nudge={nudge}
+    />
   );
 }
+
 
 // Read-only map for the chosen route. The map frames just the selected cities;
 // a bottom rail of recommended routes lets the user switch and the map re-frames
@@ -1329,7 +1181,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
         <LeafletRouteMap dest={dest} route={route} height="100%" interactive={false} />
       </div>
 
-      {/* Recommended routes — tap to switch; the map re-frames live */}
+      {/* Recommended routes: tap to switch, the map re-frames live */}
       {variants.length > 0 && (
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, padding: "12px 0 calc(14px + env(safe-area-inset-bottom))", background: C.white }}>
           <p style={{ margin: "0 16px 10px", fontSize: 12, fontWeight: 800, color: C.head }}>Recommended routes</p>
@@ -1451,7 +1303,7 @@ function RouteMapFull({ dest, route, setRoute, onClose }) {
           <p style={{ margin: 0, padding: "10px 16px 12px", fontSize: 11.5, color: C.sub, textAlign: "center" }}>Tap a pin to add or remove a city</p>
         </div>
 
-        {/* selected sequence — reorder + nights */}
+        {/* selected sequence: reorder and nights */}
         <div style={{ padding: "16px 16px 28px" }}>
           <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 800, color: C.head }}>Your sequence</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
