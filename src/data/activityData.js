@@ -86,6 +86,10 @@ function pickFlags(name) {
 
 // Generate 3 deterministic photo slots from the CDN fallback set + activity photo
 function pickPhotos(activity) {
+  // A caller that already holds pictures for this activity knows better than
+  // the fallbacks below, which are five Thailand shots used for everywhere.
+  // That is how a Bali volcano page ended up opening on a dolphin show.
+  if (activity.photos?.length) return activity.photos;
   const h = hash(activity.title || activity.name || "x");
   const hero = activity.photo || activity.img;
   const others = [
