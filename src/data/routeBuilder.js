@@ -71,8 +71,10 @@ export function hop(dest, from, to) {
   return out;
 }
 
-const carMins = (d) => Math.max(30, Math.round(((d / 55) * 60) / 15) * 15);
-const flyMins = (d) => Math.round(((d / 750) * 60 + 150) / 15) * 15;
+// Exported so the region page can price a hop the same way the route step does.
+// Two files guessing separately is two files that disagree in front of a couple.
+export const carMins = (d) => Math.max(30, Math.round(((d / 55) * 60) / 15) * 15);
+export const flyMins = (d) => Math.round(((d / 750) * 60 + 150) / 15) * 15;
 
 // The airport that serves a city, and the city that airport sits in. Ha Long
 // is served by Hanoi's and Hoi An by Da Nang's, which is the whole reason a
