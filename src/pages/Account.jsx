@@ -172,6 +172,9 @@ export default function Account({ userState, leadData, setUserState, setLeadData
     { icon: Bookmark, label: "Saved & Wishlist", badge: wishlistTotal || undefined, onClick: () => navigate("/saved") },
     { icon: Users, label: "Travellers & documents", onClick: () => setShowTravellers(true) },
     { icon: HelpCircle, label: "Contact Support", onClick: () => setShowSupport(true) },
+    // Both open the same sheet, on the tab they are named after.
+    { icon: Lightbulb, label: "Suggest a feature", onClick: () => setFeedback("feature") },
+    { icon: Bug, label: "Report a problem", onClick: () => setFeedback("problem") },
     { icon: FileText, label: "Terms & Conditions" },
     ...(tcsCerts.length ? [{ icon: ReceiptIndianRupee, label: "TCS certificate", badge: tcsReady || undefined, onClick: () => setShowTcs(true) }] : []),
     ...(isLoggedIn ? [{ icon: LogOut, label: "Logout", onClick: handleLogout }] : []),
