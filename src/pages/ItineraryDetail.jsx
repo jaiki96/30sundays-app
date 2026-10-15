@@ -10,7 +10,7 @@ import ChangeDayScreen from "./ChangeDayScreen";
 import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
-import TravelConsultantSection from "../components/TravelConsultantSection";
+import ConsultantSection from "../components/ConsultantSection";
 import { getConsultant } from "../data/consultants";
 import JourneyMap from "../components/JourneyMap";
 import ItineraryMapScreen from "../components/ItineraryMapScreen";
@@ -1417,7 +1417,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       {/* ═══ 6.5 Your travel consultant ═══ */}
       <div ref={setSectionEl("consultant")}>
-        <TravelConsultantSection
+        <ConsultantSection
           consultant={consultant}
           onVersionChange={setConsultantVersion}
         />

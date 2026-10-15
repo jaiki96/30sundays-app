@@ -13,6 +13,7 @@ export const teamLeads = {
     name: "Aarav Mehta",
     role: "Team Lead",
     phone: "+919876500022",
+    destination: "Bali",
     teamSize: 6,
     tripsPlanned: 6000,
     languages: ["English", "Hindi"],

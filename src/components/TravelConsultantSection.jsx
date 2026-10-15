@@ -4,6 +4,7 @@ import { C } from "../data";
 import { BRAND, BRAND_TINT, BRAND_SUB, FONT } from "../data/brand";
 import WhatsAppIcon from "./WhatsAppIcon";
 import { consultantVersion, teamLeadFor, formatCount } from "../data/consultants";
+import AvatarArt from "./consultant_lab/AvatarArt";
 
 // This section is styled to the brand board rather than the app's default
 // tokens: Poppins, and the five named brand colours. The rest of the app is
@@ -11,9 +12,11 @@ import { consultantVersion, teamLeadFor, formatCount } from "../data/consultants
 
 const firstName = (name) => (name || "").trim().split(/\s+/)[0] || "";
 
-// The consultant's photo, falling back to their initials. A real roster will
-// have people with no photo on file, so the fallback is the normal case rather
-// than an error state.
+// The consultant's photo, falling back to a drawn one. A real roster will have
+// people with no photo on file, so the fallback is the normal case rather than
+// an error state, and two letters in a grey disc is what a system shows when it
+// has given up. The team leads have no photo, which is why the sheet behind
+// "Talk to their team lead" was the one place this showed.
 function Avatar({ name, src, size }) {
   const ring = {
     width: size, height: size, borderRadius: "50%", flexShrink: 0,
@@ -36,17 +39,7 @@ function Avatar({ name, src, size }) {
       </div>
     );
   }
-  return (
-    <div style={{ ...ring, color: BRAND.tropicalForest, fontSize: size * 0.33, fontWeight: 600 }}>
-      {initials(name)}
-    </div>
-  );
-}
-
-function initials(name) {
-  if (!name) return "?";
-  const p = name.trim().split(/\s+/);
-  return (p[0][0] + (p[1]?.[0] || "")).toUpperCase();
+  return <div style={ring}><AvatarArt size={size} /></div>;
 }
 
 // One of the three blocks under the name. Divider sits on the left so the row
