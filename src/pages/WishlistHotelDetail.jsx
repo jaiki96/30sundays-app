@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { C } from "../data";
 import { getWishlistHotel } from "../data/wishlistData";
-import HotelDetailScreen from "../components/HotelDetailScreen";
+import HotelV3 from "../components/hotel_v3/HotelV3";
+import { detailFromHotel } from "../data/hotelDetailAdapter";
 
 // Read-only hotel view for the wishlist: same screen as the booking flow, minus
 // dates, availability, prices and the replace bar.
@@ -9,6 +11,7 @@ export default function WishlistHotelDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const hotel = getWishlistHotel(id);
+  const detail = useMemo(() => (hotel ? detailFromHotel(hotel) : null), [hotel]);
 
   if (!hotel) {
     return (
@@ -20,11 +23,10 @@ export default function WishlistHotelDetail() {
   }
 
   return (
-    <HotelDetailScreen
-      hotel={hotel}
-      cityName={hotel.neighbourhood}
-      reviews={hotel.reviews}
+    <HotelV3
+      hotel={detail}
       onBack={() => navigate(-1)}
+      readOnly
     />
   );
 }

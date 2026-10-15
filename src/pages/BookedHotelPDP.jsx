@@ -2,9 +2,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { CalendarCheck, Download } from "lucide-react";
 import { C } from "../data";
 import { getTripById } from "../data/tripData";
-import { generateHotelsForCity, getHotelReviews } from "../data/hotelData";
+import { generateHotelsForCity } from "../data/hotelData";
 import { getMauritiusInclusionsByName } from "../data/mauritiusData";
-import HotelDetailScreen from "../components/HotelDetailScreen";
+import InclusionsSection from "../components/InclusionsSection";
+import HotelV3 from "../components/hotel_v3/HotelV3";
+import { detailFromHotel } from "../data/hotelDetailAdapter";
 
 // Booked hotel = the SAME central hotel screen used in the booking flow and the
 // wishlist, in read-only mode: no prices, no room picker, just the single room
@@ -91,19 +93,34 @@ export default function BookedHotelPDP() {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Hotel not found</div>;
   }
 
-  const reviews = getHotelReviews(hotel.id);
+  const detail = detailFromHotel(hotel, { nights: 1 });
+  const inclusions = getMauritiusInclusionsByName(hotel.name);
+  const addOns = tripHotel.addOns;
 
-  // No roomFooter / bottomBar → prices, availability and the booking picker are
-  // dropped; the single booked room shows under a plain "Rooms" heading.
+  // Read only: nothing here is for sale, so the room prices and the picker come
+  // off and the booking card takes the place of the stay summary.
   return (
-    <HotelDetailScreen
-      hotel={hotel}
-      cityName={hotel.city}
-      reviews={reviews}
+    <HotelV3
+      hotel={detail}
       onBack={() => navigate(`/trips/${tripId}`)}
+      readOnly
+      nights={1}
       stay={<BookingCard hotel={hotel} trip={trip} />}
-      inclusions={getMauritiusInclusionsByName(hotel.name)}
-      addOns={tripHotel.addOns}
+      extras={(
+        <>
+          <InclusionsSection inclusions={inclusions} />
+          {addOns?.length > 0 && (
+            <div style={{ margin: "24px 16px 0" }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: "#181E4C", margin: 0 }}>
+                {addOns.length} add-ons included
+              </h3>
+              <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#535862", lineHeight: "20px" }}>
+                {addOns.map((a) => a.title || a).join(", ")}
+              </p>
+            </div>
+          )}
+        </>
+      )}
     />
   );
 }

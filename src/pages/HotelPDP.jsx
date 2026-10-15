@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight, Sparkles, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
-import { generateHotelsForCity, getStayInfo, formatHotelPrice, getHotelReviews } from "../data/hotelData";
+import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { useDeals, computePrice } from "../data/deals";
-import HotelDetailScreen from "../components/HotelDetailScreen";
+import InclusionsSection from "../components/InclusionsSection";
+import HotelV3 from "../components/hotel_v3/HotelV3";
+import { detailFromHotel } from "../data/hotelDetailAdapter";
 
 export default function HotelPDP() {
   const { itineraryId, stayIndex, hotelId } = useParams();
@@ -42,7 +44,6 @@ export default function HotelPDP() {
     return <div style={{ padding: 40, textAlign: "center", color: C.sub }}>Hotel not found</div>;
   }
 
-  const reviews = getHotelReviews(hotel.id);
   const nights = stayInfo.nights;
   const selectedRoom = hotel.rooms.find(r => r.id === selectedRoomId);
   const currentRoom = currentHotel?.rooms?.[0];
@@ -154,29 +155,6 @@ export default function HotelPDP() {
       )}
     </div>
   ) : null;
-
-  // Per-room price + select control.
-  const roomFooter = (room) => {
-    const priceDelta = (room.pricePerNight * nights) - (currentRoomPrice * nights);
-    const isSelected = room.id === selectedRoomId;
-    return (
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 4 }}>
-        <div>
-          <p style={{ fontSize: 12, color: "#FD014F", margin: "0 0 2px" }}>Price for {nights} night{nights > 1 ? "s" : ""}</p>
-          <p style={{ fontSize: 16, fontWeight: 700, margin: "0 0 2px", color: priceDelta < 0 ? "#4EAC7E" : priceDelta > 0 ? "#FD014F" : C.sub }}>
-            {priceDelta === 0 ? "No price change" : `${priceDelta > 0 ? "+" : "−"} ₹ ${formatHotelPrice(Math.abs(priceDelta))}`}
-          </p>
-        </div>
-        {isSelected ? (
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#FD014F" }}>Selected</span>
-        ) : (
-          <button onClick={(e) => { e.stopPropagation(); setSelectedRoomId(room.id); }} style={{ background: "none", border: `1.5px solid ${C.div}`, borderRadius: 8, padding: "6px 18px", fontSize: 13, fontWeight: 600, color: C.head, cursor: "pointer", fontFamily: "inherit" }}>
-            Select
-          </button>
-        )}
-      </div>
-    );
-  };
 
   // Sticky replace bar.
   const bottomBar = (
@@ -350,19 +328,57 @@ export default function HotelPDP() {
   const mauStay = itinerary.dest === "Mauritius" ? getMauritiusHotel(itinerary.id, Number(stayIndex), stayInfo.city) : null;
   const inclusions = mauStay?.inclusions && (mauStay.inclusions.honeymoon?.length || mauStay.inclusions.valueAdds?.length) ? mauStay.inclusions : null;
 
+  // Similar hotels, from the city's own list rather than a borrowed one: the
+  // six closest in price to what is on screen, each opening its own page.
+  const similar = hotels
+    .filter((x) => x.id !== hotel.id && x.rooms?.length)
+    .map((x) => ({
+      id: x.id,
+      name: x.name,
+      stars: x.stars,
+      score: x.bookingScore,
+      source: "booking",
+      area: x.neighbourhood,
+      delta: (x.rooms[0].pricePerNight - (selectedRoom?.pricePerNight || 0)) * nights,
+      image: x.images[0].url,
+      why: `${x.neighbourhood} · ${x.distanceFromCenter} km from the centre`,
+    }))
+    .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta))
+    .slice(0, 6);
+
+  // The record the screen reads: this hotel's own identity, photos, rooms and
+  // prices, over the one hotel written out in full.
+  const detail = detailFromHotel(hotel, {
+    nights,
+    similar,
+    currentStay: currentHotel && currentRoom ? {
+      name: currentHotel.name,
+      stars: currentHotel.stars,
+      score: currentHotel.bookingScore,
+      room: currentRoom.name,
+      mealPlan: currentRoom.mealPlan,
+      image: currentHotel.images[0].url,
+      total: oldStayTotal,
+    } : undefined,
+  });
+
   return (
-    <HotelDetailScreen
-      hotel={hotel}
-      cityName={stayInfo.city}
-      reviews={reviews}
+    <HotelV3
+      hotel={detail}
       onBack={() => navigate(`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`)}
       selectedRoomId={selectedRoomId}
+      onPickRoom={(room) => setSelectedRoomId(room.id)}
+      onOpenSimilar={(h) => navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(h.id)}${hotelsQS}`)}
+      nights={nights}
       stay={stayNode}
-      roomFooter={roomFooter}
-      afterRooms={changeHotelNode}
+      extras={(
+        <>
+          {changeHotelNode}
+          <InclusionsSection inclusions={inclusions} />
+        </>
+      )}
       bottomBar={isSameAsCurrent ? null : bottomBar}
       overlay={overlay}
-      inclusions={inclusions}
     />
   );
 }
