@@ -1,0 +1,48 @@
+ITINERARY AT A GLANCE - DAY-WISE VIDEOS (HALF PAGER)
+Screen: Itinerary detail  |  For UI team review
+
+------------------------------------------------------------
+BACKGROUND
+------------------------------------------------------------
+Today the itinerary detail screen has a dedicated section called
+"Watch your trip in videos" (highlights, day-wise videos and a day
+score). Data and screen-recording analysis show not many users
+reach or open this section.
+
+We want to move "Itinerary at a glance" to the top so the day plan
+is the first thing users see. But on its own the first scroll then
+reads as a wall of text.
+
+------------------------------------------------------------
+WHAT WE WANT
+------------------------------------------------------------
+Bring the videos to where users already look. Show the day-wise
+videos inline, against each day card, inside "Itinerary at a glance".
+
+  - "Itinerary at a glance" becomes the first section on the screen.
+  - Each day card shows that day's video(s) right on the card, so the
+    first scroll has visuals, not just text.
+  - Tapping a video opens the player as it does today.
+  - The existing "Change day plan" action stays on each day card.
+
+------------------------------------------------------------
+OPEN QUESTIONS FOR THE UI TEAM
+------------------------------------------------------------
+  - How should a day's videos sit on the card: one cover thumbnail
+    with a play button, or a small row of thumbnails if the day has
+    several?
+  - For a leisure or transfer day with no activity video, what do we
+    show (a destination clip, an image, or nothing)?
+  - Do we keep the day score, and if so where: on the card, behind a
+    tap, or dropped?
+  - Do we remove the standalone "Watch your trip in videos" section
+    once videos live on the day cards, or keep a highlights-only
+    version of it?
+  - How do we keep the card compact so the list still scans quickly?
+
+------------------------------------------------------------
+SUCCESS SIGNALS
+------------------------------------------------------------
+  - More users watch day videos (now that they are in the main flow).
+  - First scroll feels visual, not text heavy.
+  - Users engage with the day plan earlier in the session.

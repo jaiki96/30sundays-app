@@ -1,0 +1,387 @@
+CHANGE HOTEL SCREEN - REQUIREMENT DOCUMENT
+Screen: Change hotel (hotel alternatives for one stay)
+Reference: the Change day plan screen, which this now matches
+Prototype: live on the 30 Sundays prototype
+
+------------------------------------------------------------
+1. BACKGROUND
+------------------------------------------------------------
+The Change hotel screen was a comparison table pretending to be a list.
+Each hotel was a small thumbnail with six lines of dense text beside it,
+and the hotel the customer already had was pinned to the top of the list
+inside a box of its own.
+
+Two problems with that:
+
+  - A hotel is looked at before it is read. The photo was the smallest
+    thing on the card.
+  - Choosing a stay is the same kind of decision as choosing a day plan.
+    We had already solved that on the Change day plan screen, and the two
+    screens behaved nothing like each other.
+
+So Change hotel now uses the Change day plan pattern: photo led cards, a
+short set of facts under them, sorting and filters in one tabbed sheet,
+and a floating bar of quick filters.
+
+------------------------------------------------------------
+2. SCOPE
+------------------------------------------------------------
+In scope:
+
+  - The hotel alternatives list for one stay of the itinerary.
+  - Its header, search, sorting, filters and photo gallery.
+  - The photographs used on hotel cards across the app.
+
+Not in scope:
+
+  - The hotel detail screen, which is unchanged. It continues to carry
+    the room choice, the "Replacing X" strip and the Replace hotel CTA.
+  - The cost breakdown and the save flow on the itinerary.
+
+------------------------------------------------------------
+3. HEADER
+------------------------------------------------------------
+The header is one strip, never more than two lines tall.
+
+  - Line 1: the place name only, for example "Ubud". Not "Stay in Ubud",
+    not the hotel name. Beside it, in a lighter weight, the number of
+    options found, for example "9 options".
+  - Line 2: the stay dates, the number of rooms, and the number of
+    travellers shown as a person icon plus a figure. Example:
+    "Jun 20 - Jun 22 · 1 room · [icon] 2".
+  - The day range (Day 1 to 3) and the nights count are not shown. The
+    dates already say both.
+  - Back arrow on the left.
+  - A search icon on the right. Tapping it replaces lines 1 and 2 with a
+    full width search field, and tapping it again clears and closes it.
+    The strip height does not change when search opens.
+  - An overflow menu on the far right holds the secondary action,
+    "Book this stay myself".
+
+Search rules:
+
+  - Matches on hotel name and on area or landmark name.
+  - Case insensitive, matches anywhere in the name, not only the start.
+  - The option count in the header updates with the search.
+  - Search and filters apply together, not one instead of the other.
+
+------------------------------------------------------------
+4. THE CURRENT HOTEL
+------------------------------------------------------------
+  - The hotel already in the itinerary is NOT shown in the list. It is
+    not an alternative to itself.
+  - It is used as the price baseline. Every card shows the difference
+    from it, never an absolute price.
+  - The customer is reminded what they are replacing on the hotel detail
+    screen, which already says "Replacing {hotel name}" with the old
+    price, the new price and the difference.
+  - If for any reason there is no current hotel on the stay (a stay with
+    no hotel selected yet), the cards show the total price for the stay
+    instead of a difference, and nothing else changes.
+
+------------------------------------------------------------
+5. THE HOTEL CARD
+------------------------------------------------------------
+Order of elements, top to bottom:
+
+5.1 Photos
+
+  - A horizontally swipeable strip at the top of the card, each photo
+    slightly less than full card width so the next one peeks in and
+    invites the swipe.
+  - A badge in the bottom right corner showing the total photo count,
+    for example "14 photos".
+  - Tapping any photo, or the badge, opens the full screen gallery. It
+    must not open the hotel.
+  - Tapping anywhere else on the card opens the hotel detail screen.
+
+5.2 Hotel name
+
+  - Full name, up to two lines.
+
+5.3 Two quality chips, side by side
+
+  - Star category: a filled star icon and "5 star". This is our own
+    categorisation.
+  - Booking.com score: the Booking.com mark, the score, and the word
+    "Rated", for example "9.6 Rated". The number of people who rated is
+    NOT shown on the card.
+  - Both chips are white with a hairline border, and the colour is
+    carried by the border and the text, the same treatment the day
+    rating and day pace chips use on Change day plan.
+  - The score chip is colour coded by the score itself:
+      9.0 and above: green
+      8.0 to 8.9: teal
+      below 8.0: amber
+  - The star chip is amber.
+
+5.4 Room and location, one plain line
+
+  - Format: "{room name} · {area}, {distance} km from city centre".
+  - Example: "Executive Suite · Tegallalang, 2.4 km from city centre".
+  - The words "city centre" must be used, not "centre" on its own.
+  - The room shown is the cheapest room of that hotel, which is also the
+    room the price difference is based on.
+
+5.5 Inclusions row, an icon and a word each
+
+  - Each fact is an icon plus a short label, spaced apart. They are not
+    joined by dots and they are not chips, so the row stays light and
+    does not read as a continuation of the line above it.
+  - The facts, in this order:
+      Meal plan, when the room includes one. Show the plan as it is,
+      for example "Breakfast included" or "Breakfast + Dinner". Hide
+      this fact entirely when the room is room only.
+      Transfer: "Shared transfer" or "Private transfer".
+      Refundability: "Refundable" or "Non-refundable". Non-refundable
+      is greyed, so the absence reads as an absence.
+      "Early check-in", only when the hotel offers it.
+      "Late checkout", only when the hotel offers it.
+  - The row wraps to a second line when there are more facts than fit.
+    Wrapping is expected and acceptable.
+
+5.6 Price difference
+
+  - The only money on the card. Never the absolute price.
+  - Shown as a filled chip, the same shape Change day plan uses:
+      "More by ₹4,800" in red on a light red fill.
+      "Lesser by ₹600" in green on a light green fill.
+      "No change in price" in plain grey text when the difference is nil.
+  - The figure is the difference for the WHOLE stay, not per night.
+  - The number of nights is not repeated on the card. The header already
+    carries the dates.
+  - A chevron sits at the far right of the same row to say the card
+    opens.
+
+------------------------------------------------------------
+6. PHOTO GALLERY
+------------------------------------------------------------
+  - Opens full screen over the list, on a dark background.
+  - Opens on the photo that was tapped, not always on the first one.
+  - Header shows the hotel name and a counter, "5 of 14".
+  - Swipes horizontally, one photo per screen, and the counter follows.
+  - Closes with the X, with the device back gesture, or with Escape on
+    a keyboard. Closing returns to the same scroll position in the list.
+
+------------------------------------------------------------
+7. PHOTOGRAPHS
+------------------------------------------------------------
+This applies wherever hotel photos appear, not only on this screen.
+
+  - Hotel photos must show the hotel. Destination scenery is not a hotel
+    photo and must not stand in for one.
+  - Every hotel carries at least eight photos, grouped by what they show:
+    room, bathroom, pool, exterior and grounds, restaurant.
+  - The order they are swiped in is fixed, so every hotel tells the same
+    story: room, pool, room, exterior, bathroom, restaurant, room, pool.
+  - The first photo on a card is always a room.
+  - Each room type carries its own photos: two of the room, one of its
+    bathroom, one of the view or the grounds.
+  - When a hotel has fewer photos than the pattern needs, repeat nothing.
+    Show what exists and let the count be honest.
+
+------------------------------------------------------------
+8. SORTING
+------------------------------------------------------------
+Sorting sits in the Sort tab of the same sheet as the filters.
+
+  - Recommended (default). Best rated and highest category first.
+  - Price difference: low to high.
+  - Price difference: high to low.
+  - Rating: high to low, on the Booking.com score.
+  - Distance: nearest first, from the city centre.
+
+Notes:
+
+  - Sorting is by price DIFFERENCE, not by price, because every hotel on
+    this screen is a change to an existing stay.
+  - Choosing a sort closes the sheet immediately. There is no separate
+    apply step for sorting.
+  - The chosen sort survives filter changes and is not reset by
+    "Reset all".
+
+------------------------------------------------------------
+9. FILTERS
+------------------------------------------------------------
+9.1 Quick filters, on the floating bar
+
+  - One tap each, scrollable horizontally: 5 star, 9+ rated, Free
+    cancellation, Private transfer, Early check-in.
+  - They write the same filter state the sheet does, so the two can
+    never disagree.
+
+9.2 Filter sheet
+
+  - Hotel category: 3 star, 4 star, 5 star. Multiple allowed.
+  - Booking.com rating: 8+, 8.5+, 9+. One at a time.
+  - Meals: Only Room, Breakfast included, Breakfast + Dinner, All
+    Inclusive. Multiple allowed. A hotel matches if any of its rooms
+    offers a selected plan.
+  - Nearby landmarks: a searchable list of the areas in that city, five
+    visible with the rest behind "Show more".
+  - Hotel facilities: searchable list. A hotel must offer all selected
+    facilities.
+  - Room facilities: searchable list. Some room of the hotel must offer
+    each selected facility.
+
+9.3 Removed
+
+  - Budget. The card shows a difference, not a price, so a price range
+    filter contradicts the screen.
+
+9.4 Sheet behaviour
+
+  - Two tabs, Filters and Sort, in one sheet.
+  - A count badge on the filter button shows how many filters are in
+    effect, quick filters included.
+  - The sheet footer is pinned: "Reset all" on the left, and a primary
+    button on the right reading "Show N hotels", where N updates live as
+    filters change.
+  - Filters apply as they are tapped. The primary button closes the
+    sheet, it does not apply anything that was not already applied.
+
+------------------------------------------------------------
+10. SCENARIOS AND STATES
+------------------------------------------------------------
+  - Stay with a hotel already chosen: list excludes it, every card shows
+    a difference from it.
+  - Stay with no hotel chosen: every card shows the stay total instead of
+    a difference. Sorting by price difference falls back to sorting by
+    that total.
+  - Only one alternative available: the list shows one card, the header
+    reads "1 option", and the sheet button reads "Show 1 hotel".
+  - No alternatives at all: show the empty state, not an empty list.
+  - Filters or search match nothing: show "Nothing matches those
+    filters", a line suggesting a filter be cleared or a hotel searched
+    for, and a "Clear filters" button that also clears the search.
+  - Long room names: the room and location line wraps to two lines. It
+    must not be truncated, because the room name is what the price is
+    based on.
+  - Long hotel names: wrap to two lines, then truncate.
+  - Prices unavailable for a hotel: do not show a card with a blank
+    price. Leave the hotel out of the list.
+  - Self booking: the overflow menu offers "Book this stay myself". It
+    asks for confirmation, explains that the hotel and its cost leave
+    the package, and returns the customer to the itinerary. This is
+    unchanged behaviour and must be kept.
+
+------------------------------------------------------------
+11. NAVIGATION
+------------------------------------------------------------
+  - Back returns the customer to wherever they came from, either the
+    itinerary or the hotel detail screen. It must not always force them
+    to the itinerary.
+  - Tapping a card opens the hotel detail screen, carrying the current
+    hotel, the deal and the version along in the link, so the detail
+    screen can still show "Replacing {hotel name}" and its price
+    difference.
+  - The gallery, the filter sheet and the screen itself close in that
+    order on back or Escape. Back never skips two levels at once.
+
+------------------------------------------------------------
+12. EVENTS TO BE TRACKED
+------------------------------------------------------------
+Every event carries customer_id, deal_id, version_id, itinerary_id,
+stay_index, city and current_hotel_id where they apply.
+
+12.1 Screen and list
+
+  - change_hotel_opened
+    Properties: option_count, current_hotel_id, current_hotel_price,
+    nights, entry_point (itinerary or hotel_detail).
+
+  - change_hotel_card_viewed
+    Fires when a card enters the viewport.
+    Properties: hotel_id, position, star_category, booking_score,
+    price_delta, refundable, transfer_type.
+
+  - change_hotel_search_opened
+
+  - change_hotel_searched
+    Properties: query, result_count.
+
+12.2 Photos
+
+  - change_hotel_photos_swiped
+    Properties: hotel_id, photos_seen.
+
+  - change_hotel_gallery_opened
+    Properties: hotel_id, opened_from (photo or badge), photo_count.
+
+  - change_hotel_gallery_photo_viewed
+    Properties: hotel_id, photo_index, category.
+
+  - change_hotel_gallery_closed
+    Properties: hotel_id, photos_seen, duration_ms.
+
+12.3 Sorting and filters
+
+  - change_hotel_sort_opened
+
+  - change_hotel_sorted
+    Properties: sort_key, result_count.
+
+  - change_hotel_quick_filter_toggled
+    Properties: filter_key, on (true or false), result_count.
+
+  - change_hotel_filters_opened
+    Properties: active_filter_count.
+
+  - change_hotel_filter_applied
+    Properties: filter_group, filter_value, on, result_count.
+
+  - change_hotel_filters_reset
+    Properties: cleared_count.
+
+  - change_hotel_no_results
+    Properties: active_filters, query.
+
+12.4 Outcomes
+
+  - change_hotel_card_tapped
+    Properties: hotel_id, position, price_delta, sort_key,
+    active_filter_count, from_search (true or false).
+
+  - change_hotel_replaced
+    Fires when the customer confirms the change on the detail screen.
+    Properties: from_hotel_id, to_hotel_id, price_delta, position,
+    sort_key, active_filter_count, photos_seen.
+
+  - change_hotel_abandoned
+    Fires when the customer leaves without changing the hotel.
+    Properties: cards_viewed, galleries_opened, duration_ms.
+
+  - change_hotel_self_book_selected
+    Properties: city, removed_cost.
+
+------------------------------------------------------------
+13. WHAT WE WANT TO LEARN FROM THE DATA
+------------------------------------------------------------
+  - How many customers who open this screen actually change the hotel,
+    and how that compares with the old screen.
+  - Whether photo-led cards raise the change rate, measured through
+    photos_seen and galleries_opened against change_hotel_replaced.
+  - Which sort customers choose, and whether price difference low to
+    high is the one that leads to a change.
+  - Which filters are used, and whether removing budget cost us
+    anything.
+  - The position in the list of the hotel finally chosen, which tells us
+    whether our Recommended order is any good.
+  - How often customers move to a dearer hotel, and by how much, which
+    is the revenue case for this screen.
+
+------------------------------------------------------------
+14. OPEN POINTS FOR SIGN OFF
+------------------------------------------------------------
+  - Confirm the score bands for the colour coding of the Booking.com
+    chip (currently 9+ green, 8 to 8.9 teal, under 8 amber).
+  - Confirm whether hotel facilities and room facilities should stay in
+    the filter sheet. They were kept because only budget was asked to be
+    removed.
+  - Confirm the minimum number of photos a hotel must have before it can
+    be listed, and who is responsible for supplying them.
+  - Confirm whether the price difference should be the difference for
+    the cheapest room, as it is today, or for a room of the same type as
+    the current booking.
+  - Confirm whether hotels with no availability for the dates should be
+    hidden or shown as unavailable.

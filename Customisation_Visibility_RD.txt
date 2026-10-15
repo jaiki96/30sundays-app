@@ -1,0 +1,109 @@
+CUSTOMISATION VISIBILITY - REQUIREMENT DOCUMENT
+For UI team review / second opinion
+Screen: Itinerary detail (customer's trip plan)
+
+------------------------------------------------------------
+1. BACKGROUND
+------------------------------------------------------------
+We launched full itinerary customisation. On their trip plan, a
+user can now change:
+  - Number of travellers
+  - Travel dates
+  - Travel route
+  - Destination
+  - Day plan (activities per day)
+  - Hotels
+
+This replaces a lot of the back and forth between the user and
+the travel consultant. The user can do it themselves and get an
+updated price and PDF.
+
+------------------------------------------------------------
+2. THE PROBLEM
+------------------------------------------------------------
+The feature is powerful but hard to find and use as one flow.
+
+  a) There are three separate ingress points to customise:
+       - Edit trip (destination, dates, travellers, route)
+       - Change day plan
+       - Change hotel
+     They live in different places on the screen, so it does not
+     feel like one connected feature.
+
+  b) "Change day plan" and "Change hotel" sit lower down. They do
+     not appear in the first scroll, so many users never see them.
+
+  c) We show a tutorial that presents customisation as one complete
+     package. But to actually customise, the user has to hunt for
+     and tap multiple different controls. The tutorial promise and
+     the real experience do not match.
+
+Goal: make customisation easier to start and more visible, without
+adding repetitive "Customise" buttons all over the screen.
+
+------------------------------------------------------------
+3. WHAT WE CHANGED (current proposal)
+------------------------------------------------------------
+  a) Clear primary entry point
+     - The main edit control is now labelled "Edit trip" so it is
+       obvious what it does (destination, dates, travellers, route).
+
+  b) A short signpost card near the top
+     - A small dismissible card tells the user, in one or two lines,
+       where to go: tap "Edit trip" to change destination, dates,
+       travellers or route, or go below to "Change day plan" or
+       "Change hotel".
+     - The three action words are highlighted so the user connects
+       them to the real controls on the screen.
+     - The card can be closed once the user gets it.
+
+  c) Tidier header
+     - "How customising works" moved to the top right corner of the
+       trip image, so help is one tap away but not in the way.
+     - The save (heart) icon moved next to the trip title.
+
+  d) Consistent, lighter action links
+     - "Change day plan" and "Change hotel" now use the same light
+       text-link style as "Change flights", so they read as a set
+       and do not shout with heavy buttons.
+
+  e) Cleaner section order
+     - Sections now flow: Itinerary at a glance, Hotels, Plan
+       together, Watch your trip in videos, Flights, Reviews,
+       Journey map and cost breakdown.
+     - Removed sections that added clutter and pushed the
+       customisation controls further down.
+
+  f) Tutorial matches our existing style
+     - The customisation tutorial now uses the same look as our
+       existing "day-wise highlights" tutorial: dimmed screen, a
+       spotlight on the real control, a finger gesture, and short
+       captions. It points at the actual buttons rather than a mock.
+
+  g) Home screen education (leads only)
+     - For leads, the home screen shows a single customisation card
+       with a short Bali video, the destination and dates, and a
+       clear "see how it works" prompt. Marketing banners and extra
+       promo blocks are hidden while this card is shown, so the
+       message stays focused.
+
+------------------------------------------------------------
+4. OPEN QUESTIONS FOR THE UI TEAM
+------------------------------------------------------------
+  - Is a single signpost card enough to connect the three ingress
+    points, or do we need a stronger visual link between them?
+  - Should "Change day plan" and "Change hotel" be pulled higher so
+    they appear in the first scroll?
+  - Is the light text-link treatment discoverable enough, or does it
+    make the actions too easy to miss?
+  - Do we need a persistent "customise" affordance, or is a one-time
+    signpost plus the tutorial the right balance?
+
+------------------------------------------------------------
+5. SUCCESS SIGNALS
+------------------------------------------------------------
+  - More users start a customisation action (edit trip, change day
+    plan, change hotel).
+  - More users reach "Change day plan" and "Change hotel", not just
+    "Edit trip".
+  - Fewer basic change requests handled manually by consultants.

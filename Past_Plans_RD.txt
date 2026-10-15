@@ -1,0 +1,410 @@
+PAST PLANS IN MY PLANS - REQUIREMENT DOCUMENT
+Screens: My Plans, Itinerary detail, Itinerary builder (internal)
+Prototype: live on the 30 Sundays prototype
+
+------------------------------------------------------------
+1. BACKGROUND
+------------------------------------------------------------
+Today My Plans shows only deals in the active state. The system
+allows only one active deal per customer at a time. Any deal marked
+lost disappears from the customer's app completely.
+
+This is a loss on both sides:
+
+  - The customer loses every itinerary we ever built for them. They
+    come back a year later and have nothing to restart from.
+  - The sales consultant has no way to point the customer at an old
+    itinerary, and the customer has no way to point the consultant at
+    one either.
+
+We want lost deals to remain visible to the customer, in a collapsed
+Past plans area, with a number the customer can read out on a call.
+
+------------------------------------------------------------
+2. VOCABULARY USED IN THIS DOCUMENT
+------------------------------------------------------------
+  - Enquiry: one conversation with the customer. One enquiry can hold
+    several countries. Example: a customer enquires once and we build
+    Vietnam and Thailand for them.
+  - Deal: the existing deal record. Today, one deal per destination
+    inside an enquiry.
+  - Version: one finalised itinerary (a quote with a PDF) inside a
+    deal. A deal can hold many versions.
+  - Plan ID: the customer facing number. See section 4.
+  - Past plan: an enquiry whose deals are all in the lost state.
+
+------------------------------------------------------------
+3. WHY PAST PLANS ARE NOT GROUPED BY DESTINATION
+------------------------------------------------------------
+Live plans in My Plans are grouped by destination, and that is
+correct, because inside one live enquiry "my Bali plan" is a real
+thing the customer recognises.
+
+A past enquiry is not a destination, it is a moment in time.
+
+  - One past enquiry can hold several countries.
+  - The same country can appear in the live enquiry and in two
+    different past enquiries.
+  - If we group past plans by country, Bali shows up three times, and
+    versions from different enquiries with different prices sit next
+    to each other as though they belong together.
+
+Therefore:
+
+  - Past plans are grouped by ENQUIRY.
+  - Enquiries are sorted by TIME, newest first.
+  - Inside an enquiry, the countries are listed together on one row.
+
+------------------------------------------------------------
+4. PLAN ID
+------------------------------------------------------------
+Purpose: a consultant searching the internal tool by the customer's
+mobile number finds several enquiries and a stack of itineraries
+against one customer, often more than one for the same country.
+"The Bali one" does not narrow it down. The Plan ID does.
+
+Rules:
+
+  - The Plan ID is a plain numeric identifier, 10 to 12 digits.
+  - It is derived from the internal deal ID. Deal ID is the source of
+    truth. The Plan ID is only the customer facing presentation of
+    it. It must resolve back to exactly one record in the internal
+    tool.
+  - There are two levels:
+      Enquiry level Plan ID: identifies the enquiry. Shown once on
+      the past enquiry row.
+      Itinerary level Plan ID: identifies one finalised itinerary
+      (one version). Shown on each itinerary card.
+  - The Plan ID does not encode country or version number. The card
+    already shows the country and the version, so repeating them in
+    the number only makes it longer to read out.
+  - The Plan ID never changes once issued, including when the
+    customer plans that trip again. The new plan gets its own new ID.
+  - The Plan ID must be tappable to copy, with a short confirmation
+    after copy.
+  - Plan ID is shown only on past plans. Live plan cards must not
+    show a Plan ID strip. Live cards stay exactly as they are today.
+
+------------------------------------------------------------
+5. WHAT IS SHOWN IN MY PLANS
+------------------------------------------------------------
+5.1 Live plans
+
+  - No change at all. Same cards, same grouping, same actions, same
+    order. No Plan ID strip on them.
+
+5.2 Past plans section
+
+  - Sits below all live plans, separated by a divider.
+  - Collapsed by default, with the header "Past plans (N)" where N is
+    the number of past enquiries, not the number of itineraries.
+  - Tapping the header expands the list of past enquiries.
+
+5.3 Past enquiry row (collapsed state of one enquiry)
+
+  - Thumbnail images of up to two destinations from that enquiry,
+    overlapped, shown desaturated so they read as inactive.
+  - Line 1: "Planned in {Month Year}", taken from the most recent
+    activity in that enquiry.
+  - Line 2: the countries in the enquiry, separated by a middle dot.
+    Each country appears only once.
+  - Line 3: "{N} itineraries - Plan {enquiry Plan ID}". Use the
+    singular "itinerary" when N is 1. N counts finalised itineraries
+    (quotes) only, not drafts.
+  - A chevron indicating expandable.
+
+5.4 Past enquiry expanded
+
+  - A short note at the top: "Prices are the ones quoted in {Month
+    Year} and are no longer valid. Start any of these again and we
+    will price it afresh."
+  - One card per itinerary inside the enquiry, in the same card
+    format as My Plans uses today, but muted and marked as expired.
+  - The card must not repeat the country name that is already shown
+    on the enquiry row above it.
+  - Each card shows its own itinerary level Plan ID, tappable to
+    copy.
+  - Each card shows a footer note "Quoted {Month Year}" and a single
+    action, "Plan this again".
+
+5.5 Empty and mixed states
+
+  - Live plans present and past plans present: as described above.
+  - Only past plans, no live plan: the past plans section is shown
+    expanded by default so the screen is not empty, and the normal
+    "start a new trip" entry point stays visible above it.
+  - No live plans and no past plans: the screen stays exactly as the
+    current empty state. No past plans section is rendered.
+
+Scope note for the first release: only the live plus past state is
+being released. The past only state and the nothing yet state are
+designed but held back, to keep the release simple.
+
+------------------------------------------------------------
+6. WHICH LOST DEALS QUALIFY TO BE SHOWN
+------------------------------------------------------------
+Not every lost deal deserves to be in the customer's app.
+
+  - Show a lost deal only if at least one finalised itinerary (a
+    quote with a PDF) actually reached the customer.
+  - Do not show lost deals that never got past the draft stage.
+  - Do not show duplicate enquiries, test deals, or deals created by
+    the team for internal checks.
+  - Do not show deals belonging to a cancelled booking. Cancellations
+    are a different state and are out of scope for this document.
+  - If an enquiry ends up with zero qualifying itineraries after
+    these filters, the whole enquiry is hidden.
+
+------------------------------------------------------------
+7. PLAN THIS AGAIN
+------------------------------------------------------------
+Trigger: the customer taps "Plan this again" on a past itinerary
+card.
+
+The decision point is the travel date stored on that itinerary.
+
+7.1 Travel dates are still in the future
+
+  - Do not ask the customer anything.
+  - Show a short "Fetching updated prices" state.
+  - Create a new deal and a new version, copying the itinerary, the
+    route, the nights and the travel dates from the past itinerary.
+  - Land the customer on the existing itinerary detail screen, not a
+    new screen, with fresh prices in the cost breakdown and the usual
+    Save Itinerary action.
+  - Flight prices are not re-fetched. Keep the flight component as it
+    is and show the existing note that flight prices may be outdated.
+  - Hotels and activities are re-priced for the stored dates.
+
+7.2 Travel dates are in the past
+
+  - Show a screen asking for the new travel start date before
+    anything is priced, because there is nothing to price until the
+    customer says when.
+  - Explain why: "This plan was for {date}, which has gone by. Tell
+    us when you want to travel and we will price it for those dates."
+  - Field: new start date only. Nights are carried over from the
+    original plan, with a note that the length can be changed on the
+    next screen.
+  - The CTA is "Fetch updated prices". It stays disabled until a date
+    is chosen.
+  - After the date is entered, the flow is identical to 7.1: fetch
+    prices, then land on the itinerary detail screen with Save
+    Itinerary.
+
+7.3 Common rules for both paths
+
+  - The traveller count is carried over from the past itinerary.
+  - Day options and hotel selections are reset. The customer picks
+    again against current availability.
+  - The new plan is a NEW deal with a NEW Plan ID. The past plan is
+    never edited, never overwritten and never removed from Past
+    plans.
+  - The past deal stays in the lost state. Planning again does not
+    revive it.
+  - If the customer abandons before saving, no live deal is created
+    and nothing changes in My Plans.
+
+7.4 Open decision: one active deal at a time
+
+The system allows only one active deal per customer. If the customer
+already has a live deal and taps "Plan this again", we need a
+decision from sales and ops. The options are:
+
+  - Allow the new plan to be created and let the consultant merge or
+    close the older one.
+  - Block it and tell the customer they already have a plan in
+    progress, with a link to it.
+  - Allow it but flag it for the consultant on the internal tool.
+
+This needs to be settled before release. The prototype currently
+creates the new plan without any check.
+
+------------------------------------------------------------
+8. ITINERARY BUILDER AND INTERNAL TOOL HANDLING
+------------------------------------------------------------
+This is the part that makes the customer facing feature usable by
+the sales team.
+
+8.1 Lost status must be visible against the deal
+
+  - When a consultant opens or searches a deal in the itinerary
+    builder, the lost state must be clearly marked against the deal
+    ID, at the top of the record, not buried in a status column.
+  - The marking must be visually distinct, so a consultant never
+    quotes from a lost deal by mistake.
+  - Every version inside a lost deal inherits the lost marking.
+
+8.2 Search
+
+  - Searching by the customer's mobile number must return lost deals
+    as well, not only the active one, with the lost ones clearly
+    labelled.
+  - Searching by the Plan ID the customer reads out must land the
+    consultant directly on that exact itinerary version, not on the
+    deal in general.
+  - The internal tool must accept the Plan ID in the same search box
+    as the deal ID. The customer will not know which of the two they
+    are reading out.
+
+8.3 Acting on a lost deal
+
+  - A consultant must be able to see the itinerary and the PDF of a
+    lost deal, in read only form.
+  - A consultant must not be able to edit or re-quote a lost deal in
+    place. To quote again, a new deal must be created, the same way
+    the customer's "Plan this again" creates one.
+  - When a new deal is created from a past one, the internal record
+    must store the source Plan ID, so the consultant can see where
+    it came from and the reporting can measure revival.
+
+8.4 Status changes
+
+  - Marking a deal lost in the internal tool must make it appear in
+    the customer's Past plans within the normal sync window.
+  - Un-marking a deal (moving it back to active) must remove it from
+    Past plans and return it to the live list.
+  - Only one active deal per customer stays enforced. Past plans do
+    not count against that limit.
+
+------------------------------------------------------------
+9. EVENTS TO BE TRACKED
+------------------------------------------------------------
+Property naming to follow the existing analytics convention. Every
+event below carries customer_id, plan_id, enquiry_id and deal_id
+wherever they apply.
+
+9.1 Visibility and browsing
+
+  - past_plans_section_viewed
+    Fires when the Past plans header enters the viewport.
+    Properties: past_enquiry_count, live_plan_count.
+
+  - past_plans_expanded
+    Fires when the customer opens the Past plans section.
+    Properties: past_enquiry_count.
+
+  - past_plans_collapsed
+    Fires when the customer closes the section.
+
+  - past_enquiry_expanded
+    Fires when one past enquiry row is opened.
+    Properties: enquiry_id, plan_id, country_count, itinerary_count,
+    months_since_quote.
+
+  - past_enquiry_collapsed
+    Properties: enquiry_id, plan_id.
+
+  - past_itinerary_card_viewed
+    Fires when an itinerary card inside a past enquiry is seen.
+    Properties: plan_id, destination, version_number,
+    months_since_quote.
+
+9.2 Plan ID
+
+  - plan_id_copied
+    Fires on tap to copy.
+    Properties: plan_id, level (enquiry or itinerary), destination.
+
+9.3 Plan this again
+
+  - plan_again_tapped
+    Fires on tap of "Plan this again".
+    Properties: plan_id, destination, version_number,
+    original_travel_date, dates_in_past (true or false),
+    months_since_quote, has_live_deal (true or false).
+
+  - plan_again_date_screen_viewed
+    Fires only on the past dates path.
+    Properties: plan_id, original_travel_date.
+
+  - plan_again_date_selected
+    Properties: plan_id, new_travel_date, days_from_today.
+
+  - plan_again_date_abandoned
+    Fires if the customer closes the date screen without continuing.
+    Properties: plan_id.
+
+  - plan_again_pricing_started
+    Properties: plan_id, path (future_dates or past_dates),
+    travel_date.
+
+  - plan_again_pricing_completed
+    Properties: plan_id, new_plan_id, new_deal_id, duration_ms,
+    old_price, new_price, price_delta.
+
+  - plan_again_pricing_failed
+    Properties: plan_id, error_reason.
+
+  - plan_again_itinerary_opened
+    Fires when the customer lands on the itinerary detail screen.
+    Properties: plan_id, new_plan_id, destination.
+
+  - plan_again_saved
+    Fires when the customer saves the revived itinerary.
+    Properties: plan_id, new_plan_id, new_deal_id, destination,
+    travel_date, price.
+
+  - plan_again_abandoned
+    Fires if the customer leaves the itinerary detail screen without
+    saving, within the same session.
+    Properties: plan_id, new_plan_id, last_step.
+
+9.4 Internal tool
+
+  - builder_lost_deal_opened
+    Properties: deal_id, plan_id, opened_by, source (mobile_search,
+    plan_id_search, direct_link).
+
+  - builder_deal_created_from_past
+    Properties: source_plan_id, source_deal_id, new_deal_id,
+    created_by.
+
+------------------------------------------------------------
+10. WHAT WE WANT TO LEARN FROM THE DATA
+------------------------------------------------------------
+  - How many customers with a lost deal open Past plans at all.
+  - How many go from opening Past plans to tapping "Plan this again".
+  - The drop between "Plan this again" and a saved itinerary, split
+    by whether the dates were in the past or the future, because the
+    past dates path has one extra step.
+  - How much time passes between the original quote and the revival.
+  - How often the Plan ID is copied, which tells us whether customers
+    are actually using it on calls.
+  - Revenue from revived plans, tracked through the source Plan ID
+    stored on the new deal.
+
+------------------------------------------------------------
+11. COPY REFERENCE (as built in the prototype)
+------------------------------------------------------------
+  - Section header: "Past plans (N)"
+  - Enquiry row: "Planned in {Month Year}" / countries separated by a
+    middle dot / "{N} itineraries - Plan {ID}"
+  - Expanded note: "Prices are the ones quoted in {Month Year} and
+    are no longer valid. Start any of these again and we will price
+    it afresh."
+  - Card footer: "Quoted {Month Year}" and "Plan this again"
+  - Plan ID strip label: "PLAN ID", with "Copied" on tap
+  - Past dates screen: "This plan was for {date}, which has gone by.
+    Tell us when you want to travel and we will price it for those
+    dates."
+  - Date field label: "New start date"
+  - Helper text: "{N} nights, the same as the original plan. You can
+    change the length on the next screen."
+  - CTA: "Fetch updated prices"
+  - Loading state: "Fetching updated prices" with the sub line
+    "Hotels and activities for {date}"
+
+------------------------------------------------------------
+12. OPEN POINTS FOR SIGN OFF
+------------------------------------------------------------
+  - What happens when a live deal already exists and the customer
+    taps "Plan this again" (section 7.4).
+  - Confirm the qualifying rule for showing a lost deal (section 6),
+    specifically whether a quote must have reached the customer.
+  - Confirm whether cancelled bookings should also appear in Past
+    plans later, and whether they need a different label.
+  - Confirm how far back Past plans should go. Current assumption is
+    no limit.
+  - Confirm the exact derivation of the Plan ID from the deal ID with
+    the tech team, so the internal tool search works on day one.

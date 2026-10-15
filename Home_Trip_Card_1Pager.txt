@@ -1,0 +1,37 @@
+HOME TRIP CARD - 1 PAGER
+Screen: Home  |  Users: Lead, Pre trip, Post trip  |  For UI team review
+
+PROBLEM
+Today the trip lives behind the footer sticky card, or behind Trips /
+My plan. Lead, Pre trip and Post trip users take one or two extra taps
+to reach the thing they care about most: their itinerary.
+
+PROPOSAL
+Make the trip the hero of Home for these users. Show a trip card at the
+top of Home with the crucial trip info. Tapping it opens the Itinerary
+or Trip detail directly. (Same idea as District showing your booking on
+home after you buy a movie ticket.) New users keep the current Home.
+
+WHAT THE CARD SHOWS (by stage, open to refine)
+  Lead      Destination, dates, status, prompt to open itinerary
+  Pre trip  Destination, dates, days to go, next action to take
+  Post trip Destination, dates, trip wrap-up or next-trip nudge
+
+BEHAVIOUR
+  - Hero item, above everything else on Home.
+  - Tap anywhere on the card opens Itinerary / Trip detail.
+  - Decide if the footer sticky card stays or is dropped for these
+    stages to avoid showing the trip twice.
+  - Decide how to handle users with more than one active trip.
+
+OPEN QUESTIONS
+  - Single most useful info per stage on the card?
+  - Keep both cards (footer + hero) or drop the footer for these stages?
+  - Multiple trips: carousel, latest only, or short list?
+  - One design with changing content, or a different look per stage?
+  - Confirm Post trip is in scope (brief mentioned it both ways).
+
+SUCCESS SIGNALS
+  - Fewer taps to reach the itinerary / trip detail.
+  - More trips opened straight from Home.
+  - Lower Home to itinerary drop-off for Leads and Pre trip.

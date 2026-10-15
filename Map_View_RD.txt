@@ -1,0 +1,120 @@
+MAP VIEW ON CHANGE HOTEL - REQUIREMENT DOCUMENT
+Screen: Change hotel (map view)
+Addendum to: Change hotel screen requirement document
+
+------------------------------------------------------------
+1. WHY
+------------------------------------------------------------
+  - The list answers "which of these is better". It cannot answer
+    "where would I actually be", which is the question behind every
+    "2.4 km from city centre" on a card.
+  - Location decides more than price on a short stay. A cheaper hotel
+    40 minutes from everything is not cheaper.
+
+------------------------------------------------------------
+2. ENTRY AND EXIT
+------------------------------------------------------------
+  - A "Map view" button sits in the header of the Change hotel screen,
+    with a map icon and the words, not an icon on its own.
+  - The map opens over the list, full screen.
+  - Back, the List button, and the device back gesture all return to
+    the list at the same scroll position. Nothing is lost.
+  - The map shows only the hotels currently passing the filters. The
+    count in the map header matches the count in the list header.
+
+------------------------------------------------------------
+3. THE PINS
+------------------------------------------------------------
+  - Every hotel is a pin at its real location.
+  - The pin carries the PRICE DIFFERENCE from the stay the customer
+    already has, not the price. It is the only money this screen deals
+    in.
+  - Green with a down arrow when the hotel is cheaper.
+  - Red with an up arrow when it is dearer.
+  - Grey and the word "Same" when there is no difference.
+  - If the stay has no hotel yet, pins carry the total price for the
+    stay instead.
+  - One line at the bottom explains the colours until a pin is tapped.
+  - Pins must not cover each other at the opening zoom. Where two
+    hotels sit too close, the map must separate them or cluster them.
+
+------------------------------------------------------------
+4. TAPPING A PIN
+------------------------------------------------------------
+  - The tapped pin fills in, grows slightly, and rises above the rest.
+  - A small card slides up from the bottom: photo, hotel name, star
+    category, Booking.com score, area and distance from city centre,
+    and the price difference. It is the list card, smaller.
+  - Tapping the card opens the hotel detail screen, exactly as tapping
+    a full card in the list does.
+  - Tapping the same pin again, or the map background, closes the card.
+  - Only one card is open at a time.
+
+------------------------------------------------------------
+5. MAP BEHAVIOUR
+------------------------------------------------------------
+  - Opens framed on all the hotels shown, never so tight that a pin is
+    cut off at the edge.
+  - Pinch to zoom, drag to pan, both free.
+  - Zooming or panning does not close an open card.
+  - A hotel keeps the same spot when filters change. Pins must not move
+    around as the list is filtered.
+  - Offline or tiles unavailable: show the list with a short message,
+    not an empty grey screen.
+
+------------------------------------------------------------
+6. EVENTS TO BE TRACKED
+------------------------------------------------------------
+Every event carries customer_id, deal_id, version_id, itinerary_id,
+stay_index, city and current_hotel_id where they apply.
+
+  - change_hotel_map_opened
+    Properties: hotel_count, active_filter_count, sort_key.
+
+  - change_hotel_map_pin_tapped
+    Properties: hotel_id, price_delta, direction (cheaper, dearer,
+    same), distance_from_centre, star_category, booking_score.
+
+  - change_hotel_map_card_opened
+    Properties: hotel_id, price_delta.
+
+  - change_hotel_map_card_tapped
+    Fires when the customer opens the hotel from the map card.
+    Properties: hotel_id, price_delta, pins_tapped_before.
+
+  - change_hotel_map_zoomed
+    Properties: zoom_level, direction (in or out).
+
+  - change_hotel_map_panned
+    Fires once per gesture, not per frame.
+
+  - change_hotel_map_closed
+    Properties: duration_ms, pins_tapped, cards_opened,
+    exited_to (list or hotel_detail).
+
+  - change_hotel_map_failed
+    Fires when tiles or locations cannot load.
+    Properties: reason.
+
+------------------------------------------------------------
+7. WHAT WE WANT TO LEARN
+------------------------------------------------------------
+  - How many customers open the map at all, and whether they come back
+    to the list or leave from the map.
+  - Whether a hotel chosen from the map is nearer the centre than one
+    chosen from the list.
+  - Whether the map raises the rate of actually changing the hotel, or
+    only the time spent on the screen.
+  - How often customers move to a dearer hotel after seeing where it
+    is.
+
+------------------------------------------------------------
+8. OPEN POINTS
+------------------------------------------------------------
+  - Map provider and key. The prototype uses OpenStreetMap tiles, which
+    is fine for a prototype and not for production.
+  - Hotel coordinates. The prototype places hotels on a ring at their
+    stated distance from the centre because it has no real latitude and
+    longitude. Live data must carry both.
+  - Whether the city centre, the airport, or the itinerary's activities
+    should also appear on the map as reference points.

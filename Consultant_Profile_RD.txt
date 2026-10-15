@@ -1,0 +1,66 @@
+TRAVEL CONSULTANT PROFILE - REQUIREMENT DOCUMENT
+For UI team review / second opinion
+Screen: Itinerary detail (customer's trip plan)
+
+------------------------------------------------------------
+1. BACKGROUND
+------------------------------------------------------------
+Every trip is handled by a travel consultant. Right now the
+customer does not see who is looking after their trip on the
+itinerary screen. Showing the consultant's profile builds trust
+and gives the customer a clear person to reach out to.
+
+------------------------------------------------------------
+2. WHAT WE WANT
+------------------------------------------------------------
+Once a travel consultant is assigned to the trip, show their
+profile on the Itinerary detail screen.
+
+Details to show:
+  - Profile picture
+  - Name
+  - Bio (short, 2 lines)
+  - An option to call
+
+Rule:
+  - Only show this once a consultant is actually assigned. If no
+    consultant is assigned yet, show nothing.
+
+------------------------------------------------------------
+3. TWO DISPLAY OPTIONS TO DECIDE BETWEEN
+------------------------------------------------------------
+Option A - Section on the screen
+  - A dedicated section within the itinerary, showing the picture,
+    name, bio and a call button, all visible at once.
+  - Pros: always visible while scrolling to that point, feels part
+    of the trip, more reassuring.
+  - Cons: takes vertical space and competes with other sections.
+
+Option B - Sticky icon or card
+  - A small sticky element (icon or compact card) that stays on
+    screen. On tap it opens the full details (picture, name, bio,
+    call).
+  - Pros: always reachable, takes little space, can call from
+    anywhere on the screen.
+  - Cons: less discoverable, the profile is one tap away instead of
+    in view.
+
+------------------------------------------------------------
+4. OPEN QUESTIONS FOR THE UI TEAM
+------------------------------------------------------------
+  - Section or sticky element, which fits this screen better?
+  - If sticky, should it be an icon (photo bubble) or a small card
+    with the name always visible?
+  - Where should it sit so it does not clash with the customisation
+    controls and the bottom navigation?
+  - Should "call" be a direct call, or open a small sheet with call
+    plus other contact options later?
+  - Do we want the consultant profile before or after the customer
+    has customised the trip?
+
+------------------------------------------------------------
+5. SUCCESS SIGNALS
+------------------------------------------------------------
+  - Customers recognise they have a named person on their trip.
+  - More trust and fewer "who is handling my trip" queries.
+  - Healthy use of the call option when customers need help.

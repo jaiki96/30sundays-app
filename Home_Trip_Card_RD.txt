@@ -1,0 +1,86 @@
+HOME TRIP CARD - REQUIREMENT DOCUMENT
+For UI team review / second opinion
+Screen: Home
+
+------------------------------------------------------------
+1. BACKGROUND
+------------------------------------------------------------
+The app shows a sticky card at the footer. Its content changes by
+user stage: New, Lead, Pre trip, On trip and Post trip.
+
+For Lead, Pre trip and Post trip users, the most important thing is
+their itinerary or trip. Today, to reach it, they have to either tap
+the sticky footer card, or go to Trips / My plan and then tap a card
+to open the Itinerary or Trip detail. That is one or two extra steps
+to get to the thing they care about most.
+
+------------------------------------------------------------
+2. WHAT WE WANT
+------------------------------------------------------------
+Redesign the Home screen for Lead, Pre trip and Post trip users so
+the trip is front and centre.
+
+  - Show a trip card as the hero item at the top of Home.
+  - The card carries the crucial trip information at a glance.
+  - Tapping the card takes the user straight to the Itinerary or
+    Trip detail screen.
+
+Reference: District shows a similar card on the home screen once a
+user books a movie ticket, so the booking is the first thing you see.
+
+New users keep the current Home. This change is only for Lead, Pre
+trip and Post trip.
+
+Note: the brief mentioned Post trip as both "fine as is" and part of
+this group. Assuming Post trip is included. Please confirm.
+
+------------------------------------------------------------
+3. WHAT THE CARD SHOWS (by stage)
+------------------------------------------------------------
+The card should show what matters most at each stage. Suggested,
+open for the team to refine:
+
+  Lead
+    - Destination and trip dates
+    - Trip status (for example: itinerary ready / being prepared)
+    - Clear prompt to open the itinerary
+
+  Pre trip
+    - Destination and travel dates
+    - Countdown or days to go
+    - Next thing to do (for example: complete payment, add details)
+
+  Post trip
+    - Destination and travel dates
+    - A wrap-up or memory prompt, or next-trip nudge
+
+------------------------------------------------------------
+4. BEHAVIOUR
+------------------------------------------------------------
+  - The card is the hero item, above everything else on Home.
+  - Tap anywhere on the card opens the Itinerary or Trip detail.
+  - If the user has more than one active trip, decide how to handle
+    it (see open questions).
+  - The footer sticky card: decide whether it stays, changes, or is
+    removed for these stages to avoid showing the same thing twice.
+
+------------------------------------------------------------
+5. OPEN QUESTIONS FOR THE UI TEAM
+------------------------------------------------------------
+  - What is the single most useful piece of info per stage on the
+    card?
+  - If the sticky footer card and the hero card both point to the
+    trip, do we keep both, or drop the footer one for these stages?
+  - How do we handle users with multiple trips (carousel, most
+    recent only, or a small list)?
+  - Should the card look different per stage, or be one consistent
+    design with changing content?
+  - Confirm whether Post trip is in scope for this change.
+
+------------------------------------------------------------
+6. SUCCESS SIGNALS
+------------------------------------------------------------
+  - Fewer taps to reach the itinerary or trip detail.
+  - More users open their trip from Home directly.
+  - Lower drop-off between Home and the itinerary for Leads and Pre
+    trip users.
