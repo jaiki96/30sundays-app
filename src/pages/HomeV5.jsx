@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Star, ArrowRight, X as XIcon, Heart, IndianRupee, ShieldCheck } from "lucide-react";
-import { C, destData, reviews, customerPhotos } from "../data";
+import { C, destData, destinations, reviews, customerPhotos } from "../data";
 import EduMultiCarousel from "../components/home_v2/EduMultiCarousel";
 import TravellerReel from "../components/home_v2/TravellerReel";
 import LeadCloseCTA from "../components/home_shared/LeadCloseCTA";
 import BookedTripsRail from "../components/BookedTripsRail";
-import { SIX, COMPARE_REELS } from "../data/homeV3Data";
+import { SIX, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
 const PAD = 18;
@@ -14,13 +14,39 @@ const HERO_IMGS = [destData.Maldives.hero, destData.Bali.hero, destData.Vietnam.
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
 // Fullscreen video player. Tap the backdrop or the close button to dismiss.
-function FullscreenVideo({ src, onClose }) {
+export function FullscreenVideo({ src, onClose }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <video src={src} autoPlay controls playsInline onClick={(e) => e.stopPropagation()} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} />
       <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 16, right: 16, width: 40, height: 40, borderRadius: "50%", background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
         <XIcon size={20} color="#fff" />
       </button>
+    </div>
+  );
+}
+
+// ─── Lower-fold pieces (clean, premium spacing) ───
+function SectionTitle({ title, sub }) {
+  return (
+    <div style={{ padding: `0 ${PAD}px`, marginBottom: 14 }}>
+      <h2 style={{ fontSize: 19, fontWeight: 700, color: C.head, margin: 0, letterSpacing: "-0.4px" }}>{title}</h2>
+      {sub && <p style={{ fontSize: 12.5, color: C.sub, margin: "4px 0 0", lineHeight: "17px" }}>{sub}</p>}
+    </div>
+  );
+}
+
+// Circular destination tabs (same set as the main home), shown above the hero.
+export function DestCircles() {
+  return (
+    <div className="hs" style={{ gap: 14, padding: `12px ${PAD}px 14px`, background: C.white }}>
+      {destinations.map((d, i) => (
+        <Link key={i} to={`/destination/${encodeURIComponent(d.name)}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0, textDecoration: "none" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", border: `2.5px solid ${C.div}`, padding: 2 }}>
+            <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }} />
+          </div>
+          <span style={{ fontSize: 12.5, fontWeight: 500, color: C.sub, whiteSpace: "nowrap" }}>{d.name}</span>
+        </Link>
+      ))}
     </div>
   );
 }
@@ -279,6 +305,85 @@ export default function HomeV5() {
       <div style={{ height: 80 }} />
 
       {showVideo && <FullscreenVideo src={HERO_VIDEO} onClose={() => setShowVideo(false)} />}
+    </div>
+  );
+}
+
+
+// ─── The sections the old home was built from ───
+//
+// The home above no longer uses these, but the AI Couple Photos home still
+// does, and that screen is unchanged. They stay here, exported, so that one
+// keeps working exactly as it did.
+function SeasonCard({ d }) {
+  return (
+    <Link to={`/destination/${encodeURIComponent(d.name)}`} style={{ flexShrink: 0, width: 200, textDecoration: "none", borderRadius: 18, overflow: "hidden", background: C.white, boxShadow: "0 4px 20px rgba(0,0,0,0.07)" }}>
+      <div style={{ position: "relative", height: 150 }}>
+        <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 45%)" }} />
+        <span style={{ position: "absolute", top: 11, left: 11, display: "inline-flex", alignItems: "center", gap: 4, background: d.peakNow ? "#E6F4EC" : "rgba(255,255,255,0.95)", color: d.peakNow ? "#1B5E3A" : C.head, fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999 }}>
+          {d.peakNow && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2E7D52" }} />}
+          {d.badge}
+        </span>
+      </div>
+      <div style={{ padding: "12px 13px 13px" }}>
+        <p style={{ fontSize: 14.5, fontWeight: 700, color: C.head, margin: 0 }}>{d.flag} {d.name}</p>
+        <p style={{ fontSize: 11.5, color: C.sub, margin: "3px 0 7px", lineHeight: "15px" }}>{d.blurb}</p>
+        <p style={{ fontSize: 12, fontWeight: 600, color: C.head, margin: 0 }}>From {fromPrice(d.startPrice)} <span style={{ fontWeight: 500, color: C.inact }}>pp · 7 nights</span></p>
+      </div>
+    </Link>
+  );
+}
+
+// `afterUsps` is an optional slot for a section that belongs directly under
+// the proof line. Nothing on / passes it.
+export function LowerSections({ groups, afterUsps }) {
+  return (
+    <div style={{ paddingTop: 4, background: C.white, position: "relative" }}>
+      {/* Compact proof line */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: `0 ${PAD}px`, marginBottom: 28 }}>
+        {[
+          { I: Heart, t: "Couples only" },
+          { I: IndianRupee, t: "Transparent pricing" },
+          { I: ShieldCheck, t: "No tourist traps" },
+        ].map((x, i) => (
+          <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <x.I size={13} color={C.p600} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.head, letterSpacing: "0.1px", whiteSpace: "nowrap" }}>{x.t}</span>
+          </span>
+        ))}
+      </div>
+
+      {afterUsps}
+
+      {groups.map((g, i) => (
+        <div key={i} style={{ marginBottom: 28 }}>
+          <SectionTitle title={g.label} sub={g.sub} />
+          <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD }}>
+            {g.dests.map(d => <SeasonCard key={d.name} d={d} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function AllSixCountries() {
+  return (
+    <div style={{ marginTop: 28, background: C.white }}>
+      <SectionTitle title="All six countries" sub="Every country, honestly priced." />
+      <div style={{ padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
+        {SIX.map(d => (
+          <Link key={d.name} to={`/destination/${encodeURIComponent(d.name)}`} style={{ textDecoration: "none", borderRadius: 16, overflow: "hidden", position: "relative", height: 128 }}>
+            <img src={d.img} alt={d.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.7) 100%)" }} />
+            <div style={{ position: "absolute", left: 12, right: 12, bottom: 11 }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{d.name}</p>
+              <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.92)", margin: "1px 0 0", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>From {fromPrice(d.startPrice)} pp</p>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
