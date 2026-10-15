@@ -1725,7 +1725,12 @@ function StickyBar({ city, show, hasMap, onBack, onMap }) {
 }
 
 // ─── One region ───
-export default function RegionDetail({ dest: destProp, city: cityProp, onClose }) {
+//
+// `onAdd` is passed when this opens over the route step, where reading about a
+// place is half of choosing it. Without it, somebody who has just read the
+// honest bit about Ubud has to close the page, find the card again and press
+// the plus, which is three taps to answer a question they already answered.
+export default function RegionDetail({ dest: destProp, city: cityProp, onClose, onAdd, added }) {
   const { name, city } = useParams();
   const navigate = useNavigate();
   const embedded = !!destProp;
@@ -1872,11 +1877,33 @@ export default function RegionDetail({ dest: destProp, city: cityProp, onClose }
           )}
           <PairWith city={r.city} others={r.paired} onPick={goRegion} />
           <Faq items={faq} />
-          <div style={{ height: 40 }} />
+          <div style={{ height: onAdd ? 92 : 40 }} />
         </div>
       </div>
 
       <StickyBar city={r.city} show={scrolled} hasMap={hasMap} onBack={back} onMap={() => setMap(true)} />
+
+      {/* The answer to the question this page was opened to settle. */}
+      {onAdd && (
+        <div style={{
+          position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 7,
+          background: C.white, borderTop: `1px solid ${C.div}`,
+          padding: "10px 16px calc(12px + env(safe-area-inset-bottom))",
+        }}>
+          <button onClick={onAdd} style={{
+            width: "100%", padding: "13px 0", borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
+            fontSize: 14.5, fontWeight: 700,
+            border: added ? `1.5px solid ${C.p600}` : "none",
+            background: added ? C.white : C.p600,
+            color: added ? C.p600 : "#fff",
+            display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+          }}>
+            {added
+              ? <><Check size={16} strokeWidth={3} /> Added to the trip</>
+              : <><Plus size={16} strokeWidth={3} /> Add {r.city} to the trip</>}
+          </button>
+        </div>
+      )}
 
       {eateries && hasMap && r.food?.length > 0 && (
         <FoodMapScreen city={r.city} list={r.food} onClose={() => setEateries(false)} />
