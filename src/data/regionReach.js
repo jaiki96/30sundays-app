@@ -40,6 +40,14 @@ const PLACE_COORDS = {
   Gan: { lat: -0.6933, lng: 73.1556 },         // GAN, Addu atoll
   Donsak: { lat: 9.3086, lng: 99.6500 },       // the Samui ferry pier
   "Ha Tien": { lat: 10.3831, lng: 104.4875 },  // the Phu Quoc ferry pier
+  "Ho Chi Minh City": { lat: 10.8188, lng: 106.6520 },  // SGN, Tan Son Nhat
+  Singapore: { lat: 1.3644, lng: 103.9915 },   // SIN, the change for Auckland
+  // The Indian airports a couple leaves from.
+  Delhi: { lat: 28.5562, lng: 77.1000 },       // DEL
+  Mumbai: { lat: 19.0896, lng: 72.8656 },      // BOM
+  Bengaluru: { lat: 13.1986, lng: 77.7066 },   // BLR
+  Chennai: { lat: 12.9941, lng: 80.1709 },     // MAA
+  Kolkata: { lat: 22.6547, lng: 88.4467 },     // CCU
 };
 
 const coordsOf = (name) => cityCoords[name] || PLACE_COORDS[name] || null;
@@ -179,9 +187,22 @@ const MIN_FLY_KM = 150;
 // speed, and the quarter hour is as fine as that deserves.
 const quarter = (mins) => Math.max(15, Math.round(mins / 15) * 15);
 
-const opt = (modes, label, mins, hint = null) => {
-  const m = quarter(mins);
-  return { modes, label, mins: m, time: `About ${hhmm(m)}`, hint };
+// ─── A journey is its legs ───
+//
+// Every way is built out of legs now rather than summarised into a label and a
+// stack of icons. "Flight and cab" told a couple there were two of something;
+// it did not say they fly to Da Nang and then drive the half hour down the
+// coast. The summary is still there, because the list of ways has to be
+// comparable at a glance, but the legs are what the chosen one draws.
+const leg = (mode, from, to, mins, extra = {}) => ({
+  mode, from, to, mins: quarter(mins), ...extra,
+});
+
+const wayOf = (legs, label, hint = null) => {
+  const mins = legs.reduce((t, l) => t + l.mins, 0);
+  // Just the duration. Saying it is approximate is the screen's job, and it
+  // does it with one sign rather than a word.
+  return { modes: legs.map((l) => l.mode), label, mins, time: hhmm(mins), hint, legs };
 };
 
 // ─── Every way of making one journey ───
@@ -194,11 +215,15 @@ export function waysTo(dest, from, to) {
   // boat or a seaplane, so it gets its own answer rather than a filtered one.
   if (dest === "Maldives") {
     if (d > 200) {
-      out.push(opt(["flight"], "Domestic flight", Math.round((d / 500) * 60 + 90)));
+      out.push(wayOf(
+        [leg("flight", from, to, (d / 500) * 60 + 90, { how: "Domestic flight" })],
+        "Domestic flight",
+      ));
     } else {
       out.push(
-        opt(["flight"], "Seaplane", 45, "Daylight hours only"),
-        opt(["boat"], "Speedboat", 90),
+        wayOf([leg("flight", from, to, 45, { how: "Seaplane", note: "Daylight hours only" })],
+          "Seaplane", "Daylight hours only"),
+        wayOf([leg("boat", from, to, 90, { how: "Speedboat" })], "Speedboat"),
       );
     }
     return out;
@@ -217,18 +242,16 @@ export function waysTo(dest, from, to) {
     const drive = samePlace(from, ferry.port) ? 0 : carMins(km(from, ferry.port) ?? 0);
     const total = ferry.crossing + drive;
     if (total <= MAX_FERRY_MINS) {
-      out.push(opt(
-        drive ? ["car", "boat"] : ["boat"],
-        drive ? "Cab and ferry" : "Ferry",
-        total,
-        ferry.note,
-      ));
+      const legs = [];
+      if (drive) legs.push(leg("car", from, ferry.port, drive));
+      legs.push(leg("boat", ferry.port, to, ferry.crossing, { note: ferry.note }));
+      out.push(wayOf(legs, drive ? "Cab and ferry" : "Ferry", ferry.note));
     }
   }
 
   // ─── Road ───
   if (!islandHop && !airOnly && d <= MAX_DRIVE_KM) {
-    out.push(opt(["car"], "Cab", carMins(d)));
+    out.push(wayOf([leg("car", from, to, carMins(d))], "Cab"));
   }
 
   // ─── Air ───
@@ -241,10 +264,11 @@ export function waysTo(dest, from, to) {
       const post = ht.own ? 0 : carMins(km(ht.name, to) ?? 0);
       const extra = pre || post;
       const air = flyMins(sector);
-      out.push(opt(
-        extra ? ["flight", "car"] : ["flight"],
+      const toAir = pre ? [leg("car", from, hf.name, pre)] : [];
+      const flight = leg("flight", hf.name, ht.name, air, { fromCode: hf.code, toCode: ht.code });
+      out.push(wayOf(
+        [...toAir, flight, ...(post ? [leg("car", ht.name, to, post)] : [])],
         extra ? "Flight and cab" : "Flight",
-        air + pre + post,
         `${hf.code} to ${ht.code}`,
       ));
 
@@ -253,7 +277,10 @@ export function waysTo(dest, from, to) {
       // Bangkok's traffic, usually quicker.
       const line = METRO[ht.name] || METRO[to];
       if (line) {
-        out.push(opt(["flight", "metro"], "Flight and metro", air + 30 + pre, line));
+        out.push(wayOf(
+          [...toAir, flight, leg("metro", ht.name, to, 30, { note: line })],
+          "Flight and metro", line,
+        ));
       }
     }
   }
@@ -267,12 +294,12 @@ export function waysTo(dest, from, to) {
     const post = rt.extra ? carMins(rt.extra) : 0;
     const extra = pre || post;
     const long = ride > 8 * 60;
-    out.push(opt(
-      extra ? ["train", "car"] : ["train"],
-      extra ? "Train and cab" : "Train",
-      ride + pre + post,
-      long ? (RAIL[dest].sleeper ? "Overnight sleeper" : "A full day of it, and the point") : null,
-    ));
+    const overnight = long ? (RAIL[dest].sleeper ? "Overnight sleeper" : "A full day of it, and the point") : null;
+    const legs = [];
+    if (pre) legs.push(leg("car", from, rf.at, pre));
+    legs.push(leg("train", rf.at, rt.at, ride, overnight ? { note: overnight } : {}));
+    if (post) legs.push(leg("car", rt.at, to, post));
+    out.push(wayOf(legs, extra ? "Train and cab" : "Train", overnight));
   }
 
   // Quickest first. All of them, because the whole point of the list is that a
@@ -281,6 +308,169 @@ export function waysTo(dest, from, to) {
     .filter((w) => w.mins <= MAX_WAY_MINS)
     .sort((a, b) => a.mins - b.mins)
     .slice(0, 5);
+}
+
+// ─── Getting into the country in the first place ───
+//
+// This screen used to start inside the country, on the grounds that the India
+// leg is the same on every region screen in Vietnam. True, and it still missed
+// the first question anybody asks about a place they have never been: can I
+// fly there, and from where. Somebody reading about Hoi An does not know that
+// Hoi An has no airport, that Da Nang's is half an hour up the road, or that
+// nothing from India lands at either.
+//
+// So the row starts in India. Each one is a real journey: the flight out, the
+// airport it lands at, and then whatever gets you the rest of the way, which is
+// the same set of ways the in-country origins use.
+//
+// Their coordinates are up with the other airports, because the flight time is
+// measured between airport sites and not city centres.
+const INDIA = [
+  { city: "Delhi", code: "DEL" },
+  { city: "Mumbai", code: "BOM" },
+  { city: "Bengaluru", code: "BLR" },
+  { city: "Chennai", code: "MAA" },
+  { city: "Kolkata", code: "CCU" },
+];
+const INDIA_BY_CODE = Object.fromEntries(INDIA.map((c) => [c.code, c]));
+
+// ─── What actually flies non-stop ───
+//
+// Keyed by the arrival airport, listing the Indian airports it has a non-stop
+// from. This is the one table on this screen that is neither computed nor
+// hand-written prose, and it is the one worth re-checking: routes open and
+// close every season, and a couple reading "direct" is reading a promise.
+//
+// Everything not listed is a change of plane, which is why Auckland is not
+// here at all: nothing flies to New Zealand from India without one.
+const DIRECT = {
+  Bali: { DPS: ["DEL", "BOM"] },
+  Vietnam: { HAN: ["DEL", "BOM"], SGN: ["DEL", "BOM"] },
+  Thailand: { BKK: ["DEL", "BOM", "BLR", "MAA", "CCU"], HKT: ["DEL", "BOM"] },
+  Maldives: { MLE: ["DEL", "BOM", "BLR", "MAA", "CCU"] },
+  "Sri Lanka": { CMB: ["DEL", "BOM", "BLR", "MAA"] },
+  "New Zealand": {},
+};
+
+// Where you change when nothing is non-stop, and the gate you change on to.
+const VIA = {
+  "New Zealand": { at: "Singapore", code: "SIN", gate: "Auckland", gateCode: "AKL" },
+};
+
+// The airport city behind a code, as this country's guides name it.
+function airportCity(dest, code) {
+  const hit = airportsIn(dest).find((a) => a.code === code);
+  return hit ? hit.name : null;
+}
+
+// ─── One journey from India ───
+//
+// The non-stop that gets closest wins: the region's own gate if it has one,
+// otherwise whichever gate leaves the shortest journey on the far side. The
+// onward part is not invented here, it is the quickest of the ways already
+// worked out between that airport's city and the region.
+function fromIndia(dest, origin, city) {
+  const gates = DIRECT[dest] || {};
+  const reachable = Object.keys(gates)
+    .filter((code) => gates[code].includes(origin.code))
+    .map((code) => ({ code, at: airportCity(dest, code) }))
+    .filter((g) => g.at && coordsOf(g.at));
+
+  // Non-stop, if anything is.
+  if (reachable.length) {
+    const scored = reachable.map((g) => {
+      const here = samePlace(g.at, city);
+      const onward = here ? [] : waysTo(dest, g.at, city);
+      const rest = here ? 0 : (onward[0]?.mins ?? Infinity);
+      return { ...g, here, onward: onward[0] || null, rest };
+    }).sort((a, b) => a.rest - b.rest);
+
+    const best = scored[0];
+    if (best.rest === Infinity) return null;
+
+    const hop = leg("flight", origin.city, best.at, flyMins(km(origin.city, best.at) ?? 0), {
+      fromCode: origin.code, toCode: best.code, note: "Non-stop",
+    });
+    const legs = [hop, ...(best.onward ? best.onward.legs : [])];
+    return wayOf(
+      legs,
+      `Non-stop to ${best.at}`,
+      best.here
+        ? `Lands at ${best.code}, in the city itself`
+        : `${origin.code} to ${best.code}, then ${best.onward.label.toLowerCase()}`,
+    );
+  }
+
+  // Otherwise, one change.
+  const via = VIA[dest];
+  if (!via) return null;
+  const gateAt = airportCity(dest, via.gateCode) || via.gate;
+  if (!coordsOf(via.at) || !coordsOf(gateAt)) return null;
+  const here = samePlace(gateAt, city);
+  const onward = here ? null : waysTo(dest, gateAt, city)[0];
+  if (!here && !onward) return null;
+
+  const legs = [
+    leg("flight", origin.city, via.at, flyMins(km(origin.city, via.at) ?? 0), {
+      fromCode: origin.code, toCode: via.code, note: `Change at ${via.at}`,
+    }),
+    leg("flight", via.at, gateAt, flyMins(km(via.at, gateAt) ?? 0), {
+      fromCode: via.code, toCode: via.gateCode,
+    }),
+    ...(onward ? onward.legs : []),
+  ];
+  return wayOf(legs, `One stop, via ${via.at}`, "Nothing flies non-stop from India");
+}
+
+// ─── One chip, not three ───
+//
+// Delhi, Mumbai and Bengaluru were three chips carrying the same answer: the
+// same gateway, the same onward legs, and twenty minutes between them on a ten
+// hour journey. Nobody is choosing a region by which of those they fly out of.
+//
+// So it is one chip saying India, built from whichever of them makes the
+// shortest journey, and the airports that fly it are named on the first stop.
+// That way collapsing the three does not lose the thing they were actually
+// telling you, which is where in India this leaves from.
+function indiaOrigin(dest, city) {
+  const gates = DIRECT[dest] || {};
+  const served = new Set(Object.values(gates).flat());
+  const pool = served.size
+    ? INDIA.filter((c) => served.has(c.code))
+    : [INDIA_BY_CODE.DEL, INDIA_BY_CODE.BOM];
+
+  const found = pool
+    .map((origin) => ({ origin, way: fromIndia(dest, origin, city) }))
+    .filter((x) => x.way)
+    .sort((a, b) => a.way.mins - b.way.mins);
+  if (!found.length) return null;
+
+  const best = found[0];
+  const first = best.way.legs[0];
+  // Every Indian airport with a non-stop to the airport this journey leaves
+  // for, not merely the ones whose own shortest route happens to go that way.
+  // Delhi flies to Bangkok whether or not Delhi's quickest way to Samui does,
+  // and a list that left it out would read as "no flight from Delhi".
+  //
+  // In the order they are written above, which is the order anybody would say
+  // them in, and three of them: the chip is a stop on a line, not a timetable.
+  const direct = (DIRECT[dest] || {})[first.toCode] || pool.map((c) => c.code);
+  const codes = INDIA
+    .filter((c) => direct.includes(c.code))
+    .map((c) => c.code)
+    .slice(0, 3);
+
+  const legs = [{ ...first, from: "India", fromCode: codes.join(" · ") }, ...best.way.legs.slice(1)];
+  return {
+    id: "IN",
+    label: "India",
+    group: "india",
+    note: null,
+    isGateway: false,
+    code: null,
+    km: null,
+    ways: [wayOf(legs, best.way.label, best.way.hint)],
+  };
 }
 
 // ─── The cities a couple would be coming from ───
@@ -318,12 +508,13 @@ export function regionReach(dest, city) {
 
   // A few more candidates than needed, because an origin with no way of
   // reaching here at all gets dropped below and the row should still be five.
-  return picked.slice(0, MAX_CITIES + 3).map((name) => {
+  const local = picked.slice(0, MAX_CITIES + 3).map((name) => {
     const hub = hubFor(dest, name);
     const isGateway = !!(gate && samePlace(gate.name, name));
     return {
       id: name,
       label: name,
+      group: "local",
       // Only the arrival city carries the hand-written note, because that is
       // the leg it was written about.
       note: isGateway ? note : null,
@@ -333,4 +524,9 @@ export function regionReach(dest, city) {
       ways: waysTo(dest, name, city),
     };
   }).filter((o) => o.ways.length).slice(0, MAX_CITIES);
+
+  // India first. Somebody who has never been asks how to get into the country
+  // before they ask how to get across it.
+  const india = indiaOrigin(dest, city);
+  return india ? [india, ...local] : local;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Check, X as XIcon, Star, MapPin, Clock, Images,
   Plane, Car, TrainFront, TramFront, Ship, Footprints, Bike, Bus,
   BedDouble, ChevronDown, ChevronUp, Sparkles, Hotel,
-  Map as MapIcon, Plus, Minus,
+  Plus, Minus,
 } from "lucide-react";
 import { C, customerPhotos } from "../data";
 import { regionDetail } from "../data/regionData";
@@ -63,10 +63,6 @@ const PAD = 16;
 const MODE_ICON = {
   flight: Plane, car: Car, train: TrainFront, metro: TramFront,
   boat: Ship, walk: Footprints,
-};
-const MODE_WELL = {
-  flight: WELL.ocean, car: WELL.brand, train: WELL.lagoon, metro: WELL.lagoon,
-  boat: WELL.ocean, walk: WELL.neutral,
 };
 
 // Which picture goes with a way of getting around. Matching on the label beats
@@ -135,6 +131,83 @@ function ReadMore({ lead, sub, children, lines = 3 }) {
 // pinned here has real coordinates behind it: the regions come from the route
 // builder's own table and the sights from their own, and the distances are
 // measured off those rather than written down.
+// ─── The Maps button ───
+//
+// A word and a scrap of map, the way the share sheet on a phone offers one. It
+// reads as a map before it is read as a button, which a pin on its own does not.
+//
+// The scrap was four real OpenStreetMap tiles of the region, which was a nice
+// trick and the wrong answer twice over. At forty pixels a real map is mush,
+// and it came with the city's name printed across it, which made it look like a
+// map of Hanoi rather than the way in to the map. This is a drawn one: two
+// roads, a park and some water, in the page's own greys so it is clearly a
+// picture of a map and not a map. Nothing to fetch and nothing to read.
+function MapGlyph({ w, h }) {
+  const roads = (
+    <>
+      <path d="M-2 9 L46 18" />
+      <path d="M15 -2 L26 30" />
+    </>
+  );
+  return (
+    <svg viewBox="0 0 44 28" width={w} height={h} style={{ display: "block" }} aria-hidden>
+      <rect width="44" height="28" fill="#EDF1F5" />
+      <path d="M0 19 H13 L19 28 H0 Z" fill="#DCEBD7" />
+      <path d="M31 0 H44 V11 Q36 9 31 0 Z" fill="#CFE3F5" />
+      <g stroke="#DCE2E8" strokeWidth="4.6" fill="none" strokeLinecap="round">{roads}</g>
+      <g stroke="#FFFFFF" strokeWidth="2.4" fill="none" strokeLinecap="round">{roads}</g>
+    </svg>
+  );
+}
+
+// The tile itself: a drawn map with a pin on it, bordered so it holds its own
+// against whatever it sits on. Used on its own where there is no room for a
+// word, and with one where there is.
+function MapTile({ w = 46, h = 29, pin = 16 }) {
+  return (
+    <span style={{
+      position: "relative", width: w, height: h, flexShrink: 0, overflow: "hidden",
+      borderRadius: 8, border: `1px solid ${C.icon}`, display: "flex",
+    }}>
+      <MapGlyph w={w} h={h} />
+      {/* Blue, like every map app's pin, so it reads as a marker at a glance
+          rather than as one more pink accent. */}
+      <MapPin
+        size={pin}
+        fill={C.b600}
+        color="#fff"
+        strokeWidth={1.8}
+        style={{
+          position: "absolute", left: "50%", top: "50%",
+          transform: "translate(-50%, -58%)",
+          filter: "drop-shadow(0 1px 2px rgba(16,24,40,0.35))",
+        }}
+      />
+    </span>
+  );
+}
+
+function MapsButton({ onClick, label = true, w = 46, h = 29, pin = 16 }) {
+  return (
+    /* The map sits inside the box with white all round it and a darker edge of
+       its own. Flush and hairlined, its corner met the page's grey and the
+       whole thing dissolved into the background. */
+    <button onClick={onClick} aria-label="Open the map" style={{
+      flexShrink: 0, display: "inline-flex", alignItems: "center",
+      border: `1px solid ${C.div}`, background: C.white, borderRadius: label ? 11 : 10,
+      padding: 3, cursor: "pointer", fontFamily: "inherit", boxShadow: SHADOW.card,
+    }}>
+      {label && (
+        <span style={{
+          display: "flex", alignItems: "center", padding: "0 9px 0 7px",
+          fontSize: 11.5, fontWeight: 700, color: C.head, letterSpacing: "-0.1px",
+        }}>Maps</span>
+      )}
+      <MapTile w={w} h={h} pin={pin} />
+    </button>
+  );
+}
+
 // ─── A pin you can read ───
 //
 // These were numbered 1 to 7, counted outwards from the centre, matching a
@@ -863,42 +936,156 @@ function ThingsToDo({ acts, city, onOpen }) {
 
 // ─── How to reach ───
 //
-// Three cities, and under the one you pick, the ways of making that journey.
-// Not one route drawn leg by leg: a couple deciding between Hoi An and Ha Long
-// wants to know that one is a cab and the other is a flight, and the leg-by-leg
-// version buried that under three rows of place names and dotted lines.
+// Two questions, and the screen used to answer only the second one. A couple
+// comparing Hoi An with Ha Long wants to know that one is a cab and the other
+// is a flight. Somebody who has never been to Vietnam asks something simpler
+// first: can I fly there, and from where. Hoi An has no airport, Da Nang's is
+// half an hour up the road, and nothing from India lands at either.
 //
-// So each way is one row: the modes as icons, what it is in two or three words,
-// and roughly how long. Quickest first.
-function Way({ w, best }) {
+// So the origins start in India and carry on into the country, in one row,
+// because they are all answers to the same question and a caption over each
+// half was two labels doing the work of an order.
+//
+// Each way is a line you read left to right: the places, with the plane or the
+// boat or the car between them. No words for the modes, no times per leg, no
+// summary of what you are about to look at. The journey is the answer and the
+// only number on it is how long the whole thing takes.
+
+// A place on the way. The code sits under the name rather than beside it, so a
+// four-stop journey stays a line rather than a paragraph.
+function Stop({ name, code }) {
+  return (
+    /* inline-block, or the width cap does nothing and "Nusa Penida" pushes the
+       end of the line off the screen instead of taking two lines. */
+    <span style={{ flexShrink: 0, display: "inline-block", textAlign: "center", maxWidth: 86 }}>
+      <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: C.head, lineHeight: 1.25 }}>{name}</span>
+      {code && (
+        <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.inact, letterSpacing: "0.5px", marginTop: 1 }}>{code}</span>
+      )}
+    </span>
+  );
+}
+
+// ─── What each way of moving looks like ───
+//
+// All grey was too far the other way: a card of names and hairlines with
+// nothing to catch the eye. Each mode gets its own tint instead, from the same
+// family the activity tags use, and none of them is the brand pink. Amber for a
+// cab because that is what a taxi is everywhere, blue for the air, lagoon for
+// the rails, and a deeper water blue for anything that floats.
+const MODE_TONE = {
+  flight: { bg: "#EAF2FE", fg: "#1570EF" },
+  car: { bg: "#FFF4E0", fg: "#B54708" },
+  train: { bg: "#E5F6F5", fg: "#007E72" },
+  metro: { bg: "#EBE9FE", fg: "#6938EF" },
+  boat: { bg: "#E0F2FE", fg: "#0369A1" },
+  walk: { bg: "#F2F4F7", fg: "#475467" },
+};
+
+// And the bit between two places: a rule with the mode sitting on it. The icon
+// is the whole message, so it is the only thing on this line with any colour.
+function Hop({ mode }) {
+  const Icon = MODE_ICON[mode] || Car;
+  const tone = MODE_TONE[mode] || MODE_TONE.walk;
+  return (
+    <span aria-hidden style={{
+      flexShrink: 0, width: 46, display: "flex", alignItems: "center", justifyContent: "center",
+      position: "relative", alignSelf: "center",
+    }}>
+      <span style={{ position: "absolute", left: 2, right: 2, height: 1, background: C.div }} />
+      <span style={{
+        position: "relative", width: 24, height: 24, borderRadius: "50%", background: tone.bg,
+        display: "grid", placeItems: "center", border: `2px solid ${C.white}`,
+      }}>
+        <Icon size={13} color={tone.fg} strokeWidth={2.1} />
+      </span>
+    </span>
+  );
+}
+
+// One journey, left to right. It scrolls rather than wraps: a line that folds
+// onto three rows is the vertical version again with worse alignment.
+//
+// Delhi to Wanaka is five stops and does not fit on a phone, so the right edge
+// fades when there is more of the line past it. Measured, not guessed: a fade
+// over the end of a journey that already fits says there is more when there
+// is not.
+function Timeline({ legs }) {
+  const rail = useRef(null);
+  const [more, setMore] = useState(false);
+
+  useEffect(() => {
+    const el = rail.current;
+    if (!el) return undefined;
+    const read = () => setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    el.addEventListener("scroll", read, { passive: true });
+    return () => { ro.disconnect(); el.removeEventListener("scroll", read); };
+  }, [legs]);
+
+  if (!legs?.length) return null;
+  return (
+    <div style={{ position: "relative" }}>
+      <div ref={rail} className="hide-scrollbar" style={{
+        display: "flex", alignItems: "center", gap: 2, overflowX: "auto",
+        margin: "0 -2px", padding: "0 2px",
+      }}>
+        <Stop name={legs[0].from} code={legs[0].fromCode} />
+        {legs.map((l, i) => (
+          <Fragment key={`${l.mode}-${l.to}-${i}`}>
+            <Hop mode={l.mode} />
+            <Stop name={l.to} code={l.toCode} />
+          </Fragment>
+        ))}
+      </div>
+      {more && (
+        <span aria-hidden style={{
+          position: "absolute", top: 0, bottom: 0, right: -2, width: 28, pointerEvents: "none",
+          background: `linear-gradient(90deg, rgba(255,255,255,0) 0%, ${C.white} 85%)`,
+        }} />
+      )}
+    </div>
+  );
+}
+
+// A way: how long it takes, and the line it takes to get there.
+//
+// A cab from Da Nang to Hoi An is two place names and a car. Given a row of its
+// own for the time and another for the journey, it left most of a card empty,
+// so a single-leg way puts both on one line and the time fills the space the
+// short line was leaving. Anything longer needs the full width for the journey
+// and keeps the time above it.
+function Way({ w, first }) {
+  // "About 3h 45m" in a green chip with a clock on it was three devices saying
+  // one thing. The sign says it, the way the nights do on the route step.
+  //
+  // No "Quickest" either. The ways are in order, shortest first, and a green
+  // word on the top one only told you what its position already had.
+  const time = (
+    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: C.head, whiteSpace: "nowrap" }}>
+      <span aria-hidden style={{ marginRight: 4 }}>~</span>{w.time}
+    </span>
+  );
+  const oneLeg = w.legs?.length === 1;
+
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "10px 0",
-      borderTop: best ? "none" : `1px solid ${C.div}`,
+      padding: first ? "0 0 12px" : "12px 0",
+      borderTop: first ? "none" : `1px solid ${C.div}`,
     }}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-        {w.modes.map((m, i) => {
-          const Icon = MODE_ICON[m] || Car;
-          const tone = MODE_WELL[m] || WELL.neutral;
-          return (
-            <span key={m} style={{
-              width: 26, height: 26, borderRadius: 8, background: tone.bg,
-              display: "grid", placeItems: "center",
-              marginLeft: i ? -8 : 0, border: i ? "1.5px solid #fff" : "none",
-            }}><Icon size={13} color={tone.fg} /></span>
-          );
-        })}
-      </span>
-
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", ...T.lead, fontSize: 13.5 }}>{w.label}</span>
-        {w.hint && <span style={{ display: "block", ...T.micro, marginTop: 2 }}>{w.hint}</span>}
-      </span>
-
-      <span style={{ flexShrink: 0, textAlign: "right" }}>
-        <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: C.head }}>{w.time}</span>
-        {best && <span style={{ display: "block", ...T.micro, color: A.green, fontWeight: 700 }}>Quickest</span>}
-      </span>
+      {oneLeg ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ flex: 1, minWidth: 0 }}><Timeline legs={w.legs} /></span>
+          {time}
+        </div>
+      ) : (
+        <>
+          <div style={{ marginBottom: 8 }}>{time}</div>
+          <Timeline legs={w.legs} />
+        </>
+      )}
     </div>
   );
 }
@@ -910,24 +1097,23 @@ function HowToReach({ origins, city }) {
 
   return (
     <Sec title={`How to reach ${city}`} flush>
-      {/* Where from. The city the trip into the country lands at comes first. */}
       <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", padding: `0 ${PAD}px 2px` }}>
         {origins.map((o) => {
           const on = o.id === from.id;
           return (
             <button key={o.id} onClick={() => setPick(o.id)} style={{
-              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
-              borderRadius: R.pill, padding: "7px 13px", cursor: "pointer", fontFamily: "inherit",
+              flexShrink: 0, borderRadius: R.pill, padding: "7px 13px",
+              cursor: "pointer", fontFamily: "inherit",
               fontSize: 12.5, fontWeight: on ? 700 : 600, whiteSpace: "nowrap",
               border: `1px solid ${on ? A.pink : C.div}`,
               background: on ? A.pinkSoft : C.white,
               color: on ? "#C00840" : C.sub,
               boxShadow: on ? "none" : SHADOW.card,
             }}>
+              {/* No distance. It was the one number here nobody travels by:
+                  606 km of Vietnamese road is nine hours and 606 km of air is
+                  an hour and a half. */}
               {o.label}
-              {o.km != null && o.km >= 5 && (
-                <span style={{ opacity: 0.6, fontWeight: 600 }}>{Math.round(o.km)} km</span>
-              )}
             </button>
           );
         })}
@@ -935,20 +1121,14 @@ function HowToReach({ origins, city }) {
 
       <div style={{ padding: `12px ${PAD}px 0` }}>
         <Card>
-          {from.ways.map((w, i) => <Way key={w.label} w={w} best={i === 0} />)}
-          {/* The one line somebody wrote about this journey, where there is
-              one. It belongs to the arrival city, not to every chip. */}
-          {from.note && (
-            <p style={{
-              margin: "10px 0 0", paddingTop: 10, borderTop: `1px solid ${C.div}`,
-              ...T.meta, lineHeight: 1.5,
-            }}>{from.note}</p>
-          )}
+          {/* No note under the ways and no small print under the card. "Along
+              the coast road past An Bang" is a nice line about a thirty minute
+              drive and it was the fourth thing in a box that answers one
+              question; every time on here already says "about". */}
+          {from.ways.map((w, i) => (
+            <Way key={w.label} w={w} first={i === 0} />
+          ))}
         </Card>
-        <p style={{ margin: "8px 0 0", ...T.micro }}>
-          Door to door and approximate, airport time counted in. Your consultant
-          confirms the exact transfer when you book.
-        </p>
       </div>
     </Sec>
   );
@@ -1285,11 +1465,7 @@ function Restaurants({ list, city, onMap }) {
             {/* The map first, because it is the thing you tap to see where any
                 of this is in relation to anything else. */}
             {mappable && (
-              <button onClick={onMap} aria-label="See these on a map" style={{
-                width: 28, height: 28, borderRadius: "50%", border: `1px solid ${C.div}`,
-                background: C.white, display: "grid", placeItems: "center",
-                cursor: "pointer", padding: 0, flexShrink: 0,
-              }}><MapIcon size={14} color={C.head} /></button>
+              <MapsButton onClick={onMap} label={false} w={34} h={24} pin={13} />
             )}
             <ViewAll onClick={() => setAll(true)} />
           </span>
@@ -1436,11 +1612,14 @@ function WhereToStay({ stay, hotels, onOpenHotel }) {
               <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none" }}>
                 {stay.rooms.slice(0, 3).map((room) => (
                   <li key={room} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 6 }}>
+                    {/* A plain black dot, not a pink one. Three pink marks in a
+                        row beside a pink icon made a list of room names look
+                        like three things on offer. */}
                     <span aria-hidden style={{
-                      width: 5, height: 5, borderRadius: "50%", background: C.p600,
+                      width: 5, height: 5, borderRadius: "50%", background: C.head,
                       flexShrink: 0, marginTop: 7,
                     }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: C.head, lineHeight: 1.4 }}>{room}</span>
+                    <span style={{ fontSize: 13, fontWeight: 400, color: C.head, lineHeight: 1.4 }}>{room}</span>
                   </li>
                 ))}
               </ul>
@@ -1881,16 +2060,7 @@ export default function RegionDetail({
               <h1 style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.7px", lineHeight: "31px" }}>
                 {r.city}
               </h1>
-              {hasMap && (
-                <button onClick={() => setMap(true)} style={{
-                  flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
-                  border: `1.5px solid ${C.p600}`, background: C.white, borderRadius: R.pill,
-                  padding: "7px 13px 7px 11px", cursor: "pointer", fontFamily: "inherit",
-                  fontSize: 11.5, fontWeight: 800, color: C.p600, letterSpacing: "0.4px",
-                }}>
-                  <MapIcon size={16} color={C.p600} strokeWidth={2.4} /> MAP
-                </button>
-              )}
+              {hasMap && <MapsButton onClick={() => setMap(true)} />}
             </div>
             {/* Lead and description are one block, capped at three lines, so
                 the page opens on a picture and a paragraph rather than a page
