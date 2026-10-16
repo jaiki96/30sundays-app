@@ -286,9 +286,9 @@ function CityCard({ area, picked, onToggle, onOpen }) {
 //
 // Two stops and a way out, the way a profile preview behaves: it arrives
 // covering most of the screen with the page behind it dimmed, reading it takes
-// it the rest of the way up, and pulling it down sends it back. Whatever was
-// underneath is still underneath and unchanged, which is the point: reading
-// about Hoi An is not meant to cost you your place.
+// it the rest of the way up, and pulling it down sends it away from either
+// height. Whatever was underneath is still underneath and unchanged, which is
+// the point: reading about Hoi An is not meant to cost you your place.
 //
 // Portalled into the phone shell. Rendered where it is written it would size
 // itself against the scrolling step, and the region page measures its own box
@@ -296,6 +296,10 @@ function CityCard({ area, picked, onToggle, onOpen }) {
 // was the whole scroll length and the pictures came out half as tall again as
 // they are on the region page proper.
 const GONE = 2;
+
+// How far a drag has to travel before it counts as one. Below this it is a
+// stray few pixels on the way to reading something.
+const PULL = 70;
 
 function RegionSheet({ dest, city, added, onAdd, onClose }) {
   const [frame, setFrame] = useState(null);
@@ -350,23 +354,26 @@ function RegionSheet({ dest, city, added, onAdd, onClose }) {
   // forgotten: the sheet would follow the first few pixels and then stop dead.
   const sheet = useRef(null);
   const atTop = useRef(true);
-  const live = useRef({ h, gap, stop, pull: 0, leave });
-  live.current = { h, gap, stop, pull, leave };
+  const live = useRef({ stop, pull: 0, leave });
+  live.current = { stop, pull, leave };
 
   useEffect(() => {
     const el = sheet.current;
     if (!el) return;
     let g = null;
 
+    // What the gesture was, not where it ended up. Down means close, from
+    // either stop: half way up and dragged down used to land back at half,
+    // which is a sheet arguing with the hand on it. Up means open fully. A
+    // pull shorter than the threshold was not a gesture, so it springs back to
+    // wherever it started.
     const settle = () => {
-      const { h: H, gap: G, pull: P, stop: S } = live.current;
-      const landed = Math.max(0, Math.min(H, (S === 0 ? 0 : G) + P));
+      const { pull: P, stop: S } = live.current;
       setDrag(false);
       setPull(0);
-      // Nearest of the three, so a short tug springs back and a long one goes.
-      if (landed > G + (H - G) * 0.3) live.current.leave();
-      else if (landed > G * 0.5) setStop(1);
-      else setStop(0);
+      if (P > PULL) live.current.leave();
+      else if (P < -PULL) setStop(0);
+      else setStop(S);
     };
 
     const begin = (y, x, free) => {
