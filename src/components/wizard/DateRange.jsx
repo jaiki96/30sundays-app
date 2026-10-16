@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, AlertTriangle, Users, CalendarDays, ChevronUp } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Users, CalendarDays } from "lucide-react";
 import { C } from "../../data";
 import { monthRating } from "../../data/buildData";
 import { monthWeather } from "../../data/weatherData";
@@ -168,7 +168,7 @@ function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, p
   );
 }
 
-export default function DateRange({ dest, minNights = 7, startDate, setStartDate, nights, setNights }) {
+export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights }) {
   const today = useMemo(() => midnight(new Date()), []);
   const wrapRef = useRef(null);
   const footRef = useRef(null);
@@ -285,21 +285,31 @@ export default function DateRange({ dest, minNights = 7, startDate, setStartDate
   //
   // The one after this one. Most of this month has already gone, and nobody
   // booking a holiday on the sixteenth is leaving on the eighteenth, so
-  // opening on a grid that is half greyed out wastes the first screen. This
-  // month is still there, one scroll up, and the chip below says so while it
-  // is the thing immediately above.
+  // opening on a grid that is half greyed out wastes the first screen.
+  //
+  // It opens with the last week of this month still showing above next
+  // month's heading. That week is the whole trick: cut off cleanly at a
+  // heading, a calendar looks like the top of the list, and a row of dates
+  // above it says there is more up there without a chip or an arrow having to
+  // say so.
   //
   // Not when dates are already picked: coming back to this step should show
   // the trip, not a month somebody has already scrolled past once.
   const scroller = useRef(null);
-  const [back, setBack] = useState(false);
 
-  const monthTop = (i) => {
+  // Measured off this month's last week rather than next month's heading. A
+  // guessed margin above the heading puts that week behind the weekday row,
+  // which is the same as not showing it: the row has to clear the pinned
+  // headings to be the thing that says there is more above.
+  const landingTop = () => {
     const sc = scroller.current;
-    const el = wrapRef.current?.querySelector(`[data-month="${i}"]`);
-    if (!sc || !el) return null;
-    const head = headRef.current?.getBoundingClientRect().height || 0;
-    return sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - head;
+    const wrap = wrapRef.current;
+    const next = wrap?.querySelector('[data-month="1"]');
+    if (!sc || !next) return null;
+    const days = wrap.querySelectorAll('[data-month="0"] [data-date]');
+    const anchor = days.length ? days[days.length - 1] : next;
+    const pinned = stickyTop + (headRef.current?.getBoundingClientRect().height || 0);
+    return sc.scrollTop + anchor.getBoundingClientRect().top - sc.getBoundingClientRect().top - pinned;
   };
 
   const [ready, setReady] = useState(false);
@@ -313,69 +323,35 @@ export default function DateRange({ dest, minNights = 7, startDate, setStartDate
     if (!sc || sc === document.body) return;
     scroller.current = sc;
     setReady(true);
-    if (startDate) return;
-    const go = () => { const t = monthTop(1); if (t != null) sc.scrollTop = Math.max(0, t); };
-    go();
-    // Again once the weekday row and the chips have their real heights.
-    const id = setTimeout(go, 60);
-    return () => clearTimeout(id);
-    // Once, on the way in. Re-running it would drag somebody back up the
-    // calendar every time they changed a date.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The chip is there only while this month is just above: gone once you are
-  // deep enough in the year that going back to it is not what you want.
+  // Placed again when the pinned heading above reports its real height, which
+  // is a render after this one: landing against the guess left the week above
+  // tucked under the weekday row by the difference. Only for the first
+  // moments of the step, so changing a date never drags anybody back up the
+  // calendar.
+  const bornAt = useRef(0);
+  if (!bornAt.current) bornAt.current = performance.now();
   useLayoutEffect(() => {
     const sc = scroller.current;
-    if (!ready || !sc) return;
-    const on = () => {
-      const t = monthTop(1);
-      setBack(t != null && sc.scrollTop > t - 40 && sc.scrollTop < t + 500);
-    };
-    on();
-    sc.addEventListener("scroll", on, { passive: true });
-    return () => sc.removeEventListener("scroll", on);
-  }, [ready]);
-
-  const toThisMonth = () => {
-    const sc = scroller.current;
-    if (sc) sc.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    if (!ready || !sc || startDate) return;
+    if (performance.now() - bornAt.current > 800) return;
+    const t = landingTop();
+    if (t != null) sc.scrollTop = Math.max(0, t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, stickyTop, startDate]);
 
   return (
     <div>
       {/* The weekday row stays put, so you always know which column is Sunday. */}
       <div ref={headRef} style={{
-        position: "sticky", top: 0, zIndex: 5, background: C.white,
+        position: "sticky", top: stickyTop, zIndex: 5, background: C.white,
         display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
         padding: "6px 0 8px", borderBottom: `1px solid ${C.div}`, marginBottom: 14,
       }}>
         {WEEKDAYS.map((d, i) => (
           <span key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: C.inact }}>{d}</span>
         ))}
-      </div>
-
-      {/* Floating, not a row: it takes no height, so the calendar sits where
-          it would anyway and the chip is over the first week of it. */}
-      <div style={{ position: "sticky", top: 36, zIndex: 4, height: 0, display: "flex", justifyContent: "flex-end" }}>
-        <button
-          onClick={toThisMonth}
-          style={{
-            transform: "translateY(-2px)",
-            display: "inline-flex", alignItems: "center", gap: 4,
-            border: `1px solid ${C.div}`, borderRadius: 999, background: C.white,
-            padding: "5px 11px", cursor: "pointer", fontFamily: "inherit",
-            fontSize: 11.5, fontWeight: 700, color: C.head,
-            boxShadow: "0 2px 10px rgba(16,24,40,0.12)",
-            opacity: back ? 1 : 0,
-            pointerEvents: back ? "auto" : "none",
-            transition: "opacity .18s ease",
-          }}
-        >
-          <ChevronUp size={13} color={C.p600} />
-          {MONTH_NAMES[today.getMonth()]} {today.getFullYear()}
-        </button>
       </div>
 
       <div

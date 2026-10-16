@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -851,19 +851,41 @@ function Stepper({ label, value, onChange, min = 0, last }) {
 
 function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
   const minN = destMeta[dest]?.minNights || 3;
+  // The calendar opens part-way down, at next month, so the question has to
+  // stay on the screen rather than scrolling off with the months above it.
+  // Its height is handed to the calendar, which parks its weekday row
+  // underneath rather than on top of it.
+  const head = useRef(null);
+  const [headH, setHeadH] = useState(52);
+  useLayoutEffect(() => {
+    const el = head.current;
+    if (!el) return;
+    const read = () => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      setHeadH((prev) => (prev === h ? prev : h));
+    };
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div style={{ padding: "18px 16px 24px" }}>
-      <h1 style={titleStyle}>Select trip dates</h1>
-      <div style={{ marginTop: 16 }}>
-        <DateRange
-          dest={dest}
-          minNights={minN}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          nights={nights}
-          setNights={setNights}
-        />
+    <div style={{ padding: "0 16px 24px" }}>
+      <div ref={head} style={{
+        position: "sticky", top: 0, zIndex: 6, background: C.white, padding: "18px 0 10px",
+      }}>
+        <h1 style={titleStyle}>Select trip dates</h1>
       </div>
+      <DateRange
+        dest={dest}
+        minNights={minN}
+        stickyTop={headH}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        nights={nights}
+        setNights={setNights}
+      />
     </div>
   );
 }
