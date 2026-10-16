@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Check, X as XIcon, Star, MapPin, Clock, Images,
   Plane, Car, TrainFront, TramFront, Ship, Footprints, Bike, Bus,
   BedDouble, ChevronDown, ChevronUp, Sparkles, Hotel,
-  Map as MapIcon, Maximize2, Plus, Minus,
+  Map as MapIcon, Plus, Minus,
 } from "lucide-react";
 import { C, customerPhotos } from "../data";
 import { regionDetail } from "../data/regionData";
@@ -18,17 +18,19 @@ import { cityCoords } from "../data/buildData";
 import { sightCoords } from "../data/sightCoords";
 import { areaCoords } from "../data/areaCoords";
 import { regionsFor } from "../data/discoverData";
+import { useSaves } from "../data/saves";
 import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
 import { SKY_WORD } from "../data/weatherData";
 import { KIND_TONE } from "../data/activityKind";
+import { kindGlyph } from "../data/kindGlyph";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
+import SaveHeart from "../components/SaveHeart";
 import { SKY_STYLE } from "../components/skyStyle";
 import { SEASON_COLOR, SEASON_TINT, SEASON_LABEL, SEASON_MEANING } from "../components/seasonStyle";
 import { R, SHADOW, T, WELL, A } from "../components/hotel_refined/tokens";
 import BookedCard from "../components/booked_lab/BookedCard";
 import { ActivityScreen } from "./DayDetailLab";
-import { roomNote } from "../data/roomNotes";
 import HotelV3 from "../components/hotel_v3/HotelV3";
 import { detailFromHotel } from "../data/hotelDetailAdapter";
 import SourceLogo from "../components/hotel_detail/SourceLogo";
@@ -133,34 +135,46 @@ function ReadMore({ lead, sub, children, lines = 3 }) {
 // pinned here has real coordinates behind it: the regions come from the route
 // builder's own table and the sights from their own, and the distances are
 // measured off those rather than written down.
-const mapPin = (colour, big = false) => L.divIcon({
-  className: "",
-  html: `<div style="width:${big ? 16 : 11}px;height:${big ? 16 : 11}px;border-radius:50%;
-      background:${colour};border:3px solid #fff;
-      box-shadow:0 2px 7px rgba(0,0,0,0.32)"></div>`,
-  iconSize: [big ? 16 : 11, big ? 16 : 11],
-  iconAnchor: [big ? 8 : 5.5, big ? 8 : 5.5],
-});
-
-// ─── A pin you can tell apart ───
+// ─── A pin you can read ───
 //
-// Seven identical dots on an island is a puzzle, not a map. Each sight carries
-// its number, counted outwards from the centre, and the same number is on its
-// card, so a pin and a card can be matched by looking rather than by tapping
-// everything in turn. The selected one grows and goes brand colour.
-const numberPin = (n, on) => {
-  const d = on ? 30 : 24;
+// These were numbered 1 to 7, counted outwards from the centre, matching a
+// number on the card. That works, but it makes the map a lookup table: you tap
+// a dot to find out what it is, and nothing on the screen says whether the
+// thing nearest the old town is a temple or a tailor.
+//
+// So the pin says the name, with the kind of thing it is drawn beside it. The
+// colours are the same ones the tags on the cards use, so a market pin and a
+// market tag are the same pink. The chosen one fills with brand colour and
+// comes to the front.
+const sightPin = (name, kind, on) => {
+  const tone = KIND_TONE[kind] || KIND_TONE.Culture;
+  const bg = on ? C.p600 : "#fff";
+  const ink = on ? "#fff" : C.head;
+  const chipBg = on ? "rgba(255,255,255,0.22)" : tone.bg;
+  const chipInk = on ? "#fff" : tone.fg;
   return L.divIcon({
-    className: "",
-    html: `<div style="width:${d}px;height:${d}px;border-radius:50%;
-        background:${on ? C.p600 : WELL.gold.fg};border:2.5px solid #fff;
-        box-shadow:0 2px 8px rgba(0,0,0,0.34);
-        display:flex;align-items:center;justify-content:center;
-        font-family:Figtree,sans-serif;font-size:${on ? 13 : 12}px;font-weight:800;color:#fff">${n}</div>`,
-    iconSize: [d, d],
-    iconAnchor: [d / 2, d / 2],
+    className: "sight-pin",
+    html: `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:5px;
+        background:${bg};border-radius:999px;padding:3px 9px 3px 3px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.26);white-space:nowrap">
+        <span style="width:19px;height:19px;border-radius:50%;background:${chipBg};
+            display:flex;align-items:center;justify-content:center;flex-shrink:0"
+          >${kindGlyph(kind, { size: 12, colour: chipInk })}</span>
+        <span style="font-family:Figtree,sans-serif;font-size:11px;font-weight:800;color:${ink};
+            max-width:116px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(name)}</span>
+      </div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
   });
 };
+
+// The names are ours, not anybody's input, but a pin is raw markup and an
+// apostrophe in "Angel's Billabong" should stay an apostrophe.
+function escapeHtml(t = "") {
+  return t.replace(/[&<>"']/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+  ));
+}
 
 // The town itself, named on the map rather than left as one more dot. This is
 // the honest way to answer "where is Ubud": we hold a centre point for every
@@ -170,7 +184,7 @@ const numberPin = (n, on) => {
 // centre are the ones a couple cares about most, and they sit on top of it: a
 // label stretching sideways covered two or three of them every time.
 const centrePin = (label) => L.divIcon({
-  className: "",
+  className: "sight-pin is-centre",
   html: `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;transform:translate(-50%,-11px)">
       <div style="width:18px;height:18px;border-radius:50%;background:${C.p600};
           border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.34)"></div>
@@ -224,6 +238,100 @@ function pinnedSights(acts, here) {
     .sort((x, y) => x.km - y.km);
 }
 
+// ─── Labels that keep off each other ───
+//
+// A name is longer than a number, and the things to do in a town are mostly in
+// the same few streets, so at a zoom that also fits a day trip an hour away
+// four of them land on the same spot. A dot can afford to overlap a dot. A
+// label cannot: the one underneath is simply not there.
+//
+// So after every move the pins are walked in order, nearest the centre first,
+// and any one that lands on a label already placed drops by its own height
+// until it is clear. The first pin never moves, the shift is a line or two at
+// most, and the label stays plainly attached to its part of the map.
+//
+// Done in the DOM rather than in the data because it is a question about
+// pixels: the same two sights collide at one zoom and separate at the next.
+// As far as a label is ever moved off its own point. Roughly three stacked
+// labels; past that the shift would be saying something false about where the
+// place is, and overlapping is the lesser wrong.
+const NUDGE = 92;
+
+function Declutter({ count, pick }) {
+  const map = useMap();
+  useEffect(() => {
+    const pane = map.getPane("markerPane");
+    if (!pane) return undefined;
+
+    const run = () => {
+      // The marker element Leaflet positions is a zero-sized point; the label
+      // is the child hanging off it, so the child is what gets measured and
+      // what gets moved.
+      const labels = [...pane.querySelectorAll(".sight-pin")]
+        .map((el) => el.firstElementChild)
+        .filter(Boolean);
+      labels.forEach((el) => { el.style.marginTop = "0px"; });
+
+      // The town goes down first and never moves: it is the thing the map is
+      // answering about, and the sights nearest it are exactly the ones that
+      // land on top of it. After that, highest on the screen keeps its place
+      // and anything clashing with it goes under, which is the order a stack of
+      // labels reads in anyway.
+      const rows = labels
+        .map((el) => ({ el, r: el.getBoundingClientRect(), centre: el.parentElement.classList.contains("is-centre") }))
+        .sort((a, b) => (Number(b.centre) - Number(a.centre)) || (a.r.top - b.r.top));
+
+      const placed = [];
+      const clash = (top, r) => placed.find((q) =>
+        top < q.bottom + 2 && top + r.height + 2 > q.top &&
+        r.left < q.right + 3 && r.left + r.width + 3 > q.left);
+
+      // How far this label has to move, one way, to clear everything already
+      // down. Each step jumps clean past whatever it hit rather than feeling
+      // its way in fixed increments, which is what a run of stacked labels
+      // needs: the thing in the way may be the town pin, half as tall again as
+      // a label.
+      const slide = (r, dir) => {
+        let d = 0;
+        for (let i = 0; i < 8; i += 1) {
+          const hit = clash(r.top + d, r);
+          if (!hit) return d;
+          d = dir > 0 ? hit.bottom + 3 - r.top : hit.top - 3 - r.height - r.top;
+          if (Math.abs(d) > NUDGE) return null;
+        }
+        return null;
+      };
+
+      rows.forEach(({ el, r, centre }) => {
+        // Up or down, whichever is the shorter move, so a stack opens around
+        // its point rather than hanging below it. A label with nowhere to go
+        // inside the limit stays where it is and overlaps, which at least
+        // leaves it honest about where the thing actually is.
+        const down = centre ? 0 : slide(r, 1);
+        const up = centre ? null : slide(r, -1);
+        const both = [down, up].filter((d) => d != null);
+        const drop = both.length ? both.reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a)) : 0;
+        if (drop) el.style.marginTop = `${drop}px`;
+        placed.push({
+          top: r.top + drop, bottom: r.top + drop + r.height,
+          left: r.left, right: r.left + r.width,
+        });
+      });
+    };
+
+    // Straight away, and again twice after: the first pass runs before Leaflet
+    // has finished placing anything, and the one after that can still measure a
+    // label set in the fallback font, which is narrower than Figtree and hides
+    // a clash that appears the moment the real font lands.
+    run();
+    const ids = [setTimeout(run, 120), setTimeout(run, 450)];
+    document.fonts?.ready.then(run).catch(() => {});
+    map.on("zoomend moveend", run);
+    return () => { ids.forEach(clearTimeout); map.off("zoomend moveend", run); };
+  }, [map, count, pick]);
+  return null;
+}
+
 // ─── Getting closer ───
 //
 // The view opens on the whole destination, which is the point: it answers where
@@ -262,7 +370,7 @@ function Zoom() {
 // The whole card is the way in. There is no separate button, because a card
 // that appears when you press a pin and does nothing when you press it is a
 // card that has taught you not to press it.
-function PinCard({ n, img, title, meta, tag, rating, onOpen, onClose }) {
+function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
   return (
     <div style={{
       position: "absolute", left: 12, right: 12, bottom: 16, zIndex: 650,
@@ -276,17 +384,7 @@ function PinCard({ n, img, title, meta, tag, rating, onOpen, onClose }) {
           display: "flex", gap: 12, alignItems: "center", width: "100%", textAlign: "left",
           background: "none", border: "none", padding: 11, cursor: "pointer", fontFamily: "inherit",
         }}>
-          <span style={{ position: "relative", flexShrink: 0 }}>
-            <img src={img} alt="" style={{ width: 64, height: 64, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
-            {n != null && (
-              <span style={{
-                position: "absolute", top: -5, left: -5, width: 21, height: 21, borderRadius: "50%",
-                background: C.p600, color: "#fff", fontSize: 11.5, fontWeight: 800,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                border: "2px solid #fff",
-              }}>{n}</span>
-            )}
-          </span>
+          <img src={img} alt="" style={{ width: 64, height: 64, flexShrink: 0, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
           <span style={{ flex: 1, minWidth: 0, paddingRight: 22 }}>
             <span style={{ ...T.h3, fontSize: 14.5, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
             <span style={{ ...T.micro, display: "block", marginTop: 3 }}>{meta}</span>
@@ -377,17 +475,18 @@ function RegionMapScreen({ dest, city, acts, onOpenAct, onClose }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <Zoom />
+        <Declutter count={sights.length} pick={pick} />
 
         {/* The town, named, and deliberately underneath everything else. The
             numbered pins are what you came to press, and the ones nearest the
             centre land right on top of this one. */}
         <Marker position={[here.lat, here.lng]} icon={centrePin(city)} zIndexOffset={-500} />
 
-        {sights.map((x, n) => (
+        {sights.map((x) => (
           <Marker
             key={x.id}
             position={[x.lat, x.lng]}
-            icon={numberPin(n + 1, pick === x.id)}
+            icon={sightPin(x.name, x.kind, pick === x.id)}
             zIndexOffset={pick === x.id ? 1000 : 0}
             eventHandlers={{ click: () => setPick(x.id) }}
           />
@@ -411,23 +510,8 @@ function RegionMapScreen({ dest, city, acts, onOpenAct, onClose }) {
         }}>{city} in {dest}</span>
       </div>
 
-      {/* With nothing chosen the map is just the map, so one line says what to
-          do with it rather than leaving a blank screen of dots. */}
-      {!chosen && (
-        <span style={{
-          position: "absolute", left: 0, right: 0, bottom: 20, zIndex: 600,
-          textAlign: "center", pointerEvents: "none",
-        }}>
-          <span style={{
-            background: "rgba(17,17,17,0.78)", backdropFilter: "blur(10px)", color: "#fff",
-            borderRadius: R.pill, padding: "8px 14px", fontSize: 12, fontWeight: 600,
-          }}>Tap a pin to see what it is</span>
-        </span>
-      )}
-
       {chosen && (
         <PinCard
-          n={sights.indexOf(chosen) + 1}
           img={chosen.img}
           title={chosen.name}
           meta={kmLabel(chosen.km)}
@@ -1048,12 +1132,13 @@ function FoodMapScreen({ city, list, onClose }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <Zoom />
+        <Declutter count={pins.length} pick={pick} />
         <Marker position={[here.lat, here.lng]} icon={centrePin(city)} zIndexOffset={-500} />
-        {pins.map((x, n) => (
+        {pins.map((x) => (
           <Marker
             key={x.name}
             position={[x.lat, x.lng]}
-            icon={numberPin(n + 1, pick === x.name)}
+            icon={sightPin(x.name, "Food", pick === x.name)}
             zIndexOffset={pick === x.name ? 1000 : 0}
             eventHandlers={{ click: () => setPick(x.name) }}
           />
@@ -1086,18 +1171,6 @@ function FoodMapScreen({ city, list, onClose }) {
         }}>{pins.length} of {list.length} mapped</span>
       )}
 
-      {!chosen && (
-        <span style={{
-          position: "absolute", left: 0, right: 0, bottom: 20, zIndex: 600,
-          textAlign: "center", pointerEvents: "none",
-        }}>
-          <span style={{
-            background: "rgba(17,17,17,0.78)", backdropFilter: "blur(10px)", color: "#fff",
-            borderRadius: R.pill, padding: "8px 14px", fontSize: 12, fontWeight: 600,
-          }}>Tap a pin to see the place</span>
-        </span>
-      )}
-
       {chosen && (
         <div style={{
           position: "absolute", left: 12, right: 12, bottom: 16, zIndex: 650,
@@ -1105,14 +1178,7 @@ function FoodMapScreen({ city, list, onClose }) {
         }}>
           <div style={{ position: "relative", background: C.white, borderRadius: R.card, boxShadow: SHADOW.float, padding: 11 }}>
             <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
-              <span style={{ position: "relative", flexShrink: 0 }}>
-                <img src={chosen.img} alt="" style={{ width: 56, height: 56, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
-                <span style={{
-                  position: "absolute", top: -5, left: -5, width: 21, height: 21, borderRadius: "50%",
-                  background: C.p600, color: "#fff", fontSize: 11.5, fontWeight: 800,
-                  display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff",
-                }}>{pins.indexOf(chosen) + 1}</span>
-              </span>
+              <img src={chosen.img} alt="" style={{ width: 56, height: 56, flexShrink: 0, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
               <div style={{ flex: 1, minWidth: 0, paddingRight: 20 }}>
                 <p style={{ margin: 0, ...T.h3, fontSize: 14.5, ...clamp(1) }}>{chosen.name}</p>
                 <p style={{ margin: "3px 0 0", ...T.micro, ...clamp(1) }}>
@@ -1332,49 +1398,52 @@ function Postcard({ city, pros, cons }) {
 // couple genuinely cannot work out for themselves is what kind of place to book
 // here and which room in it is worth paying up for, so that is what this says.
 //
-// The advice and the hotels are one answer, so they sit in one tinted block
-// again rather than a white card with a rail underneath it. Two surfaces read
-// as two sections, and "what kind of hotel" followed by "here are the hotels"
-// is plainly a single thought.
-function WhereToStay({ stay, hotels, city, onOpenHotel }) {
+// The advice and the hotels are one answer, so they sit in one block rather
+// than a card with a rail underneath it. Two surfaces read as two sections, and
+// "what kind of hotel" followed by "here are the hotels" is plainly a single
+// thought.
+//
+// White, like every other card on the page. It was a pink and cream wash, which
+// is a lot of brand colour to put behind three paragraphs of body text; the
+// pink earns more by being only the two icons and the bullets.
+//
+// Both halves used to open with an icon in a tinted well, which pushed the
+// words into a column two thirds of the width and left a tall strip of nothing
+// down the left of the block. The wells are gone. The advice is the only thing
+// in here, so it gets the full width, and the room names are a plain list of
+// the three worth asking about rather than three cards with a line of reasoning
+// under each.
+function WhereToStay({ stay, hotels, onOpenHotel }) {
   return (
     <Sec title="Where to stay" flush>
       <div style={{
-        margin: `0 ${PAD}px`, borderRadius: R.hero, padding: "14px 14px 16px",
-        background: "linear-gradient(160deg, #FFF0F4 0%, #FEF6E9 100%)",
-        border: "1px solid #F8D8E1",
+        margin: `0 ${PAD}px`, borderRadius: R.card, padding: "14px 14px 16px",
+        background: C.white, boxShadow: SHADOW.card,
       }}>
         {stay && (
           <>
-            <div style={{ display: "flex", gap: 12 }}>
-              <Well Icon={Hotel} tone={WELL.brand} size={36} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, ...T.eyebrow, color: C.p900 }}>What kind of hotel</p>
-                <p style={{ margin: "4px 0 0", ...T.lead }}>{stay.headline}</p>
-                <p style={{ margin: "5px 0 0", ...T.body }}>{stay.note}</p>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Hotel size={15} color={C.p600} strokeWidth={2.4} />
+              <p style={{ margin: 0, ...T.lead }}>What kind of hotel</p>
             </div>
+            <p style={{ margin: "6px 0 0", ...T.body }}>{stay.note}</p>
 
-            {/* A list of three room names says what exists, not which to take.
-                The line under each one is the reason. */}
-            <div style={{ display: "flex", gap: 12, marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(201,160,170,0.35)" }}>
-              <Well Icon={BedDouble} tone={WELL.gold} size={36} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, ...T.eyebrow, color: C.p900 }}>Which room to ask for</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 9 }}>
-                  {stay.rooms.slice(0, 3).map((room) => (
-                    <div key={room} style={{
-                      background: "rgba(255,255,255,0.8)", border: "1px solid rgba(201,160,170,0.4)",
-                      borderRadius: R.well, padding: "9px 11px 10px",
-                    }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{room}</p>
-                      {roomNote(room, city) && (
-                        <p style={{ margin: "3px 0 0", fontSize: 11.5, lineHeight: "16px", color: C.sub }}>{roomNote(room, city)}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.div}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <BedDouble size={15} color={C.p600} strokeWidth={2.4} />
+                <p style={{ margin: 0, ...T.lead }}>Which room to look for</p>
               </div>
+              <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none" }}>
+                {stay.rooms.slice(0, 3).map((room) => (
+                  <li key={room} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 6 }}>
+                    <span aria-hidden style={{
+                      width: 5, height: 5, borderRadius: "50%", background: C.p600,
+                      flexShrink: 0, marginTop: 7,
+                    }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.head, lineHeight: 1.4 }}>{room}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </>
         )}
@@ -1424,16 +1493,17 @@ function WhereToStay({ stay, hotels, city, onOpenHotel }) {
                       </span>
                     </div>
                     {/* The star count and the score are on the row above, so the
-                        tags that only repeat them are dropped. */}
+                        tags that only repeat them are dropped. The meal plan
+                        goes too: "Breakfast included" and "Only Room" are a
+                        rate detail, and nothing on this page is a rate. Two
+                        tags, because the third was always the weakest one. */}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 9 }}>
-                      {[h.mealPlan, ...(h.viewTags || []), ...(h.amenities || [])]
+                      {[...(h.viewTags || []), ...(h.amenities || [])]
                         .filter((x) => x && !/star$|rated$/.test(x))
-                        // "Breakfast included" and "Breakfast" are one fact, and
-                        // the card had room for three, not two and a repeat.
                         .filter((x, i, all) => all.findIndex((y) =>
                           y.toLowerCase().includes(x.toLowerCase()) ||
                           x.toLowerCase().includes(y.toLowerCase())) === i)
-                        .slice(0, 3)
+                        .slice(0, 2)
                         .map((x) => (
                           <span key={x} style={{
                             padding: "3px 8px", borderRadius: R.pill, background: C.bg,
@@ -1451,55 +1521,6 @@ function WhereToStay({ stay, hotels, city, onOpenHotel }) {
             </div>
           </>
         )}
-      </div>
-    </Sec>
-  );
-}
-
-// ─── Where it is ───
-//
-// A still map with the region pinned, and the whole thing opens the full map.
-// It answers the one question the name cannot: is this the next town over or
-// the other end of the country.
-function WhereItIs({ dest, city, onOpen }) {
-  const here = cityCoords[city];
-  if (!here) return null;
-  return (
-    <Sec title="Where it is">
-      <div
-        onClick={onOpen}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
-        style={{
-          position: "relative", zIndex: 0, height: 158, borderRadius: R.card,
-          overflow: "hidden", border: `1px solid ${C.div}`, boxShadow: SHADOW.card, cursor: "pointer",
-        }}
-      >
-        <MapContainer
-          center={[here.lat, here.lng]}
-          zoom={9}
-          style={{ height: "100%", width: "100%", background: "#AADAFF" }}
-          attributionControl={false}
-          zoomControl={false}
-          dragging={false}
-          scrollWheelZoom={false}
-          doubleClickZoom={false}
-          touchZoom={false}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <Marker position={[here.lat, here.lng]} icon={mapPin(C.p600, true)} />
-        </MapContainer>
-        <span aria-hidden style={{
-          position: "absolute", top: 10, right: 10, zIndex: 500,
-          width: 34, height: 34, borderRadius: R.well, background: C.white,
-          boxShadow: SHADOW.float, display: "grid", placeItems: "center",
-        }}><Maximize2 size={15} color={C.head} /></span>
-        <span style={{
-          position: "absolute", left: 10, bottom: 10, zIndex: 500,
-          background: C.white, borderRadius: R.pill, padding: "6px 11px",
-          boxShadow: SHADOW.float, fontSize: 11.5, fontWeight: 700, color: C.head,
-        }}>See {city} in {dest}</span>
       </div>
     </Sec>
   );
@@ -1596,7 +1617,7 @@ function Faq({ items }) {
 //
 // Snapping is CSS, and the dots read the scroll position rather than driving
 // it, so a flick, a drag and a trackpad all land on the same frame.
-function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, height, hideBack, closeIcon }) {
+function RegionHero({ photos, city, count, saved, onSave, onBack, onGallery, height, hideBack, closeIcon }) {
   const rail = useRef(null);
   const [i, setI] = useState(0);
 
@@ -1652,11 +1673,10 @@ function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, hei
           </button>
         )}
         <span style={{ flex: 1 }} />
-        {hasMap && (
-          <button onClick={onMap} aria-label="Map" style={round}>
-            <MapIcon size={16} color={C.head} />
-          </button>
-        )}
+        {/* The corner of a photograph is where every app a couple already uses
+            puts the save, and it was carrying a second door to the map. The
+            map now sits beside the name, where the question it answers is. */}
+        <SaveHeart onPhoto size={36} saved={saved} onToggle={onSave} />
       </div>
 
       {/* Dots under the photograph, and the gallery beside them. */}
@@ -1700,8 +1720,9 @@ function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, hei
 // Once the pictures have scrolled away there is nothing on the screen saying
 // which region you are reading about, and on a page this long that matters more
 // than it sounds. So the name arrives in a plain bar exactly as the photograph
-// leaves, carrying the same two buttons it was carrying before.
-function StickyBar({ city, show, hasMap, onBack, onMap, closeIcon, inset = 0 }) {
+// leaves, carrying the way out and the save, the two things that should never
+// be a scroll away.
+function StickyBar({ city, show, saved, onSave, onBack, closeIcon, inset = 0 }) {
   return (
     <div style={{
       position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
@@ -1721,11 +1742,7 @@ function StickyBar({ city, show, hasMap, onBack, onMap, closeIcon, inset = 0 }) 
       <p style={{ margin: 0, flex: 1, minWidth: 0, ...T.h3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {city}
       </p>
-      {hasMap && (
-        <button onClick={onMap} aria-label="Map" style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
-          <MapIcon size={15} color={C.head} />
-        </button>
-      )}
+      <SaveHeart saved={saved} onToggle={onSave} />
     </div>
   );
 }
@@ -1747,6 +1764,7 @@ export default function RegionDetail({
 }) {
   const { name, city } = useParams();
   const navigate = useNavigate();
+  const { forDest, toggleRegion } = useSaves();
   const embedded = !!destProp;
   const dest = embedded ? destProp : decodeURIComponent(name || "");
   const [localCity, setLocalCity] = useState(cityProp || "");
@@ -1822,6 +1840,7 @@ export default function RegionDetail({
 
   const g = r.guide;
   const hasMap = !!cityCoords[town];
+  const saved = forDest(dest).regions.includes(town);
   const mediaCount = new Set([
     ...r.photos,
     ...r.acts.map((a) => a.img),
@@ -1837,11 +1856,11 @@ export default function RegionDetail({
           city={r.city}
           count={mediaCount}
           height={heroH}
-          hasMap={hasMap}
+          saved={saved}
+          onSave={() => toggleRegion(dest, town)}
           hideBack={sheetStop === "full"}
           closeIcon={!!sheetStop}
           onBack={back}
-          onMap={() => setMap(true)}
           onGallery={() => setGallery(true)}
         />
 
@@ -1855,12 +1874,24 @@ export default function RegionDetail({
           </div>
 
           <div style={{ padding: `8px ${PAD}px 0` }}>
-            <p style={{ margin: 0, ...T.eyebrow, color: C.inact }}>
-              {r.dest}{g?.area ? ` · ${g.area}` : ""}
-            </p>
-            <h1 style={{ margin: "5px 0 0", fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.7px", lineHeight: "31px" }}>
-              {r.city}
-            </h1>
+            {/* The country and the area used to sit above the name. A couple
+                arrived here from a Vietnam screen by tapping Hanoi, so neither
+                was news, and the map beside the name answers the where. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <h1 style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.7px", lineHeight: "31px" }}>
+                {r.city}
+              </h1>
+              {hasMap && (
+                <button onClick={() => setMap(true)} style={{
+                  flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
+                  border: `1.5px solid ${C.p600}`, background: C.white, borderRadius: R.pill,
+                  padding: "7px 13px 7px 11px", cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 11.5, fontWeight: 800, color: C.p600, letterSpacing: "0.4px",
+                }}>
+                  <MapIcon size={16} color={C.p600} strokeWidth={2.4} /> MAP
+                </button>
+              )}
+            </div>
             {/* Lead and description are one block, capped at three lines, so
                 the page opens on a picture and a paragraph rather than a page
                 of prose. */}
@@ -1868,7 +1899,6 @@ export default function RegionDetail({
           </div>
 
           {r.acts.length > 0 && <ThingsToDo acts={r.acts} city={r.city} onOpen={setActivity} />}
-          <WhereItIs dest={r.dest} city={r.city} onOpen={() => setMap(true)} />
           {(r.pros.length > 0 || r.cons.length > 0) && (
             <Sec title="The honest bit">
               <Postcard city={r.city} pros={r.pros} cons={r.cons} />
@@ -1888,7 +1918,7 @@ export default function RegionDetail({
             </Sec>
           )}
           {g?.transport?.length > 0 && <TransportModes items={g.transport} />}
-          {(g?.stay || hotels.length > 0) && <WhereToStay stay={g?.stay} hotels={hotels} city={r.city} onOpenHotel={setHotel} />}
+          {(g?.stay || hotels.length > 0) && <WhereToStay stay={g?.stay} hotels={hotels} onOpenHotel={setHotel} />}
           {r.food?.length > 0 && (
             <Restaurants list={r.food} city={r.city} onMap={() => setEateries(true)} />
           )}
@@ -1904,11 +1934,11 @@ export default function RegionDetail({
       <StickyBar
         city={r.city}
         show={scrolled || sheetStop === "full"}
-        hasMap={hasMap}
+        saved={saved}
+        onSave={() => toggleRegion(dest, town)}
         onBack={back}
         closeIcon={!!sheetStop}
         inset={sheetStop ? 20 : 0}
-        onMap={() => setMap(true)}
       />
 
       {/* The answer to the question this page was opened to settle. */}
