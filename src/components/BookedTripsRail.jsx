@@ -219,17 +219,22 @@ export default function BookedTripsRail() {
   const [all, setAll] = useState(false);
 
   return (
-    <div style={{ marginTop: 32, background: C.white }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: `0 ${PAD}px`, marginBottom: 13 }}>
+    <div style={{ marginTop: 32, background: C.cream }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: `0 ${PAD}px` }}>
         <h2 style={{ margin: 0, flex: 1, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
-          Real traveller itineraries
+          What they booked
         </h2>
         <button onClick={() => setAll(true)} style={{
-          flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
+          flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 3,
           border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
           fontSize: 12.5, fontWeight: 700, color: C.p600,
         }}>View all <ArrowRight size={13} /></button>
       </div>
+      {/* What the heading used to spell out at twice the size. "What they
+          booked" is the claim; this is the small print under it. */}
+      <p style={{ margin: `3px ${PAD}px 13px`, fontSize: 13.5, color: C.sub }}>
+        Real itineraries, from recent bookings.
+      </p>
 
       <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
         {BOOKED_TRIPS.map((t) => <BookedCard key={t.key} t={t} />)}

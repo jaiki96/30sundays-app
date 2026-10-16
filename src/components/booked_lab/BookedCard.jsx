@@ -11,6 +11,11 @@ import { C } from "../../data";
 //
 // The pace sits beside the price rather than on a line of its own, because
 // "Relaxed" and "₹62,498" are the two things people compare cards on.
+//
+// Who booked it, and when, is the thing that makes the card proof rather than
+// an advert, so it sits on the photograph with a live dot beside it instead of
+// opening the block of facts in grey. That frees the first line under the
+// photo for the trip itself, with the party count beside it.
 
 export const TAG = {
   Relaxed: { bg: "#EAF2FE", fg: "#175CD3" },
@@ -58,33 +63,48 @@ export default function BookedCard({ t, wide = false }) {
       border: `1px solid ${C.div}`, boxShadow: "0 3px 14px rgba(0,0,0,0.06)",
       display: "flex", flexDirection: "column",
     }}>
-      <img src={t.img} alt={t.dest} style={{ width: "100%", height: wide ? 150 : 138, objectFit: "cover", display: "block" }} />
+      <div style={{ position: "relative" }}>
+        <img src={t.img} alt={t.dest} style={{ width: "100%", height: wide ? 150 : 138, objectFit: "cover", display: "block" }} />
+        <span style={{
+          position: "absolute", left: 11, bottom: 10, maxWidth: "calc(100% - 22px)",
+          display: "inline-flex", alignItems: "center", gap: 7,
+          // No backdrop blur. The pill sits inside a rounded card that already
+          // clips its contents, and a blurred backdrop inside a clipping box
+          // composites badly: the rounding and the text drop out of it.
+          background: "rgba(17,17,17,0.66)",
+          borderRadius: 999, padding: "6px 12px 6px 9px",
+          fontSize: 11.5, color: "rgba(255,255,255,0.86)",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          <span aria-hidden style={{ width: 9, height: 9, borderRadius: "50%", background: "#34D399", flexShrink: 0 }} />
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+            <strong style={{ fontWeight: 800, color: "#fff" }}>{t.who}</strong> booked {t.when}
+          </span>
+        </span>
+      </div>
 
       <div style={{ padding: "11px 13px 13px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            <strong style={{ fontWeight: 800, color: C.head }}>{t.who}</strong> booked {t.when}
-          </span>
+          <p style={{ margin: 0, minWidth: 0, fontSize: 15, fontWeight: 800, color: C.head, letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {t.dest} ({t.nights}N)
+          </p>
           <span style={{
             flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "3px 8px", borderRadius: 999, border: `1px solid ${C.div}`,
-            fontSize: 10.5, fontWeight: 700, color: C.sub, whiteSpace: "nowrap",
+            padding: "4px 10px", borderRadius: 999, border: `1px solid ${C.div}`,
+            fontSize: 11.5, fontWeight: 700, color: C.sub, whiteSpace: "nowrap",
           }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-              {adults}<User size={11} />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+              {adults}<User size={12} />
             </span>
             {kids > 0 && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-                {kids}<Baby size={11} />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                {kids}<Baby size={12} />
               </span>
             )}
           </span>
         </div>
 
-        <p style={{ margin: "8px 0 0", fontSize: 15, fontWeight: 800, color: C.head, letterSpacing: "-0.3px" }}>
-          {t.nights} nights in {t.dest}
-        </p>
-        <div style={{ marginTop: 3 }}><Route legs={t.legs} /></div>
+        <div style={{ marginTop: 4 }}><Route legs={t.legs} /></div>
 
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
