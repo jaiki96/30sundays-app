@@ -8,6 +8,9 @@ export const C = {
   wText: "#B54708", wBg: "#FFFAEB",
   head: "#181D27", sub: "#535862", inact: "#A4A7AE", icon: "#D5D7DA",
   div: "#E9EAEB", bg: "#F5F5F5", white: "#FFFFFF",
+  // The home screen's ground. Warm enough that a white card reads as a card on
+  // it, pale enough that nothing on top has to fight it.
+  cream: "#FCF8F5",
 };
 
 // ─── Vibe chip styles ───

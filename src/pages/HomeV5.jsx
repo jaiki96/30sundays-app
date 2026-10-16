@@ -149,11 +149,14 @@ export function LovedByCouples() {
 //
 // One picture, the name of the company on it, one promise, and the button. The
 // home used to spend its first two screens on shortcuts and a promo carousel
-// before it said what we do, so the photo now carries that weight on its own
-// and the proof line sits under the button where it backs the decision up.
+// before it said what we do, so the photo carries that weight on its own.
+//
+// The proof line has moved above the button, onto the photograph. Underneath it
+// was something you read after you had already decided; above it, it is the last
+// thing read before the tap, which is the job a rating does.
 function Hero({ imgs, idx, onPlay }) {
   return (
-    <div style={{ background: C.white }}>
+    <div style={{ background: C.cream }}>
       <div style={{ position: "relative", height: 432, overflow: "hidden" }}>
         {imgs.map((src, i) => (
           <img key={i} src={src} alt="" style={{
@@ -172,7 +175,22 @@ function Hero({ imgs, idx, onPlay }) {
           color: "#fff", letterSpacing: "-0.4px", textShadow: "0 2px 16px rgba(0,0,0,0.45)", pointerEvents: "none",
         }}>Complete Picture of your Holiday</h1>
 
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 80, background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 100%)", pointerEvents: "none" }} />
+        {/* The rating, white on the photograph, directly above the button. */}
+        <div style={{
+          position: "absolute", left: PAD, right: PAD, bottom: 56, zIndex: 2,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+          textShadow: "0 1px 10px rgba(0,0,0,0.5)", pointerEvents: "none",
+        }}>
+          <GoogleMark />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>4.6</span>
+          <Star size={14} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
+          <span style={{ color: "rgba(255,255,255,0.55)" }}>|</span>
+          <span style={{ fontSize: 15, color: "#fff" }}>25,000+ travellers</span>
+        </div>
+
+        {/* Short, so the photograph still has somewhere dark for the rating to
+            sit. Eighty pixels of wash took the bottom fifth of the picture. */}
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 44, background: `linear-gradient(180deg, rgba(252,248,245,0) 0%, ${C.cream} 100%)`, pointerEvents: "none" }} />
       </div>
 
       <div style={{ padding: `0 ${PAD}px`, marginTop: -26, position: "relative", textAlign: "center" }}>
@@ -181,14 +199,6 @@ function Hero({ imgs, idx, onPlay }) {
           background: C.p600, color: "#fff", borderRadius: 999, padding: "15px 44px",
           fontSize: 16, fontWeight: 700, textDecoration: "none", boxShadow: "0 10px 26px rgba(227,27,83,0.32)",
         }}>Plan my trip <ArrowRight size={17} /></Link>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 14 }}>
-          <GoogleMark />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: C.head }}>4.6</span>
-          <Star size={13} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />
-          <span style={{ color: C.div }}>|</span>
-          <span style={{ fontSize: 13.5, color: C.sub }}>25,000+ travellers</span>
-        </div>
       </div>
     </div>
   );
@@ -205,6 +215,43 @@ function GoogleMark() {
   );
 }
 
+// ─── The frond ───
+//
+// Drawn rather than photographed, because a cut-out leaf at this size is a
+// stamp-sized PNG with a ragged edge and one more thing to download. Nine
+// leaflets fanned off a stem, each one pointed at both ends the way a real one
+// is, in the lagoon green the app already uses and at the weight of a
+// watermark. Nothing is read off it, so it sits behind the cards.
+const FROND = Array.from({ length: 13 }, (_, i) => {
+  const t = i / 12;                     // 0 at the base, 1 at the tip
+  const angle = -78 + t * 156;          // fanned either side of the stem
+  const len = 62 + Math.sin(t * Math.PI) * 56;   // longest in the middle
+  const w = 6 + Math.sin(t * Math.PI) * 3.5;
+  return { angle, len, w };
+});
+
+function PalmCorner() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 170 190"
+      width="178" height="199"
+      style={{ position: "absolute", top: -40, right: -52, color: "#2F9E8F", opacity: 0.3, pointerEvents: "none" }}
+    >
+      <g transform="translate(26, 96) rotate(24)" fill="currentColor">
+        {FROND.map(({ angle, len, w }) => (
+          <path
+            key={angle}
+            transform={`rotate(${angle})`}
+            d={`M0 0 Q${len * 0.42} ${-w} ${len} 0 Q${len * 0.42} ${w} 0 0Z`}
+          />
+        ))}
+        <path d="M-4 0 Q22 -1.5 46 0 Q22 1.5 -4 0Z" />
+      </g>
+    </svg>
+  );
+}
+
 // ─── Destinations ───
 //
 // Six countries, a photo and a name each, and no price. The price belongs on
@@ -212,11 +259,16 @@ function GoogleMark() {
 // only question being asked is where you fancy going.
 function Destinations() {
   return (
-    <div style={{ marginTop: 30, background: C.white }}>
-      <h2 style={{ margin: `0 ${PAD}px 14px`, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
-        Destinations
+    <div style={{ marginTop: 30, background: C.cream, position: "relative", overflow: "hidden" }}>
+      {/* A frond off the right edge, behind the cards. The block was a heading
+          and a grid on a flat ground, and the one thing every one of these six
+          countries has in common is the tree. Decoration, so it sits well back
+          and nothing has to be read off it. */}
+      <PalmCorner />
+      <h2 style={{ position: "relative", margin: `0 ${PAD}px 14px`, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
+        Curated Destinations
       </h2>
-      <div style={{ padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ position: "relative", padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         {SIX.map((d) => (
           <Link key={d.name} to={`/destination/${encodeURIComponent(d.name)}`} style={{
             textDecoration: "none", background: C.white, borderRadius: 16, padding: 8,
@@ -244,7 +296,7 @@ const MATCH = [
 
 function PerfectMatch() {
   return (
-    <div style={{ marginTop: 32, padding: `0 ${PAD}px`, background: C.white }}>
+    <div style={{ marginTop: 32, padding: `0 ${PAD}px`, background: C.cream }}>
       <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
         Why we&apos;re the perfect match
       </h2>
@@ -285,7 +337,7 @@ export default function HomeV5() {
   }));
 
   return (
-    <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.white }}>
+    <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.cream }}>
       <Hero imgs={HERO_IMGS} idx={hero} onPlay={() => setShowVideo(true)} />
 
       <Destinations />
