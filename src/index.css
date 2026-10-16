@@ -48,6 +48,22 @@
   50% { opacity: 1; transform: scale(1.08); }
 }
 
+/* ─── Pointing at a control ───
+   The customise picker scrolls to Change hotel or Change day plan rather than
+   carrying a second copy of them, so something has to say "this one". A ring
+   that expands and fades three times: enough to find by eye, over before it
+   becomes a thing you are waiting out. The control keeps its own styling. */
+.point-at {
+  position: relative;
+  z-index: 1;
+  animation: pointAt 0.85s ease-out 3;
+}
+@keyframes pointAt {
+  0%   { box-shadow: 0 0 0 0 rgba(227, 27, 83, 0.55); }
+  70%  { box-shadow: 0 0 0 9px rgba(227, 27, 83, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(227, 27, 83, 0); }
+}
+
 /* Change Day, Bottom Sheet animations */
 @keyframes sheetSlideUp {
   from { transform: translateY(100%); }

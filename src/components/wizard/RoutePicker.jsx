@@ -484,7 +484,10 @@ function RegionSheet({ dest, city, added, onAdd, onClose }) {
   );
 }
 
-export default function RoutePicker({ dest, nights, route, setRoute, nudge }) {
+// `title` is the step's question. The itinerary screen opens this same picker
+// as its own screen with its own header bar, so there it passes none and keeps
+// one title on the screen instead of two saying the same thing.
+export default function RoutePicker({ dest, nights, route, setRoute, nudge, title = "Choose the cities you want to visit" }) {
   const areas = useMemo(() => destAreas[dest] || [], [dest]);
   // The region page opens over the step rather than navigating to it. Leaving
   // the wizard loses every answer given so far, and reading about Ubud is not
@@ -567,7 +570,9 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge }) {
     const read = () => {
       const h = head.current?.offsetHeight;
       const p = peek.current?.offsetHeight;
-      if (h) setHeadH(h);
+      // Zero is a real answer when there is no title, so only a missing
+      // measurement falls back to the default.
+      if (h != null) setHeadH(h);
       if (p) setPeekH(p);
     };
     read();
@@ -699,11 +704,13 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge }) {
           whole screen. */}
       <div ref={head} style={{
         position: "sticky", top: 0, zIndex: 1, background: C.white,
-        padding: "14px 16px 12px",
+        padding: title ? "14px 16px 12px" : 0,
       }}>
-        <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: C.head, letterSpacing: "-0.4px", lineHeight: 1.22 }}>
-          Choose the cities you want to visit
-        </h1>
+        {title && (
+          <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: C.head, letterSpacing: "-0.4px", lineHeight: 1.22 }}>
+            {title}
+          </h1>
+        )}
       </div>
 
       {/* ─── The map, and most of the screen ───

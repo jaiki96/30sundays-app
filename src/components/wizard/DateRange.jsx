@@ -168,7 +168,12 @@ function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, p
   );
 }
 
-export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights }) {
+// `lockNights` is for editing a trip that already exists. The wizard asks two
+// questions here, a start and a length; a saved plan has already answered the
+// second one, and its day count is what the plan is made of. So with a length
+// locked a tap sets the whole stay at once and the calendar never asks for an
+// end it is not allowed to change.
+export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights, lockNights = null }) {
   const today = useMemo(() => midnight(new Date()), []);
   const wrapRef = useRef(null);
   const footRef = useRef(null);
@@ -226,6 +231,8 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   };
 
   const onPick = (d) => {
+    // A locked length: one tap moves the whole stay, start and end together.
+    if (lockNights) { commit(d, addDays(d, lockNights)); return; }
     // Nothing picked, a finished trip, or the marker is back on the start:
     // this tap is a start.
     if (!start || hasRange || focus === "start") { beginAt(d); return; }
