@@ -24,7 +24,7 @@ import { SKY_WORD } from "../data/weatherData";
 import { KIND_TONE } from "../data/activityKind";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
 import { SKY_STYLE } from "../components/skyStyle";
-import { SEASON_COLOR, SEASON_TINT } from "../components/seasonStyle";
+import { SEASON_COLOR, SEASON_TINT, SEASON_LABEL, SEASON_MEANING } from "../components/seasonStyle";
 import { R, SHADOW, T, WELL, A } from "../components/hotel_refined/tokens";
 import BookedCard from "../components/booked_lab/BookedCard";
 import { ActivityScreen } from "./DayDetailLab";
@@ -883,8 +883,9 @@ const VERDICT = {
   rainy: { label: "Fine, but expect rain", bg: "#FFF4E0", fg: "#B54708" },
   heavy: { label: "Not the best time", bg: "#FEF3F2", fg: "#B42318" },
 };
-const CROWD_WORD = { peak: "Busiest", shoulder: "Fewer people, cheaper", off: "Quietest, cheapest" };
-const SEASON_WORD = { peak: "Peak season", shoulder: "Shoulder", off: "Off-season" };
+// The season's name and what it means come from the dates step's own wording,
+// not a second copy of them here. Two names for the same three seasons in one
+// app is one of them being wrong.
 
 function WhenToGo({ r }) {
   const now = new Date().getMonth();
@@ -949,7 +950,7 @@ function WhenToGo({ r }) {
               <Sky.Icon size={13} color={Sky.color} />
               {days != null ? `${days} rain days` : "rain not recorded"}
             </span>
-            {[SEASON_WORD[mo.rating], CROWD_WORD[mo.rating]].map((t) => (
+            {[SEASON_LABEL[mo.rating], SEASON_MEANING[mo.rating]].map((t) => (
               <span key={t} style={{
                 flexShrink: 0, padding: "3px 9px", borderRadius: R.pill,
                 background: SEASON_TINT[mo.rating], color: SEASON_COLOR[mo.rating],

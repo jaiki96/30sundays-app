@@ -15,7 +15,7 @@ import { RAMP } from "../data/brand";
 // Every value here clears 4.5:1 on white. These labels are 9.5px, so the
 // prettier, paler versions of all three would not survive daylight.
 
-export const SEASON_LABEL = { peak: "Peak season", shoulder: "Shoulder season", off: "Off-season" };
+export const SEASON_LABEL = { peak: "Peak Season", shoulder: "Mid-season", off: "Off Season" };
 
 // On the white chip.
 // Green is the go-ahead, so it belongs on shoulder season: fewer people and a
@@ -47,12 +47,13 @@ export const SEASON_TINT = {
   off: "#F2F0EE",
 };
 
-// What the season actually means for a couple standing there. "Peak" is a
-// trade term; "Busiest" is the thing it decides.
+// What the season actually means for a couple standing there: how many other
+// people are going to be there and what it costs. "Peak" on its own is a trade
+// term and decides nothing for anybody reading it.
 export const SEASON_MEANING = {
-  peak: "Busiest",
-  shoulder: "Fewer people, cheaper",
-  off: "Quietest, cheapest",
+  peak: "Highest Demand, Peak Rates",
+  shoulder: "Fewer Crowds, Better Rates",
+  off: "Quietest Time, Base Rates",
 };
 
 // The weather chip. Its own colour, not the neutral grey, so the sky and the
