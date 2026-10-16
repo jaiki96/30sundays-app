@@ -1595,7 +1595,7 @@ function Faq({ items }) {
 //
 // Snapping is CSS, and the dots read the scroll position rather than driving
 // it, so a flick, a drag and a trackpad all land on the same frame.
-function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, height }) {
+function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, height, hideBack, closeIcon }) {
   const rail = useRef(null);
   const [i, setI] = useState(0);
 
@@ -1643,9 +1643,13 @@ function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, hei
         top: "calc(14px + env(safe-area-inset-top, 0px))",
         display: "flex", alignItems: "center", gap: 8,
       }}>
-        <button onClick={onBack} aria-label="Back" style={round}>
-          <ArrowLeft size={18} color={C.head} />
-        </button>
+        {!hideBack && (
+          <button onClick={onBack} aria-label={closeIcon ? "Close" : "Back"} style={round}>
+            {/* In a sheet this shuts the sheet rather than going anywhere, and
+                a cross says that where an arrow says the opposite. */}
+            {closeIcon ? <XIcon size={18} color={C.head} /> : <ArrowLeft size={18} color={C.head} />}
+          </button>
+        )}
         <span style={{ flex: 1 }} />
         {hasMap && (
           <button onClick={onMap} aria-label="Map" style={round}>
@@ -1696,21 +1700,22 @@ function RegionHero({ photos, city, count, hasMap, onBack, onMap, onGallery, hei
 // which region you are reading about, and on a page this long that matters more
 // than it sounds. So the name arrives in a plain bar exactly as the photograph
 // leaves, carrying the same two buttons it was carrying before.
-function StickyBar({ city, show, hasMap, onBack, onMap }) {
+function StickyBar({ city, show, hasMap, onBack, onMap, closeIcon, inset = 0 }) {
   return (
     <div style={{
       position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
       background: "rgba(255,255,255,0.97)", backdropFilter: "blur(8px)",
       borderBottom: `1px solid ${C.div}`,
-      padding: "8px 12px", paddingTop: "calc(8px + env(safe-area-inset-top, 0px))",
+      padding: "8px 12px",
+      paddingTop: `calc(${8 + inset}px + env(safe-area-inset-top, 0px))`,
       display: "flex", alignItems: "center", gap: 8,
       opacity: show ? 1 : 0,
       transform: show ? "translateY(0)" : "translateY(-100%)",
       pointerEvents: show ? "auto" : "none",
       transition: "opacity 0.18s ease, transform 0.18s ease",
     }}>
-      <button onClick={onBack} aria-label="Back" style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
-        <ArrowLeft size={17} color={C.head} />
+      <button onClick={onBack} aria-label={closeIcon ? "Close" : "Back"} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
+        {closeIcon ? <XIcon size={17} color={C.head} /> : <ArrowLeft size={17} color={C.head} />}
       </button>
       <p style={{ margin: 0, flex: 1, minWidth: 0, ...T.h3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {city}
@@ -1730,7 +1735,15 @@ function StickyBar({ city, show, hasMap, onBack, onMap }) {
 // place is half of choosing it. Without it, somebody who has just read the
 // honest bit about Ubud has to close the page, find the card again and press
 // the plus, which is three taps to answer a question they already answered.
-export default function RegionDetail({ dest: destProp, city: cityProp, onClose, onAdd, added }) {
+export default function RegionDetail({
+  dest: destProp, city: cityProp, onClose, onAdd, added,
+  // Set when this is the content of a bottom sheet. The sheet is a different
+  // height at each of its stops, so the photographs cannot be measured off
+  // this page's own box or they would resize as the sheet moves; the sheet
+  // passes the one height it should always be. It also wants to know how far
+  // the page has been scrolled, because scrolling is what opens it fully.
+  heroHeight, onScrollTop, sheetStop,
+}) {
   const { name, city } = useParams();
   const navigate = useNavigate();
   const embedded = !!destProp;
@@ -1789,12 +1802,13 @@ export default function RegionDetail({ dest: destProp, city: cityProp, onClose, 
   // The photographs take a little under half the screen, which is where every
   // listing app puts them, and leaves the first section of facts visible at
   // the bottom rather than a strip of nothing.
-  const heroH = Math.round(H * 0.42);
+  const heroH = heroHeight || Math.round(H * 0.42);
 
   const onScroll = useCallback((e) => {
     // The bar arrives as the last of the photograph leaves.
     setScrolled(e.currentTarget.scrollTop > heroH - 70);
-  }, [heroH]);
+    onScrollTop?.(e.currentTarget.scrollTop);
+  }, [heroH, onScrollTop]);
 
   if (!regions.length || !regions.some((x) => x.city === town) || !r) {
     return (
@@ -1823,6 +1837,8 @@ export default function RegionDetail({ dest: destProp, city: cityProp, onClose, 
           count={mediaCount}
           height={heroH}
           hasMap={hasMap}
+          hideBack={sheetStop === "full"}
+          closeIcon={!!sheetStop}
           onBack={back}
           onMap={() => setMap(true)}
           onGallery={() => setGallery(true)}
@@ -1881,7 +1897,18 @@ export default function RegionDetail({ dest: destProp, city: cityProp, onClose, 
         </div>
       </div>
 
-      <StickyBar city={r.city} show={scrolled} hasMap={hasMap} onBack={back} onMap={() => setMap(true)} />
+      {/* In a sheet the bar is the way out and is there the whole time the
+          sheet is full, rather than arriving with the scroll: a sheet with no
+          visible way to close it is a trap. */}
+      <StickyBar
+        city={r.city}
+        show={scrolled || sheetStop === "full"}
+        hasMap={hasMap}
+        onBack={back}
+        closeIcon={!!sheetStop}
+        inset={sheetStop ? 20 : 0}
+        onMap={() => setMap(true)}
+      />
 
       {/* The answer to the question this page was opened to settle. */}
       {onAdd && (
