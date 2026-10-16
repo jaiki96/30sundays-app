@@ -2611,8 +2611,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       {/* The way back to all five, from anywhere on the page. The other five
           doors are spread over three thousand pixels of scroll. */}
       {wizardEditable && !citiesScreen && (
+        /* Inside the phone, not inside the window. Plain `position: fixed`
+           pinned this to the browser's own bottom right, which on a phone is
+           the same place and on a desktop is three hundred pixels off the side
+           of the shell. Every other overlay here hangs off `overlayFrame`; this
+           one now does too, as a layer that passes clicks through to the page
+           with one button in it that does not. */
+        <div style={{ ...overlayFrame, zIndex: 55, pointerEvents: "none" }}>
         <button onClick={() => setCustomiseOpen(true)} style={{
-          position: "fixed", right: 14, bottom: 88, zIndex: 55,
+          position: "absolute", right: 14, bottom: 88, pointerEvents: "auto",
           display: "inline-flex", alignItems: "center", gap: 7,
           padding: "10px 15px 10px 13px", borderRadius: 999, border: "none",
           // Ink, not pink. The bar underneath already has the pink button, and
@@ -2624,6 +2631,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         }}>
           <SlidersHorizontal size={16} /> Customise
         </button>
+        </div>
       )}
 
       {/* ═══ Day Traveller Photos Fullscreen ═══ */}
