@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, AlertTriangle, Users, CalendarDays } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Users, CalendarDays, ChevronUp } from "lucide-react";
 import { C } from "../../data";
 import { monthRating } from "../../data/buildData";
 import { monthWeather } from "../../data/weatherData";
@@ -72,7 +72,7 @@ function WeatherChip({ w, small }) {
 }
 
 // ─── One month ───
-function Month({ m, y, dest, today, start, end, ghostEnd, onPick, onGrab, pulse }) {
+function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, pulse }) {
   const ndays = new Date(y, m + 1, 0).getDate();
   const firstDow = new Date(y, m, 1).getDay();
   const r = monthRating(dest, m);
@@ -82,7 +82,7 @@ function Month({ m, y, dest, today, start, end, ghostEnd, onPick, onGrab, pulse 
   for (let d = 1; d <= ndays; d++) cells.push(d);
 
   return (
-    <div style={{ marginBottom: 18 }}>
+    <div data-month={idx} style={{ marginBottom: 18 }}>
       {/* Two chips, not one. How busy a month is and what the sky is doing are
           different questions, and one chip made them read as a single fact. */}
       <div style={{ padding: "0 2px 16px" }}>
@@ -131,7 +131,7 @@ function Month({ m, y, dest, today, start, end, ghostEnd, onPick, onGrab, pulse 
                 onClick={() => onPick(d)}
                 style={{
                   position: "absolute", inset: cap ? "1px 2px" : 0,
-                  border: "none", cursor: past ? "default" : "pointer", fontFamily: "inherit",
+                  cursor: past ? "default" : "pointer", fontFamily: "inherit",
                   borderRadius: 10,
                   background: cap ? C.p600 : "transparent",
                   border: isGhostEnd ? `1.5px dashed ${C.p600}` : "none",
@@ -281,6 +281,68 @@ export default function DateRange({ dest, minNights = 7, startDate, setStartDate
   const stopDrag = () => setDrag(null);
   const short = hasRange && n < minNights;
 
+  // ─── Which month you land on ───
+  //
+  // The one after this one. Most of this month has already gone, and nobody
+  // booking a holiday on the sixteenth is leaving on the eighteenth, so
+  // opening on a grid that is half greyed out wastes the first screen. This
+  // month is still there, one scroll up, and the chip below says so while it
+  // is the thing immediately above.
+  //
+  // Not when dates are already picked: coming back to this step should show
+  // the trip, not a month somebody has already scrolled past once.
+  const scroller = useRef(null);
+  const [back, setBack] = useState(false);
+
+  const monthTop = (i) => {
+    const sc = scroller.current;
+    const el = wrapRef.current?.querySelector(`[data-month="${i}"]`);
+    if (!sc || !el) return null;
+    const head = headRef.current?.getBoundingClientRect().height || 0;
+    return sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - head;
+  };
+
+  const [ready, setReady] = useState(false);
+  useLayoutEffect(() => {
+    let sc = wrapRef.current?.parentElement;
+    while (sc && sc !== document.body) {
+      const oy = getComputedStyle(sc).overflowY;
+      if (oy === "auto" || oy === "scroll") break;
+      sc = sc.parentElement;
+    }
+    if (!sc || sc === document.body) return;
+    scroller.current = sc;
+    setReady(true);
+    if (startDate) return;
+    const go = () => { const t = monthTop(1); if (t != null) sc.scrollTop = Math.max(0, t); };
+    go();
+    // Again once the weekday row and the chips have their real heights.
+    const id = setTimeout(go, 60);
+    return () => clearTimeout(id);
+    // Once, on the way in. Re-running it would drag somebody back up the
+    // calendar every time they changed a date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The chip is there only while this month is just above: gone once you are
+  // deep enough in the year that going back to it is not what you want.
+  useLayoutEffect(() => {
+    const sc = scroller.current;
+    if (!ready || !sc) return;
+    const on = () => {
+      const t = monthTop(1);
+      setBack(t != null && sc.scrollTop > t - 40 && sc.scrollTop < t + 500);
+    };
+    on();
+    sc.addEventListener("scroll", on, { passive: true });
+    return () => sc.removeEventListener("scroll", on);
+  }, [ready]);
+
+  const toThisMonth = () => {
+    const sc = scroller.current;
+    if (sc) sc.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div>
       {/* The weekday row stays put, so you always know which column is Sunday. */}
@@ -294,6 +356,28 @@ export default function DateRange({ dest, minNights = 7, startDate, setStartDate
         ))}
       </div>
 
+      {/* Floating, not a row: it takes no height, so the calendar sits where
+          it would anyway and the chip is over the first week of it. */}
+      <div style={{ position: "sticky", top: 36, zIndex: 4, height: 0, display: "flex", justifyContent: "flex-end" }}>
+        <button
+          onClick={toThisMonth}
+          style={{
+            transform: "translateY(-2px)",
+            display: "inline-flex", alignItems: "center", gap: 4,
+            border: `1px solid ${C.div}`, borderRadius: 999, background: C.white,
+            padding: "5px 11px", cursor: "pointer", fontFamily: "inherit",
+            fontSize: 11.5, fontWeight: 700, color: C.head,
+            boxShadow: "0 2px 10px rgba(16,24,40,0.12)",
+            opacity: back ? 1 : 0,
+            pointerEvents: back ? "auto" : "none",
+            transition: "opacity .18s ease",
+          }}
+        >
+          <ChevronUp size={13} color={C.p600} />
+          {MONTH_NAMES[today.getMonth()]} {today.getFullYear()}
+        </button>
+      </div>
+
       <div
         ref={wrapRef}
         onPointerMove={onMove}
@@ -301,9 +385,9 @@ export default function DateRange({ dest, minNights = 7, startDate, setStartDate
         onPointerCancel={stopDrag}
         style={{ touchAction: drag ? "none" : "auto" }}
       >
-        {months.map(({ m, y }) => (
+        {months.map(({ m, y }, i) => (
           <Month
-            key={`${m}-${y}`} m={m} y={y} dest={dest} today={today}
+            key={`${m}-${y}`} m={m} y={y} idx={i} dest={dest} today={today}
             start={start} end={end} ghostEnd={ghostEnd} onPick={onPick} onGrab={onGrab} pulse={pulse}
           />
         ))}
