@@ -1,23 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ArrowRight, User, Baby, Heart, ArrowLeftRight } from "lucide-react";
+import { ChevronDown, ArrowRight, User, Baby, ArrowLeftRight } from "lucide-react";
+import SaveHeart from "./SaveHeart";
 import { C, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
 import PlanRef from "./PlanRef";
 
 // Wishlist toggle shown on every version row (prototype: local state only).
-function WishHeart({ on, onToggle }) {
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      aria-label={on ? "Remove from wishlist" : "Save to wishlist"}
-      style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
-    >
-      <Heart size={16} color={C.p600} fill={on ? C.p600 : "none"} />
-    </button>
-  );
-}
-
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
 
 // A version (or a Maldives property quote) is a DRAFT (editable) or a QUOTE
@@ -122,7 +111,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
             {titleText}
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-            {!lost && <WishHeart on={isWished(primary.id)} onToggle={() => handleWish(primary.id)} />}
+            {!lost && <SaveHeart size={30} saved={isWished(primary.id)} onToggle={() => handleWish(primary.id)} />}
             {showVersionBadge && <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, letterSpacing: ".3px" }}>V{versionBadgeNum}</span>}
             {isDraftCard && <DraftChip />}
             <StatusChip kind={stateKind} />
@@ -201,7 +190,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId
             const vDates = travelRange(vTd?.fromDate, vNights);
             return (
               <div key={v.id} onClick={() => onOpen(v)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px 9px 14px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
-                <WishHeart on={isWished(v.id)} onToggle={() => handleWish(v.id)} />
+                <SaveHeart size={30} saved={isWished(v.id)} onToggle={() => handleWish(v.id)} />
                 <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, flexShrink: 0 }}>V{v.num}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vRoute}</p>

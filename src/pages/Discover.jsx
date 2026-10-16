@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { C, destData } from "../data";
 import { useSaves } from "../data/saves";
+import SaveHeart from "../components/SaveHeart";
 import { destHero, estimatePerPerson, formatINR } from "../data/buildData";
 import { regionsFor, activitiesFor, goodToKnow, starterRoutes } from "../data/discoverData";
 
@@ -60,27 +61,16 @@ function Spotlight({ data, onClose, saved, onToggleSave }) {
             </div>
           )}
           {saveable && (
-            <button onClick={onToggleSave} style={{ width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px", borderRadius: 12, border: `1.5px solid ${saved ? "#2E7D52" : C.p600}`, background: saved ? "#E6F4EC" : C.p600, color: saved ? "#1B5E3A" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-              <Heart size={17} fill={saved ? "#1B5E3A" : "#fff"} color={saved ? "#1B5E3A" : "#fff"} />
+            /* The same pink the heart is everywhere else, rather than the
+               green this one button used to turn. A save is a save. */
+            <button onClick={onToggleSave} style={{ width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px", borderRadius: 12, border: `1.5px solid ${C.p600}`, background: saved ? C.white : C.p600, color: saved ? C.p600 : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              <Heart size={17} fill={saved ? C.p600 : "none"} color={saved ? C.p600 : "#fff"} strokeWidth={2.2} />
               {saved ? `Saved${savedLabel ? ` · ${savedLabel}` : ""}` : "Save this"}
             </button>
           )}
         </div>
       </div>
     </div>
-  );
-}
-
-// Heart save button (corner of a card).
-function SaveHeart({ saved, onClick }) {
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      aria-label={saved ? "Saved" : "Save"}
-      style={{ width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", background: saved ? C.p600 : "rgba(255,255,255,0.92)", boxShadow: "0 1px 5px rgba(0,0,0,0.18)" }}
-    >
-      <Heart size={16} fill={saved ? "#fff" : "none"} color={saved ? "#fff" : C.head} strokeWidth={2} />
-    </button>
   );
 }
 
@@ -168,7 +158,7 @@ export default function Discover({ routesBase = "/discover" }) {
               <div style={{ position: "relative", height: 120 }}>
                 <img src={r.img} alt={r.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 50%)" }} />
-                <div style={{ position: "absolute", top: 9, right: 9 }}><SaveHeart saved={isRegionSaved(r.city)} onClick={() => toggleRegion(dest, r.city)} /></div>
+                <div style={{ position: "absolute", top: 9, right: 9 }}><SaveHeart onPhoto saved={isRegionSaved(r.city)} onToggle={() => toggleRegion(dest, r.city)} /></div>
                 <span style={{ position: "absolute", left: 9, bottom: 9, display: "inline-flex", alignItems: "center", gap: 4, background: r.dayTrip ? "rgba(255,255,255,0.94)" : C.p100, color: r.dayTrip ? C.sub : C.p600, fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 999 }}>
                   {r.dayTrip ? "Day trip" : `Base · ${r.n}N`}
                 </span>
@@ -212,7 +202,7 @@ export default function Discover({ routesBase = "/discover" }) {
               <div style={{ position: "relative", height: 176, borderRadius: 14, overflow: "hidden" }}>
                 <img src={a.img} alt={a.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.7) 100%)" }} />
-                <div style={{ position: "absolute", top: 9, right: 9 }}><SaveHeart saved={isActivitySaved(a.id)} onClick={() => toggleActivity(dest, a.id)} /></div>
+                <div style={{ position: "absolute", top: 9, right: 9 }}><SaveHeart onPhoto saved={isActivitySaved(a.id)} onToggle={() => toggleActivity(dest, a.id)} /></div>
                 <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Play size={16} color={C.head} fill={C.head} />
                 </div>

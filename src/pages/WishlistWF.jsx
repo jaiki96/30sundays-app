@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Heart, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { C, destData } from "../data";
 import { useSaves } from "../data/saves";
+import SaveHeart from "../components/SaveHeart";
 import { mergedSaves, saveCounts, YOU, PARTNER } from "../data/coupleData";
 
 const PAD = 16;
@@ -30,9 +31,7 @@ function Row({ item, onUnsave }) {
         <p style={{ fontSize: 11.5, color: C.sub, margin: "2px 0 0" }}>{item.sub}</p>
       </div>
       {item.by.includes("you") && (
-        <button onClick={onUnsave} aria-label="Unsave" style={{ width: 32, height: 32, borderRadius: "50%", background: C.p600, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-          <Heart size={15} fill="#fff" color="#fff" />
-        </button>
+        <SaveHeart saved onToggle={onUnsave} />
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, Heart, Clock } from "lucide-react";
+import { Play, Clock } from "lucide-react";
 import { C } from "../data";
 import { WATCH_CATEGORIES } from "../data/watchData";
 import { useSavedVideos } from "../hooks/useSavedVideos";
+import SaveHeart from "./SaveHeart";
 
 // Watch card - split layout (portrait poster + white footer panel) so it reads
 // unmistakably as a vertical video, distinct from the gradient cards used for
@@ -65,17 +66,9 @@ export default function WatchCard({ video, onOpen, live = false, width, aspect =
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.35) 100%)" }} />
 
         {/* Save heart - top-left so the duration pill owns top-right */}
-        <button
-          onClick={(e) => { e.stopPropagation(); toggle(video.id); }}
-          aria-label={isSaved(video.id) ? "Unsave" : "Save"}
-          style={{
-            position: "absolute", top: 8, left: 8, width: 28, height: 28,
-            borderRadius: "50%", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)",
-            border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-          }}
-        >
-          <Heart size={13} color={isSaved(video.id) ? C.p600 : "#fff"} fill={isSaved(video.id) ? C.p600 : "transparent"} strokeWidth={2.2} />
-        </button>
+        <div style={{ position: "absolute", top: 8, left: 8 }}>
+          <SaveHeart onPhoto size={28} saved={isSaved(video.id)} onToggle={() => toggle(video.id)} />
+        </div>
 
         {/* Duration pill - strong "this is a video" cue */}
         <div style={{

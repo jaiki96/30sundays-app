@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Bookmark } from "lucide-react";
+import { ArrowLeft, Bookmark } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
+import SaveHeart from "../components/SaveHeart";
 import { POI_CATEGORIES, CATEGORY_LABELS } from "../data/wishlistData";
 
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿", Mauritius: "🇲🇺" };
@@ -11,16 +12,10 @@ const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩",
 const PAD = 16;
 
 // Small round heart used to remove something from the wishlist.
+// On this screen everything is already saved, so the heart is always solid and
+// pressing it takes the thing off the list.
 function RemoveHeart({ onRemove, light }) {
-  return (
-    <button
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
-      aria-label="Remove from wishlist"
-      style={{ width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: light ? "rgba(255,255,255,0.92)" : "transparent", boxShadow: light ? "0 1px 4px rgba(0,0,0,0.18)" : "none" }}
-    >
-      <Heart size={17} color={C.p600} fill={C.p600} />
-    </button>
-  );
+  return <SaveHeart saved onPhoto={!!light} onToggle={onRemove} />;
 }
 
 // A saved row: itinerary, hotel, activity, restaurant or shopping place.

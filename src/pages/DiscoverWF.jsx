@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Heart, Play, Check, ChevronRight, Star, MapPin, FileCheck, Plane, Clock, ShieldCheck, Sun } from "lucide-react";
+import { ArrowLeft, Play, Check, ChevronRight, Star, MapPin, FileCheck, Plane, Clock, ShieldCheck, Sun } from "lucide-react";
 import { C, destData, destinations, reviews, getCustomerPhotos, couplePhotoNames, getItinerariesForDest, customerPhotos } from "../data";
 import { useSaves } from "../data/saves";
+import SaveHeart from "../components/SaveHeart";
 import { destHero } from "../data/buildData";
 import { regionsFor, activitiesFor } from "../data/discoverData";
 import { weatherData } from "../data/weatherData";
@@ -23,14 +24,6 @@ function visitPct(name) {
 
 // One save-heart look everywhere: brand-pink outline that fills solid on save.
 // No disc; a soft shadow keeps it legible over photos (drop it when on white).
-function SaveHeart({ saved, onClick, size = 30, icon = 22, shadow = true }) {
-  return (
-    <button onClick={(e) => { e.stopPropagation(); onClick(); }} aria-label={saved ? "Saved" : "Save"} style={{ width: size, height: size, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0 }}>
-      <Heart size={icon} fill={saved ? C.p600 : "none"} color={C.p600} strokeWidth={2.2} style={shadow ? { filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.45))" } : undefined} />
-    </button>
-  );
-}
-
 // Horizontal scroll of ready-made itineraries for the destination, chosen to be
 // distinct (different routes / nights / cities), reusing the standard card.
 function ReadyMadeItineraries({ dest }) {
@@ -105,7 +98,7 @@ export default function DiscoverWF() {
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.18) 28%, rgba(0,0,0,0.72) 100%)" }} />
               
               <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: 8, right: 8 }}>
-                <SaveHeart saved={isRegionSaved(r.city)} onClick={() => toggleRegion(dest, r.city)} />
+                <SaveHeart onPhoto saved={isRegionSaved(r.city)} onToggle={() => toggleRegion(dest, r.city)} />
               </div>
               <div style={{ position: "absolute", left: 11, right: 11, bottom: 11 }}>
                 <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>{r.emoji} {r.city}</p>
@@ -156,7 +149,7 @@ export default function DiscoverWF() {
               <div style={{ position: "relative", height: 168, borderRadius: 14, overflow: "hidden" }}>
                 <img src={a.img} alt={a.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.7) 100%)" }} />
-                <div style={{ position: "absolute", top: 8, right: 8 }}><SaveHeart saved={isActivitySaved(a.id)} onClick={() => toggleActivity(dest, a.id)} /></div>
+                <div style={{ position: "absolute", top: 8, right: 8 }}><SaveHeart onPhoto saved={isActivitySaved(a.id)} onToggle={() => toggleActivity(dest, a.id)} /></div>
                 <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={15} color={C.head} fill={C.head} /></div>
                 <div style={{ position: "absolute", left: 9, right: 9, bottom: 9 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "15px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{a.name}</p>
@@ -223,7 +216,7 @@ export function DestReel({ dest, reel, saved, onToggleSave, onClose }) {
         <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)", textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>{kicker}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 10px" }}>
           <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#fff", lineHeight: 1.15, letterSpacing: "-0.4px", textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}>{name}</p>
-          <SaveHeart saved={saved} onClick={onToggleSave} />
+          <SaveHeart onPhoto size={34} saved={saved} onToggle={onToggleSave} />
         </div>
         {isRegion ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
