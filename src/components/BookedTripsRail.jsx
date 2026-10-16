@@ -219,26 +219,37 @@ export default function BookedTripsRail() {
   const [all, setAll] = useState(false);
 
   return (
-    <div style={{ marginTop: 32, background: C.cream }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: `0 ${PAD}px` }}>
-        <h2 style={{ margin: 0, flex: 1, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
-          What they booked
+    <div style={{ marginTop: 32 }}>
+      {/* "Just booked" is the claim, and "by real travellers" is the half that
+          makes it one: handwritten, because a line in somebody's hand is the
+          one bit of a sales page that reads as a person saying it. */}
+      <div style={{ padding: `0 ${PAD}px`, marginBottom: 14 }}>
+        <h2 style={{ margin: 0, fontSize: 40, fontWeight: 800, color: C.ink, letterSpacing: "-1.4px", lineHeight: 1 }}>
+          Just booked
         </h2>
-        <button onClick={() => setAll(true)} style={{
-          flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 3,
-          border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
-          fontSize: 12.5, fontWeight: 700, color: C.p600,
-        }}>View all <ArrowRight size={13} /></button>
+        {/* Tucked under the end of the heading rather than hard against the
+            margin, and leaning five degrees, which is what stops a handwritten
+            line reading as a font choice. */}
+        <p style={{ margin: "-1px 0 0", textAlign: "right", paddingRight: 62, lineHeight: 1.1 }}>
+          <span style={{
+            display: "inline-block", transform: "rotate(-5deg)",
+            fontFamily: "Caveat, cursive", fontSize: 25, fontWeight: 700, color: "#007E72",
+          }}>by real travellers</span>
+        </p>
       </div>
-      {/* What the heading used to spell out at twice the size. "What they
-          booked" is the claim; this is the small print under it. */}
-      <p style={{ margin: `3px ${PAD}px 13px`, fontSize: 13.5, color: C.sub }}>
-        Real itineraries, from recent bookings.
-      </p>
 
       <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
         {BOOKED_TRIPS.map((t) => <BookedCard key={t.key} t={t} />)}
       </div>
+
+      {/* Under the rail, not beside the heading. Beside it, "View all" is a
+          thing you read before you have seen one; under it, it is what you
+          reach for when you have. */}
+      <button onClick={() => setAll(true)} style={{
+        display: "inline-flex", alignItems: "center", gap: 4, margin: `14px ${PAD}px 0`,
+        border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+        fontSize: 13, fontWeight: 700, color: C.ink,
+      }}>View all <ArrowRight size={14} /></button>
 
       {all && <AllTripsSheet onClose={() => setAll(false)} />}
     </div>

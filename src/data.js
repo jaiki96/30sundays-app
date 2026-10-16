@@ -9,8 +9,15 @@ export const C = {
   head: "#181D27", sub: "#535862", inact: "#A4A7AE", icon: "#D5D7DA",
   div: "#E9EAEB", bg: "#F5F5F5", white: "#FFFFFF",
   // The home screen's ground. Warm enough that a white card reads as a card on
-  // it, pale enough that nothing on top has to fight it.
-  cream: "#FCF8F5",
+  // it, pale enough that nothing on top has to fight it, with the dot it is
+  // stippled with.
+  cream: "#FDF8F5",
+  // The stipple over the lower half of it, which is the ink at seven percent.
+  dot: "rgba(24, 30, 76, 0.07)",
+  // The navy the home screen's headings are set in. Near-black is what you use
+  // when you have not chosen; this is the choice, and it is warmer against the
+  // cream than #181D27 ever was.
+  ink: "#181E4C",
 };
 
 // ─── Vibe chip styles ───

@@ -85,7 +85,7 @@ export default function BookedCard({ t, wide = false }) {
 
       <div style={{ padding: "11px 13px 13px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <p style={{ margin: 0, minWidth: 0, fontSize: 15, fontWeight: 800, color: C.head, letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <p style={{ margin: 0, minWidth: 0, fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {t.dest} ({t.nights}N)
           </p>
           <span style={{
@@ -110,7 +110,7 @@ export default function BookedCard({ t, wide = false }) {
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
           marginTop: 11, paddingTop: 11, borderTop: `1px solid ${C.div}`,
         }}>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: C.head, letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>
             ₹{t.price} <span style={{ fontSize: 10, fontWeight: 600, color: C.inact, letterSpacing: 0 }}>per person</span>
           </p>
           <span style={{

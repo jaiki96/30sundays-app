@@ -56,7 +56,7 @@ export function TravellerMomentsReels() {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ padding: `0 ${PAD}px`, marginBottom: 13 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>Traveller moments</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>Traveller Moments</h2>
       </div>
       <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD }}>
         {travellerReels.map((r, i) => <TravellerReel key={i} item={r} />)}
@@ -119,12 +119,12 @@ export function LovedByCouples() {
   return (
     <div style={{ margin: "28px 16px 0" }}>
       <div style={{ marginBottom: 13 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>Loved by 1,000+ couples</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>Traveller Reviews</h2>
       </div>
       <div style={{ background: `linear-gradient(135deg, ${C.p100} 0%, #fff 100%)`, border: `1px solid ${C.p100}`, borderRadius: 18, padding: "20px 18px", marginBottom: 16, boxShadow: "0 4px 18px rgba(137,18,62,0.08)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <div style={{ textAlign: "center", flexShrink: 0 }}>
-            <div style={{ fontSize: 44, fontWeight: 800, color: C.head, lineHeight: 1, letterSpacing: "-1.5px" }}>4.6</div>
+            <div style={{ fontSize: 44, fontWeight: 800, color: C.ink, lineHeight: 1, letterSpacing: "-1.5px" }}>4.6</div>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginTop: 2, letterSpacing: "0.2px" }}>out of 5</div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -156,7 +156,7 @@ export function LovedByCouples() {
 // thing read before the tap, which is the job a rating does.
 function Hero({ imgs, idx, onPlay }) {
   return (
-    <div style={{ background: C.cream }}>
+    <div>
       <div style={{ position: "relative", height: 432, overflow: "hidden" }}>
         {imgs.map((src, i) => (
           <img key={i} src={src} alt="" style={{
@@ -215,43 +215,6 @@ function GoogleMark() {
   );
 }
 
-// ─── The frond ───
-//
-// Drawn rather than photographed, because a cut-out leaf at this size is a
-// stamp-sized PNG with a ragged edge and one more thing to download. Nine
-// leaflets fanned off a stem, each one pointed at both ends the way a real one
-// is, in the lagoon green the app already uses and at the weight of a
-// watermark. Nothing is read off it, so it sits behind the cards.
-const FROND = Array.from({ length: 13 }, (_, i) => {
-  const t = i / 12;                     // 0 at the base, 1 at the tip
-  const angle = -78 + t * 156;          // fanned either side of the stem
-  const len = 62 + Math.sin(t * Math.PI) * 56;   // longest in the middle
-  const w = 6 + Math.sin(t * Math.PI) * 3.5;
-  return { angle, len, w };
-});
-
-function PalmCorner() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 170 190"
-      width="178" height="199"
-      style={{ position: "absolute", top: -40, right: -52, color: "#2F9E8F", opacity: 0.3, pointerEvents: "none" }}
-    >
-      <g transform="translate(26, 96) rotate(24)" fill="currentColor">
-        {FROND.map(({ angle, len, w }) => (
-          <path
-            key={angle}
-            transform={`rotate(${angle})`}
-            d={`M0 0 Q${len * 0.42} ${-w} ${len} 0 Q${len * 0.42} ${w} 0 0Z`}
-          />
-        ))}
-        <path d="M-4 0 Q22 -1.5 46 0 Q22 1.5 -4 0Z" />
-      </g>
-    </svg>
-  );
-}
-
 // ─── Destinations ───
 //
 // Six countries, a photo and a name each, and no price. The price belongs on
@@ -259,23 +222,29 @@ function PalmCorner() {
 // only question being asked is where you fancy going.
 function Destinations() {
   return (
-    <div style={{ marginTop: 30, background: C.cream, position: "relative", overflow: "hidden" }}>
-      {/* A frond off the right edge, behind the cards. The block was a heading
-          and a grid on a flat ground, and the one thing every one of these six
-          countries has in common is the tree. Decoration, so it sits well back
-          and nothing has to be read off it. */}
-      <PalmCorner />
-      <h2 style={{ position: "relative", margin: `0 ${PAD}px 14px`, fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
+    <div style={{ marginTop: 30, position: "relative", overflow: "hidden" }}>
+      {/* Two leaves, one off each edge, behind the cards. The block was a
+          heading and a grid on a flat ground, and the one thing all six of
+          these countries have in common is the tree. */}
+      <img src={ART.leafRight} alt="" aria-hidden style={{
+        position: "absolute", top: 20, right: -7, width: 76, height: 92, pointerEvents: "none",
+      }} />
+      <img src={ART.leafLeft} alt="" aria-hidden style={{
+        position: "absolute", top: 442, left: -11, width: 93, height: 104, pointerEvents: "none",
+      }} />
+      <h2 style={{ position: "relative", margin: `0 ${PAD}px 14px`, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>
         Curated Destinations
       </h2>
       <div style={{ position: "relative", padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         {SIX.map((d) => (
           <Link key={d.name} to={`/destination/${encodeURIComponent(d.name)}`} style={{
             textDecoration: "none", background: C.white, borderRadius: 16, padding: 8,
-            boxShadow: "0 4px 18px rgba(0,0,0,0.08)",
+            // Warm and deep, not a neutral grey drop: these sit on a cream
+            // ground and a grey shadow on cream reads as dirt.
+            boxShadow: "0 14px 40px rgba(120,86,40,0.16)",
           }}>
             <img src={d.img} alt={d.name} style={{ width: "100%", height: 118, objectFit: "cover", borderRadius: 11, display: "block" }} />
-            <p style={{ margin: "10px 0 6px", textAlign: "center", fontSize: 15, fontWeight: 700, color: C.head }}>{d.name}</p>
+            <p style={{ margin: "10px 0 6px", textAlign: "center", fontSize: 15.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.2px" }}>{d.name}</p>
           </Link>
         ))}
       </div>
@@ -288,31 +257,51 @@ function Destinations() {
 // The three claims used to be a row of 11px captions under the hero, which is
 // the size you set a disclaimer in. They are the reasons to use us at all, so
 // they get a line of their own each and the question they answer above them.
+// ─── The brand's own artwork ───
+//
+// Three line drawings for the claims and two palm leaves for the destinations,
+// served from the same place the live site serves them from. They were drawn
+// for this brand and nothing I can build out of circles and straight lines is
+// going to be them.
+//
+// Referenced rather than copied into the repo, which keeps the prototype in
+// step with the real thing: when the artwork is redrawn, this follows. The cost
+// is that the page leans on that CDN for five small files.
+const ART_CDN = "https://cdn.prod.website-files.com/66fab24c6dde4d79b3b507d9";
+const ART = {
+  couple: `${ART_CDN}/68b6df380a620230fa53dcbb_couple.svg`,
+  price: `${ART_CDN}/68b6de749d134418c093c9b5_SVG_animate-02_09_2025%2C-17_14_46.svg`,
+  traps: `${ART_CDN}/68b6de74da5e6834f4be99af_SVG_animate-02_09_2025%2C-17_17_59.svg`,
+  leafRight: `${ART_CDN}/68b7e505c45a6083ce21cab5_leave-right.svg`,
+  leafLeft: `${ART_CDN}/68b7e505ea2efe68166ea93c_leave-left.avif`,
+};
+
 const MATCH = [
-  { I: Heart, t: "Made for Couples", s: "Vacations curated solely with couples in mind" },
-  { I: IndianRupee, t: "Price Transparency", s: "Only travel company to provide a split of Flights, Hotels & Activities" },
-  { I: ShieldCheck, t: "No Tourist Traps", s: "Only 8+ rated hotels; hand-picked authentic activities" },
+  { art: "couple", t: "Made for Couples", s: "Vacations curated solely with couples in mind" },
+  { art: "price", t: "Price Transparency", s: "Only travel company to provide a split of Flights, Hotels & Activities" },
+  { art: "traps", t: "No Tourist Traps", s: "Only 8+ rated hotels; hand-picked authentic activities" },
 ];
 
 function PerfectMatch() {
   return (
-    <div style={{ marginTop: 32, padding: `0 ${PAD}px`, background: C.cream }}>
-      <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
+    <div style={{ marginTop: 32, padding: `0 ${PAD}px` }}>
+      <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>
         Why we&apos;re the perfect match
       </h2>
       <p style={{ margin: "0 0 20px", fontSize: 13.5, lineHeight: "20px", color: C.sub }}>
         Overwhelmed by itineraries that leave you no time to relax together? Suspect your &apos;friendly&apos; travel agent isn&apos;t so friendly to your wallet? Then give us a try!
       </p>
-      {MATCH.map(({ I, t, s }) => (
-        <div key={t} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18 }}>
-          <span style={{
-            width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: C.p100,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <I size={21} color={C.p600} strokeWidth={2.1} />
-          </span>
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head, letterSpacing: "-0.2px" }}>{t}</p>
+      {/* One card each, on the white the rest of the page puts its content on,
+          rather than three rows loose on the ground. */}
+      {MATCH.map(({ art, t, s }) => (
+        <div key={t} style={{
+          display: "flex", alignItems: "center", gap: 14, marginBottom: 12,
+          background: C.white, borderRadius: 16, padding: "14px 16px",
+          boxShadow: "0 4px 18px rgba(120,86,40,0.08)",
+        }}>
+          <img src={ART[art]} alt="" width={46} height={46} style={{ flexShrink: 0, display: "block" }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.ink, letterSpacing: "-0.2px" }}>{t}</p>
             <p style={{ margin: "3px 0 0", fontSize: 13, lineHeight: "18px", color: C.sub }}>{s}</p>
           </div>
         </div>
@@ -346,12 +335,23 @@ export default function HomeV5() {
       {/* Torn between two? in the Sunday School multi-video style */}
       <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />
 
-      {/* Sunday School settles which country; this is what they ask for next. */}
-      <BookedTripsRail />
+      {/* ─── The stippled half ───
+          The ground picks up a dot every sixteen pixels from here down, in the
+          heading's navy at seven percent. The top half carries photographs and
+          does not need a surface; from the proof onwards the page is mostly
+          cards on a ground, and the texture is what stops that reading as a
+          blank. */}
+      <div style={{
+        backgroundImage: `radial-gradient(${C.dot} 1px, transparent 1.2px)`,
+        backgroundSize: "16px 16px",
+      }}>
+        {/* Sunday School settles which country; this is what they ask for next. */}
+        <BookedTripsRail />
 
-      {/* Traveller moments + reviews + closing lead-gen */}
-      <TravellerMomentsReels />
-      <LovedByCouples />
+        {/* Traveller moments + reviews */}
+        <TravellerMomentsReels />
+        <LovedByCouples />
+      </div>
       <LeadCloseCTA tone="clean" pad={PAD} />
 
       <div style={{ height: 80 }} />
