@@ -254,8 +254,6 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   // Tapping the greyed Continue on the route step asks the step to say what
   // is missing, rather than the button simply not responding.
   const [routeNudge, setRouteNudge] = useState(0);
-  // Set by the route picker while a city card is open over its map.
-  const [routeFocus, setRouteFocus] = useState(false);
   const nudgeRoute = () => setRouteNudge((n) => n + 1);
 
   // Reset the trip to a freshly-picked destination (nights, route, activities).
@@ -421,7 +419,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       default: return null;
     }
   };
-  const cta = routeFocus && step === 3 ? null : ctaFor();
+  const cta = ctaFor();
 
   // ─── progress stepper: a concise summary + jump-to per stage ───
   // Each step shows its stage name and a short value of what's picked. Tapping a
@@ -543,7 +541,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
         )}
         {step === 3 && (isMaldives
           ? <StepResortPref tier={tier} setTier={setTier} pinnedResortId={pinnedResortId} setPinnedResortId={setPinnedResortId} nights={nights} />
-          : (route && <StepRoute dest={dest} nights={targetNights} startDate={startDate} route={route} setRoute={setRoute} setNights={setNights} editRoute={editRoute} nudge={routeNudge} onFocus={setRouteFocus} />)
+          : (route && <StepRoute dest={dest} nights={targetNights} startDate={startDate} route={route} setRoute={setRoute} setNights={setNights} editRoute={editRoute} nudge={routeNudge} />)
         )}
         {step === 4 && (isMaldives
           ? <StepMealPref mealPrefs={mealPrefs} setMealPrefs={setMealPrefs} />
@@ -1116,13 +1114,11 @@ function StepMealPref({ mealPrefs, setMealPrefs }) {
 //
 // The one case the picker cannot answer stays here: a trip long enough that we
 // would rather a person designed it.
-function StepRoute({ dest, nights, startDate, route, setRoute, setNights, editRoute, nudge, onFocus }) {
+function StepRoute({ dest, nights, startDate, route, setRoute, setNights, editRoute, nudge }) {
   const meta = destMeta[dest] || {};
   const LONG = 14;
   const n = nights || routeNights(route) || meta.defaultNights || 7;
   const [leadSent, setLeadSent] = useState(false);
-  // A long trip never reaches the picker, so it never takes the screen either.
-  useEffect(() => { if (n > 14) onFocus?.(false); }, [n, onFocus]);
 
   if (n > LONG) {
     return (
@@ -1157,7 +1153,6 @@ function StepRoute({ dest, nights, startDate, route, setRoute, setNights, editRo
       setRoute={setRoute}
       setNights={setNights}
       nudge={nudge}
-      onFocus={onFocus}
     />
   );
 }

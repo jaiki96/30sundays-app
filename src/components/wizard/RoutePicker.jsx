@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Search, X, Plus, Check, AlertTriangle } from "lucide-react";
+import { X, Check, ChevronRight, AlertTriangle } from "lucide-react";
 import { C } from "../../data";
 import { destAreas, areaImg, cityCoords } from "../../data/buildData";
-import { pickTag } from "../../data/routeBuilder";
-import { regionDetail } from "../../data/regionData";
+import { regionGuide } from "../../data/regionGuide";
 import RegionDetail from "../../pages/RegionDetail";
 
 // ─── Choose the cities ───
@@ -17,9 +17,11 @@ import RegionDetail from "../../pages/RegionDetail";
 // all a drag-and-drop route builder. A couple picking Ubud does not need nine
 // surfaces to do it in.
 //
-// So: a search box, a list of cities, and a map. A card is a picture, a name, a
-// line and a tag. One line at the foot says whether what they have chosen fits
-// the trip, which is the only thing the warnings were ever really saying.
+// So: a map, and a list of cities on a sheet that pulls up over it. There is
+// no search: a country has ten or fifteen regions in it, which is a scroll
+// rather than a query, and the box cost more room than it saved. One line at
+// the foot says whether what they have chosen fits the trip, which is the only
+// thing the warnings were ever really saying.
 //
 // The order and the nights are ours to work out, as they always were, and the
 // itinerary screen is where either gets changed afterwards.
@@ -79,14 +81,13 @@ function fit(route, rec, nights) {
 // rather than numbered dots: a pin reading "2" is a puzzle, and the name is
 // both the label and the answer. Picked cities carry the brand colour and a
 // tick, so the map is a way of choosing rather than a picture of what you chose.
-const namePin = (name, picked, open) => L.divIcon({
+const namePin = (name, picked) => L.divIcon({
   className: "",
-  html: `<div style="transform:translate(-50%,-50%) scale(${open ? 1.08 : 1});
-      transition:transform .14s ease;
+  html: `<div style="transform:translate(-50%,-50%);
       display:inline-flex;align-items:center;gap:4px;
       white-space:nowrap;padding:6px 11px;border-radius:999px;
       background:${picked ? C.p600 : "#fff"};color:${picked ? "#fff" : C.head};
-      box-shadow:${open ? "0 4px 14px rgba(16,24,40,0.4)" : "0 2px 8px rgba(16,24,40,0.28)"};
+      box-shadow:0 2px 8px rgba(16,24,40,0.28);
       font-family:Figtree,sans-serif;font-size:12.5px;font-weight:700">
       ${picked ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ""}
       ${name}
@@ -95,33 +96,28 @@ const namePin = (name, picked, open) => L.divIcon({
   iconAnchor: [0, 0],
 });
 
-// Leaflet measures its container once and caches it. Growing the map when a
-// card opens leaves the new area unpainted until it is told, which showed as
-// flat blue below the old bottom edge.
-function Resize({ on }) {
+// ─── Keeping the right part of the map on screen ───
+//
+// Leaflet measures its container once and caches it. Growing the map leaves
+// the new area unpainted until it is told, which showed as flat blue below the
+// old bottom edge. Being told is not enough on its own: the extra height gets
+// added at the bottom and the cities stay pinned to the top, so the map has to
+// be framed again, and framed against what is actually visible rather than the
+// whole element, since the sheet sits over the foot of it.
+function Frame({ on, fit, clear = 0 }) {
   const map = useMap();
   useEffect(() => {
-    const id = setTimeout(() => map.invalidateSize(), 60);
+    const id = setTimeout(() => {
+      map.invalidateSize();
+      map.fitBounds(fit, { paddingBottomRight: [0, clear], animate: false });
+    }, 60);
     return () => clearTimeout(id);
-  }, [map, on]);
+  }, [map, on, fit, clear]);
   return null;
 }
 
-function CityMap({ dest, cards, picked, onToggle, onOpen, height, onFocus }) {
+function CityMap({ cards, picked, onOpen, height, covered = 0 }) {
   const pins = useMemo(() => cards.filter((a) => cityCoords[a.city]), [cards]);
-  const [sel, setSel] = useState(null);
-  const chosen = pins.find((p) => p.city === sel);
-  // Only for the one that is open, because working out a region is not free.
-  const imgs = useMemo(() => {
-    if (!chosen) return [];
-    const photos = regionDetail(dest, chosen.city)?.photos || [];
-    return (photos.length ? photos : [chosen.img]).filter(Boolean).slice(0, 5);
-  }, [dest, chosen]);
-
-  // A card open over the map is the whole screen, so the step hides its list
-  // and the wizard stands its button down until the card is answered or shut.
-  useEffect(() => { onFocus?.(!!chosen); }, [chosen, onFocus]);
-  useEffect(() => () => onFocus?.(false), [onFocus]);
 
   // ─── What the opening view fits ───
   //
@@ -142,10 +138,15 @@ function CityMap({ dest, cards, picked, onToggle, onOpen, height, onFocus }) {
     const use = core.length >= 2 ? core : pts;
     const lat = use.map((x) => x.lat);
     const lng = use.map((x) => x.lng);
-    const pad = Math.max(0.12, (Math.max(...lat) - Math.min(...lat)) * 0.25);
+    // Each side gets a margin off its own span. Padding the longitude by a
+    // quarter of the latitude is what pushed a tall country like Vietnam out
+    // to a view with half of China in it.
+    const padOf = (xs) => Math.max(0.12, (Math.max(...xs) - Math.min(...xs)) * 0.18);
+    const padLat = padOf(lat);
+    const padLng = padOf(lng);
     return [
-      [Math.min(...lat) - pad, Math.min(...lng) - pad],
-      [Math.max(...lat) + pad, Math.max(...lng) + pad],
+      [Math.min(...lat) - padLat, Math.min(...lng) - padLng],
+      [Math.max(...lat) + padLat, Math.max(...lng) + padLng],
     ];
   }, [pins]);
 
@@ -159,163 +160,65 @@ function CityMap({ dest, cards, picked, onToggle, onOpen, height, onFocus }) {
         style={{ height: "100%", width: "100%", background: "#AADAFF" }}
         attributionControl={false}
         zoomControl={false}
+        // Whole zoom steps are a factor of two apart, so fitting a long
+        // country into a short box had to drop a whole level and the view
+        // came back with half of China in it. Off the snap, it fits exactly.
+        zoomSnap={0}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Resize on={height} />
+        <Frame on={height} fit={span} clear={covered} />
         {pins.map((p) => (
           <Marker
             key={p.city}
             position={[cityCoords[p.city].lat, cityCoords[p.city].lng]}
-            icon={namePin(p.city, picked.has(p.city), sel === p.city)}
-            zIndexOffset={sel === p.city ? 1000 : picked.has(p.city) ? 500 : 0}
-            eventHandlers={{ click: () => setSel(p.city) }}
+            icon={namePin(p.city, picked.has(p.city))}
+            zIndexOffset={picked.has(p.city) ? 500 : 0}
+            eventHandlers={{ click: () => onOpen(p.city) }}
           />
         ))}
       </MapContainer>
-
-      {/* The card floats over the map rather than pushing it, the way a
-          listing does, and it comes up from under the bottom edge. */}
-      {chosen && (
-        <div style={{
-          position: "absolute", left: 12, right: 12, bottom: 14, zIndex: 650,
-          animation: "sheetSlideUp 0.24s cubic-bezier(0.22,0.61,0.36,1)",
-        }}>
-          <MapCard
-            area={chosen}
-            imgs={imgs}
-            picked={picked.has(chosen.city)}
-            onToggle={() => { onToggle(chosen); setSel(null); }}
-            onOpen={() => onOpen(chosen.city)}
-            onClose={() => setSel(null)}
-          />
-        </div>
-      )}
     </div>
   );
 }
 
-// ─── The card a pin raises ───
+// ─── How long we would give it ───
 //
-// The same shape the listing apps use: a reel of photographs you swipe with
-// dots under them, the name and a line, one tag, and the two things you can do
-// about it. Tapping the picture or the name opens the full region page, which
-// has the same Add button at the foot of it, so reading about a place and
-// choosing it are never two separate errands.
-function CardReel({ imgs, alt, height = 150 }) {
-  const [i, setI] = useState(0);
-  const onScroll = (e) => {
-    const el = e.currentTarget;
-    const next = Math.round(el.scrollLeft / el.clientWidth);
-    if (next !== i) setI(next);
-  };
-  return (
-    <div style={{ position: "relative", height, background: "#F4F2F0" }}>
-      <div
-        className="hide-scrollbar"
-        onScroll={onScroll}
-        style={{
-          display: "flex", height: "100%", overflowX: "auto", overflowY: "hidden",
-          scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {imgs.map((src, n) => (
-          <div key={n} style={{ flex: "0 0 100%", width: "100%", height: "100%", scrollSnapAlign: "start" }}>
-            <img src={src} alt={n === 0 ? alt : ""} loading={n === 0 ? "eager" : "lazy"}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-        ))}
-      </div>
-      {imgs.length > 1 && (
-        <div style={{
-          position: "absolute", left: 0, right: 0, bottom: 8,
-          display: "flex", justifyContent: "center", gap: 4, pointerEvents: "none",
-        }}>
-          {imgs.map((_, n) => (
-            <span key={n} style={{
-              width: n === i ? 6 : 4.5, height: n === i ? 6 : 4.5, borderRadius: "50%",
-              background: n === i ? "#fff" : "rgba(255,255,255,0.55)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-            }} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MapCard({ area, imgs, picked, onToggle, onOpen, onClose }) {
-  const tag = pickTag(area.dest, area.city);
-  const round = {
-    position: "absolute", top: 9, width: 28, height: 28, borderRadius: "50%",
-    border: "none", background: "rgba(255,255,255,0.94)", backdropFilter: "blur(6px)",
-    display: "grid", placeItems: "center", cursor: "pointer", padding: 0,
-    boxShadow: "0 2px 8px rgba(16,24,40,0.2)",
-  };
-
-  return (
-    <div style={{
-      position: "relative", background: C.white, borderRadius: 16, overflow: "hidden",
-      boxShadow: "0 8px 28px rgba(16,24,40,0.24)",
-    }}>
-      {/* The whole card is the way into the region page, which is where the
-          real Add button lives. Here it is a mark in the corner rather than a
-          button across the bottom: the card is for reading, not for a form. */}
-      <div onClick={onOpen} role="button" tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onOpen(); } }}
-        style={{ cursor: "pointer" }}>
-        <CardReel imgs={imgs} alt={area.city} />
-
-        <div style={{ padding: "11px 13px 13px" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {area.city}
-            </span>
-            {tag && (
-              <span style={{
-                flexShrink: 0, background: C.p100, color: C.p900, borderRadius: 999, padding: "3px 9px",
-                fontSize: 10, fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase",
-              }}>{tag}</span>
-            )}
-          </div>
-          <p style={{ margin: "3px 0 0", fontSize: 12.5, lineHeight: "18px", color: C.sub }}>
-            {area.tag}
-          </p>
-        </div>
-      </div>
-
-      <button
-        onClick={onToggle}
-        aria-label={picked ? `Remove ${area.city}` : `Add ${area.city}`}
-        style={{
-          ...round, left: 9,
-          background: picked ? C.p600 : "rgba(255,255,255,0.94)",
-        }}
-      >
-        {picked
-          ? <Check size={15} strokeWidth={3.5} color="#fff" />
-          : <Plus size={15} strokeWidth={3} color={C.head} />}
-      </button>
-
-      <button onClick={onClose} aria-label="Close" style={{ ...round, right: 9 }}>
-        <X size={15} color={C.head} />
-      </button>
-    </div>
-  );
-}
+// Our own suggested nights for the city, shown as the range around it rather
+// than a single number, because that is how long anybody actually stays and a
+// flat "2 nights" reads as a rule. A single tilde carries the "about", which
+// the words no longer have to: the almost-equals sign is two strokes and reads
+// as an equals at this size, which is the opposite of what it means.
+const nightsRange = (n) => {
+  const k = Math.max(1, n || 2);
+  return `${k} to ${k + 1} nights`;
+};
 
 // ─── One city ───
 //
-// Picture, name, one line, one tag. The whole card opens the region page,
-// because that is what somebody wants when they are deciding; the plus is the
-// only thing on it that chooses.
-function CityCard({ dest, area, picked, onToggle, onOpen }) {
-  const tag = pickTag(dest, area.city);
+// The whole card chooses it. There is no plus beside the name any more: a card
+// with one obvious thing to do with it does not need a button to say so, and
+// the tick is the answer rather than the control. Reading about the place is
+// the other thing somebody wants here, so that is its own small link.
+//
+// The line under the name is the region's own written opening rather than the
+// three-word label the list used to carry: three words told nobody why they
+// would pick one city over another. Its opening sentence only, not the
+// paragraph: the sentence and the sentence after it filled the card to the
+// point of being a wall.
+//
+// And the photograph stretches to whatever the words need rather than being a
+// fixed square, so the card is as tall as its contents and there is no band of
+// nothing to manage in the first place.
+function CityCard({ area, picked, onToggle, onOpen }) {
+  const g = regionGuide(area.dest, area.city);
+  const blurb = g?.lead || area.tag;
   return (
     <div
-      onClick={onOpen}
+      onClick={onToggle}
       role="button"
+      aria-pressed={picked}
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onOpen(); } }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
       style={{
         display: "flex", gap: 12, padding: 11, cursor: "pointer",
         borderRadius: 16, background: C.white,
@@ -324,52 +227,258 @@ function CityCard({ dest, area, picked, onToggle, onOpen }) {
         transition: "border-color .15s",
       }}
     >
-      <img src={area.img} alt="" style={{ width: 84, height: 84, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "#F4F2F0" }} />
+      <div style={{
+        position: "relative", width: 78, minHeight: 78, alignSelf: "stretch",
+        flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#F4F2F0",
+      }}>
+        <img src={area.img} alt="" style={{
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%", objectFit: "cover", display: "block",
+        }} />
+      </div>
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {area.city}
           </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggle(); }}
-            aria-label={picked ? `Remove ${area.city}` : `Add ${area.city}`}
-            style={{
-              width: 28, height: 28, borderRadius: "50%", flexShrink: 0, padding: 0, cursor: "pointer",
-              display: "grid", placeItems: "center",
-              background: picked ? C.p600 : C.white,
-              border: `1.5px solid ${picked ? C.p600 : C.p300}`,
-            }}
-          >
-            {picked
-              ? <Check size={15} strokeWidth={3.5} color="#fff" />
-              : <Plus size={15} strokeWidth={3} color={C.p600} />}
-          </button>
+          {picked && (
+            <span aria-hidden style={{
+              width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
+              display: "grid", placeItems: "center", background: C.p600,
+            }}>
+              <Check size={14} strokeWidth={3.5} color="#fff" />
+            </span>
+          )}
         </div>
 
         <p style={{
           margin: "2px 0 0", fontSize: 12, lineHeight: "17px", color: C.sub,
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-        }}>{area.tag}</p>
+        }}>{blurb}</p>
 
-        <span style={{ flex: 1 }} />
-
-        {tag && (
-          <span style={{
-            alignSelf: "flex-start", marginTop: 7,
-            background: C.p100, color: C.p900, borderRadius: 999, padding: "3px 9px",
-            fontSize: 10, fontWeight: 800, letterSpacing: "0.3px", textTransform: "uppercase",
-            whiteSpace: "nowrap",
-          }}>{tag}</span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+          <span
+            aria-label={`About ${nightsRange(area.n)}`}
+            style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, color: C.head, opacity: 0.72, whiteSpace: "nowrap" }}
+          >
+            <span aria-hidden style={{ marginRight: 4, fontWeight: 800 }}>~</span>
+            {nightsRange(area.n)}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            style={{
+              flexShrink: 0, border: "none", background: "none", padding: 0, cursor: "pointer",
+              fontFamily: "inherit", fontSize: 12, fontWeight: 800, color: C.p600,
+              display: "inline-flex", alignItems: "center", gap: 1,
+            }}
+          >
+            View details
+            <ChevronRight size={14} strokeWidth={2.6} />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-export default function RoutePicker({ dest, nights, route, setRoute, nudge, onFocus }) {
+// ─── The region, on a sheet over whatever opened it ───
+//
+// Two stops and a way out, the way a profile preview behaves: it arrives
+// covering most of the screen with the page behind it dimmed, reading it takes
+// it the rest of the way up, and pulling it down sends it back. Whatever was
+// underneath is still underneath and unchanged, which is the point: reading
+// about Hoi An is not meant to cost you your place.
+//
+// Portalled into the phone shell. Rendered where it is written it would size
+// itself against the scrolling step, and the region page measures its own box
+// to decide how tall the photographs are: opened from the route step that box
+// was the whole scroll length and the pictures came out half as tall again as
+// they are on the region page proper.
+const GONE = 2;
+
+function RegionSheet({ dest, city, added, onAdd, onClose }) {
+  const [frame, setFrame] = useState(null);
+  const [h, setH] = useState(760);
+  // 0 full, 1 partial, GONE on the way out. Opens from under the bottom edge.
+  const [stop, setStop] = useState(GONE);
+  const [drag, setDrag] = useState(false);
+  const [pull, setPull] = useState(0);
+
+  const gap = Math.round(h * 0.28);
+  const at = stop === 0 ? 0 : stop === 1 ? gap : h;
+  const top = Math.max(0, Math.min(h, at + pull));
+  const shade = Math.max(0, 1 - top / Math.max(1, h));
+
+  useEffect(() => {
+    const el = document.getElementById("phone-frame");
+    setFrame(el);
+    if (!el) return;
+    const read = () => setH(el.getBoundingClientRect().height);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // One frame under the bottom edge, then up: the arrival is the same
+  // transition as every other move between stops.
+  useEffect(() => {
+    const id = setTimeout(() => setStop(1), 20);
+    return () => clearTimeout(id);
+  }, []);
+
+  const leave = useCallback(() => {
+    setStop(GONE);
+    setTimeout(() => onClose?.(), 240);
+  }, [onClose]);
+
+  // ─── Pulling it down ───
+  //
+  // The drag is not only the handle's. Anywhere on the sheet counts, as long
+  // as the page inside is already at its top and the finger is going down,
+  // which is the one moment the page itself has nothing to do with the
+  // gesture. That is what makes "scroll it down and it goes" true rather than
+  // "find the handle and pull it".
+  //
+  // On native listeners rather than React's, because React adds touchmove as a
+  // passive listener and a passive listener cannot stop the page scrolling
+  // under the drag.
+  //
+  // Attached once and only once. Hung off anything that changes while a finger
+  // is down, they tear off and go back on mid-gesture, and the drag so far is
+  // forgotten: the sheet would follow the first few pixels and then stop dead.
+  const sheet = useRef(null);
+  const atTop = useRef(true);
+  const live = useRef({ h, gap, stop, pull: 0, leave });
+  live.current = { h, gap, stop, pull, leave };
+
+  useEffect(() => {
+    const el = sheet.current;
+    if (!el) return;
+    let g = null;
+
+    const settle = () => {
+      const { h: H, gap: G, pull: P, stop: S } = live.current;
+      const landed = Math.max(0, Math.min(H, (S === 0 ? 0 : G) + P));
+      setDrag(false);
+      setPull(0);
+      // Nearest of the three, so a short tug springs back and a long one goes.
+      if (landed > G + (H - G) * 0.3) live.current.leave();
+      else if (landed > G * 0.5) setStop(1);
+      else setStop(0);
+    };
+
+    const begin = (y, x, free) => {
+      g = { y, x, moving: free };
+      if (free) { setDrag(true); setPull(0); }
+    };
+    const moved = (y, x, e) => {
+      if (!g) return;
+      const dy = y - g.y;
+      const dx = x - g.x;
+      if (!g.moving) {
+        if (!atTop.current || dy <= 8 || Math.abs(dx) > Math.abs(dy)) return;
+        g.moving = true;
+        setDrag(true);
+      }
+      if (e.cancelable) e.preventDefault();
+      setPull(dy);
+    };
+    const ended = () => {
+      if (!g) return;
+      const moving = g.moving;
+      g = null;
+      if (moving) settle();
+    };
+
+    const onHandle = (t) => !!(t && t.closest && t.closest("[data-grab]"));
+
+    const ts = (e) => { const t = e.touches[0]; begin(t.clientY, t.clientX, onHandle(e.target)); };
+    const tm = (e) => { const t = e.touches[0]; moved(t.clientY, t.clientX, e); };
+    const md = (e) => { if (e.button === 0) begin(e.clientY, e.clientX, onHandle(e.target)); };
+    const mm = (e) => moved(e.clientY, e.clientX, e);
+
+    el.addEventListener("touchstart", ts, { passive: true });
+    el.addEventListener("touchmove", tm, { passive: false });
+    el.addEventListener("touchend", ended);
+    el.addEventListener("touchcancel", ended);
+    el.addEventListener("mousedown", md);
+    window.addEventListener("mousemove", mm);
+    window.addEventListener("mouseup", ended);
+    return () => {
+      el.removeEventListener("touchstart", ts);
+      el.removeEventListener("touchmove", tm);
+      el.removeEventListener("touchend", ended);
+      el.removeEventListener("touchcancel", ended);
+      el.removeEventListener("mousedown", md);
+      window.removeEventListener("mousemove", mm);
+      window.removeEventListener("mouseup", ended);
+    };
+    // On the phone shell, which arrives one render after this component does
+    // and never changes again. Before it arrives there is no sheet to listen
+    // to, and anything that changes more often than this tears the listeners
+    // off mid-gesture.
+  }, [frame]);
+
+  if (!frame) return null;
+
+  return createPortal(
+    <div style={{ position: "absolute", inset: 0, zIndex: 240 }}>
+      <div
+        onClick={leave}
+        style={{
+          position: "absolute", inset: 0, background: "rgba(24,29,39,0.5)",
+          opacity: shade, transition: drag ? "none" : "opacity .24s ease",
+        }}
+      />
+
+      <div ref={sheet} style={{
+        position: "absolute", left: 0, right: 0, bottom: 0, top,
+        background: C.bg, borderRadius: top > 2 ? "18px 18px 0 0" : 0,
+        overflow: "hidden", boxShadow: "0 -8px 30px rgba(16,24,40,0.28)",
+        transition: drag ? "none" : "top .24s cubic-bezier(0.22,0.61,0.36,1), border-radius .2s",
+      }}>
+        <RegionDetail
+          dest={dest}
+          city={city}
+          added={added}
+          // Choosing the city is the answer the sheet was opened for, so the
+          // sheet goes, whether it was opened from the map or from the list.
+          onAdd={() => { onAdd?.(); leave(); }}
+          onClose={leave}
+          heroHeight={Math.round(h * 0.42)}
+          sheetStop={stop === 0 ? "full" : "partial"}
+          // Reading it is what opens it: the first scroll takes the sheet the
+          // rest of the way up rather than moving the page under a half sheet.
+          // Back at the top, a downward drag belongs to the sheet again.
+          onScrollTop={(y) => {
+            atTop.current = y <= 1;
+            if (y > 4 && stop === 1) setStop(0);
+          }}
+        />
+
+        {/* The handle. A drag starts here whichever way it is going, which is
+            the only way up by hand; everywhere else on the sheet it has to be
+            a downward pull from the top of the page. */}
+        <div data-grab style={{
+          position: "absolute", top: 0, left: "28%", right: "28%", height: 34,
+          zIndex: 9, cursor: "grab", touchAction: "none",
+          display: "grid", placeItems: "center",
+        }}>
+          <span style={{
+            width: 40, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.85)",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+          }} />
+        </div>
+      </div>
+    </div>,
+    frame
+  );
+}
+
+export default function RoutePicker({ dest, nights, route, setRoute, nudge }) {
   const areas = useMemo(() => destAreas[dest] || [], [dest]);
-  const [q, setQ] = useState("");
   // The region page opens over the step rather than navigating to it. Leaving
   // the wizard loses every answer given so far, and reading about Ubud is not
   // a reason to start again.
@@ -388,14 +497,10 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, onFo
   // list can be a dozen long; what somebody has already decided should not be
   // something they scroll to find.
   const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const list = needle
-      ? cards.filter((a) => `${a.city} ${a.tag || ""}`.toLowerCase().includes(needle))
-      : cards;
     const order = route.map((s) => s.city);
     const rank = (a) => (order.includes(a.city) ? order.indexOf(a.city) : 1000 + cards.indexOf(a));
-    return [...list].sort((a, b) => rank(a) - rank(b));
-  }, [cards, q, route]);
+    return [...cards].sort((a, b) => rank(a) - rank(b));
+  }, [cards, route]);
 
   const seen = useRef(false);
   if (nudge) seen.current = true;
@@ -412,26 +517,158 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, onFo
   // because inside the phone shell on a desktop the viewport is the window
   // rather than the screen we are drawing.
   const box = useRef(null);
+  const scroller = useRef(null);
   const [H, setH] = useState(560);
+  const [sized, setSized] = useState(false);
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    let scroller = el.parentElement;
-    while (scroller && scroller !== document.body) {
-      const oy = getComputedStyle(scroller).overflowY;
+    let sc = el.parentElement;
+    while (sc && sc !== document.body) {
+      const oy = getComputedStyle(sc).overflowY;
       if (oy === "auto" || oy === "scroll") break;
-      scroller = scroller.parentElement;
+      sc = sc.parentElement;
     }
-    if (!scroller || scroller === document.body) return;
-    const read = () => { const h = scroller.clientHeight; if (h > 200) setH(h); };
+    if (!sc || sc === document.body) return;
+    scroller.current = sc;
+    const read = () => { const h = sc.clientHeight; if (h > 200) { setH(h); setSized(true); } };
     read();
     const ro = new ResizeObserver(read);
-    ro.observe(scroller);
+    ro.observe(sc);
     return () => ro.disconnect();
   }, []);
-  // A card over the map takes the step: no list under it, no button beside it.
-  const [focused, setFocused] = useState(false);
-  const focus = useCallback((on) => { setFocused(on); onFocus?.(on); }, [onFocus]);
+
+  // ─── Where the sheet rests ───
+  //
+  // Three stops and no others: the strip at the foot that says how many cities
+  // there are, halfway up with the list under the map, and all the way up with
+  // the list on its own. The sheet settles on the nearest one when a flick ends
+  // rather than being left wherever the finger happened to stop, which is what
+  // makes it feel like a sheet instead of a long page. Past the top stop it is
+  // an ordinary list again and nothing snaps.
+  //
+  // The title and the strip at the top of the sheet are measured rather than
+  // guessed, because the sheet is pulled up over the map by exactly the
+  // strip's height and a few pixels out shows as a gap or a clipped line.
+  const head = useRef(null);
+  const peek = useRef(null);
+  const sheet = useRef(null);
+  const frame = useRef(null);
+  const [headH, setHeadH] = useState(56);
+  const [peekH, setPeekH] = useState(56);
+  useEffect(() => {
+    const read = () => {
+      const h = head.current?.offsetHeight;
+      const p = peek.current?.offsetHeight;
+      if (h) setHeadH(h);
+      if (p) setPeekH(p);
+    };
+    read();
+    const ro = new ResizeObserver(read);
+    if (head.current) ro.observe(head.current);
+    if (peek.current) ro.observe(peek.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // The stops are read off the sheet itself at the moment they are needed
+  // rather than worked out from the heights in state. The step is a different
+  // height with the wizard's button under it than without, so a number worked
+  // out while a card was up is the wrong number by the time the card is gone.
+  // Half means half of what is under the title, so the map keeps its share of
+  // the screen now that the title holds the top of it.
+  const titlePx = useRef(56);
+  titlePx.current = headH;
+  const stops = useCallback(() => {
+    const sc = scroller.current;
+    const sh = sheet.current;
+    if (!sc || !sh) return null;
+    const up = sh.offsetTop;
+    const t = titlePx.current;
+    const mid = t + Math.round((sc.clientHeight - t) / 2);
+    return [0, Math.max(0, up - mid), up];
+  }, []);
+
+  // The slide is animated here rather than handed to the browser. A native
+  // smooth scroll gets dropped halfway whenever the map re-measures itself in
+  // the same beat, and the sheet was landing back where it started.
+  const anim = useRef(0);
+  const settle = useRef(0);
+  const busy = useRef(false);
+  const goTo = useCallback((top, smooth) => {
+    const sc = scroller.current;
+    if (!sc) return;
+    cancelAnimationFrame(anim.current);
+    clearTimeout(settle.current);
+    const from = sc.scrollTop;
+    const by = top - from;
+    if (!smooth || !by) { sc.scrollTop = top; busy.current = false; return; }
+    const t0 = performance.now();
+    busy.current = true;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / 280);
+      sc.scrollTop = from + by * (1 - Math.pow(1 - k, 3));
+      if (k < 1) anim.current = requestAnimationFrame(step);
+      else busy.current = false;
+    };
+    anim.current = requestAnimationFrame(step);
+    // If the frames never arrive, which is what happens when the screen is not
+    // being drawn, the sheet still has to end up where it was sent.
+    settle.current = setTimeout(() => {
+      if (busy.current) { sc.scrollTop = top; busy.current = false; }
+    }, 340);
+  }, []);
+  useEffect(() => () => {
+    cancelAnimationFrame(anim.current);
+    clearTimeout(settle.current);
+  }, []);
+
+  const goStop = useCallback((i, smooth) => {
+    const st = stops();
+    if (st) goTo(st[i], smooth);
+  }, [stops, goTo]);
+
+  // How much of the map the sheet is sitting on, measured once the scroll has
+  // come to rest. The map is framed against what is left, so the cities stay
+  // in the part of it somebody can see.
+  const [low, setLow] = useState(false);
+  const [cover, setCover] = useState(0);
+  useEffect(() => {
+    const sc = scroller.current;
+    if (!sc) return;
+    let quiet;
+    const rest = () => {
+      const sh = sheet.current;
+      const mp = frame.current;
+      if (!sh || !mp) return;
+      const top = sh.getBoundingClientRect().top;
+      setCover(Math.max(0, Math.round(mp.getBoundingClientRect().bottom - top)));
+      // Settle on the nearest stop, unless this is our own slide finishing or
+      // the sheet is up and the list is being read.
+      if (busy.current) return;
+      const st = stops();
+      if (!st || sc.scrollTop > st[2] + 4) return;
+      const near = st.reduce((a, b) => (Math.abs(b - sc.scrollTop) < Math.abs(a - sc.scrollTop) ? b : a));
+      if (Math.abs(near - sc.scrollTop) > 2) goTo(near, true);
+    };
+    const on = () => {
+      setLow(sc.scrollTop < 24);
+      clearTimeout(quiet);
+      quiet = setTimeout(rest, 130);
+    };
+    on();
+    rest();
+    sc.addEventListener("scroll", on, { passive: true });
+    return () => { sc.removeEventListener("scroll", on); clearTimeout(quiet); };
+  }, [H, headH, peekH, stops, goTo]);
+
+  // Land halfway, and not before the step has been measured: landing against
+  // a guessed height puts the sheet in the wrong place and it stays there.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current || !sized || !scroller.current || !sheet.current) return;
+    landed.current = true;
+    goStop(1, false);
+  }, [sized, peekH, headH, goStop]);
 
   // Cities go in the order the trip would run them, not the order they were
   // tapped, and the nights are shared out again every time. Nothing is ever
@@ -449,89 +686,72 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, onFo
 
   return (
     <div ref={box} style={{ position: "relative" }}>
+      {/* The same question the other steps ask, asked the same way. It stays at
+          the top of the screen while the map and the sheet move under it, and
+          goes only when the sheet comes all the way up and the list is the
+          whole screen. */}
+      <div ref={head} style={{
+        position: "sticky", top: 0, zIndex: 1, background: C.white,
+        padding: "14px 16px 12px",
+      }}>
+        <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: C.head, letterSpacing: "-0.4px", lineHeight: 1.22 }}>
+          Choose the cities you want to visit
+        </h1>
+      </div>
+
       {/* ─── The map, and most of the screen ───
           Not behind a button, and not a strip at the top. A couple choosing
           between six parts of an island is asking where those places are, and
           the map is the answer rather than an illustration of it. It stays put
           while the sheet slides up over it. */}
-      <div style={{ position: "sticky", top: 0, zIndex: 0 }}>
+      <div ref={frame} style={{ position: "sticky", top: headH, zIndex: 0 }}>
         <CityMap
-          dest={dest}
           cards={cards}
           picked={picked}
-          onToggle={toggle}
+          // A pin opens the same sheet the list's View details opens. One
+          // surface for one question: what is this place and do we want it.
           onOpen={(city) => setReading(city)}
-          onFocus={focus}
-          height={focused ? H : Math.round(H * 0.46)}
+          height={H - headH}
+          covered={cover}
         />
       </div>
 
-      {/* ─── And the cities, on a sheet that pulls up over it ─── */}
-      <div style={{
-        position: "relative", zIndex: 1, marginTop: -18, background: C.white,
+      {/* ─── And the cities, on a sheet that pulls up over it ───
+          Pulled up over the map by its own strip, so at the foot of the scroll
+          the only thing showing is the count and the handle above it: the map
+          has the screen under the title, and the line says there is a list
+          below. At the top stop it comes over the title too. */}
+      <div ref={sheet} style={{
+        position: "relative", zIndex: 2, marginTop: -peekH, background: C.white,
         borderRadius: "20px 20px 0 0", minHeight: H,
         boxShadow: "0 -6px 24px rgba(16,24,40,0.12)",
-        display: focused ? "none" : "block",
       }}>
-        <div style={{ display: "flex", justifyContent: "center", padding: "9px 0 0" }}>
-          <span style={{ width: 38, height: 4, borderRadius: 99, background: C.div }} />
-        </div>
+        <div ref={peek}>
+          <div style={{ display: "flex", justifyContent: "center", padding: "9px 0 0" }}>
+            <span style={{ width: 38, height: 4, borderRadius: 99, background: C.div }} />
+          </div>
 
-        {/* The one line a peeking sheet has room for, and the same line the
-            listing apps put there: how much is down here. */}
-        <div style={{ padding: `9px ${PAD}px 0` }}>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: C.head, textAlign: "center", letterSpacing: "-0.2px" }}>
+          {/* The one line a peeking sheet has room for, and the same line the
+              listing apps put there: how much is down here. */}
+          <p style={{
+            margin: 0, padding: `10px ${PAD}px 12px`, fontSize: 14.5, fontWeight: 800,
+            color: C.head, textAlign: "center", letterSpacing: "-0.2px",
+          }}>
             {cards.length} cities in {dest}
           </p>
-          <p style={{ margin: "2px 0 0", fontSize: 11.5, color: C.sub, textAlign: "center" }}>
-            Choose the ones you want to visit
-          </p>
         </div>
 
-        <div style={{
-          position: "sticky", top: 0, zIndex: 20, marginTop: 11,
-          background: C.white, borderBottom: `1px solid ${C.div}`,
-          padding: `9px ${PAD}px 10px`,
-        }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            border: `1px solid ${C.div}`, borderRadius: 999, padding: "9px 13px", background: C.white,
-          }}>
-            <Search size={15} color={C.inact} style={{ flexShrink: 0 }} />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Find a city"
-              style={{
-                flex: 1, minWidth: 0, border: "none", outline: "none", background: "none",
-                fontFamily: "inherit", fontSize: 13.5, color: C.head,
-              }}
-            />
-            {q && (
-              <button onClick={() => setQ("")} aria-label="Clear" style={{
-                border: "none", background: "none", padding: 0, cursor: "pointer", display: "grid", placeItems: "center",
-              }}><X size={14} color={C.inact} /></button>
-            )}
-          </div>
-        </div>
-
-        <div style={{ padding: `12px ${PAD}px 16px` }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: `4px ${PAD}px 16px`, borderTop: `1px solid ${C.div}` }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12 }}>
             {shown.map((a) => (
               <CityCard
                 key={a.city}
-                dest={dest}
                 area={a}
                 picked={picked.has(a.city)}
                 onToggle={() => toggle(a)}
                 onOpen={() => setReading(a.city)}
               />
             ))}
-            {shown.length === 0 && (
-              <p style={{ margin: "14px 0", fontSize: 13, color: C.sub, textAlign: "center" }}>
-                Nothing in {dest} matches &ldquo;{q}&rdquo;.
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -542,7 +762,7 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, onFo
           number. The line above only appears when there is something wrong
           with the choice, which is when there are more cities than the trip can
           hold; a line that is always there is one nobody reads. */}
-      {route.length > 0 && !focused && (
+      {route.length > 0 && !low && (
         <div style={{
           position: "sticky", bottom: 0, zIndex: 20,
           background: C.white, borderTop: `1px solid ${C.div}`,
@@ -582,19 +802,18 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, onFo
         </div>
       )}
 
-      {/* Over the step, and over the sticky bars with it. The region page gets
-          the same add button the cards have, because somebody who has just
-          read about Ubud should not have to come back out to choose it. */}
+      {/* The region page gets the same add button the cards have, because
+          somebody who has just read about Ubud should not have to come back
+          out to choose it. */}
       {reading && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 120 }}>
-          <RegionDetail
-            dest={dest}
-            city={reading}
-            added={picked.has(reading)}
-            onAdd={() => toggle({ city: reading })}
-            onClose={() => setReading(null)}
-          />
-        </div>
+        <RegionSheet
+          key={reading}
+          dest={dest}
+          city={reading}
+          added={picked.has(reading)}
+          onAdd={() => toggle({ city: reading })}
+          onClose={() => setReading(null)}
+        />
       )}
     </div>
   );
