@@ -238,6 +238,36 @@ export function recommendedRoute(dest, nights) {
 
 export const routeNights = (route) => route.reduce((s, r) => s + r.n, 0);
 
+// ─── Making a route longer or shorter ───
+//
+// Changing how long a trip is does not change where it goes, so the cities
+// stay exactly as they are and only the nights move. Nights gained go to the
+// shortest stays first, which stops an extra week piling up in one town;
+// nights given back come off the longest, and never off a city's last night,
+// because a stop nobody sleeps in is not a stop. Where they actually land is
+// still theirs to set, on the cities screen.
+export function respread(route, target) {
+  const out = route.map((r) => ({ ...r }));
+  if (!out.length) return out;
+  let diff = target - routeNights(out);
+  let guard = 0;
+  while (diff !== 0 && guard < 500) {
+    guard += 1;
+    let i = -1;
+    if (diff > 0) {
+      out.forEach((r, k) => { if (i < 0 || r.n < out[i].n) i = k; });
+      out[i].n += 1;
+      diff -= 1;
+    } else {
+      out.forEach((r, k) => { if (r.n > 1 && (i < 0 || r.n > out[i].n)) i = k; });
+      if (i < 0) break;
+      out[i].n -= 1;
+      diff += 1;
+    }
+  }
+  return out;
+}
+
 // ─── activities ───
 // Pool grouped by route city, each activity tagged with its vibe and whether it
 // matches the trip's chosen vibes (those rank first / are recommended).

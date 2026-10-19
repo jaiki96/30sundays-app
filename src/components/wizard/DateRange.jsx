@@ -168,12 +168,7 @@ function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, p
   );
 }
 
-// `lockNights` is for editing a trip that already exists. The wizard asks two
-// questions here, a start and a length; a saved plan has already answered the
-// second one, and its day count is what the plan is made of. So with a length
-// locked a tap sets the whole stay at once and the calendar never asks for an
-// end it is not allowed to change.
-export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights, lockNights = null }) {
+export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights }) {
   const today = useMemo(() => midnight(new Date()), []);
   const wrapRef = useRef(null);
   const footRef = useRef(null);
@@ -181,9 +176,23 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   const [drag, setDrag] = useState(null);
   const [footH, setFootH] = useState(120);
 
+  // A trip that already exists has to be on the page before it can be scrolled
+  // to, and a saved plan can sit further out than the ten months the wizard
+  // offers. So the list runs as far as the trip plus two months, which also
+  // keeps the trip from being the last thing on the page with nothing under it.
+  const bornWith = useRef(null);
+  if (bornWith.current === null) bornWith.current = startDate || false;
+
   const months = useMemo(() => {
+    const base = today.getFullYear() * 12 + today.getMonth();
+    let count = MONTHS_SHOWN;
+    if (bornWith.current) {
+      const s = new Date(bornWith.current);
+      const reach = s.getFullYear() * 12 + s.getMonth() - base + 3;
+      if (reach > count) count = reach;
+    }
     const out = [];
-    for (let i = 0; i < MONTHS_SHOWN; i++) {
+    for (let i = 0; i < count; i++) {
       const m = (today.getMonth() + i) % 12;
       const y = today.getFullYear() + Math.floor((today.getMonth() + i) / 12);
       out.push({ m, y });
@@ -231,8 +240,6 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   };
 
   const onPick = (d) => {
-    // A locked length: one tap moves the whole stay, start and end together.
-    if (lockNights) { commit(d, addDays(d, lockNights)); return; }
     // Nothing picked, a finished trip, or the marker is back on the start:
     // this tap is a start.
     if (!start || hasRange || focus === "start") { beginAt(d); return; }
@@ -319,6 +326,39 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
     return sc.scrollTop + anchor.getBoundingClientRect().top - sc.getBoundingClientRect().top - pinned;
   };
 
+  // ─── Landing on a trip that already exists ───
+  //
+  // Opening on this month and leaving a couple to scroll for their own dates
+  // is the calendar asking them where their holiday is. So when a trip is
+  // already booked into the screen, it opens on it: the month it starts in,
+  // with the week before still showing above the heading, and if the trip
+  // starts late enough in the month to fall off the bottom from there, far
+  // enough down that the day it starts on is on screen. Up and down from there
+  // is theirs.
+  const tripTop = () => {
+    const sc = scroller.current;
+    const wrap = wrapRef.current;
+    if (!sc || !wrap || !start) return null;
+    const cell = wrap.querySelector(`[data-date="${start.getFullYear()}-${start.getMonth()}-${start.getDate()}"]`);
+    const mEl = cell?.closest("[data-month]");
+    if (!cell || !mEl) return null;
+
+    const pinned = stickyTop + (headRef.current?.getBoundingClientRect().height || 0);
+    const scTop = sc.getBoundingClientRect().top;
+    const rel = (el) => sc.scrollTop + el.getBoundingClientRect().top - scTop - pinned;
+
+    const idx = Number(mEl.dataset.month);
+    let top = 0;
+    if (idx > 0) {
+      const days = wrap.querySelectorAll(`[data-month="${idx - 1}"] [data-date]`);
+      top = rel(days.length ? days[days.length - 1] : mEl);
+    }
+    const room = sc.clientHeight - pinned - footH;
+    const dayTop = rel(cell);
+    if (dayTop - top > room - 60) top = dayTop - Math.max(0, room * 0.35);
+    return Math.max(0, top);
+  };
+
   const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
     let sc = wrapRef.current?.parentElement;
@@ -341,12 +381,21 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   if (!bornAt.current) bornAt.current = performance.now();
   useLayoutEffect(() => {
     const sc = scroller.current;
-    if (!ready || !sc || startDate) return;
+    if (!ready || !sc) return;
     if (performance.now() - bornAt.current > 800) return;
+    if (bornWith.current) {
+      // Only while it is still the trip we opened on. Once a new day is
+      // tapped, where the calendar sits is theirs and not ours.
+      if (startDate !== bornWith.current) return;
+      const t = tripTop();
+      if (t != null) sc.scrollTop = t;
+      return;
+    }
+    if (startDate) return;
     const t = landingTop();
     if (t != null) sc.scrollTop = Math.max(0, t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, stickyTop, startDate]);
+  }, [ready, stickyTop, startDate, footH]);
 
   return (
     <div>
