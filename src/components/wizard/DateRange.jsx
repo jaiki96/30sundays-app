@@ -3,8 +3,8 @@ import { CheckCircle2, AlertTriangle, Users, CalendarDays } from "lucide-react";
 import { C } from "../../data";
 import { monthRating } from "../../data/buildData";
 import { monthWeather } from "../../data/weatherData";
-import { SKY_STYLE, SKY_LABEL } from "../skyStyle";
-import { SEASON_LABEL, SEASON_COLOR, SEASON_TINT, SEASON_MEANING, WEATHER_CHIP } from "../seasonStyle";
+import { SKY_STYLE, SKY_LABEL, SKY_CHIP } from "../skyStyle";
+import { SEASON_LABEL, SEASON_COLOR, SEASON_TINT, SEASON_MEANING } from "../seasonStyle";
 
 // ─── Picking the dates ───
 //
@@ -57,10 +57,11 @@ function SeasonChip({ r, small }) {
 function WeatherChip({ w, small }) {
   if (!w) return null;
   const Sky = SKY_STYLE[w.sky] || SKY_STYLE.cloudy;
+  const chip = SKY_CHIP[w.sky] || SKY_CHIP.cloudy;
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "3px 8px" : "4px 9px",
-      borderRadius: 999, background: WEATHER_CHIP.bg, color: WEATHER_CHIP.fg,
+      borderRadius: 999, background: chip.bg, color: chip.fg,
       fontSize: small ? 10 : 10.5, fontWeight: 700, whiteSpace: "nowrap",
     }}>
       <Sky.Icon size={small ? 10 : 11} color={Sky.color} />
@@ -233,19 +234,26 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
     setNights(Math.max(1, nightsBetween(st, e)));
   };
 
+  // ─── A start answers the second question too ───
+  //
+  // Tapping a day used to leave a single marker and a dotted ring where the
+  // trip might end, and wait. The length is a question we can already answer,
+  // so it is answered: the whole stay is laid out at the length we recommend,
+  // and moving the end is an edit rather than a step. A trip that already has a
+  // length keeps it, because moving a holiday is not the same as resizing one.
   const beginAt = (d) => {
-    setStartDate(midnight(d).toISOString());
-    setNights(null);
+    commit(d, addDays(d, hasRange && nights ? nights : minNights));
     setFocus("end");
   };
 
   const onPick = (d) => {
-    // Nothing picked, a finished trip, or the marker is back on the start:
-    // this tap is a start.
-    if (!start || hasRange || focus === "start") { beginAt(d); return; }
-    // Holding a start and waiting for the end. A later day is that end; an
-    // earlier one cannot be, so it becomes the start instead.
-    if (d > midnight(start)) { commit(start, d); setFocus("start"); return; }
+    // The marker is on the end and this day can be one, so this tap moves it.
+    if (start && focus === "end" && d > midnight(start)) {
+      commit(start, d);
+      setFocus("start");
+      return;
+    }
+    // Otherwise the tap is a start, and brings its own end with it.
     beginAt(d);
   };
 

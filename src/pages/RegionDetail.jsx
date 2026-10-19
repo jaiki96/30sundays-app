@@ -21,7 +21,7 @@ import { regionsFor } from "../data/discoverData";
 import { useSaves } from "../data/saves";
 import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
-import { SKY_WORD } from "../data/weatherData";
+import { SKY_WORD, SKY_SENTENCE } from "../data/weatherData";
 import { KIND_TONE } from "../data/activityKind";
 import { kindGlyph } from "../data/kindGlyph";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
@@ -1150,7 +1150,7 @@ function WhenToGo({ r }) {
             }}>{v.label}</span>
           </div>
           <p style={{ margin: "7px 0 0", ...T.body }}>
-            {SKY_WORD[mo.sky] || "Mixed"} days{mo.rainWord ? ` and ${mo.rainWord}` : ""}, {mo.low}° at night and {mo.high}° by afternoon.
+            {SKY_SENTENCE[mo.sky] || "A mixed sky"}, {mo.low}° at night and {mo.high}° by afternoon.
           </p>
           {/* One line. The three facts are read together, and wrapping them
               turned a glance into a paragraph. */}

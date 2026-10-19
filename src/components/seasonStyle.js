@@ -1,31 +1,31 @@
 import { C } from "../data";
-import { RAMP } from "../data/brand";
 
 // ─── How a month is labelled on the dates step ───
 //
-// This ran two greens and a grey. Two greens at 9.5px are one colour with a
-// printing fault, so you could not tell peak from shoulder without reading.
+// Three unrelated colours, not one colour at three strengths. Peak and
+// mid-season are different answers, not degrees of the same one, and two
+// shades of a single hue at 9.5px are one colour with a printing fault. So
+// peak takes purple, mid-season takes bronze, and they have nothing to do with
+// each other or with the four skies they sit beside, which run gold, cyan,
+// blue and indigo. Seven labels on that screen, seven colours.
 //
-// Three colours now, far enough apart to tell at a glance: the brand green for
-// the months at their best, blue for the ones in between, warm grey for the
-// quiet ones. Grey is the point of the third one. An off-season month is not a
-// warning, it is just less busy, which is often the better trip and always the
-// cheaper one, so it gets a colour that steps back rather than one that argues.
+// Off-season keeps the grey. It is not a warning, it is just quieter, which is
+// often the better trip and always the cheaper one, so it gets the colour that
+// steps back rather than one that argues.
 //
-// Every value here clears 4.5:1 on white. These labels are 9.5px, so the
-// prettier, paler versions of all three would not survive daylight.
+// No green, and no red. Green reads as a pass mark on a thing that is not a
+// test, and red would tell a couple not to go somewhere we are selling them.
+//
+// Every value here clears 4.5:1 on its own ground. These labels are 9.5px, so
+// the prettier, paler versions would not survive daylight.
 
 export const SEASON_LABEL = { peak: "Peak Season", shoulder: "Mid-season", off: "Off Season" };
 
 // On the white chip.
-// Green is the go-ahead, so it belongs on shoulder season: fewer people and a
-// cheaper trip is the recommendation, not the busiest month of the year. Peak
-// takes the blue, which reads as a statement of fact rather than a nudge, and
-// off-season keeps the grey that steps back.
 export const SEASON_COLOR = {
-  peak: "#175CD3",             // the blue the hotel page already tags with
-  shoulder: RAMP.lagoonBliss[900], // #007E72, the board's green
-  off: "#767270",              // Coastal Mist taken down until it can be read
+  peak: "#8B1FA8",      // purple
+  shoulder: "#6B3E0A",  // bronze
+  off: "#6B6764",       // steps back
 };
 
 // ─── The chip the month sits in ───
@@ -42,8 +42,8 @@ export const monthChipInk = (on) => (on ? C.p600 : C.head);
 // Pale grounds for the same three, so a season can sit in a chip beside the
 // month without the chip shouting louder than the month's own name.
 export const SEASON_TINT = {
-  peak: "#EAF2FE",
-  shoulder: "#E5F6F5",
+  peak: "#F6E6FA",
+  shoulder: "#F5EADB",
   off: "#F2F0EE",
 };
 
@@ -56,7 +56,6 @@ export const SEASON_MEANING = {
   off: "Quietest Time, Base Rates",
 };
 
-// The weather chip. Its own colour, not the neutral grey, so the sky and the
-// crowds never read as the same kind of fact: amber is the warmth of a
-// forecast, and the icon inside says which sky it actually is.
-export const WEATHER_CHIP = { bg: "#FFF4E0", fg: "#B54708" };
+// The weather chip, per sky, so the sky and the crowds never read as the same
+// kind of fact: the seasons are purples, the skies are their own colours. See
+// SKY_CHIP in skyStyle for the grounds and the inks.

@@ -445,7 +445,7 @@ function DateScreen({ dest, value, nights, minNights, onPick, onClose, frame }) 
             the dates they land on are already written into the calendar below,
             twice over, so nothing up here repeats them. */}
         <h1 style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
-          Select trip dates
+          Select travel dates
         </h1>
       </div>
 

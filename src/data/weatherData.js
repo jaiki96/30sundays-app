@@ -27,8 +27,8 @@ export function seasonLabel(rainMm) {
 // icon says something rather than decorating.
 //   sunny        under 50mm, dry
 //   cloudy       50 to 119mm, a shower here and there
-//   rainy        120 to 219mm, wet enough to plan around
-//   heavy        220mm and over, properly wet
+//   rainy        120 to 219mm, light rain, worth packing for
+//   heavy        220mm and over, the wettest of the four
 //
 // The millimetres stay behind the words. A traveller deciding on a month wants
 // to know whether they will be rained on, not by how much.
@@ -41,8 +41,20 @@ export function monthSky(dest, monthIdx) {
   return "heavy";
 }
 
-// The word on the chip, in the vocabulary people use for weather.
-export const SKY_WORD = { sunny: "Sunny", cloudy: "Cloudy", rainy: "Rainy", heavy: "Heavy rain" };
+// The word on the chip, in the vocabulary people use for weather. Four steps
+// up to "Rainy" and no further: "Heavy rain" was the wettest of four saying it
+// twice, and the louder word only ever talked a couple out of a month we had
+// just recommended to them.
+export const SKY_WORD = { sunny: "Sunny", cloudy: "Cloudy", rainy: "Light rain", heavy: "Rainy" };
+
+// The same four as a clause, for the sentence on the region page. "Light rain
+// days and wet" is not a thing anybody says.
+export const SKY_SENTENCE = {
+  sunny: "Mostly sunny",
+  cloudy: "Mostly cloudy",
+  rainy: "Some light rain",
+  heavy: "Rain on and off",
+};
 
 // The numbers a month is judged on, in one call.
 export function monthWeather(dest, monthIdx) {

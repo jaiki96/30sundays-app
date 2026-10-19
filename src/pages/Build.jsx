@@ -875,7 +875,7 @@ function StepDates({ dest, startDate, setStartDate, nights, setNights }) {
       <div ref={head} style={{
         position: "sticky", top: 0, zIndex: 6, background: C.white, padding: "18px 0 10px",
       }}>
-        <h1 style={titleStyle}>Select trip dates</h1>
+        <h1 style={titleStyle}>Select travel dates</h1>
       </div>
       <DateRange
         dest={dest}
