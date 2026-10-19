@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Star, MapPin } from "lucide-react";
 import { C } from "../data";
+import SaveHeart from "./SaveHeart";
 
 // Shared hotel card that represents ONE stay. Used across planning/exploration,
 // booked trips, the day-by-day view, the day drawer, and the compare popup so a
@@ -29,6 +30,8 @@ export default function HotelStayCard({
   dayLabel, topRightBadge, recommendedBadge, soldOut,
   stars, ratingScore, name, roomType, city, freeCancellation,
   showChevron = true, width, to, onClick, footer, confirmationBar,
+  // The wishlist heart, over the photo. Only drawn when the caller can save.
+  saved, onSave,
 }) {
   const cardStyle = {
     width, minWidth: width, flexShrink: width ? 0 : undefined,
@@ -64,8 +67,11 @@ export default function HotelStayCard({
             fontSize: 11, fontWeight: 700, boxShadow: "0 1px 6px rgba(0,0,0,0.12)",
           }}>30 Sundays Recommended</span>
         )}
-        {topRightBadge && (
-          <div style={{ position: "absolute", top: 10, right: 10 }}>{topRightBadge}</div>
+        {(topRightBadge || onSave) && (
+          <div style={{ position: "absolute", top: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
+            {topRightBadge}
+            {onSave && <SaveHeart onPhoto size={30} saved={saved} onToggle={onSave} />}
+          </div>
         )}
       </div>
 

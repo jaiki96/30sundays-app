@@ -5,6 +5,7 @@ import {
   Clock, Timer, Car, Info, RefreshCw, Play,
 } from "lucide-react";
 import { C } from "../data";
+import SaveHeart from "../components/SaveHeart";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { TourReviewsSheet } from "./ItineraryDetail";
 import { buildActivityDetail } from "../data/activityData";
@@ -499,7 +500,12 @@ export function ChangeDayCTA() {
 }
 
 // The app's own activity detail screen, full screen over the day.
-export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vietnam", isBooked = true }) {
+//
+// `saved` and `onSave` are optional. A region page is browsing, and browsing
+// is where a couple wants to keep a thing for later, so it passes both and
+// gets a heart beside the back control. A day in a booked trip passes neither
+// and the header stays as it was.
+export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vietnam", isBooked = true, saved, onSave }) {
   const detail = useMemo(
     // isBooked gates the video hero on the activity page. Reaching it from a
     // day in your own itinerary is exactly the case that should get it; a
@@ -510,13 +516,14 @@ export function ActivityScreen({ activity, city, dayNum, onClose, country = "Vie
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 200, background: C.white, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 24 }}>
-        <div style={{ padding: "10px 16px 0", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ padding: "10px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <button
             onClick={onClose}
             style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.9)", border: `1px solid ${C.div}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
           >
             <ArrowLeft size={18} color={HEAD} />
           </button>
+          {onSave && <SaveHeart onPhoto size={36} saved={!!saved} onToggle={onSave} />}
         </div>
         <ActivityDetailScroll detail={detail} />
       </div>

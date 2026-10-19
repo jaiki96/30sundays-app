@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Share2, Images } from "lucide-react";
 import { C } from "../../data";
 import { R, SHADOW, T, A, PAD } from "../hotel_refined/tokens";
+import SaveHeart from "../SaveHeart";
 
 // ─── The top of the page ───
 //
@@ -66,7 +67,10 @@ function VideoTile({ video, height, onOpen }) {
   );
 }
 
-export default function MediaHeader({ hotel, onBack, onGallery, onShare }) {
+// The top-right slot holds one control. A screen that can save the hotel
+// passes onSave and gets the wishlist heart there; one that cannot keeps the
+// share button, so nothing else that opens this header changes.
+export default function MediaHeader({ hotel, onBack, onGallery, onShare, saved = false, onSave = null }) {
   const H = 288;
   const cellH = (H - 7) / 2;
 
@@ -118,9 +122,15 @@ export default function MediaHeader({ hotel, onBack, onGallery, onShare }) {
         <ArrowLeft size={18} color={C.head} />
       </button>
 
-      <button onClick={onShare} aria-label="Share" style={{ ...round, position: "absolute", top: 20, right: PAD + 10 }}>
-        <Share2 size={16} color={C.head} />
-      </button>
+      {onSave ? (
+        <div style={{ position: "absolute", top: 20, right: PAD + 10 }}>
+          <SaveHeart saved={saved} onToggle={onSave} onPhoto size={36} />
+        </div>
+      ) : (
+        <button onClick={onShare} aria-label="Share" style={{ ...round, position: "absolute", top: 20, right: PAD + 10 }}>
+          <Share2 size={16} color={C.head} />
+        </button>
+      )}
 
       <button
         onClick={() => onGallery("All")}

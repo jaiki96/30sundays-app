@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Star } from "lucide-react";
 import { C } from "../data";
 import { CATEGORY_COLORS, CATEGORY_META, getRoomSplitLabel } from "../data/resortData";
+import { useWishlist } from "../data/wishlist";
+import SaveHeart from "./SaveHeart";
 
 // Each card represents ONE night config for a resort (no toggles)
 export default function ResortCard({ resort, nights, showCategoryBadge, query }) {
+  const wishlist = useWishlist();
   const config = resort.night_configs.find(c => c.nights === nights) || resort.night_configs[0];
   const defaultCombo = config ? (config.combos.find(c => c.is_default) || config.combos[0]) : null;
   const roomSplit = defaultCombo ? getRoomSplitLabel(defaultCombo) : "";
@@ -13,6 +16,16 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
   const badgeCat = showCategoryBadge && resort.categories[0];
   const badgeColor = badgeCat ? CATEGORY_COLORS[badgeCat] : null;
   const badgeLabel = badgeCat ? CATEGORY_META[badgeCat]?.label : null;
+
+  // The wishlist keys a resort by name under Maldives, with its atoll as the
+  // town, the same way a hotel elsewhere carries the city of its stay.
+  const saved = wishlist.isSaved("hotel", "Maldives", resort.name);
+  const toggleSave = () => wishlist.toggle("hotel", "Maldives", resort.name, {
+    name: resort.name,
+    img: resort.hero_image,
+    sub: `${resort.atoll || "Maldives"} · ${resort.star_rating}-star`,
+    city: resort.atoll || null,
+  });
 
   return (
     <Link
@@ -41,10 +54,15 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
             </div>
           )}
 
-          {/* Category badge, top right */}
+          {/* The heart, top right, where every card in the app keeps it */}
+          <div style={{ position: "absolute", top: 10, right: 10 }}>
+            <SaveHeart saved={saved} onToggle={toggleSave} onPhoto size={32} />
+          </div>
+
+          {/* Category badge, to the left of the heart */}
           {badgeColor && badgeLabel && (
             <div style={{
-              position: "absolute", top: 10, right: 10,
+              position: "absolute", top: 16, right: 48,
               background: badgeColor.bg, color: badgeColor.text,
               borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700,
               boxShadow: "0 2px 8px rgba(0,0,0,0.10)",

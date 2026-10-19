@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, Calendar } from "lucide-react";
 import { C, VS, allItineraries } from "../data";
+import SaveHeart from "./SaveHeart";
+import { useWishlist } from "../data/wishlist";
 
 // Version tag, subtle uppercase label
 const versionBadgeStyle = {
@@ -104,6 +106,17 @@ function RouteTitle({ route, fullWidth }) {
 
 export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates, hideDest = false, showVersion = false }) {
   const v = VS[vibe || it.vibe];
+  // A ready-made itinerary saves as a trip, keyed by its own id, so the
+  // wishlist can open it straight from the card.
+  const { isSaved, toggle } = useWishlist();
+  const wishId = `it_${it.id}`;
+  const saved = isSaved("trip", it.dest, wishId);
+  const onHeart = () => toggle("trip", it.dest, wishId, {
+    name: `${it.dest} trip · ${it.nights}N`,
+    img: it.img,
+    sub: (it.route || []).map(r => `${r.n}N ${r.city}`).join(" · ") || it.name || null,
+    city: null,
+  });
   const cardW = fullWidth ? "100%" : 272;
   const cardH = fullWidth ? 360 : 340;
   const hasDates = travelDates?.fromDate;
@@ -115,8 +128,11 @@ export default function ItineraryCard({ it, vibe, fullWidth = false, travelDates
         <img src={it.img} alt={it.dest} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.82) 100%)" }} />
 
-        {/* Vibe tag top-right, glassmorphism */}
-        <span style={{ position: "absolute", top: 12, right: 12, ...vibeChipStyle(v) }}>{it.vibe}</span>
+        {/* Heart top-right, vibe tag beside it */}
+        <div style={{ position: "absolute", top: 12, right: 12 }}>
+          <SaveHeart onPhoto saved={saved} onToggle={onHeart} />
+        </div>
+        <span style={{ position: "absolute", top: 16, right: 52, ...vibeChipStyle(v) }}>{it.vibe}</span>
 
         {/* Veg badge top-left */}
         {it.veg && (

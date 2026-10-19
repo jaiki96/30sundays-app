@@ -7,6 +7,7 @@ import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
 import SaveHeart from "../components/SaveHeart";
+import { useWishlist } from "../data/wishlist";
 import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
@@ -601,6 +602,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     setParams(next, { replace: true });
   };
   const dealsCtx = useDeals();
+  const wishlist = useWishlist();
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
   const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
@@ -1738,6 +1740,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 roomType={h.type}
                 city={h.city}
                 freeCancellation={h.freeCancellation}
+                saved={wishlist.isSaved("hotel", it.dest, h.name)}
+                onSave={() => wishlist.toggle("hotel", it.dest, h.name, { name: h.name, img: h.img, sub: `${h.city}${h.stars ? ` · ${h.stars}-star` : ""}`, city: h.city })}
                 to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
                 footer={
                   <>

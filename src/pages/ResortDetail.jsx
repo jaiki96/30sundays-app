@@ -7,7 +7,9 @@ import {
 } from "lucide-react";
 import { C } from "../data";
 import { getResortById, getRoomSplitLabel, resorts, MEAL_INFO } from "../data/resortData";
+import { useWishlist } from "../data/wishlist";
 import ResortCard from "../components/ResortCard";
+import SaveHeart from "../components/SaveHeart";
 
 // Demo hero video used until each resort has its own clip.
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
@@ -55,6 +57,7 @@ function BookingMark() {
 export default function ResortDetail() {
   const { resortId } = useParams();
   const [params] = useSearchParams();
+  const wishlist = useWishlist();
   const resort = getResortById(resortId);
 
   // Choices carried in from the quote (or sensible defaults when browsing).
@@ -134,6 +137,16 @@ export default function ResortDetail() {
   // Hero gallery: a video first, then all the resort photos.
   const heroVideo = resort.video_url || HERO_VIDEO;
 
+  // The heart on the hero, keyed the same way the resort card keys it, so a
+  // save made on the list shows here and the other way round.
+  const isWished = wishlist.isSaved("hotel", "Maldives", resort.name);
+  const toggleWish = () => wishlist.toggle("hotel", "Maldives", resort.name, {
+    name: resort.name,
+    img: resort.hero_image || resort.images?.[0],
+    sub: `${resort.atoll || "Maldives"} · ${resort.star_rating}-star`,
+    city: resort.atoll || null,
+  });
+
   // Carry the current choices onto linked (similar) resorts.
   const carry = [
     startDate && `date=${encodeURIComponent(startDate)}`,
@@ -167,6 +180,9 @@ export default function ResortDetail() {
         }}>
           <ArrowLeft size={18} color="#fff" />
         </Link>
+        <div style={{ position: "absolute", top: 14, right: 14 }}>
+          <SaveHeart saved={isWished} onToggle={toggleWish} onPhoto size={34} />
+        </div>
       </div>
 
       {/* ─── Title + star / booking rating / atoll ─── */}

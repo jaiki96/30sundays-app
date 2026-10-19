@@ -172,6 +172,10 @@ export default function HotelV3({
   // Which paper the honest bit is written on. The postcard is the one we
   // picked, so it is what every screen gets unless it asks for the other.
   honestVariant = "postcard",
+  // The wishlist heart over the photos. The screen that opens this knows
+  // which destination it is in, so it owns the save and hands it down here.
+  saved = false,
+  onSave = null,
 }) {
   const [gallery, setGallery] = useState(null);
   const scroller = useRef(null);
@@ -217,6 +221,8 @@ export default function HotelV3({
           onBack={onBack}
           onGallery={(cat) => setGallery(cat)}
           onShare={() => {}}
+          saved={saved}
+          onSave={onSave}
         />
 
         <div style={{ padding: `18px ${PAD}px 0` }}>

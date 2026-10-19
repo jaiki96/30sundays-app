@@ -5,6 +5,7 @@ import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { useDeals, computePrice } from "../data/deals";
+import { useWishlist } from "../data/wishlist";
 import InclusionsSection from "../components/InclusionsSection";
 import HotelV3 from "../components/hotel_v3/HotelV3";
 import { detailFromHotel } from "../data/hotelDetailAdapter";
@@ -18,6 +19,7 @@ export default function HotelPDP() {
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
   const dealsCtx = useDeals();
+  const wishlist = useWishlist();
   const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
   const [confirmReplace, setConfirmReplace] = useState(false); // warning popup
   const [showUpgrade, setShowUpgrade] = useState(false); // upgrade details sheet
@@ -47,6 +49,18 @@ export default function HotelPDP() {
 
   const nights = stayInfo.nights;
   const selectedRoom = hotel.rooms.find(r => r.id === selectedRoomId);
+
+  // The heart over the photos. Hotels are regenerated for every set of dates
+  // and their ids are positional, so the wishlist keys them by name, filed
+  // under the trip's destination with the stay's town alongside.
+  const wishDest = itinerary.dest;
+  const isWished = wishlist.isSaved("hotel", wishDest, hotel.name);
+  const toggleWish = () => wishlist.toggle("hotel", wishDest, hotel.name, {
+    name: hotel.name,
+    img: hotel.images?.[0]?.url,
+    sub: `${stayInfo.city} · ${hotel.stars}-star`,
+    city: stayInfo.city,
+  });
   const currentRoom = currentHotel?.rooms?.[0];
 
   const isSameAsCurrent = isCurrentHotel && selectedRoomId === hotel.rooms[0]?.id;
@@ -394,6 +408,8 @@ export default function HotelPDP() {
       )}
       bottomBar={isSameAsCurrent ? null : bottomBar}
       overlay={overlay}
+      saved={isWished}
+      onSave={toggleWish}
     />
   );
 }

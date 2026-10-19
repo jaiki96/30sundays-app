@@ -7,6 +7,8 @@ import { C } from "../../data";
 import { destAreas, areaImg, cityCoords } from "../../data/buildData";
 import { regionGuide } from "../../data/regionGuide";
 import RegionDetail from "../../pages/RegionDetail";
+import { useWishlist } from "../../data/wishlist";
+import WishlistPickSheet, { SavedHint, SavedMark } from "../WishlistPickSheet";
 
 // ─── Choose the cities ───
 //
@@ -209,7 +211,8 @@ const nightsRange = (n) => {
 // And the photograph stretches to whatever the words need rather than being a
 // fixed square, so the card is as tall as its contents and there is no band of
 // nothing to manage in the first place.
-function CityCard({ area, picked, onToggle, onOpen }) {
+// saved: the region is on the wishlist, which the card marks and nothing more.
+function CityCard({ area, picked, saved, onToggle, onOpen }) {
   const g = regionGuide(area.dest, area.city);
   const blurb = g?.lead || area.tag;
   return (
@@ -242,6 +245,7 @@ function CityCard({ area, picked, onToggle, onOpen }) {
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {area.city}
           </span>
+          {saved && <SavedMark size={20} />}
           {picked && (
             <span aria-hidden style={{
               width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
@@ -503,6 +507,19 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
   const picked = useMemo(() => new Set(route.map((r) => r.city)), [route]);
   const note = useMemo(() => fit(route, rec, nights), [route, rec, nights]);
 
+  // The regions hearted for this destination before the wizard was opened. A
+  // mark on their cards, and one line under the question that opens them so
+  // they can be added from here. Not pre-chosen: a save is interest, a pick is
+  // a decision, and the nights are worked out from the picks.
+  const { ofKind } = useWishlist();
+  // With the card's photograph, so the sheet shows the place and not a blank.
+  const savedRegions = useMemo(
+    () => ofKind("region", dest).map((it) => ({ ...it, img: it.img || cards.find((c) => c.city === it.id)?.img || null })),
+    [ofKind, dest, cards]
+  );
+  const savedCities = useMemo(() => new Set(savedRegions.map((i) => i.id)), [savedRegions]);
+  const [picking, setPicking] = useState(false);
+
   // Chosen cities first, in the order the trip runs them, then the rest. The
   // list can be a dozen long; what somebody has already decided should not be
   // something they scroll to find.
@@ -711,6 +728,7 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
             {title}
           </h1>
         )}
+        <SavedHint count={savedRegions.length} dest={dest} onOpen={() => setPicking(true)} style={{ marginTop: title ? 6 : 0, padding: title ? 0 : `10px ${PAD}px 0` }} />
       </div>
 
       {/* ─── The map, and most of the screen ───
@@ -762,6 +780,7 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
                 key={a.city}
                 area={a}
                 picked={picked.has(a.city)}
+                saved={savedCities.has(a.city)}
                 onToggle={() => toggle(a)}
                 onOpen={() => setReading(a.city)}
               />
@@ -814,6 +833,18 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
             ))}
           </div>
         </div>
+      )}
+
+      {/* The saves, as a sheet over the step, each with an Add button. */}
+      {picking && createPortal(
+        <WishlistPickSheet
+          dest={dest} kind="region" items={savedRegions}
+          isAdded={(it) => picked.has(it.id)}
+          onAdd={(it) => { const a = cards.find((c) => c.city === it.id); if (a) toggle(a); }}
+          canAdd={(it) => canonical.includes(it.id) ? null : "Not one of the cities we plan here"}
+          onClose={() => setPicking(false)}
+        />,
+        document.getElementById("phone-frame") || document.body
       )}
 
       {/* The region page gets the same add button the cards have, because

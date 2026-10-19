@@ -30,6 +30,19 @@ const flagOf = (dest) => destData[dest]?.flag || "";
 // activity's town never goes stale; the snapshot taken at save time otherwise.
 function useRows(items, deals) {
   return useMemo(() => items.map((it) => {
+    if (it.kind === "trip" && String(it.id).startsWith("it_")) {
+      // A ready-made itinerary hearted from its card, not a plan version.
+      const itin = allItineraries.find((i) => String(i.id) === String(it.id).slice(3));
+      return {
+        ...it,
+        name: itin ? `${itin.dest} trip · ${itin.nights}N` : it.name,
+        img: it.img || itin?.img || null,
+        sub: it.sub || (itin?.route || []).map((r) => `${r.n}N ${r.city}`).join(" · ") || "",
+        meta: itin?.price ? `Ready-made · From ₹${itin.price}/pp` : "Ready-made",
+        open: itin ? `/itinerary/${itin.id}` : null,
+        pin: null,
+      };
+    }
     if (it.kind === "trip") {
       let hit = null;
       deals.forEach((d) => {
@@ -73,7 +86,9 @@ function useRows(items, deals) {
         pin: c ? { lat: c.lat, lng: c.lng } : null,
       };
     }
-    return { ...it, sub: it.sub || it.city || "", meta: KIND_NOUN[it.kind] || "", open: null, pin: null };
+    // Stays, food and shops open the region page they were saved on.
+    const region = it.city ? `/destination/${encodeURIComponent(it.dest)}/region/${encodeURIComponent(it.city)}` : null;
+    return { ...it, sub: it.sub || it.city || "", meta: `${KIND_NOUN[it.kind] || ""}${it.city ? ` · ${it.city}` : ""}`, open: region, pin: null };
   }), [items, deals]);
 }
 

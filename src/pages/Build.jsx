@@ -24,6 +24,8 @@ import NextStepNote from "../components/NextStepNote";
 import MonthWeather from "../components/MonthWeather";
 import DateRange from "../components/wizard/DateRange";
 import RoutePicker from "../components/wizard/RoutePicker";
+import { useWishlist } from "../data/wishlist";
+import WishlistPickSheet, { SavedHint, SavedMark } from "../components/WishlistPickSheet";
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -1412,6 +1414,19 @@ function StepActivities({ dest, route, vibes, picks, setPicks }) {
   const [reel, setReel] = useState(null);
   const toggle = (id) => setPicks(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  // What the couple hearted for this destination before they got here. A mark
+  // on the cards that are already on the wishlist, and one line that opens
+  // the saves so they can be added without leaving the step. Nothing is
+  // pre-ticked: a save is interest, a tick is a decision.
+  const { ofKind } = useWishlist();
+  const savedActs = useMemo(
+    () => ofKind("activity", dest).map((it) => ({ ...it, img: it.img || all.find((a) => a.id === it.id)?.img || null })),
+    [ofKind, dest, all]
+  );
+  const savedIds = useMemo(() => new Set(savedActs.map(i => i.id)), [savedActs]);
+  const onRoute = useMemo(() => new Set(all.map(a => a.id)), [all]);
+  const [picking, setPicking] = useState(false);
+
   const TOP = 8;
   const shown = showAll ? all : all.slice(0, TOP);
 
@@ -1419,10 +1434,11 @@ function StepActivities({ dest, route, vibes, picks, setPicks }) {
     <div style={{ padding: "18px 16px 24px" }}>
       <h1 style={titleStyle}>What sounds fun?</h1>
       <p style={subStyle}>Pick anything you like. Some may make it into your final trip, some may not, depending on what's possible on the ground.</p>
+      <SavedHint count={savedActs.length} dest={dest} onOpen={() => setPicking(true)} style={{ marginTop: 8 }} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
         {shown.map(a => (
-          <ActivityCard key={a.id} a={a} on={picks.has(a.id)} onOpen={() => setReel(a)} onToggle={() => toggle(a.id)} />
+          <ActivityCard key={a.id} a={a} on={picks.has(a.id)} saved={savedIds.has(a.id)} onOpen={() => setReel(a)} onToggle={() => toggle(a.id)} />
         ))}
       </div>
 
@@ -1437,13 +1453,22 @@ function StepActivities({ dest, route, vibes, picks, setPicks }) {
       )}
 
       {reel && <ActivityReel a={reel} dest={dest} on={picks.has(reel.id)} onToggle={() => toggle(reel.id)} onClose={() => setReel(null)} />}
+      {picking && (
+        <WishlistPickSheet
+          dest={dest} kind="activity" items={savedActs}
+          isAdded={(it) => picks.has(it.id)}
+          onAdd={(it) => toggle(it.id)}
+          canAdd={(it) => onRoute.has(it.id) ? null : `Not on this route (${it.city || "another town"})`}
+          onClose={() => setPicking(false)}
+        />
+      )}
     </div>
   );
 }
 
 // Portrait reel card (mirrors the destination cards). Tap the card to watch the
 // reel; tap the corner tick to add/remove.
-function ActivityCard({ a, on, onOpen, onToggle }) {
+function ActivityCard({ a, on, saved, onOpen, onToggle }) {
   const { rating, reviews } = activityRating(a.id);
   return (
     <div onClick={onOpen} style={{
@@ -1452,6 +1477,7 @@ function ActivityCard({ a, on, onOpen, onToggle }) {
     }}>
       <img src={a.img} alt={a.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0) 55%)" }} />
+      {saved && <SavedMark onPhoto size={26} style={{ position: "absolute", top: 8, left: 8 }} />}
       <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.32)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)", display: "grid", placeItems: "center" }}>
         <Play size={17} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
       </div>

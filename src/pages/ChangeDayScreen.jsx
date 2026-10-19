@@ -8,6 +8,7 @@ import { DayRatingPill } from "../components/DayRating";
 import { TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShape";
 import { FilterChip, SearchableCheckList } from "./HotelListing";
 import CardReel from "../components/CardReel";
+import { useWishlist } from "../data/wishlist";
 
 // ─── Change day plan, full screen ───
 //
@@ -86,7 +87,8 @@ function Fact({ icon: Icon, children }) {
 }
 
 // ─── One plan ───────────────────────────────────────────────────────────────
-function OptionCard({ opt, onOpen, onGallery }) {
+// savedHits: the activities in this plan the couple already hearted.
+function OptionCard({ opt, onOpen, onGallery, savedHits = [] }) {
   return (
     <div
       data-testid={`day-option-${opt.id}`}
@@ -133,6 +135,14 @@ function OptionCard({ opt, onOpen, onGallery }) {
 
       <div style={{ padding: "11px 12px 12px", display: "flex", flexDirection: "column", gap: 9 }}>
         <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.32 }}>{opt.name}</p>
+        {savedHits.length > 0 && (
+          <p style={{ margin: "-3px 0 0", display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: C.p600 }}>
+            <Heart size={11} color={C.p600} fill={C.p600} style={{ flexShrink: 0 }} />
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              You saved {savedHits.length === 1 ? savedHits[0] : `${savedHits[0]} and ${savedHits.length - 1} more`}
+            </span>
+          </p>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
           <DayRatingPill rating={opt.rating} style="outline" />
@@ -328,6 +338,12 @@ export default function ChangeDayScreen({
   // Which plan's pictures are open, and which one you tapped.
   const [gallery, setGallery] = useState(null);
 
+  // The activities the couple hearted, by name, so a plan that includes one
+  // can say so. Names rather than ids: a day plan holds names only.
+  const { ofKind } = useWishlist();
+  const savedNames = useMemo(() => new Set(ofKind("activity").map((i) => (i.name || "").toLowerCase())), [ofKind]);
+  const hitsFor = (o) => (o.activities || []).filter((n) => savedNames.has(String(n).toLowerCase()));
+
   // Every activity on offer for this day, for the searchable filter.
   const activityOptions = useMemo(
     () => [...new Set(options.flatMap((o) => o.activities || []))].sort(),
@@ -440,6 +456,7 @@ export default function ChangeDayScreen({
                 opt={o}
                 onOpen={onOpen}
                 onGallery={(opt, at) => setGallery({ opt, at })}
+                savedHits={hitsFor(o)}
               />
             ))}
           </div>

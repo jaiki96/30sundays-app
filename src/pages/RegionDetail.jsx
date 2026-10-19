@@ -6,7 +6,7 @@ import L from "leaflet";
 import {
   ArrowLeft, ArrowRight, Check, X as XIcon, Star, MapPin, Clock, Images,
   Plane, Car, TrainFront, TramFront, Ship, Footprints, Bike, Bus,
-  BedDouble, ChevronDown, ChevronUp, Sparkles, Hotel,
+  BedDouble, ChevronDown, ChevronUp, Sparkles, Hotel, ShoppingBag,
   Plus, Minus,
 } from "lucide-react";
 import { C, customerPhotos } from "../data";
@@ -19,12 +19,14 @@ import { sightCoords } from "../data/sightCoords";
 import { areaCoords } from "../data/areaCoords";
 import { regionsFor } from "../data/discoverData";
 import { useSaves } from "../data/saves";
+import { useWishlist } from "../data/wishlist";
 import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
 import { SKY_WORD, SKY_SENTENCE } from "../data/weatherData";
 import { KIND_TONE } from "../data/activityKind";
 import { kindGlyph } from "../data/kindGlyph";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
+import { regionShops, SHOP_TAG } from "../data/regionShops";
 import SaveHeart from "../components/SaveHeart";
 import { SKY_STYLE } from "../components/skyStyle";
 import { SEASON_COLOR, SEASON_TINT, SEASON_LABEL, SEASON_MEANING } from "../components/seasonStyle";
@@ -51,6 +53,23 @@ import SourceLogo from "../components/hotel_detail/SourceLogo";
 // the same surface is both a thing you browse and a thing you read.
 
 const PAD = 16;
+
+// ─── What a heart keeps ───
+//
+// The wishlist files everything under the destination it was tapped in and
+// draws a row from a snapshot: a name, a picture if we hold one, and a small
+// line under the name. These write that snapshot for each kind of thing on
+// this page, so the Saved screen says the same about a place as the page did.
+// The id is whatever the live data already calls the thing: `city::name` for
+// an activity, a restaurant or a shop, and the hotel's own name for a hotel.
+const placeId = (city, name) => `${city}::${name}`;
+const actMeta = (a, city) => ({ name: a.name, img: a.img, sub: city, city });
+const foodMeta = (f, city) => ({
+  name: f.name, img: f.img, city,
+  sub: [sortTags(f.tags)[0], f.area].filter(Boolean).join(" · "),
+});
+const shopMeta = (s, city) => ({ name: s.name, city, sub: [s.tag, s.area].filter(Boolean).join(" · ") });
+const hotelMeta = (h, city) => ({ name: h.name, img: h.images?.[0]?.url, city, sub: `${city} · ${h.stars}-star` });
 
 // ─── One region, on one page ───
 //
@@ -444,7 +463,11 @@ function Zoom() {
 // The whole card is the way in. There is no separate button, because a card
 // that appears when you press a pin and does nothing when you press it is a
 // card that has taught you not to press it.
-function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
+//
+// The heart sits beside the title, bare, because the card is white. It is a
+// button inside what used to be a button, so the card is a div that acts as
+// one now: a button cannot hold another button.
+function PinCard({ img, title, meta, tag, rating, saved, onSave, onOpen, onClose }) {
   return (
     <div style={{
       position: "absolute", left: 12, right: 12, bottom: 16, zIndex: 650,
@@ -454,13 +477,23 @@ function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
         position: "relative", background: C.white, borderRadius: R.card,
         boxShadow: SHADOW.float, overflow: "hidden",
       }}>
-        <button onClick={onOpen} style={{
-          display: "flex", gap: 12, alignItems: "center", width: "100%", textAlign: "left",
-          background: "none", border: "none", padding: 11, cursor: "pointer", fontFamily: "inherit",
-        }}>
+        <div
+          onClick={onOpen}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+          style={{
+            display: "flex", gap: 12, alignItems: "center", width: "100%", textAlign: "left",
+            background: "none", border: "none", padding: 11, cursor: "pointer", fontFamily: "inherit",
+            boxSizing: "border-box",
+          }}
+        >
           <img src={img} alt="" style={{ width: 64, height: 64, flexShrink: 0, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
-          <span style={{ flex: 1, minWidth: 0, paddingRight: 22 }}>
-            <span style={{ ...T.h3, fontSize: 14.5, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
+          <span style={{ flex: 1, minWidth: 0, paddingRight: 30 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ ...T.h3, fontSize: 14.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
+              {onSave && <SaveHeart size={28} saved={!!saved} onToggle={onSave} />}
+            </span>
             <span style={{ ...T.micro, display: "block", marginTop: 3 }}>{meta}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 7 }}>
               {tag && (
@@ -481,7 +514,7 @@ function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
               )}
             </span>
           </span>
-        </button>
+        </div>
 
         <button onClick={onClose} aria-label="Close" style={{
           position: "absolute", top: 8, right: 8, width: 24, height: 24, borderRadius: "50%",
@@ -507,6 +540,7 @@ function RegionMapScreen({ dest, city, acts, onOpenAct, onClose }) {
   const here = cityCoords[city];
   const sights = useMemo(() => pinnedSights(acts || [], here), [acts, here]);
   const [pick, setPick] = useState(null);
+  const { isSaved, toggle } = useWishlist();
 
   const span = useMemo(() => {
     // ─── Every pin, deliberately ───
@@ -595,6 +629,8 @@ function RegionMapScreen({ dest, city, acts, onOpenAct, onClose }) {
             fg: (KIND_TONE[chosen.kind] || KIND_TONE.Culture).fg,
           }}
           rating={rating}
+          saved={isSaved("activity", dest, chosen.id)}
+          onSave={() => toggle("activity", dest, chosen.id, actMeta(chosen, city))}
           onOpen={() => onOpenAct(chosen)}
           onClose={() => setPick(null)}
         />
@@ -795,7 +831,11 @@ const SHOWN_TRIPS = 6;
 // that only some cards had, and because a rail stretches every card to the
 // same height, the ones without it carried the gap where it would have been.
 // On the photograph it costs no height at all, so every card reads the same.
-function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
+//
+// The heart is on the photograph too, top right, in a white disc. The badge
+// has the top left, the reel's dots have the bottom, and the right-hand corner
+// is where every listing app a couple has used puts it.
+function ActCard({ a, saved, onSave, onOpen, width = 255, imgH = 165 }) {
   const tone = KIND_TONE[a.kind] || KIND_TONE.Culture;
   const imgs = a.imgs?.length ? a.imgs : [a.img].filter(Boolean);
 
@@ -823,6 +863,11 @@ function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
             boxShadow: "0 1px 6px rgba(16,24,40,0.18)",
             fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap",
           }}><Sparkles size={10} /> {a.pick}</span>
+        )}
+        {onSave && (
+          <span style={{ position: "absolute", right: 9, top: 9, zIndex: 1 }}>
+            <SaveHeart onPhoto size={32} saved={!!saved} onToggle={onSave} />
+          </span>
         )}
       </div>
 
@@ -854,8 +899,13 @@ function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
   );
 }
 
-function ThingsToDo({ acts, city, onOpen }) {
+function ThingsToDo({ acts, dest, city, onOpen }) {
   const [all, setAll] = useState(false);
+  const { isSaved, toggle } = useWishlist();
+  const heart = (a) => ({
+    saved: isSaved("activity", dest, a.id),
+    onSave: () => toggle("activity", dest, a.id, actMeta(a, city)),
+  });
 
   return (
     <>
@@ -866,7 +916,7 @@ function ThingsToDo({ acts, city, onOpen }) {
       >
         <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
           {acts.slice(0, SHOWN_ACTS).map((a) => (
-            <ActCard key={a.id} a={a} onOpen={onOpen} />
+            <ActCard key={a.id} a={a} {...heart(a)} onOpen={onOpen} />
           ))}
         </div>
       </Sec>
@@ -874,7 +924,7 @@ function ThingsToDo({ acts, city, onOpen }) {
       <ListSheet open={all} title={`Things to do in ${city}`} count={acts.length} onClose={() => setAll(false)}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {acts.map((a) => (
-            <ActCard key={a.id} a={a} width="100%" imgH={200} onOpen={(x) => { setAll(false); onOpen(x); }} />
+            <ActCard key={a.id} a={a} {...heart(a)} width="100%" imgH={200} onOpen={(x) => { setAll(false); onOpen(x); }} />
           ))}
         </div>
       </ListSheet>
@@ -1232,10 +1282,18 @@ function foodPins(list, city) {
     .sort((a, b) => (a.km ?? 0) - (b.km ?? 0));
 }
 
-function FoodMapScreen({ city, list, onClose }) {
+// ─── Places on a map ───
+//
+// Built for the restaurants, and the shops use it as it stands: both lists
+// are a name, a neighbourhood and a distance, and both want the same answer,
+// which is where any of this is in relation to anything else. `title` is the
+// pill at the top, `pinKind` picks the glyph on the pins, `tags` turns a place
+// into the pills on its card, and `kind` and `meta` are what its heart saves.
+function PlaceMapScreen({ dest, city, list, title, pinKind, tags, kind, meta, onClose }) {
   const here = cityCoords[city];
   const pins = useMemo(() => foodPins(list, city), [list, city]);
   const [pick, setPick] = useState(null);
+  const { isSaved, toggle } = useWishlist();
 
   const span = useMemo(() => {
     const all = [here, ...pins.map((x) => ({ lat: x.lat, lng: x.lng }))];
@@ -1266,7 +1324,7 @@ function FoodMapScreen({ city, list, onClose }) {
           <Marker
             key={x.name}
             position={[x.lat, x.lng]}
-            icon={sightPin(x.name, "Food", pick === x.name)}
+            icon={sightPin(x.name, pinKind, pick === x.name)}
             zIndexOffset={pick === x.name ? 1000 : 0}
             eventHandlers={{ click: () => setPick(x.name) }}
           />
@@ -1287,7 +1345,7 @@ function FoodMapScreen({ city, list, onClose }) {
           pointerEvents: "auto", background: C.white, borderRadius: R.pill, padding: "9px 14px",
           boxShadow: SHADOW.float, fontSize: 12.5, fontWeight: 700, color: C.head,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-        }}>Where to eat in {city}</span>
+        }}>{title}</span>
       </div>
 
       {list.length > pins.length && (
@@ -1306,24 +1364,31 @@ function FoodMapScreen({ city, list, onClose }) {
         }}>
           <div style={{ position: "relative", background: C.white, borderRadius: R.card, boxShadow: SHADOW.float, padding: 11 }}>
             <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
-              <img src={chosen.img} alt="" style={{ width: 56, height: 56, flexShrink: 0, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
-              <div style={{ flex: 1, minWidth: 0, paddingRight: 20 }}>
-                <p style={{ margin: 0, ...T.h3, fontSize: 14.5, ...clamp(1) }}>{chosen.name}</p>
+              {/* A photograph where we hold one, the kind's icon where we do
+                  not. The shops carry no pictures, by design. */}
+              {chosen.img
+                ? <img src={chosen.img} alt="" style={{ width: 56, height: 56, flexShrink: 0, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
+                : <Well Icon={ShoppingBag} size={56} />}
+              <div style={{ flex: 1, minWidth: 0, paddingRight: 30 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <p style={{ margin: 0, ...T.h3, fontSize: 14.5, flex: 1, minWidth: 0, ...clamp(1) }}>{chosen.name}</p>
+                  <SaveHeart
+                    size={28}
+                    saved={isSaved(kind, dest, placeId(city, chosen.name))}
+                    onToggle={() => toggle(kind, dest, placeId(city, chosen.name), meta(chosen, city))}
+                  />
+                </div>
                 <p style={{ margin: "3px 0 0", ...T.micro, ...clamp(1) }}>
                   {chosen.area}{chosen.km != null ? ` · ${chosen.km} km from the centre` : ""}
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
-                  {sortTags(chosen.tags).map((tag) => {
-                    const tone = FOOD_TAG[tag];
-                    return (
-                      <span key={tag} style={{
-                        padding: "3px 8px", borderRadius: R.pill,
-                        background: tone ? tone.bg : C.bg,
-                        color: tone ? tone.fg : C.sub,
-                        fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-                      }}>{tag}</span>
-                    );
-                  })}
+                  {tags(chosen).map((t) => (
+                    <span key={t.label} style={{
+                      padding: "3px 8px", borderRadius: R.pill,
+                      background: t.bg, color: t.fg,
+                      fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+                    }}>{t.label}</span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1351,44 +1416,67 @@ function FoodMapScreen({ city, list, onClose }) {
 const FOOD_FILTERS = ["Indian food", "Veg only", "Local food"];
 const SHOWN_FOOD = 4;
 
-function FoodRow({ f }) {
+// The food tags as the pills the row and the map card draw, in the order
+// sortTags puts them. The shops have their own version below.
+const foodTags = (f) => sortTags(f.tags).map((label) => {
+  const tone = FOOD_TAG[label];
+  return { label, bg: tone ? tone.bg : C.bg, fg: tone ? tone.fg : C.sub };
+});
+
+// ─── One place, as a row ───
+//
+// The restaurants and the shops share this. A picture or an icon on the left,
+// the name, where it is, one line about it and its tags in the middle, and
+// the heart at the right edge, bare, because the row is white.
+function PlaceRow({ img, Icon, name, area, km, note, tags, saved, onSave }) {
   return (
     <div style={{
       display: "flex", gap: 11, alignItems: "center", width: "100%",
       background: C.white, borderRadius: R.card, padding: 9, boxShadow: SHADOW.card,
+      boxSizing: "border-box",
     }}>
-      <img src={f.img} alt="" style={{
-        width: 58, height: 58, borderRadius: R.well, objectFit: "cover",
-        flexShrink: 0, background: A.photoBg,
-      }} />
+      {img
+        ? <img src={img} alt="" style={{ width: 58, height: 58, borderRadius: R.well, objectFit: "cover", flexShrink: 0, background: A.photoBg }} />
+        : <Well Icon={Icon} size={58} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, ...T.lead, fontSize: 13.5, ...clamp(1) }}>{f.name}</p>
+        <p style={{ margin: 0, ...T.lead, fontSize: 13.5, ...clamp(1) }}>{name}</p>
         <div style={{ display: "flex", alignItems: "center", gap: 4, margin: "4px 0 0" }}>
           <MapPin size={11} color={C.inact} style={{ flexShrink: 0 }} />
           <span style={{ ...T.micro, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {f.area}{f.km != null ? ` · ${f.km} km from the centre` : ""}
+            {area}{km != null ? ` · ${km} km from the centre` : ""}
           </span>
         </div>
-        <p style={{ margin: "4px 0 0", ...T.meta, lineHeight: 1.4, ...clamp(1) }}>{f.note}</p>
+        <p style={{ margin: "4px 0 0", ...T.meta, lineHeight: 1.4, ...clamp(1) }}>{note}</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
-          {sortTags(f.tags).map((tag) => {
-            const tone = FOOD_TAG[tag];
-            return (
-              <span key={tag} style={{
-                padding: "3px 8px", borderRadius: R.pill,
-                background: tone ? tone.bg : C.bg,
-                color: tone ? tone.fg : C.sub,
-                fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-              }}>{tag}</span>
-            );
-          })}
+          {tags.map((t) => (
+            <span key={t.label} style={{
+              padding: "3px 8px", borderRadius: R.pill,
+              background: t.bg, color: t.fg,
+              fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+            }}>{t.label}</span>
+          ))}
         </div>
       </div>
+      {onSave && <SaveHeart size={32} saved={!!saved} onToggle={onSave} />}
     </div>
   );
 }
 
-function Restaurants({ list, city, onMap }) {
+function FoodRow({ f, saved, onSave }) {
+  return (
+    <PlaceRow
+      img={f.img} name={f.name} area={f.area} km={f.km} note={f.note}
+      tags={foodTags(f)} saved={saved} onSave={onSave}
+    />
+  );
+}
+
+function Restaurants({ list, dest, city, onMap }) {
+  const { isSaved, toggle } = useWishlist();
+  const heart = (f) => ({
+    saved: isSaved("restaurant", dest, placeId(city, f.name)),
+    onSave: () => toggle("restaurant", dest, placeId(city, f.name), foodMeta(f, city)),
+  });
   // No map where nothing on the list is anywhere. Every place to eat near a
   // Maldives resort is "on your island", which is true and unpinnable, and an
   // empty map is a worse answer than no map.
@@ -1442,7 +1530,7 @@ function Restaurants({ list, city, onMap }) {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: `12px ${PAD}px 0` }}>
-          {shown.slice(0, SHOWN_FOOD).map((f) => <FoodRow key={f.name} f={f} />)}
+          {shown.slice(0, SHOWN_FOOD).map((f) => <FoodRow key={f.name} f={f} {...heart(f)} />)}
           {shown.length === 0 && (
             <p style={{ margin: "4px 0", ...T.body }}>Nothing on our list for that here yet.</p>
           )}
@@ -1452,7 +1540,69 @@ function Restaurants({ list, city, onMap }) {
 
       <ListSheet open={all} title={`Where to eat in ${city}`} count={list.length} onClose={() => setAll(false)}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {list.map((f) => <FoodRow key={f.name} f={f} />)}
+          {list.map((f) => <FoodRow key={f.name} f={f} {...heart(f)} />)}
+        </div>
+      </ListSheet>
+    </>
+  );
+}
+
+// ─── Where to shop ───
+//
+// The same block as the restaurants, one question later. Three to five places
+// per region, so there are no filter chips: a filter over four rows is a
+// filter over nothing. The door to the full list stays, because every list on
+// this page has one and a couple who has learned where it is should find it.
+//
+// No photographs. We hold none of these places, and a stock market under a
+// real market's name would be a claim. The icon says what the row is.
+const SHOWN_SHOPS = 4;
+
+const shopTags = (s) => {
+  const tone = SHOP_TAG[s.tag];
+  return s.tag ? [{ label: s.tag, bg: tone ? tone.bg : C.bg, fg: tone ? tone.fg : C.sub }] : [];
+};
+
+function ShopRow({ s, saved, onSave }) {
+  return (
+    <PlaceRow
+      Icon={ShoppingBag} name={s.name} area={s.area} km={s.km} note={s.note}
+      tags={shopTags(s)} saved={saved} onSave={onSave}
+    />
+  );
+}
+
+function Shopping({ list, dest, city, onMap }) {
+  const mappable = useMemo(() => foodPins(list, city).length > 0, [list, city]);
+  const [all, setAll] = useState(false);
+  const { isSaved, toggle } = useWishlist();
+  const heart = (s) => ({
+    saved: isSaved("shop", dest, placeId(city, s.name)),
+    onSave: () => toggle("shop", dest, placeId(city, s.name), shopMeta(s, city)),
+  });
+
+  return (
+    <>
+      <Sec
+        title={`Where to shop in ${city}`}
+        action={list.length > 0 && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            {mappable && (
+              <MapsButton onClick={onMap} label={false} w={34} h={24} pin={13} />
+            )}
+            <ViewAll onClick={() => setAll(true)} />
+          </span>
+        )}
+        flush
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: `0 ${PAD}px` }}>
+          {list.slice(0, SHOWN_SHOPS).map((s) => <ShopRow key={s.name} s={s} {...heart(s)} />)}
+        </div>
+      </Sec>
+
+      <ListSheet open={all} title={`Where to shop in ${city}`} count={list.length} onClose={() => setAll(false)}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {list.map((s) => <ShopRow key={s.name} s={s} {...heart(s)} />)}
         </div>
       </ListSheet>
     </>
@@ -1537,7 +1687,12 @@ function Postcard({ city, pros, cons }) {
 // in here, so it gets the full width, and the room names are a plain list of
 // the three worth asking about rather than three cards with a line of reasoning
 // under each.
-function WhereToStay({ stay, hotels, onOpenHotel }) {
+//
+// Each hotel card carries a heart on its photograph, top right, in a white
+// disc, the same corner the activity cards use. The card is a div that acts
+// as a button, because the heart is a button and a button cannot hold one.
+function WhereToStay({ stay, hotels, dest, city, onOpenHotel }) {
+  const { isSaved, toggle } = useWishlist();
   return (
     <Sec title="Where to stay" flush>
       <div style={{
@@ -1580,12 +1735,19 @@ function WhereToStay({ stay, hotels, onOpenHotel }) {
             <p style={{ margin: `${stay ? 16 : 0}px 0 10px`, ...T.h3 }}>Recommended hotels</p>
             <div className="hs" style={{ gap: 12, margin: "0 -14px", paddingLeft: 14, paddingRight: 14, alignItems: "stretch" }}>
               {hotels.map((h) => (
-                <button key={h.id} onClick={() => onOpenHotel(h)} style={{
-                  flexShrink: 0, width: 255, background: C.white, borderRadius: R.card,
-                  overflow: "hidden", boxShadow: SHADOW.card,
-                  display: "flex", flexDirection: "column",
-                  border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                }}>
+                <div
+                  key={h.id}
+                  onClick={() => onOpenHotel(h)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenHotel(h); } }}
+                  style={{
+                    flexShrink: 0, width: 255, background: C.white, borderRadius: R.card,
+                    overflow: "hidden", boxShadow: SHADOW.card,
+                    display: "flex", flexDirection: "column",
+                    border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  }}
+                >
                   {/* A rail stretches every card to the tallest, and a hotel
                       with two tags instead of three used to leave the slack as
                       white at the bottom. The photograph takes it instead.
@@ -1597,6 +1759,13 @@ function WhereToStay({ stay, hotels, onOpenHotel }) {
                       position: "absolute", inset: 0,
                       width: "100%", height: "100%", objectFit: "cover", display: "block",
                     }} />
+                    <span style={{ position: "absolute", right: 9, top: 9, zIndex: 1 }}>
+                      <SaveHeart
+                        onPhoto size={32}
+                        saved={isSaved("hotel", dest, h.name)}
+                        onToggle={() => toggle("hotel", dest, h.name, hotelMeta(h, city))}
+                      />
+                    </span>
                   </div>
                   <div style={{ padding: "10px 12px 13px" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -1643,7 +1812,7 @@ function WhereToStay({ stay, hotels, onOpenHotel }) {
                         a number a consultant has to walk back on the call is
                         worse than no number at all. */}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </>
@@ -1892,6 +2061,7 @@ export default function RegionDetail({
   const { name, city } = useParams();
   const navigate = useNavigate();
   const { forDest, toggleRegion } = useSaves();
+  const { isSaved, toggle } = useWishlist();
   const embedded = !!destProp;
   const dest = embedded ? destProp : decodeURIComponent(name || "");
   const [localCity, setLocalCity] = useState(cityProp || "");
@@ -1905,6 +2075,7 @@ export default function RegionDetail({
   const [activity, setActivity] = useState(null);
   const [hotel, setHotel] = useState(null);
   const [eateries, setEateries] = useState(false);
+  const [shopping, setShopping] = useState(false);
 
   const box = useRef(null);
   const scroller = useRef(null);
@@ -1928,6 +2099,7 @@ export default function RegionDetail({
       .slice(0, 6);
   }, [r, town, dest]);
   const trips = useMemo(() => (r ? tripsThroughCity(dest, town) : []), [r, dest, town]);
+  const shops = useMemo(() => (r ? regionShops(dest, town) : []), [r, dest, town]);
   const faq = useMemo(() => regionFaq(r), [r]);
   const reach = useMemo(() => (r ? regionReach(dest, town) : []), [r, dest, town]);
 
@@ -2016,7 +2188,7 @@ export default function RegionDetail({
             <ReadMore lead={g?.lead || r.blurb} sub={g?.sub}>{g?.about}</ReadMore>
           </div>
 
-          {r.acts.length > 0 && <ThingsToDo acts={r.acts} city={r.city} onOpen={setActivity} />}
+          {r.acts.length > 0 && <ThingsToDo acts={r.acts} dest={dest} city={r.city} onOpen={setActivity} />}
           {(r.pros.length > 0 || r.cons.length > 0) && (
             <Sec title="The honest bit">
               <Postcard city={r.city} pros={r.pros} cons={r.cons} />
@@ -2036,9 +2208,14 @@ export default function RegionDetail({
             </Sec>
           )}
           {g?.transport?.length > 0 && <TransportModes items={g.transport} />}
-          {(g?.stay || hotels.length > 0) && <WhereToStay stay={g?.stay} hotels={hotels} onOpenHotel={setHotel} />}
+          {(g?.stay || hotels.length > 0) && (
+            <WhereToStay stay={g?.stay} hotels={hotels} dest={dest} city={r.city} onOpenHotel={setHotel} />
+          )}
           {r.food?.length > 0 && (
-            <Restaurants list={r.food} city={r.city} onMap={() => setEateries(true)} />
+            <Restaurants list={r.food} dest={dest} city={r.city} onMap={() => setEateries(true)} />
+          )}
+          {shops.length > 0 && (
+            <Shopping list={shops} dest={dest} city={r.city} onMap={() => setShopping(true)} />
           )}
           <PairWith city={r.city} others={r.paired} onPick={goRegion} />
           <Faq items={faq} />
@@ -2082,7 +2259,20 @@ export default function RegionDetail({
       )}
 
       {eateries && hasMap && r.food?.length > 0 && (
-        <FoodMapScreen city={r.city} list={r.food} onClose={() => setEateries(false)} />
+        <PlaceMapScreen
+          dest={dest} city={r.city} list={r.food}
+          title={`Where to eat in ${r.city}`} pinKind="Food"
+          tags={foodTags} kind="restaurant" meta={foodMeta}
+          onClose={() => setEateries(false)}
+        />
+      )}
+      {shopping && hasMap && shops.length > 0 && (
+        <PlaceMapScreen
+          dest={dest} city={r.city} list={shops}
+          title={`Where to shop in ${r.city}`} pinKind="Market"
+          tags={shopTags} kind="shop" meta={shopMeta}
+          onClose={() => setShopping(false)}
+        />
       )}
 
       {gallery && <GalleryScreen r={r} onClose={() => setGallery(false)} />}
@@ -2101,7 +2291,13 @@ export default function RegionDetail({
           nothing to swap, so it opens the same way a saved hotel does. */}
       {hotel && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: C.white }}>
-          <HotelV3 hotel={detailFromHotel(hotel)} onBack={() => setHotel(null)} readOnly />
+          <HotelV3
+            hotel={detailFromHotel(hotel)}
+            onBack={() => setHotel(null)}
+            readOnly
+            saved={isSaved("hotel", dest, hotel.name)}
+            onSave={() => toggle("hotel", dest, hotel.name, hotelMeta(hotel, r.city))}
+          />
         </div>
       )}
 
@@ -2120,6 +2316,8 @@ export default function RegionDetail({
           city={r.city}
           country={dest}
           isBooked={false}
+          saved={isSaved("activity", dest, activity.id)}
+          onSave={() => toggle("activity", dest, activity.id, actMeta(activity, r.city))}
           onClose={() => setActivity(null)}
         />
       )}

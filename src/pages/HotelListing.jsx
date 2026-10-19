@@ -7,8 +7,10 @@ import {
 } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { useWishlist } from "../data/wishlist";
 import HotelMapScreen from "../components/HotelMapScreen";
 import CardReel from "../components/CardReel";
+import SaveHeart from "../components/SaveHeart";
 
 // ─── Change hotel, built like Change day plan ───
 //
@@ -121,7 +123,12 @@ function Fact({ icon: Icon, children, muted = false }) {
 }
 
 // ─── One hotel ──────────────────────────────────────────────────────────────
-function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
+//
+// The heart sits on the photo, top right, where every card in the app keeps
+// it. A hotel already on the wishlist also says so in a small chip, bottom
+// left of the photo, because a filled heart alone is easy to miss on a reel
+// that is mostly picture.
+function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false, onSave }) {
   const photos = galleryOf(hotel);
   const strip = photos.slice(0, 6);
 
@@ -151,6 +158,22 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
           <Images size={11} color="#fff" />
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{photos.length} photos</span>
         </button>
+
+        {onSave && (
+          <div style={{ position: "absolute", top: 9, right: 9 }}>
+            <SaveHeart saved={saved} onToggle={onSave} onPhoto size={32} />
+          </div>
+        )}
+
+        {saved && (
+          <span style={{
+            position: "absolute", left: 9, bottom: 7,
+            background: C.p100, color: C.p600, borderRadius: 999, padding: "3px 8px",
+            fontSize: 10.5, fontWeight: 700, lineHeight: "13px", pointerEvents: "none",
+          }}>
+            Saved
+          </span>
+        )}
       </CardReel>
 
       <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
@@ -248,6 +271,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     else navigate(backToItinerary, { replace: true });
   };
 
+  const { isSaved: wishSaved, toggle: wishToggle } = useWishlist();
   const [showSheet, setShowSheet] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmSelf, setConfirmSelf] = useState(false);
@@ -301,8 +325,19 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     else if (filters.sort === "rating") list = [...list].sort((a, b) => b.bookingScore - a.bookingScore);
     else if (filters.sort === "distance") list = [...list].sort((a, b) => a.distanceFromCenter - b.distanceFromCenter);
     else list = [...list].sort((a, b) => (b.bookingScore + b.stars / 2) - (a.bookingScore + a.stars / 2));
-    return list;
-  }, [allHotels, currentHotelId, currentHotel, nights, filters]);
+
+    // Hotels already on the wishlist come first. The chosen sort still holds
+    // inside each group, so a saved hotel is lifted, not shuffled.
+    const wishDest = itinerary?.dest;
+    const saved = list.filter(h => wishSaved("hotel", wishDest, h.name));
+    const rest = list.filter(h => !wishSaved("hotel", wishDest, h.name));
+    return [...saved, ...rest];
+  }, [allHotels, currentHotelId, currentHotel, nights, filters, itinerary, wishSaved]);
+
+  const savedCount = useMemo(
+    () => shown.filter(h => wishSaved("hotel", itinerary?.dest, h.name)).length,
+    [shown, itinerary, wishSaved],
+  );
 
   // Escape closes what is on top, the way a full screen should.
   useEffect(() => {
@@ -358,6 +393,17 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const openHotel = (hotel) =>
     navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(hotel.id)}?current=${encodeURIComponent(currentHotelId || "")}${dealQS}`);
 
+  // Saved by name, under the trip's destination, with the stay's town kept
+  // alongside: the hotel list is rebuilt for every set of dates, so a name is
+  // the only key that survives.
+  const isWished = (h) => wishSaved("hotel", itinerary.dest, h.name);
+  const toggleWish = (h) => wishToggle("hotel", itinerary.dest, h.name, {
+    name: h.name,
+    img: h.images?.[0]?.url,
+    sub: `${stayInfo.city} · ${h.stars}-star`,
+    city: stayInfo.city,
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.bg, position: "relative", overflow: "hidden" }}>
       {/* ═══ Header: where this stay is, how long it runs, how much choice ═══ */}
@@ -411,6 +457,14 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* One quiet line, only when there is something to say. The saved
+                hotels sit first, and this says why. */}
+            {savedCount > 0 && (
+              <p style={{ margin: "-2px 0 -4px", fontSize: 12.5, color: C.sub }}>
+                {savedCount} saved in {stayInfo.city}, shown first.
+              </p>
+            )}
+
             {shown.map(h => (
               <HotelCard
                 key={h.id}
@@ -419,6 +473,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
                 onOpen={openHotel}
                 onGallery={(hotel, at) => setGallery({ hotel, at })}
+                saved={isWished(h)}
+                onSave={() => toggleWish(h)}
               />
             ))}
 
