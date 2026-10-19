@@ -29,6 +29,7 @@ import SaveHeart from "../components/SaveHeart";
 import { SKY_STYLE } from "../components/skyStyle";
 import { SEASON_COLOR, SEASON_TINT, SEASON_LABEL, SEASON_MEANING } from "../components/seasonStyle";
 import { R, SHADOW, T, WELL, A } from "../components/hotel_refined/tokens";
+import CardReel from "../components/CardReel";
 import BookedCard from "../components/booked_lab/BookedCard";
 import { ActivityScreen } from "./DayDetailLab";
 import HotelV3 from "../components/hotel_v3/HotelV3";
@@ -783,59 +784,6 @@ function ListSheet({ open, title, count, children, onClose }) {
 const SHOWN_ACTS = 5;
 // Eleven itineraries on a rail is eleven swipes. Same cap, same door.
 const SHOWN_TRIPS = 6;
-
-// ─── The pictures on a card ───
-//
-// Its own reel, swiped inside the card, because one photograph of a waterfall
-// is a waterfall and three of them are a morning. Snapping is CSS and the dots
-// read the scroll rather than drive it, so a flick and a drag land on the same
-// frame.
-//
-// Scrolling is not tapping, so the reel can live inside a card that opens the
-// activity: a swipe moves the picture and a tap goes through to the page.
-function CardReel({ imgs, alt, height }) {
-  const [i, setI] = useState(0);
-  const onScroll = (e) => {
-    const el = e.currentTarget;
-    const next = Math.round(el.scrollLeft / el.clientWidth);
-    if (next !== i) setI(next);
-  };
-
-  return (
-    <div style={{ position: "relative", height, flexShrink: 0, background: A.photoBg }}>
-      <div
-        className="hide-scrollbar"
-        onScroll={onScroll}
-        style={{
-          display: "flex", height: "100%", overflowX: "auto", overflowY: "hidden",
-          scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {imgs.map((src, n) => (
-          <div key={n} style={{ flex: "0 0 100%", width: "100%", height: "100%", scrollSnapAlign: "start" }}>
-            <img src={src} alt={n === 0 ? alt : ""} loading={n === 0 ? "eager" : "lazy"}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-        ))}
-      </div>
-
-      {imgs.length > 1 && (
-        <div style={{
-          position: "absolute", left: 0, right: 0, bottom: 8,
-          display: "flex", justifyContent: "center", gap: 4, pointerEvents: "none",
-        }}>
-          {imgs.map((_, n) => (
-            <span key={n} style={{
-              width: n === i ? 6 : 4.5, height: n === i ? 6 : 4.5, borderRadius: "50%",
-              background: n === i ? "#fff" : "rgba(255,255,255,0.55)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-            }} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── One thing to do ───
 //

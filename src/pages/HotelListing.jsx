@@ -8,6 +8,7 @@ import {
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import HotelMapScreen from "../components/HotelMapScreen";
+import CardReel from "../components/CardReel";
 
 // ─── Change hotel, built like Change day plan ───
 //
@@ -134,24 +135,14 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
         border: `1px solid ${C.div}`, boxShadow: "0 1px 4px rgba(24,30,76,0.05)",
       }}
     >
-      {/* Photos: swipe through a few here, tap for all of them */}
-      <div style={{ position: "relative", height: 168, background: C.div }}>
-        <div className="hide-scrollbar" style={{ display: "flex", height: "100%", overflowX: "auto", gap: 2 }}>
-          {strip.map((src, i) => (
-            <div
-              key={i}
-              onClick={(e) => { e.stopPropagation(); onGallery(hotel, i); }}
-              style={{ flexShrink: 0, height: "100%", width: "86%" }}
-            >
-              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            </div>
-          ))}
-        </div>
+      {/* Photos: a full-width reel you swipe, with dots under it, the same one
+          the region pages use. Tap a picture for all of them. */}
+      <CardReel imgs={strip} alt={hotel.name} height={168} onTap={(i) => onGallery(hotel, i)}>
         <button
           data-testid={`gallery-${hotel.id}`}
           onClick={(e) => { e.stopPropagation(); onGallery(hotel, 0); }}
           style={{
-            position: "absolute", right: 9, bottom: 9, display: "inline-flex", alignItems: "center", gap: 5,
+            position: "absolute", right: 9, bottom: 7, display: "inline-flex", alignItems: "center", gap: 5,
             background: "rgba(12,16,40,0.78)", borderRadius: 6, padding: "4px 9px", border: "none",
             cursor: "pointer", fontFamily: "inherit",
             backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
@@ -160,7 +151,7 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery }) {
           <Images size={11} color="#fff" />
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{photos.length} photos</span>
         </button>
-      </div>
+      </CardReel>
 
       <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
         <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{hotel.name}</p>

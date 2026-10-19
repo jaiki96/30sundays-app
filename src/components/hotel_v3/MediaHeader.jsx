@@ -11,7 +11,7 @@ import { R, SHADOW, T, A, PAD } from "../hotel_refined/tokens";
 // to unmute a four second pan of a swimming pool asks a question the viewer was
 // not asking. Sound belongs in the gallery, where you have chosen to watch.
 
-function VideoTile({ video, height }) {
+function VideoTile({ video, height, onOpen }) {
   const ref = useRef(null);
   const [failed, setFailed] = useState(false);
 
@@ -22,11 +22,19 @@ function VideoTile({ video, height }) {
     el.play().catch(() => {});
   }, [failed]);
 
+  // The clip opens the gallery, like every photograph beside it. It is the one
+  // thing in the strip that looked the most tappable and was the only thing
+  // that did nothing.
   return (
-    <div style={{
-      position: "relative", width: 172, height, flexShrink: 0,
-      borderRadius: R.hero, overflow: "hidden", background: "#111",
-    }}>
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Watch this hotel's videos"
+      style={{
+        position: "relative", width: 172, height, flexShrink: 0, padding: 0,
+        border: "none", cursor: "pointer", display: "block",
+        borderRadius: R.hero, overflow: "hidden", background: "#111",
+      }}>
       {failed ? (
         <img src={video.poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       ) : (
@@ -50,11 +58,11 @@ function VideoTile({ video, height }) {
 
       <div style={{ position: "absolute", left: 12, right: 12, bottom: 11, pointerEvents: "none" }}>
         <p style={{ ...T.eyebrow, margin: 0, color: "rgba(255,255,255,0.72)" }}>{video.duration}</p>
-        <p style={{ margin: "3px 0 0", fontSize: 12.5, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>
+        <p style={{ margin: "3px 0 0", fontSize: 12.5, fontWeight: 700, color: "#fff", lineHeight: 1.25, textAlign: "left" }}>
           {video.label}
         </p>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -84,7 +92,7 @@ export default function MediaHeader({ hotel, onBack, onGallery, onShare }) {
           padding: `0 ${PAD}px`, WebkitOverflowScrolling: "touch",
         }}
       >
-        <VideoTile video={hotel.video} height={H} />
+        <VideoTile video={hotel.video} height={H} onOpen={() => onGallery("Videos")} />
 
         {pairs.map((pair, pi) => (
           <div key={pi} style={{ display: "flex", flexDirection: "column", gap: 7, flexShrink: 0 }}>

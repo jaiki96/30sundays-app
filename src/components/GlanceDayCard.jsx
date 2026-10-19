@@ -111,10 +111,10 @@ export default function GlanceDayCard({
                   aria-label="Read what couples said about this day"
                   style={{ padding: 0, border: "none", background: "none", cursor: "pointer", display: "inline-flex", fontFamily: "inherit" }}
                 >
-                  <DayRatingPill rating={rating} style="outline" showCount />
+                  <DayRatingPill rating={rating} style="outline" />
                 </button>
               ) : (
-                <DayRatingPill rating={rating} style="outline" showCount />
+                <DayRatingPill rating={rating} style="outline" />
               )}
               {pace && <PaceChip pace={pace} level={paceLevel} />}
             </div>

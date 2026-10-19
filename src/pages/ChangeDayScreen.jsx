@@ -7,6 +7,7 @@ import { C } from "../data";
 import { DayRatingPill } from "../components/DayRating";
 import { TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShape";
 import { FilterChip, SearchableCheckList } from "./HotelListing";
+import CardReel from "../components/CardReel";
 
 // ─── Change day plan, full screen ───
 //
@@ -85,7 +86,7 @@ function Fact({ icon: Icon, children }) {
 }
 
 // ─── One plan ───────────────────────────────────────────────────────────────
-function OptionCard({ opt, onOpen }) {
+function OptionCard({ opt, onOpen, onGallery }) {
   return (
     <div
       data-testid={`day-option-${opt.id}`}
@@ -97,18 +98,10 @@ function OptionCard({ opt, onOpen }) {
         boxShadow: "0 1px 4px rgba(24,30,76,0.05)",
       }}
     >
-      {/* Media, scrollable when the plan has more than one */}
-      <div style={{ position: "relative", height: 168, background: C.div }}>
-        <div className="hide-scrollbar" style={{ display: "flex", height: "100%", overflowX: "auto", gap: 2 }}>
-          {opt.images.map((src, i) => (
-            <div key={i} style={{
-              position: "relative", flexShrink: 0, height: "100%",
-              width: opt.images.length > 1 ? "86%" : "100%",
-            }}>
-              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            </div>
-          ))}
-        </div>
+      {/* Media: a full-width reel you swipe, with dots under it, the same one
+          the region pages and Change hotel use. A photograph opens the
+          photographs; the rest of the card opens the plan. */}
+      <CardReel imgs={opt.images} alt={opt.name} height={168} onTap={(i) => onGallery(opt, i)}>
         {opt.video && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{
@@ -120,24 +113,29 @@ function OptionCard({ opt, onOpen }) {
           </div>
         )}
         {opt.mediaCount > 1 && (
-          <div style={{
-            position: "absolute", right: 9, bottom: 9, display: "inline-flex", alignItems: "center", gap: 5,
-            background: "rgba(12,16,40,0.78)", borderRadius: 6, padding: "3px 8px",
-            backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
-          }}>
+          <button
+            type="button"
+            data-testid={`day-gallery-${opt.id}`}
+            onClick={(e) => { e.stopPropagation(); onGallery(opt, 0); }}
+            style={{
+              position: "absolute", right: 9, bottom: 7, display: "inline-flex", alignItems: "center", gap: 5,
+              background: "rgba(12,16,40,0.78)", borderRadius: 6, padding: "3px 8px",
+              border: "none", cursor: "pointer", fontFamily: "inherit",
+              backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+            }}>
             <Layers size={11} color="#fff" />
             <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>
               {opt.video ? `${opt.mediaCount} media` : `${opt.images.length} images`}
             </span>
-          </div>
+          </button>
         )}
-      </div>
+      </CardReel>
 
       <div style={{ padding: "11px 12px 12px", display: "flex", flexDirection: "column", gap: 9 }}>
         <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.32 }}>{opt.name}</p>
 
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-          <DayRatingPill rating={opt.rating} style="outline" showCount />
+          <DayRatingPill rating={opt.rating} style="outline" />
           <PaceChip pace={opt.pace} colors={opt.paceColors} />
         </div>
 
@@ -272,7 +270,53 @@ function SortFilterSheet({ tab, setTab, f, setF, activityOptions, matchCount, on
   );
 }
 
-// ─── The screen ─────────────────────────────────────────────────────────────
+// ─── Every photograph, full bleed ───
+//
+// The Change hotel screen's gallery, on the Change day plan screen, because
+// they are the same card doing the same job and a photograph should behave the
+// same way in both. Swipe through, and the counter says where you are.
+function DayGallery({ opt, startAt, onClose }) {
+  const photos = opt.images || [];
+  const [idx, setIdx] = useState(startAt);
+
+  useEffect(() => {
+    const el = document.getElementById(`dgal-${startAt}`);
+    el?.scrollIntoView({ block: "nearest", inline: "start" });
+  }, [startAt]);
+
+  return (
+    <div data-testid="day-gallery" style={{ position: "absolute", inset: 0, zIndex: 200, background: "#0B0E1A", display: "flex", flexDirection: "column" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+        <button onClick={onClose} aria-label="Close gallery" style={{
+          width: 32, height: 32, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.14)",
+          display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
+        }}>
+          <XIcon size={17} color="#fff" />
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{opt.name}</p>
+          <p style={{ margin: 0, fontSize: 11.5, color: "rgba(255,255,255,0.6)" }}>{idx + 1} of {photos.length}</p>
+        </div>
+      </div>
+      <div
+        className="hide-scrollbar"
+        onScroll={(e) => {
+          const w = e.currentTarget.clientWidth || 1;
+          setIdx(Math.round(e.currentTarget.scrollLeft / w));
+        }}
+        style={{ flex: 1, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}
+      >
+        {photos.map((src, i) => (
+          <div key={i} id={`dgal-${i}`} style={{ flexShrink: 0, width: "100%", height: "100%", scrollSnapAlign: "start", display: "grid", placeItems: "center" }}>
+            <img src={src} alt="" style={{ width: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── The screen ──────────────────────────────────────────────────────────────────────────
 export default function ChangeDayScreen({
   dayNumber, city, options, onOpen, onClose, onLeisureDay, frameStyle,
 }) {
@@ -281,6 +325,8 @@ export default function ChangeDayScreen({
   const [showFilters, setShowFilters] = useState(false);
   const [sheetTab, setSheetTab] = useState("Filters");
   const [f, setF] = useState({ transfer: [], pace: [], rating: [], activities: [], sort: "recommended" });
+  // Which plan's pictures are open, and which one you tapped.
+  const [gallery, setGallery] = useState(null);
 
   // Every activity on offer for this day, for the searchable filter.
   const activityOptions = useMemo(
@@ -388,7 +434,14 @@ export default function ChangeDayScreen({
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {shown.map((o) => <OptionCard key={o.id} opt={o} onOpen={onOpen} />)}
+            {shown.map((o) => (
+              <OptionCard
+                key={o.id}
+                opt={o}
+                onOpen={onOpen}
+                onGallery={(opt, at) => setGallery({ opt, at })}
+              />
+            ))}
           </div>
         )}
 
@@ -476,6 +529,10 @@ export default function ChangeDayScreen({
           matchCount={shown.length}
           onClose={() => setShowFilters(false)}
         />
+      )}
+
+      {gallery && (
+        <DayGallery opt={gallery.opt} startAt={gallery.at} onClose={() => setGallery(null)} />
       )}
     </div>
   );

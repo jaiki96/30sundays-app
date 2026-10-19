@@ -846,6 +846,7 @@ function DayPager({
   const last = useRef(0);
   const axis = useRef(null);
   const inner = useRef(null);       // the collage scroller a drag started on
+  const tapMedia = useRef(false);   // the press landed on the media, not a control
   const offset = useRef(0);
 
   useEffect(() => {
@@ -887,6 +888,9 @@ function DayPager({
     const r = box.current.getBoundingClientRect();
     const onMedia = e.clientY - r.top < mediaH - SHEET_LIFT && p < 0.4;
     inner.current = onMedia ? box.current.querySelectorAll("[data-media-scroll]")[idx] || null : null;
+    // A press that lands on a control belongs to that control: the mute, the
+    // back arrow, the day switcher, View media gallery itself.
+    tapMedia.current = onMedia && !e.target?.closest?.("button, a, input");
   };
 
   const move = (e) => {
@@ -926,7 +930,12 @@ function DayPager({
       const threshold = Math.max(52, W * 0.16);
       if (offset.current <= -threshold) go(idx + 1);
       else if (offset.current >= threshold) go(idx - 1);
+    } else if (!axis.current && tapMedia.current) {
+      // Nothing moved far enough to be a drag, so it was a tap on the
+      // photograph, which does what the button over it does.
+      onGallery?.({ day: days[idx], tab: "activity" });
     }
+    tapMedia.current = false;
     start.current = null;
     axis.current = null;
     inner.current = null;

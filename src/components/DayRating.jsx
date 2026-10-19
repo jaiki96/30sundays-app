@@ -5,17 +5,16 @@ import { TIER } from "../data/dayRatings";
 // ─── Compact slot: day cards in "Itinerary at a glance", and the
 // alternative-plan cards in Change day plan.
 //
-// Figure only — no words, no rating count, and NOT tappable. The breakdown has
-// exactly one entry point, on the day-details screen, so these two slots stay
-// pure display and never compete with the card's own tap target.
-//
-// Green at or above the threshold, amber below it. The figure is always shown.
+// The figure on its own: green at or above the threshold, amber below it, and
+// no words. How many people it came from used to sit beside it in brackets,
+// which read as a second number to weigh up on a card already carrying a pace
+// chip, a day, a city and a plan. The count is still there where it is being
+// studied rather than skimmed, on the breakdown this chip opens.
 //
 // style: "pct" (icon + figure) · "word" (icon + figure + verb)
 //        "dot" (colour dot + figure) · "chip" (filled, colour carries the tier)
 //        "outline" (hairline chip, matches the pace chip it sits next to)
-// showCount appends the number of ratings, e.g. "84% (281)".
-export function DayRatingPill({ rating, overlay = false, style = "pct", showCount = false }) {
+export function DayRatingPill({ rating, overlay = false, style = "pct" }) {
   if (!rating || !rating.tier.showPct) return null;
   const col = rating.color;
   const filled = style === "chip";
@@ -45,9 +44,6 @@ export function DayRatingPill({ rating, overlay = false, style = "pct", showCoun
       )}
       <span style={{ fontSize: 11.5, fontWeight: outline ? 700 : 800, color: figureColor, fontVariantNumeric: "tabular-nums" }}>
         {rating.enjoyedPct}%
-        {/* The count is what turns a percentage into evidence: 84% off 281
-            ratings and 84% off 6 are not the same claim. */}
-        {showCount && rating.count ? ` (${rating.count})` : ""}
       </span>
       {style === "word" && (
         <span style={{ fontSize: 11.5, fontWeight: 600, color: filled ? "rgba(255,255,255,0.85)" : C.sub }}>
