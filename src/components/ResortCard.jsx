@@ -25,6 +25,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
     img: resort.hero_image,
     sub: `${resort.atoll || "Maldives"} · ${resort.star_rating}-star`,
     city: resort.atoll || null,
+    stars: resort.star_rating,
   });
 
   return (
@@ -54,15 +55,10 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
             </div>
           )}
 
-          {/* The heart, top right, where every card in the app keeps it */}
-          <div style={{ position: "absolute", top: 10, right: 10 }}>
-            <SaveHeart saved={saved} onToggle={toggleSave} onPhoto size={32} />
-          </div>
-
-          {/* Category badge, to the left of the heart */}
+          {/* Category badge, top right */}
           {badgeColor && badgeLabel && (
             <div style={{
-              position: "absolute", top: 16, right: 48,
+              position: "absolute", top: 10, right: 10,
               background: badgeColor.bg, color: badgeColor.text,
               borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700,
               boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
@@ -84,7 +80,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
 
         {/* Card content */}
         <div style={{ padding: "12px 14px 14px" }}>
-          {/* Resort name + star rating */}
+          {/* Resort name, star rating, and the heart at the far right */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
             <h4 style={{ fontSize: 15, fontWeight: 700, color: C.head, margin: 0, lineHeight: "20px", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {resort.name}
@@ -93,6 +89,7 @@ export default function ResortCard({ resort, nights, showCategoryBadge, query })
               <Star size={12} color="#F59E0B" fill="#F59E0B" />
               <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>{resort.star_rating}</span>
             </div>
+            <SaveHeart saved={saved} onToggle={toggleSave} size={28} style={{ margin: "-4px -6px -4px 4px" }} />
           </div>
 
           {/* Atoll + transfer */}

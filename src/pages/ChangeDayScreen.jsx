@@ -87,7 +87,28 @@ function Fact({ icon: Icon, children }) {
 }
 
 // ─── One plan ───────────────────────────────────────────────────────────────
-// savedHits: the activities in this plan the couple already hearted.
+// ─── A saved activity in this plan, said on the photo ───
+// A soft dark shade across the top of the photo with the line in white, so
+// the picture keeps its own colour and the brand pink heart is the only
+// accent. Chosen from six options on 2026-10-20.
+const savedText = (hits) => (hits.length === 1 ? hits[0].name : `${hits[0].name} and ${hits.length - 1} more`);
+
+function SavedOnPhoto({ hits }) {
+  return (
+    <div style={{
+      position: "absolute", left: 0, right: 0, top: 0, zIndex: 2, pointerEvents: "none",
+      display: "flex", alignItems: "center", gap: 6, padding: "10px 12px 26px",
+      background: "linear-gradient(180deg, rgba(12,16,40,0.72) 0%, rgba(12,16,40,0.35) 60%, rgba(12,16,40,0) 100%)",
+    }}>
+      <Heart size={14} color={C.p600} fill={C.p600} style={{ flexShrink: 0 }} />
+      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12.5, fontWeight: 700, color: "#fff" }}>
+        You saved <b style={{ fontWeight: 800 }}>{savedText(hits)}</b>
+      </span>
+    </div>
+  );
+}
+
+// savedHits: the activities in this plan already on the wishlist, by name.
 function OptionCard({ opt, onOpen, onGallery, savedHits = [] }) {
   return (
     <div
@@ -104,6 +125,7 @@ function OptionCard({ opt, onOpen, onGallery, savedHits = [] }) {
           the region pages and Change hotel use. A photograph opens the
           photographs; the rest of the card opens the plan. */}
       <CardReel imgs={opt.images} alt={opt.name} height={168} onTap={(i) => onGallery(opt, i)}>
+        {savedHits.length > 0 && <SavedOnPhoto hits={savedHits} />}
         {opt.video && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <span style={{
@@ -135,14 +157,6 @@ function OptionCard({ opt, onOpen, onGallery, savedHits = [] }) {
 
       <div style={{ padding: "11px 12px 12px", display: "flex", flexDirection: "column", gap: 9 }}>
         <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.32 }}>{opt.name}</p>
-        {savedHits.length > 0 && (
-          <p style={{ margin: "-3px 0 0", display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: C.p600 }}>
-            <Heart size={11} color={C.p600} fill={C.p600} style={{ flexShrink: 0 }} />
-            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              You saved {savedHits.length === 1 ? savedHits[0] : `${savedHits[0]} and ${savedHits.length - 1} more`}
-            </span>
-          </p>
-        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
           <DayRatingPill rating={opt.rating} style="outline" />
@@ -341,8 +355,10 @@ export default function ChangeDayScreen({
   // The activities the couple hearted, by name, so a plan that includes one
   // can say so. Names rather than ids: a day plan holds names only.
   const { ofKind } = useWishlist();
-  const savedNames = useMemo(() => new Set(ofKind("activity").map((i) => (i.name || "").toLowerCase())), [ofKind]);
-  const hitsFor = (o) => (o.activities || []).filter((n) => savedNames.has(String(n).toLowerCase()));
+  const savedByName = useMemo(() => new Map(ofKind("activity").map((i) => [(i.name || "").toLowerCase(), i])), [ofKind]);
+  const hitsFor = (o) => (o.activities || [])
+    .filter((n) => savedByName.has(String(n).toLowerCase()))
+    .map((n) => ({ name: n }));
 
   // Every activity on offer for this day, for the searchable filter.
   const activityOptions = useMemo(

@@ -19,6 +19,7 @@ import HomeV6 from "./pages/HomeV6";
 import NudgeOptions from "./pages/NudgeOptions";
 import AISectionOptions from "./pages/AISectionOptions";
 import AIPhotos from "./pages/AIPhotos";
+import HeartLab from "./pages/HeartLab";
 import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, HOME_LAB_PAGES } from "./pages/home_lab";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
@@ -90,6 +91,7 @@ import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
 import SavedWishlist from "./pages/SavedWishlist";
+import { WishlistHome, WishlistBoard } from "./pages/WishlistBoards";
 import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
 import WishlistToast from "./components/WishlistToast";
@@ -163,6 +165,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/v5" element={<HomeV2 />} />
         <Route path="/v6" element={<HomeV6 userState={userState} />} />
         {/* Home page lab: ten takes on everything above Sunday School */}
+        <Route path="/heart-lab" element={<HeartLab />} />
         <Route path="/home-lab" element={<HomeLabIndex />} />
         <Route path="/home-lab/cta" element={<CtaLab />} />
         <Route path="/home-lab/cards" element={<CardsLab />} />
@@ -189,7 +192,14 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/compare/:dealId" element={<CompareVersions />} />
-        <Route path="/saved" element={<SavedWishlist />} />
+        <Route path="/saved" element={<WishlistHome />} />
+        <Route path="/saved/board/:dest" element={<WishlistBoard />} />
+        {/* The group board: people on it, who saved what, love it too. Ships
+            after the one-person board above. */}
+        <Route path="/saved/group" element={<WishlistHome group />} />
+        <Route path="/saved/group/board/:dest" element={<WishlistBoard group />} />
+        {/* The wishlist before trip boards, kept to compare. */}
+        <Route path="/saved/classic" element={<SavedWishlist />} />
         <Route path="/saved/activity/:dest/:id" element={<WishlistActivityDetail />} />
         <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
         <Route path="/login-v2" element={<LoginV2 />} />

@@ -2,6 +2,7 @@ import { Heart, Check, Plus, X as XIcon, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../data";
 import { useWishlist, KIND_LABEL } from "../data/wishlist";
+import { PHOTO_HEART_SHADOW } from "./SaveHeart";
 
 // ─── Your saves, where you are choosing ───
 //
@@ -32,17 +33,15 @@ export function SavedHint({ count, dest, onOpen, style }) {
 }
 
 // A small solid heart that marks a card or row as something already saved.
-// Over a photograph it gets the white disc; on white it is bare.
+// Over a photograph it gets the same soft shadow as the save heart; on white
+// it is bare.
 export function SavedMark({ onPhoto = false, size = 22, style }) {
   return (
     <span aria-label="On your wishlist" title="On your wishlist" style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      display: "inline-grid", placeItems: "center",
-      background: onPhoto ? "rgba(255,255,255,0.96)" : "transparent",
-      boxShadow: onPhoto ? "0 1px 5px rgba(16,24,40,0.22)" : "none",
-      ...style,
+      width: size, height: size, flexShrink: 0,
+      display: "inline-grid", placeItems: "center", ...style,
     }}>
-      <Heart size={Math.round(size * 0.55)} color={C.p600} fill={C.p600} />
+      <Heart size={Math.round(size * (onPhoto ? 0.66 : 0.55))} color={C.p600} fill={C.p600} style={onPhoto ? { filter: PHOTO_HEART_SHADOW } : undefined} />
     </span>
   );
 }

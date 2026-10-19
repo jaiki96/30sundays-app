@@ -1435,18 +1435,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         )}
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-            <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
+          {/* Title row: the save heart sits at its right end, on the first line */}
+          <div style={{ alignSelf: "stretch", display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <p style={{ flex: 1, minWidth: 0, fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+              <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
+              {/* Version badge only once the itinerary is created (priced) */}
+              {quoted && (
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
+                  V{version.num}
+                </span>
+              )}
+            </p>
             {inDeal && versionId && (
-              <SaveHeart onPhoto size={30} saved={dealsCtx.isWished(versionId)} onToggle={() => dealsCtx.toggleWish(versionId)} />
+              <SaveHeart onPhoto saved={dealsCtx.isWished(versionId)} onToggle={() => dealsCtx.toggleWish(versionId)} style={{ margin: "-2px -6px -2px 0" }} />
             )}
-            {/* Version badge only once the itinerary is created (priced) */}
-            {quoted && (
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
-                V{version.num}
-              </span>
-            )}
-          </p>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
@@ -1741,7 +1744,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 city={h.city}
                 freeCancellation={h.freeCancellation}
                 saved={wishlist.isSaved("hotel", it.dest, h.name)}
-                onSave={() => wishlist.toggle("hotel", it.dest, h.name, { name: h.name, img: h.img, sub: `${h.city}${h.stars ? ` · ${h.stars}-star` : ""}`, city: h.city })}
+                onSave={() => wishlist.toggle("hotel", it.dest, h.name, { name: h.name, img: h.img, sub: `${h.city}${h.stars ? ` · ${h.stars}-star` : ""}`, city: h.city, stars: h.stars, score: h.rating })}
                 to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
                 footer={
                   <>

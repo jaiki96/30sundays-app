@@ -60,6 +60,8 @@ export default function HotelPDP() {
     img: hotel.images?.[0]?.url,
     sub: `${stayInfo.city} · ${hotel.stars}-star`,
     city: stayInfo.city,
+    stars: hotel.stars,
+    score: hotel.bookingScore,
   });
   const currentRoom = currentHotel?.rooms?.[0];
 

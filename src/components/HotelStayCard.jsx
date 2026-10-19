@@ -30,7 +30,7 @@ export default function HotelStayCard({
   dayLabel, topRightBadge, recommendedBadge, soldOut,
   stars, ratingScore, name, roomType, city, freeCancellation,
   showChevron = true, width, to, onClick, footer, confirmationBar,
-  // The wishlist heart, over the photo. Only drawn when the caller can save.
+  // The wishlist heart, beside the name. Only drawn when the caller can save.
   saved, onSave,
 }) {
   const cardStyle = {
@@ -67,11 +67,8 @@ export default function HotelStayCard({
             fontSize: 11, fontWeight: 700, boxShadow: "0 1px 6px rgba(0,0,0,0.12)",
           }}>30 Sundays Recommended</span>
         )}
-        {(topRightBadge || onSave) && (
-          <div style={{ position: "absolute", top: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
-            {topRightBadge}
-            {onSave && <SaveHeart onPhoto size={30} saved={saved} onToggle={onSave} />}
-          </div>
+        {topRightBadge && (
+          <div style={{ position: "absolute", top: 10, right: 10 }}>{topRightBadge}</div>
         )}
       </div>
 
@@ -95,8 +92,11 @@ export default function HotelStayCard({
           </div>
         )}
 
-        {/* Name */}
-        <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0, lineHeight: "21px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
+        {/* Name, with the heart right aligned beside it */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: C.head, margin: 0, lineHeight: "21px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{name}</p>
+          {onSave && <SaveHeart size={28} saved={saved} onToggle={onSave} style={{ margin: "-4px -6px -4px 0" }} />}
+        </div>
 
         {/* Room type (never truncated) */}
         {roomType && (

@@ -1,96 +1,30 @@
 import { useState, useMemo, useEffect } from "react";
+import { useRows } from "../data/wishlistRows";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { ArrowLeft, Heart, List, Map as MapIcon, Plus, Minus, X as XIcon, ChevronRight, Compass } from "lucide-react";
-import { C, allItineraries, destData } from "../data";
+import { ArrowLeft, Heart, List, Map as MapIcon, Plus, Minus, X as XIcon, ChevronRight, ChevronDown, Compass, Check } from "lucide-react";
+import { C, destData } from "../data";
 import { useDeals } from "../data/deals";
-import { useWishlist, TAB_KINDS, KIND_LABEL, KIND_NOUN } from "../data/wishlist";
-import { regionByCity, activityById } from "../data/discoverData";
+import { useWishlist, TAB_KINDS, KIND_LABEL } from "../data/wishlist";
+import { regionByCity } from "../data/discoverData";
+import { regionGuide } from "../data/regionGuide";
 import { regionMeta } from "../data/saves";
-import { cityCoords } from "../data/buildData";
-import { sightCoords } from "../data/sightCoords";
 import SaveHeart from "../components/SaveHeart";
 
 // ─── The wishlist ───
 //
 // One screen for everything a couple hearted, filed by destination. The row of
 // destinations up top is the folders; inside one, the tabs split what was saved
-// by what it is (trips, stays, things to do, food, shops). Regions are not a
-// tab. They are the chips under the tabs: tap one and the list narrows to that
-// part of the destination, and the region itself shows as a card you can open
-// or take off the list. A map sits behind the list for anything that is
+// by what it is (trips, hotels, things to do, food, shops). Regions are not a
+// tab. They are a filter at the end of the tabs: pick one and the list narrows
+// to that part of the destination, and the region itself shows as a card you
+// can open or take off the list. A filter rather than a third row of chips,
+// because the header was already two rows and the list is what people came for. A map sits behind the list for anything that is
 // somewhere, which is regions and the sights we can place.
 
 const PAD = 16;
 const flagOf = (dest) => destData[dest]?.flag || "";
-
-// ─── What a saved item looks like as a row ───
-// Looked up from the live data where we can, so a region's photo or an
-// activity's town never goes stale; the snapshot taken at save time otherwise.
-function useRows(items, deals) {
-  return useMemo(() => items.map((it) => {
-    if (it.kind === "trip" && String(it.id).startsWith("it_")) {
-      // A ready-made itinerary hearted from its card, not a plan version.
-      const itin = allItineraries.find((i) => String(i.id) === String(it.id).slice(3));
-      return {
-        ...it,
-        name: itin ? `${itin.dest} trip · ${itin.nights}N` : it.name,
-        img: it.img || itin?.img || null,
-        sub: it.sub || (itin?.route || []).map((r) => `${r.n}N ${r.city}`).join(" · ") || "",
-        meta: itin?.price ? `Ready-made · From ₹${itin.price}/pp` : "Ready-made",
-        open: itin ? `/itinerary/${itin.id}` : null,
-        pin: null,
-      };
-    }
-    if (it.kind === "trip") {
-      let hit = null;
-      deals.forEach((d) => {
-        (d.versions || []).forEach((v) => { if (v.id === it.id) hit = { deal: d, v }; });
-        (d.properties || []).forEach((p) => (p.versions || []).forEach((v) => { if (v.id === it.id) hit = { deal: d, v, property: p.property }; }));
-      });
-      const itin = hit ? allItineraries.find((i) => i.id === (hit.v.itineraryId ?? hit.deal.itineraryId)) : null;
-      const nights = hit?.v.customizations?.travelDates?.nights ?? itin?.nights;
-      const route = (itin?.route || []).map((r) => `${r.n}N ${r.city}`).join(" · ");
-      return {
-        ...it,
-        name: `${it.dest} trip${nights ? ` · ${nights}N` : ""}`,
-        img: it.img || hit?.deal.img || itin?.img || null,
-        sub: hit?.property || route || it.sub || itin?.name || "",
-        meta: hit ? `V${hit.v.num}${itin?.price ? ` · From ₹${itin.price}/pp` : ""}` : "Plan",
-        open: itin ? `/itinerary/${itin.id}${hit ? `?dealId=${hit.deal.id}&versionId=${hit.v.id}` : ""}` : null,
-        pin: null,
-      };
-    }
-    if (it.kind === "region") {
-      const r = regionByCity(it.dest, it.id);
-      const c = cityCoords[it.id];
-      return {
-        ...it,
-        name: it.id, img: r?.img || it.img || null, sub: r?.blurb || it.sub || "",
-        meta: r ? (r.dayTrip ? "Day trip" : `Base · about ${r.n} nights`) : "Region",
-        emoji: r?.emoji,
-        open: `/destination/${encodeURIComponent(it.dest)}/region/${encodeURIComponent(it.id)}`,
-        pin: c ? { lat: c.lat, lng: c.lng } : null,
-      };
-    }
-    if (it.kind === "activity") {
-      const a = activityById(it.dest, it.id);
-      const name = a?.name || it.name;
-      const c = sightCoords(name);
-      return {
-        ...it,
-        name, img: a?.img || it.img || null, city: a?.city || it.city || null,
-        sub: a?.city || it.city || "", meta: a?.vibe ? `${KIND_NOUN.activity} · ${a.vibe}` : KIND_NOUN.activity,
-        open: `/saved/activity/${encodeURIComponent(it.dest)}/${encodeURIComponent(it.id)}`,
-        pin: c ? { lat: c.lat, lng: c.lng } : null,
-      };
-    }
-    // Stays, food and shops open the region page they were saved on.
-    const region = it.city ? `/destination/${encodeURIComponent(it.dest)}/region/${encodeURIComponent(it.city)}` : null;
-    return { ...it, sub: it.sub || it.city || "", meta: `${KIND_NOUN[it.kind] || ""}${it.city ? ` · ${it.city}` : ""}`, open: region, pin: null };
-  }), [items, deals]);
-}
 
 // ─── Pieces ───
 
@@ -115,38 +49,95 @@ function Row({ row, onRemove, onOpen }) {
         ? <img src={row.img} alt="" style={{ width: 66, height: 66, borderRadius: 11, objectFit: "cover", flexShrink: 0 }} />
         : <div style={{ width: 66, height: 66, borderRadius: 11, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0, fontSize: 22 }}>{row.emoji || "♥"}</div>}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.name}</p>
+          <SaveHeart size={28} saved onToggle={onRemove} style={{ margin: "-5px -6px -5px 0" }} />
+        </div>
         {row.sub && <p style={{ margin: "3px 0 0", fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.sub}</p>}
         <p style={{ margin: "2px 0 0", fontSize: 11.5, color: C.inact }}>{row.meta}</p>
       </div>
-      <SaveHeart saved onToggle={onRemove} />
     </div>
   );
 }
 
-// The region a couple filtered to, as a card: its photo, what it is for, and
-// the heart that takes it off the list. If the chip was a town they saved
-// things in but never hearted itself, the heart is open and saves it.
+// A region, drawn the way the trip builder draws it on the choose-cities
+// step: the photo down the left, the name with its heart, the region's own
+// opening line, and how long people tend to stay. The same card in both places
+// so a town looks like the same town wherever it turns up. If a couple filtered
+// to a town they saved things in but never hearted itself, the heart is open
+// and saves it.
 function RegionCard({ dest, city, row, onSave, onRemove, onOpen }) {
   const r = regionByCity(dest, city);
+  const g = regionGuide(dest, city);
   const img = row?.img || r?.img;
+  const blurb = g?.lead || r?.blurb || (row ? "On your wishlist" : `Where your ${dest} saves are`);
+  const stay = r ? (r.dayTrip ? "Day trip" : `${r.n || 2} to ${(r.n || 2) + 1} nights`) : null;
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.div}`, borderRadius: 16, overflow: "hidden", marginBottom: 14 }}>
-      {img && (
-        <div onClick={onOpen} style={{ position: "relative", height: 120, cursor: "pointer" }}>
-          <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          <div style={{ position: "absolute", top: 10, right: 10 }}>
-            <SaveHeart onPhoto saved={!!row} onToggle={row ? onRemove : onSave} />
-          </div>
+    <div onClick={onOpen} role="button" style={{
+      display: "flex", gap: 12, padding: 11, cursor: "pointer",
+      borderRadius: 16, background: C.white, border: `1px solid ${C.div}`,
+      boxShadow: "0 1px 3px rgba(24,29,39,0.05)",
+    }}>
+      <div style={{ position: "relative", width: 78, minHeight: 78, alignSelf: "stretch", flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#F4F2F0" }}>
+        {img && <img src={img} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{city}</span>
+          <SaveHeart size={28} saved={!!row} onToggle={row ? onRemove : onSave} style={{ margin: "-5px -6px -5px 0" }} />
         </div>
-      )}
-      <div onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: C.head }}>{r?.emoji ? `${r.emoji} ` : ""}{city}</p>
-          <p style={{ margin: "2px 0 0", fontSize: 12, color: C.sub, lineHeight: "16px" }}>{r?.blurb || (row ? "On your wishlist" : `Where your ${dest} saves are`)}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 12, lineHeight: "17px", color: C.sub, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{blurb}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, color: C.head, opacity: 0.72, whiteSpace: "nowrap" }}>
+            {stay && <><span aria-hidden style={{ marginRight: 4, fontWeight: 800 }}>{r?.dayTrip ? "" : "~"}</span>{stay}</>}
+          </span>
+          <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: C.p600, display: "inline-flex", alignItems: "center", gap: 1 }}>
+            View details <ChevronRight size={14} strokeWidth={2.6} />
+          </span>
         </div>
-        {!img && <SaveHeart saved={!!row} onToggle={row ? onRemove : onSave} />}
-        <ChevronRight size={16} color={C.inact} />
+      </div>
+    </div>
+  );
+}
+
+// ─── The region filter ───
+// A button at the end of the tabs, and the sheet it opens. The button says
+// which region is on, so the filter is never on without the screen saying so.
+function RegionFilterButton({ region, onClick }) {
+  const on = !!region;
+  return (
+    <button onClick={onClick} aria-haspopup="dialog" style={{
+      flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 10px", marginBottom: 6,
+      borderRadius: 999, border: `1px solid ${on ? C.p600 : C.div}`, background: C.white,
+      color: on ? C.p600 : C.head, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+    }}>
+      {region || "All regions"} <ChevronDown size={14} />
+    </button>
+  );
+}
+
+function RegionSheet({ dest, options, total, region, onPick, onClose }) {
+  const Option = ({ value, label, n, saved }) => {
+    const on = region === value;
+    return (
+      <button onClick={() => onPick(value)} style={{
+        display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 48, padding: "0 4px",
+        background: "none", border: "none", borderBottom: `1px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+      }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: on ? 800 : 600, color: C.head }}>{label}</span>
+        {saved && <Heart size={13} color={C.p600} fill={C.p600} aria-label="Region on your wishlist" />}
+        <span style={{ fontSize: 12, color: C.inact, minWidth: 18, textAlign: "right" }}>{n}</span>
+        <span style={{ width: 20, display: "grid", placeItems: "center" }}>{on && <Check size={16} strokeWidth={3} color={C.p600} />}</span>
+      </button>
+    );
+  };
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 700, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(24,29,39,0.45)", animation: "fadeInBg .2s ease-out" }} />
+      <div style={{ position: "relative", width: "100%", maxHeight: "75%", overflowY: "auto", background: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: `18px ${PAD}px calc(18px + env(safe-area-inset-bottom))`, boxShadow: "0 -8px 28px rgba(0,0,0,0.2)", animation: "sheetSlideUp .25s ease-out" }}>
+        <p style={{ fontSize: 17, fontWeight: 800, color: C.head, margin: "0 0 6px" }}>Regions in {dest}</p>
+        <Option value={null} label="All regions" n={total} />
+        {options.map((o) => <Option key={o.city} value={o.city} label={o.city} n={o.n} saved={o.saved} />)}
       </div>
     </div>
   );
@@ -254,7 +245,7 @@ export default function SavedWishlist() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { deals } = useDeals();
-  const { items, destinations, counts, remove, toggle } = useWishlist();
+  const { items, destinations, counts, removeWithUndo, toggle } = useWishlist();
 
   // The folder. From the link that opened us, else the destination saved into
   // most recently, else everything.
@@ -278,18 +269,18 @@ export default function SavedWishlist() {
   }, [scoped]);
   useEffect(() => { if (!tabs.some((t) => t.key === tab)) setTab("all"); }, [tabs, tab]);
 
-  // The region chips: every region saved here, then every town something
+  // The region filter's options: every region saved here, then every town something
   // saved here is in. Saved ones first, with the heart.
   const regionChips = useMemo(() => {
     if (!dest) return [];
     const saved = rows.filter((r) => r.kind === "region").map((r) => r.id);
     const towns = rows.filter((r) => r.kind !== "region" && r.city).map((r) => r.city);
     const out = [...new Set([...saved, ...towns])];
-    return out.map((city) => ({ city, saved: saved.includes(city) }));
+    return out.map((city) => ({ city, saved: saved.includes(city), n: rows.filter((r) => (r.kind === "region" ? r.id : r.city) === city).length }));
   }, [rows, dest]);
   const regionRow = region ? rows.find((r) => r.kind === "region" && r.id === region) : null;
 
-  // What the list shows: not the regions (they are the chips), narrowed by tab
+  // What the list shows: not the regions (they are cards of their own), narrowed by tab
   // and by region.
   const listed = useMemo(() => rows
     .filter((r) => r.kind !== "region")
@@ -301,8 +292,8 @@ export default function SavedWishlist() {
 
   // Grouped for the list. Inside a destination, by kind; across all of them,
   // by destination.
-  // Saved regions are rows too, under "All", unless a region chip is doing the
-  // job of showing one.
+  // Saved regions are cards too, under "All", unless the region filter is
+  // already showing one.
   const groups = useMemo(() => {
     const regions = rows.filter((r) => r.kind === "region");
     if (dest) {
@@ -316,10 +307,11 @@ export default function SavedWishlist() {
     })).filter((g) => g.rows.length);
   }, [dest, tab, region, rows, listed, destinations]);
 
-  // Removing is confirmed first, so a stray tap does not lose a save.
-  const [pendingRemove, setPendingRemove] = useState(null); // { name, run }
-  const askRemove = (row) => setPendingRemove({ name: row.name, run: () => remove(row.kind, row.dest, row.id) });
-  const confirmRemove = () => { pendingRemove?.run(); setPendingRemove(null); };
+  // Removing happens at once, with an Undo on the toast, rather than behind a
+  // "are you sure". A save costs nothing to make again and a confirm on every
+  // heart gets tapped through without reading; the undo is the real safety.
+  const askRemove = (row) => removeWithUndo(row.kind, row.dest, row.id);
+  const [regionSheet, setRegionSheet] = useState(false);
 
   const openRow = (row) => { if (row.open) navigate(row.open); };
   const mapAvailable = !!dest && rows.some((r) => r.pin);
@@ -356,10 +348,11 @@ export default function SavedWishlist() {
           </div>
         )}
 
-        {/* Kind tabs */}
-        {scoped.length > 0 && tabs.length > 1 && (
-          <div className="hide-scrollbar" style={{ display: "flex", gap: 18, padding: `0 ${PAD}px`, overflowX: "auto" }}>
-            {tabs.map((t) => {
+        {/* Kind tabs, and the region filter at their end */}
+        {scoped.length > 0 && (tabs.length > 1 || (dest && regionChips.length > 0)) && (
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 10, padding: `0 ${PAD}px` }}>
+          <div className="hide-scrollbar" style={{ flex: 1, minWidth: 0, display: "flex", gap: 18, overflowX: "auto" }}>
+            {tabs.length > 1 && tabs.map((t) => {
               const on = tab === t.key;
               return (
                 <button key={t.key} onClick={() => setTab(t.key)} style={{ flexShrink: 0, background: "none", border: "none", padding: "6px 0 9px", cursor: "pointer", fontFamily: "inherit", borderBottom: `2px solid ${on ? C.p600 : "transparent"}`, display: "inline-flex", alignItems: "center", gap: 5 }}>
@@ -369,17 +362,10 @@ export default function SavedWishlist() {
               );
             })}
           </div>
+          {dest && regionChips.length > 0 && <RegionFilterButton region={region} onClick={() => setRegionSheet(true)} />}
+          </div>
         )}
       </div>
-
-      {/* Region chips, inside a destination */}
-      {dest && regionChips.length > 0 && view === "list" && (
-        <div className="hide-scrollbar" style={{ flexShrink: 0, display: "flex", gap: 8, padding: `12px ${PAD}px 0`, overflowX: "auto" }}>
-          {regionChips.map((c) => (
-            <Chip key={c.city} on={region === c.city} heart={c.saved} onClick={() => setRegion(region === c.city ? null : c.city)}>{c.city}</Chip>
-          ))}
-        </div>
-      )}
 
       {/* Body */}
       {view === "map" ? (
@@ -393,12 +379,14 @@ export default function SavedWishlist() {
           ) : (
             <>
               {region && (
+                <div style={{ marginBottom: 14 }}>
                 <RegionCard
                   dest={dest} city={region} row={regionRow}
                   onSave={() => toggle("region", dest, region, regionMeta(dest, region))}
                   onRemove={() => askRemove(regionRow)}
                   onOpen={() => navigate(`/destination/${encodeURIComponent(dest)}/region/${encodeURIComponent(region)}`)}
                 />
+                </div>
               )}
               {groups.length === 0 ? (
                 <p style={{ margin: "24px 0", textAlign: "center", fontSize: 13, color: C.sub }}>
@@ -408,7 +396,9 @@ export default function SavedWishlist() {
                 <div key={g.key} style={{ marginBottom: 18 }}>
                   {g.label && <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: ".4px" }}>{g.label} <span style={{ color: C.inact }}>· {g.rows.length}</span></p>}
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {g.rows.map((row) => <Row key={row.key} row={row} onRemove={() => askRemove(row)} onOpen={row.open ? () => openRow(row) : undefined} />)}
+                    {g.rows.map((row) => row.kind === "region"
+                      ? <RegionCard key={row.key} dest={row.dest} city={row.id} row={row} onRemove={() => askRemove(row)} onOpen={() => openRow(row)} />
+                      : <Row key={row.key} row={row} onRemove={() => askRemove(row)} onOpen={row.open ? () => openRow(row) : undefined} />)}
                   </div>
                 </div>
               ))}
@@ -417,21 +407,12 @@ export default function SavedWishlist() {
         </div>
       )}
 
-      {/* Remove confirmation */}
-      {pendingRemove && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 700, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div onClick={() => setPendingRemove(null)} style={{ position: "absolute", inset: 0, background: "rgba(24,29,39,0.45)" }} />
-          <div style={{ position: "relative", width: "100%", background: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: `20px ${PAD}px calc(20px + env(safe-area-inset-bottom))`, boxShadow: "0 -8px 28px rgba(0,0,0,0.2)" }}>
-            <p style={{ fontSize: 17, fontWeight: 800, color: C.head, margin: "0 0 6px" }}>Remove from wishlist?</p>
-            <p style={{ fontSize: 13.5, color: C.sub, margin: "0 0 18px", lineHeight: "19px" }}>
-              {pendingRemove.name} will be taken off your wishlist. You can always save it again later.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setPendingRemove(null)} style={{ flex: 1, minHeight: 46, borderRadius: 12, border: `1.5px solid ${C.div}`, background: C.white, color: C.head, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Keep it</button>
-              <button onClick={confirmRemove} style={{ flex: 1, minHeight: 46, borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Remove</button>
-            </div>
-          </div>
-        </div>
+      {regionSheet && (
+        <RegionSheet
+          dest={dest} options={regionChips} total={scoped.length} region={region}
+          onPick={(c) => { setRegion(c); setRegionSheet(false); }}
+          onClose={() => setRegionSheet(false)}
+        />
       )}
     </div>
   );

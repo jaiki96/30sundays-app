@@ -1477,7 +1477,6 @@ function ActivityCard({ a, on, saved, onOpen, onToggle }) {
     }}>
       <img src={a.img} alt={a.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0) 55%)" }} />
-      {saved && <SavedMark onPhoto size={26} style={{ position: "absolute", top: 8, left: 8 }} />}
       <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.32)", backdropFilter: "blur(4px)", border: "1.5px solid rgba(255,255,255,0.7)", display: "grid", placeItems: "center" }}>
         <Play size={17} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
       </div>
@@ -1494,7 +1493,10 @@ function ActivityCard({ a, on, saved, onOpen, onToggle }) {
           <span style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>{rating}</span>
           <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.8)", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>({reviews})</span>
         </div>
-        <p style={{ margin: 0, color: "#fff", fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px", lineHeight: 1.2 }}>{a.name}</p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+          <p style={{ flex: 1, minWidth: 0, margin: 0, color: "#fff", fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px", lineHeight: 1.2 }}>{a.name}</p>
+          {saved && <SavedMark onPhoto size={20} style={{ marginTop: -2, marginRight: -3 }} />}
+        </div>
         <p style={{ margin: "2px 0 0", display: "flex", alignItems: "center", gap: 3, color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
           <MapPin size={10} color="rgba(255,255,255,0.85)" /> {a.city}
         </p>

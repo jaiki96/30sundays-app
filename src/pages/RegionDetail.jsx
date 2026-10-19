@@ -69,7 +69,7 @@ const foodMeta = (f, city) => ({
   sub: [sortTags(f.tags)[0], f.area].filter(Boolean).join(" · "),
 });
 const shopMeta = (s, city) => ({ name: s.name, city, sub: [s.tag, s.area].filter(Boolean).join(" · ") });
-const hotelMeta = (h, city) => ({ name: h.name, img: h.images?.[0]?.url, city, sub: `${city} · ${h.stars}-star` });
+const hotelMeta = (h, city) => ({ name: h.name, img: h.images?.[0]?.url, city, sub: `${city} · ${h.stars}-star`, stars: h.stars, score: h.bookingScore });
 
 // ─── One region, on one page ───
 //
@@ -832,9 +832,9 @@ const SHOWN_TRIPS = 6;
 // same height, the ones without it carried the gap where it would have been.
 // On the photograph it costs no height at all, so every card reads the same.
 //
-// The heart is on the photograph too, top right, in a white disc. The badge
-// has the top left, the reel's dots have the bottom, and the right-hand corner
-// is where every listing app a couple has used puts it.
+// The heart sits beside the name, at the right edge of the card. It saves
+// the thing the name names, so it belongs to the name, and the photograph
+// stays a photograph.
 function ActCard({ a, saved, onSave, onOpen, width = 255, imgH = 165 }) {
   const tone = KIND_TONE[a.kind] || KIND_TONE.Culture;
   const imgs = a.imgs?.length ? a.imgs : [a.img].filter(Boolean);
@@ -864,15 +864,13 @@ function ActCard({ a, saved, onSave, onOpen, width = 255, imgH = 165 }) {
             fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap",
           }}><Sparkles size={10} /> {a.pick}</span>
         )}
-        {onSave && (
-          <span style={{ position: "absolute", right: 9, top: 9, zIndex: 1 }}>
-            <SaveHeart onPhoto size={32} saved={!!saved} onToggle={onSave} />
-          </span>
-        )}
       </div>
 
       <div style={{ padding: "11px 12px 13px", flex: 1, display: "flex", flexDirection: "column" }}>
-        <p style={{ margin: 0, ...T.h3, ...clamp(1) }}>{a.name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <p style={{ margin: 0, flex: 1, minWidth: 0, ...T.h3, ...clamp(1) }}>{a.name}</p>
+          {onSave && <SaveHeart size={28} saved={!!saved} onToggle={onSave} style={{ margin: "-5px -6px -5px 0" }} />}
+        </div>
         {/* Two lines kept whether the line needs them or not. A rail stretches
             every card to the tallest one, so a one-line summary used to leave
             its missing second line as a gap above the tags. Reserving it puts
@@ -1427,7 +1425,8 @@ const foodTags = (f) => sortTags(f.tags).map((label) => {
 //
 // The restaurants and the shops share this. A picture or an icon on the left,
 // the name, where it is, one line about it and its tags in the middle, and
-// the heart at the right edge, bare, because the row is white.
+// the heart on the name's line at the right edge, bare, because the row is
+// white.
 function PlaceRow({ img, Icon, name, area, km, note, tags, saved, onSave }) {
   return (
     <div style={{
@@ -1439,7 +1438,10 @@ function PlaceRow({ img, Icon, name, area, km, note, tags, saved, onSave }) {
         ? <img src={img} alt="" style={{ width: 58, height: 58, borderRadius: R.well, objectFit: "cover", flexShrink: 0, background: A.photoBg }} />
         : <Well Icon={Icon} size={58} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, ...T.lead, fontSize: 13.5, ...clamp(1) }}>{name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <p style={{ margin: 0, flex: 1, minWidth: 0, ...T.lead, fontSize: 13.5, ...clamp(1) }}>{name}</p>
+          {onSave && <SaveHeart size={28} saved={!!saved} onToggle={onSave} style={{ margin: "-5px -6px -5px 0" }} />}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, margin: "4px 0 0" }}>
           <MapPin size={11} color={C.inact} style={{ flexShrink: 0 }} />
           <span style={{ ...T.micro, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1457,7 +1459,6 @@ function PlaceRow({ img, Icon, name, area, km, note, tags, saved, onSave }) {
           ))}
         </div>
       </div>
-      {onSave && <SaveHeart size={32} saved={!!saved} onToggle={onSave} />}
     </div>
   );
 }
@@ -1759,13 +1760,6 @@ function WhereToStay({ stay, hotels, dest, city, onOpenHotel }) {
                       position: "absolute", inset: 0,
                       width: "100%", height: "100%", objectFit: "cover", display: "block",
                     }} />
-                    <span style={{ position: "absolute", right: 9, top: 9, zIndex: 1 }}>
-                      <SaveHeart
-                        onPhoto size={32}
-                        saved={isSaved("hotel", dest, h.name)}
-                        onToggle={() => toggle("hotel", dest, h.name, hotelMeta(h, city))}
-                      />
-                    </span>
                   </div>
                   <div style={{ padding: "10px 12px 13px" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -1781,7 +1775,15 @@ function WhereToStay({ stay, hotels, dest, city, onOpenHotel }) {
                         </span>
                       </span>
                     </div>
-                    <p style={{ margin: "7px 0 0", ...T.h3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7 }}>
+                      <p style={{ margin: 0, flex: 1, minWidth: 0, ...T.h3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</p>
+                      <SaveHeart
+                        size={28}
+                        saved={isSaved("hotel", dest, h.name)}
+                        onToggle={() => toggle("hotel", dest, h.name, hotelMeta(h, city))}
+                        style={{ margin: "-5px -6px -5px 0" }}
+                      />
+                    </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 4, margin: "3px 0 0" }}>
                       <MapPin size={11} color={C.inact} style={{ flexShrink: 0 }} />
                       <span style={{ ...T.micro, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1913,7 +1915,7 @@ function Faq({ items }) {
 //
 // Snapping is CSS, and the dots read the scroll position rather than driving
 // it, so a flick, a drag and a trackpad all land on the same frame.
-function RegionHero({ photos, city, count, saved, onSave, onBack, onGallery, height, hideBack, closeIcon }) {
+function RegionHero({ photos, city, count, onBack, onGallery, height, hideBack, closeIcon }) {
   const rail = useRef(null);
   const [i, setI] = useState(0);
 
@@ -1968,11 +1970,6 @@ function RegionHero({ photos, city, count, saved, onSave, onBack, onGallery, hei
             {closeIcon ? <XIcon size={18} color={C.head} /> : <ArrowLeft size={18} color={C.head} />}
           </button>
         )}
-        <span style={{ flex: 1 }} />
-        {/* The corner of a photograph is where every app a couple already uses
-            puts the save, and it was carrying a second door to the map. The
-            map now sits beside the name, where the question it answers is. */}
-        <SaveHeart onPhoto size={36} saved={saved} onToggle={onSave} />
       </div>
 
       {/* Dots under the photograph, and the gallery beside them. */}
@@ -2016,9 +2013,9 @@ function RegionHero({ photos, city, count, saved, onSave, onBack, onGallery, hei
 // Once the pictures have scrolled away there is nothing on the screen saying
 // which region you are reading about, and on a page this long that matters more
 // than it sounds. So the name arrives in a plain bar exactly as the photograph
-// leaves, carrying the way out and the save, the two things that should never
-// be a scroll away.
-function StickyBar({ city, show, saved, onSave, onBack, closeIcon, inset = 0 }) {
+// leaves, carrying the way out, which should never be a scroll away. The save
+// stays beside the name on the page, not up here.
+function StickyBar({ city, show, onBack, closeIcon, inset = 0 }) {
   return (
     <div style={{
       position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
@@ -2038,7 +2035,6 @@ function StickyBar({ city, show, saved, onSave, onBack, closeIcon, inset = 0 }) 
       <p style={{ margin: 0, flex: 1, minWidth: 0, ...T.h3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {city}
       </p>
-      <SaveHeart saved={saved} onToggle={onSave} />
     </div>
   );
 }
@@ -2155,8 +2151,6 @@ export default function RegionDetail({
           city={r.city}
           count={mediaCount}
           height={heroH}
-          saved={saved}
-          onSave={() => toggleRegion(dest, town)}
           hideBack={sheetStop === "full"}
           closeIcon={!!sheetStop}
           onBack={back}
@@ -2175,12 +2169,14 @@ export default function RegionDetail({
           <div style={{ padding: `8px ${PAD}px 0` }}>
             {/* The country and the area used to sit above the name. A couple
                 arrived here from a Vietnam screen by tapping Hanoi, so neither
-                was news, and the map beside the name answers the where. */}
+                was news, and the map beside the name answers the where. The
+                heart closes the row, right aligned, the same as on every card. */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h1 style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.7px", lineHeight: "31px" }}>
                 {r.city}
               </h1>
               {hasMap && <MapsButton onClick={() => setMap(true)} />}
+              <SaveHeart size={32} saved={saved} onToggle={() => toggleRegion(dest, town)} style={{ marginRight: -6 }} />
             </div>
             {/* Lead and description are one block, capped at three lines, so
                 the page opens on a picture and a paragraph rather than a page
@@ -2229,8 +2225,6 @@ export default function RegionDetail({
       <StickyBar
         city={r.city}
         show={scrolled || sheetStop === "full"}
-        saved={saved}
-        onSave={() => toggleRegion(dest, town)}
         onBack={back}
         closeIcon={!!sheetStop}
         inset={sheetStop ? 20 : 0}

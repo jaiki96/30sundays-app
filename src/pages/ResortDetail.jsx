@@ -137,7 +137,7 @@ export default function ResortDetail() {
   // Hero gallery: a video first, then all the resort photos.
   const heroVideo = resort.video_url || HERO_VIDEO;
 
-  // The heart on the hero, keyed the same way the resort card keys it, so a
+  // The heart beside the name, keyed the same way the resort card keys it, so a
   // save made on the list shows here and the other way round.
   const isWished = wishlist.isSaved("hotel", "Maldives", resort.name);
   const toggleWish = () => wishlist.toggle("hotel", "Maldives", resort.name, {
@@ -145,6 +145,7 @@ export default function ResortDetail() {
     img: resort.hero_image || resort.images?.[0],
     sub: `${resort.atoll || "Maldives"} · ${resort.star_rating}-star`,
     city: resort.atoll || null,
+    stars: resort.star_rating,
   });
 
   // Carry the current choices onto linked (similar) resorts.
@@ -180,14 +181,14 @@ export default function ResortDetail() {
         }}>
           <ArrowLeft size={18} color="#fff" />
         </Link>
-        <div style={{ position: "absolute", top: 14, right: 14 }}>
-          <SaveHeart saved={isWished} onToggle={toggleWish} onPhoto size={34} />
-        </div>
       </div>
 
       {/* ─── Title + star / booking rating / atoll ─── */}
       <div style={{ padding: "16px 16px 0" }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: C.head, margin: "0 0 8px" }}>{resort.name}</h2>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: C.head, margin: 0, flex: 1, minWidth: 0 }}>{resort.name}</h2>
+          <SaveHeart saved={isWished} onToggle={toggleWish} size={32} style={{ marginTop: -1, marginRight: -7 }} />
+        </div>
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 8px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Star size={14} color="#F59E0B" fill="#F59E0B" />

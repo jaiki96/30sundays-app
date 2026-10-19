@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ChevronDown, ChevronUp,
   Check, Star, User, Images, ChevronRight, Map, MapPin,
-  Car, Utensils, RotateCcw, Ban, LogIn, LogOut,
+  Car, Utensils, RotateCcw, Ban, LogIn, LogOut, Heart,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
@@ -124,10 +124,10 @@ function Fact({ icon: Icon, children, muted = false }) {
 
 // ─── One hotel ──────────────────────────────────────────────────────────────
 //
-// The heart sits on the photo, top right, where every card in the app keeps
-// it. A hotel already on the wishlist also says so in a small chip, bottom
-// left of the photo, because a filled heart alone is easy to miss on a reel
-// that is mostly picture.
+// The heart sits beside the hotel name, right aligned, where every card in
+// the app keeps it. The photo stays a photo. A solid pink heart on white next
+// to the name is signal enough, and the list already says how many are saved
+// and lifts them to the top, so the old "Saved" chip on the photo is gone.
 function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false, onSave }) {
   const photos = galleryOf(hotel);
   const strip = photos.slice(0, 6);
@@ -159,25 +159,15 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{photos.length} photos</span>
         </button>
 
-        {onSave && (
-          <div style={{ position: "absolute", top: 9, right: 9 }}>
-            <SaveHeart saved={saved} onToggle={onSave} onPhoto size={32} />
-          </div>
-        )}
-
-        {saved && (
-          <span style={{
-            position: "absolute", left: 9, bottom: 7,
-            background: C.p100, color: C.p600, borderRadius: 999, padding: "3px 8px",
-            fontSize: 10.5, fontWeight: 700, lineHeight: "13px", pointerEvents: "none",
-          }}>
-            Saved
-          </span>
-        )}
       </CardReel>
 
       <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
-        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3 }}>{hotel.name}</p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3, flex: 1, minWidth: 0 }}>{hotel.name}</p>
+          {onSave && (
+            <SaveHeart saved={saved} onToggle={onSave} size={28} style={{ marginTop: -5, marginBottom: -5, marginRight: -6 }} />
+          )}
+        </div>
 
         {/* How good it is: our stars counted out, their score scored */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -402,6 +392,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     img: h.images?.[0]?.url,
     sub: `${stayInfo.city} · ${h.stars}-star`,
     city: stayInfo.city,
+    stars: h.stars,
+    score: h.bookingScore,
   });
 
   return (
@@ -457,25 +449,34 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {/* One quiet line, only when there is something to say. The saved
-                hotels sit first, and this says why. */}
-            {savedCount > 0 && (
-              <p style={{ margin: "-2px 0 -4px", fontSize: 12.5, color: C.sub }}>
-                {savedCount} saved in {stayInfo.city}, shown first.
-              </p>
-            )}
-
-            {shown.map(h => (
-              <HotelCard
-                key={h.id}
-                hotel={h}
-                nights={nights}
-                priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
-                onOpen={openHotel}
-                onGallery={(hotel, at) => setGallery({ hotel, at })}
-                saved={isWished(h)}
-                onSave={() => toggleWish(h)}
-              />
+            {/* Saved hotels get a heading of their own, and the rest start under
+                a second one, so it is plain that the first few are the
+                wishlist and not the best matches. Without saves there is one
+                list and no headings at all. */}
+            {shown.map((h, i) => (
+              <Fragment key={h.id}>
+                {savedCount > 0 && i === 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 -4px" }}>
+                    <Heart size={16} color={C.p600} fill={C.p600} />
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: C.head }}>From your wishlist</p>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.p600 }}>{savedCount} saved</span>
+                  </div>
+                )}
+                {savedCount > 0 && i === savedCount && (
+                  <p style={{ margin: "10px 0 -4px", paddingTop: 16, borderTop: `1px solid ${C.div}`, fontSize: 15, fontWeight: 800, color: C.head }}>
+                    All hotels in {stayInfo.city}
+                  </p>
+                )}
+                <HotelCard
+                  hotel={h}
+                  nights={nights}
+                  priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
+                  onOpen={openHotel}
+                  onGallery={(hotel, at) => setGallery({ hotel, at })}
+                  saved={isWished(h)}
+                  onSave={() => toggleWish(h)}
+                />
+              </Fragment>
             ))}
 
             {/* The one thing the overflow menu used to hold. It is a real
@@ -688,6 +689,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           currentHotel={currentHotel}
           onOpen={(h) => { setMapOpen(false); openHotel(h); }}
           onClose={() => setMapOpen(false)}
+          isSaved={isWished}
         />
       )}
     </div>

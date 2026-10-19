@@ -518,7 +518,10 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
     [ofKind, dest, cards]
   );
   const savedCities = useMemo(() => new Set(savedRegions.map((i) => i.id)), [savedRegions]);
-  const [picking, setPicking] = useState(false);
+  // Arriving from a board's "Plan from these saves", the saved places open
+  // straight away: that is what the button promised. Still nothing pre-ticked.
+  const [picking, setPicking] = useState(() =>
+    savedRegions.length > 0 && new URLSearchParams(window.location.search).get("from") === "wishlist" && route.length === 0);
 
   // Chosen cities first, in the order the trip runs them, then the rest. The
   // list can be a dozen long; what somebody has already decided should not be

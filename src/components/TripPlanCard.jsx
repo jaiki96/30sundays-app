@@ -106,10 +106,10 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
             {titleText}
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-            {!lost && <SaveHeart size={30} saved={isWished(primary.id)} onToggle={() => handleWish(primary.id)} />}
             {showVersionBadge && <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, letterSpacing: ".3px" }}>V{versionBadgeNum}</span>}
             {isDraftCard && <DraftChip />}
             <StatusChip kind={stateKind} />
+            {!lost && <SaveHeart size={28} saved={isWished(primary.id)} onToggle={() => handleWish(primary.id)} style={{ margin: "-6px -6px -6px 0" }} />}
           </div>
         </div>
         <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.head, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{routeText}</p>
@@ -185,7 +185,6 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
             const vDates = travelRange(vTd?.fromDate, vNights);
             return (
               <div key={v.id} onClick={() => onOpen(v)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px 9px 14px", borderTop: `1px solid ${C.bg}`, cursor: "pointer" }}>
-                <SaveHeart size={30} saved={isWished(v.id)} onToggle={() => handleWish(v.id)} />
                 <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.bg, color: C.sub, flexShrink: 0 }}>V{v.num}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vRoute}</p>
@@ -193,6 +192,7 @@ export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNot
                     {vDates ? `${vDates} · ` : ""}{fmt(total(ppPrice(v), travellersOf(v)))}
                   </p>
                 </div>
+                <SaveHeart size={28} saved={isWished(v.id)} onToggle={() => handleWish(v.id)} style={{ margin: "-6px 0" }} />
                 <ArrowRight size={13} color={C.inact} style={{ flexShrink: 0 }} />
               </div>
             );
