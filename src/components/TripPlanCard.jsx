@@ -6,7 +6,6 @@ import { C, allItineraries } from "../data";
 import { useDeals } from "../data/deals";
 import PlanRef from "./PlanRef";
 
-// Wishlist toggle shown on every version row (prototype: local state only).
 const destFlags = { Thailand: "🇹🇭", Vietnam: "🇻🇳", Bali: "🇮🇩", Maldives: "🇲🇻", "Sri Lanka": "🇱🇰", "New Zealand": "🇳🇿" };
 
 // A version (or a Maldives property quote) is a DRAFT (editable) or a QUOTE
@@ -53,16 +52,12 @@ function ActionLink({ quote }) {
 // ONE card template per deal. Header (destination, version, status) + the
 // itinerary facts (route with nights, dates, travellers, generated-on) + the
 // price(s) with their action. Maldives shows one priced row per property.
-export default function TripPlanCard({ deal, onOpen, onStartNew, onSaved, planId, pastNote }) {
+export default function TripPlanCard({ deal, onOpen, onStartNew, planId, pastNote }) {
   const [open, setOpen] = useState(false);
   const { isWished, toggleWish } = useDeals();
   const navigate = useNavigate();
-  // Toggle the heart and, when it turns ON, let the parent raise a "saved" toast.
-  const handleWish = (id) => {
-    const nowOn = !isWished(id);
-    toggleWish(id);
-    if (nowOn) onSaved?.(dest);
-  };
+  // The wishlist raises its own "saved" line when the heart turns on.
+  const handleWish = (id) => toggleWish(id);
   const lost = deal.status === "lost";
   const sorted = [...deal.versions].sort((a, b) => b.num - a.num);
   const latest = sorted[0];

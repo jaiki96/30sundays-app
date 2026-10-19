@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Heart, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
 import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
+import SaveHeart from "../components/SaveHeart";
 import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
@@ -1435,9 +1436,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
             {inDeal && versionId && (
-              <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", flexShrink: 0, padding: 0 }}>
-                <Heart size={16} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
-              </button>
+              <SaveHeart onPhoto size={30} saved={dealsCtx.isWished(versionId)} onToggle={() => dealsCtx.toggleWish(versionId)} />
             )}
             {/* Version badge only once the itinerary is created (priced) */}
             {quoted && (

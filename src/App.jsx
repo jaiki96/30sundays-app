@@ -90,10 +90,9 @@ import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
 import SavedWishlist from "./pages/SavedWishlist";
-import WishlistHotelDetail from "./pages/WishlistHotelDetail";
 import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
-import { SavesProvider } from "./data/saves";
+import WishlistToast from "./components/WishlistToast";
 import { WishlistProvider } from "./data/wishlist";
 import { ProfileProvider } from "./data/profile";
 import { AIPhotosProvider } from "./state/useAIPhotos";
@@ -191,8 +190,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/compare/:dealId" element={<CompareVersions />} />
         <Route path="/saved" element={<SavedWishlist />} />
-        <Route path="/saved/hotel/:id" element={<WishlistHotelDetail />} />
-        <Route path="/saved/activity/:id" element={<WishlistActivityDetail />} />
+        <Route path="/saved/activity/:dest/:id" element={<WishlistActivityDetail />} />
         <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
         <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
@@ -253,6 +251,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
       {showNudge && (leadData?.salesRequest ? <CallbackNudge /> : <TripNudge userState={userState} />)}
       {showNudge && <ProfileGate userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
+      <WishlistToast />
     </PhoneFrame>
   );
 }
@@ -267,9 +266,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <DealsProvider>
-    <SavesProvider>
     <WishlistProvider>
+    <DealsProvider>
     <ProfileProvider>
     <AIPhotosProvider>
     <GiftingProvider>
@@ -290,9 +288,8 @@ export default function App() {
     </GiftingProvider>
     </AIPhotosProvider>
     </ProfileProvider>
-    </WishlistProvider>
-    </SavesProvider>
     </DealsProvider>
+    </WishlistProvider>
     </ErrorBoundary>
   );
 }
