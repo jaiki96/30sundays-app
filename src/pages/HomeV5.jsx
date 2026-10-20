@@ -10,6 +10,21 @@ import { SIX, fromPrice, COMPARE_REELS } from "../data/homeV3Data";
 import { travellerReels } from "../data/homeV2Data";
 
 const PAD = 18;
+
+// ─── One section heading ───
+//
+// The page ran five sizes: 22 on Curated Destinations and Why we're the
+// perfect match, 18 on Traveller Moments and Traveller Reviews, 19 on the
+// closing call to action, in two different darks and three weights. Five
+// headings of the same rank set five different ways reads as five different
+// ranks, and none of them is.
+//
+// One style now, used by every section heading on the page. The two display
+// headings are deliberately not this: "Just booked by real travellers" is set
+// large to match the site, and the Sunday School carousel brings its own.
+export const HOME_HEAD = {
+  margin: 0, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px",
+};
 const HERO_IMGS = [destData.Maldives.hero, destData.Bali.hero, destData.Vietnam.hero];
 const HERO_VIDEO = "https://thirtysundays-prod-content.fra1.digitaloceanspaces.com/welcome/Indonesia.mp4";
 
@@ -29,7 +44,7 @@ export function FullscreenVideo({ src, onClose }) {
 function SectionTitle({ title, sub }) {
   return (
     <div style={{ padding: `0 ${PAD}px`, marginBottom: 14 }}>
-      <h2 style={{ fontSize: 19, fontWeight: 700, color: C.head, margin: 0, letterSpacing: "-0.4px" }}>{title}</h2>
+      <h2 style={HOME_HEAD}>{title}</h2>
       {sub && <p style={{ fontSize: 12.5, color: C.sub, margin: "4px 0 0", lineHeight: "17px" }}>{sub}</p>}
     </div>
   );
@@ -56,7 +71,7 @@ export function TravellerMomentsReels() {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ padding: `0 ${PAD}px`, marginBottom: 13 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>Traveller Moments</h2>
+        <h2 style={HOME_HEAD}>Traveller Moments</h2>
       </div>
       <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD }}>
         {travellerReels.map((r, i) => <TravellerReel key={i} item={r} />)}
@@ -119,7 +134,7 @@ export function LovedByCouples() {
   return (
     <div style={{ margin: "28px 16px 0" }}>
       <div style={{ marginBottom: 13 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: "-0.3px" }}>Traveller Reviews</h2>
+        <h2 style={HOME_HEAD}>Traveller Reviews</h2>
       </div>
       <div style={{ background: `linear-gradient(135deg, ${C.p100} 0%, #fff 100%)`, border: `1px solid ${C.p100}`, borderRadius: 18, padding: "20px 18px", marginBottom: 16, boxShadow: "0 4px 18px rgba(137,18,62,0.08)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
@@ -232,7 +247,7 @@ function Destinations() {
       <img src={ART.leafLeft} alt="" aria-hidden style={{
         position: "absolute", top: 442, left: -11, width: 93, height: 104, pointerEvents: "none",
       }} />
-      <h2 style={{ position: "relative", margin: `0 ${PAD}px 14px`, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>
+      <h2 style={{ ...HOME_HEAD, position: "relative", margin: `0 ${PAD}px 14px` }}>
         Curated Destinations
       </h2>
       <div style={{ position: "relative", padding: `0 ${PAD}px`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -285,7 +300,7 @@ const MATCH = [
 function PerfectMatch() {
   return (
     <div style={{ marginTop: 32, padding: `0 ${PAD}px` }}>
-      <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>
+      <h2 style={{ ...HOME_HEAD, margin: "0 0 10px" }}>
         Why we&apos;re the perfect match
       </h2>
       <p style={{ margin: "0 0 20px", fontSize: 13.5, lineHeight: "20px", color: C.sub }}>
@@ -332,9 +347,6 @@ export default function HomeV5() {
       <Destinations />
       <PerfectMatch />
 
-      {/* Torn between two? in the Sunday School multi-video style */}
-      <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />
-
       {/* ─── The stippled half ───
           The ground picks up a dot every sixteen pixels from here down, in the
           heading's navy at seven percent. The top half carries photographs and
@@ -345,8 +357,14 @@ export default function HomeV5() {
         backgroundImage: `radial-gradient(${C.dot} 1px, transparent 1.2px)`,
         backgroundSize: "16px 16px",
       }}>
-        {/* Sunday School settles which country; this is what they ask for next. */}
+        {/* The proof comes before the teaching. Somebody who has just read why
+            we are a good match wants to know whether anybody agreed, not a
+            lesson; Sunday School is what they stay for once they believe it. */}
         <BookedTripsRail />
+
+        {/* Torn between two? in the Sunday School multi-video style. Its own
+            cream band, so the stipple behind it never shows. */}
+        <EduMultiCarousel valueTitle="Torn between [two]?" lessons={seriesLessons} />
 
         {/* Traveller moments + reviews */}
         <TravellerMomentsReels />
