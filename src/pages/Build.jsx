@@ -25,9 +25,9 @@ import MonthWeather from "../components/MonthWeather";
 import DateRange from "../components/wizard/DateRange";
 import RoutePicker from "../components/wizard/RoutePicker";
 
-// Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
+// Steps: 0 Destination · 1 Party · 2 When · 3 Cities · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
-const STEP_LABELS_DEFAULT = ["Destination", "Travelers", "Travel dates", "Route", "Activities"];
+const STEP_LABELS_DEFAULT = ["Destination", "Travelers", "Travel dates", "Cities", "Activities"];
 const STEP_LABELS_MALDIVES = ["Destination", "Travelers", "Travel dates", "Resort", "Meal plan"];
 // Only these get the in-app itinerary wizard; other countries go to lead capture.
 const AUTO_ITINERARY_DESTS = ["Thailand", "Vietnam", "Bali"];
@@ -421,11 +421,14 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   };
   const cta = ctaFor();
 
-  // ─── progress stepper: a concise summary + jump-to per stage ───
-  // Each step shows its stage name and a short value of what's picked. Tapping a
-  // completed step jumps back to it. A pre-seeded destination locks step 0.
-  const pad2 = (n) => String(n).padStart(2, "0");
-  const ddmm = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+  // ─── progress stepper: what each stage answered ───
+  // A stage shows its answer once it has one, and its own name until then.
+  // Tapping a completed stage jumps back to it, and a pre-seeded destination
+  // locks stage 0.
+  // "10 Nov", not "10/11". A slash date is two numbers to decode, and on a
+  // step whose whole job is to say what you already answered, that is the one
+  // thing it must not be. The month is short so two of them still fit the row.
+  const ddmm = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   let whenVal = null;
   if (startDate) {
     const s = new Date(startDate);
@@ -437,14 +440,21 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     : tier ? TIER_META[tier]?.label : null;
   const stepSummary = [
     dest || null,                                                            // Destination
-    step >= 1 ? `${adultCount}A${party.kids ? ` ${party.kids}K` : ""}` : null, // Travelers
+    // "2 adults", not "2A". The same point as the activities stage: a code
+    // saves four characters in a row that scrolls anyway, and costs the reader
+    // the one thing the stage is there to tell them.
+    step >= 1
+      ? `${adultCount} adult${adultCount === 1 ? "" : "s"}${party.kids ? `, ${party.kids} ${party.kids === 1 ? "child" : "children"}` : ""}`
+      : null,                                                                // Travelers
     whenVal,                                                                 // Travel dates
     isMaldives
       ? resortPrefVal                                                        // Resort preference
-      : (route?.length ? `${route.length} ${route.length === 1 ? "city" : "cities"}` : null), // Route
+      : (route?.length ? `${route.length} ${route.length === 1 ? "city" : "cities"}` : null), // Cities
+    // What was picked, not how many picks. "2 picks" on the Activities step is
+    // a count of taps; "2 activities" is the answer the step was asking for.
     isMaldives
-      ? (mealPrefs.size ? `${mealPrefs.size} pick${mealPrefs.size === 1 ? "" : "s"}` : null)  // Meal plan
-      : (picks.size ? `${picks.size} pick${picks.size === 1 ? "" : "s"}` : null),             // Activities
+      ? (mealPrefs.size ? `${mealPrefs.size} meal plan${mealPrefs.size === 1 ? "" : "s"}` : null) // Meal plan
+      : (picks.size ? `${picks.size} activit${picks.size === 1 ? "y" : "ies"}` : null),           // Activities
   ];
   // Sequential edit: tap back to any already-reached editable step (from the
   // entry field up to the current step) to edit it again; forward still only via
@@ -493,8 +503,16 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
               stepper - the wizard only appears once a wizard-eligible country is
               chosen. Edit mode keeps the stepper on step 0. */}
           {(editMode || step > 0) && (
-          /* Clickable stage stepper: name + a concise value; tap a done step to
-              jump back. Scrolls sideways so full stage names stay readable. */
+          /* ─── The stepper ───
+              One line per stage, not two. It used to carry the stage's name
+              and its answer stacked on top of each other, which is the same
+              word twice: "Destination" over "Vietnam" tells you nothing that
+              "Vietnam" does not, and five of those made a header taller than
+              the question underneath it.
+
+              So a stage shows its answer once it has one, and its name until
+              then. The bar above says where you are, the pink says which stage
+              you are on, and tapping a done one jumps back. */
           <div ref={stepBarRef} className="hide-scrollbar" style={{ flex: 1, display: "flex", gap: 10, minWidth: 0, overflowX: "auto" }}>
             {/* Activities is dropped for the edit flow and the ready-made-itinerary
                 flow (both non-Maldives end on Route). */}
@@ -521,8 +539,13 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
                   }}
                 >
                   <div style={{ height: 4, borderRadius: 4, background: active ? C.p600 : C.div, transition: "background .2s" }} />
-                  <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 500, color: current ? C.p600 : C.inact, whiteSpace: "nowrap" }}>{label}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, fontWeight: 500, color: !val ? C.div : current ? C.p600 : done ? C.head : C.inact, whiteSpace: "nowrap" }}>{val || "–"}</p>
+                  {/* An answer reads as an answer: darker and heavier than the
+                      question it replaced. */}
+                  <p style={{
+                    margin: "6px 0 0", fontSize: 11.5, whiteSpace: "nowrap",
+                    fontWeight: val ? 700 : 500,
+                    color: current ? C.p600 : val ? C.head : C.inact,
+                  }}>{val || label}</p>
                 </button>
               );
             })}
@@ -1193,7 +1216,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
       <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
         <button onClick={onClose} style={iconBtn} aria-label="Close map"><XIcon size={20} color={C.head} /></button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head }}>Your route</p>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head }}>Your cities</p>
           <p style={{ margin: 0, fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.map(s => `${s.city} ${s.n}N`).join(" · ")}</p>
         </div>
         <button onClick={onClose} style={{ ...pillBtn, color: C.p600, borderColor: C.p300 }}>Done</button>
@@ -1206,7 +1229,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
       {/* Recommended routes: tap to switch, the map re-frames live */}
       {variants.length > 0 && (
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, padding: "12px 0 calc(14px + env(safe-area-inset-bottom))", background: C.white }}>
-          <p style={{ margin: "0 16px 10px", fontSize: 12, fontWeight: 800, color: C.head }}>Recommended routes</p>
+          <p style={{ margin: "0 16px 10px", fontSize: 12, fontWeight: 800, color: C.head }}>City options</p>
           <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
             {variants.map((r, idx) => {
               const on = sigOf(r) === selectedSig;
@@ -1216,7 +1239,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
                   border: `${on ? 2 : 1}px solid ${on ? C.p600 : C.div}`, background: on ? C.p100 : C.white,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 5 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>Route {idx + 1}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>Option {idx + 1}</span>
                     {on ? <Check size={15} color={C.p600} strokeWidth={2.5} /> : <span style={{ fontSize: 11.5, fontWeight: 700, color: C.p600 }}>Select</span>}
                   </div>
                   <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1417,8 +1440,13 @@ function StepActivities({ dest, route, vibes, picks, setPicks }) {
 
   return (
     <div style={{ padding: "18px 16px 24px" }}>
-      <h1 style={titleStyle}>What sounds fun?</h1>
-      <p style={subStyle}>Pick anything you like. Some may make it into your final trip, some may not, depending on what's possible on the ground.</p>
+      {/* The name of the step, like every other step. "What sounds fun?" asked
+          a question the screen then answered for you, and the line under it
+          ran to three of them: a caveat about what is possible on the ground,
+          at the moment somebody is being invited to choose. The caveat is true
+          and worth one short clause, not a paragraph. */}
+      <h1 style={titleStyle}>Select activities</h1>
+      <p style={subStyle}>Pick any activity you like. We fit in what we can.</p>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
         {shown.map(a => (
@@ -1568,7 +1596,10 @@ function ConfirmEdit({ target, onCancel, onConfirm }) {
 
 // ─── shared styles ───
 const titleStyle = { margin: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" };
-const subStyle = { margin: "8px 0 0", fontSize: 14, color: C.sub, lineHeight: 1.45 };
+// Supporting text, under a 26px title. It was 14px, which is body size: at
+// that weight it argued with the heading instead of sitting under it. Every
+// step's line is one short sentence now, so it can afford to be a caption.
+const subStyle = { margin: "7px 0 0", fontSize: 13, color: C.sub, lineHeight: 1.4 };
 const iconBtn = { width: 38, height: 38, borderRadius: 12, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 };
 const roundBtn = { width: 32, height: 32, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 };
 const primaryBtn = { width: "100%", padding: "15px", borderRadius: 14, border: "none", background: C.p600, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };

@@ -39,6 +39,7 @@ import DayDetailLab from "./pages/DayDetailLab";
 import DayDetailImmersive from "./pages/DayDetailImmersive";
 import GlanceCardLab from "./pages/GlanceCardLab";
 import RatingLab from "./pages/RatingLab";
+import StepperLab from "./pages/StepperLab";
 import ProfileLab from "./pages/ProfileLab";
 import ActivitiesEduLab from "./pages/ActivitiesEduLab";
 import SaveVersionLab from "./pages/SaveVersionLab";
@@ -205,6 +206,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/day-media/:variant" element={<DayDetailImmersive />} />
         <Route path="/glance-lab" element={<GlanceCardLab />} />
         <Route path="/rating-lab" element={<RatingLab />} />
+        <Route path="/stepper-lab" element={<StepperLab />} />
         <Route path="/profile-lab" element={<ProfileLab />} />
         <Route path="/activities-lab" element={<ActivitiesEduLab />} />
         <Route path="/save-lab" element={<SaveVersionLab />} />
