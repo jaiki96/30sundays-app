@@ -242,14 +242,27 @@ function CityCard({ area, picked, onToggle, onOpen }) {
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {area.city}
           </span>
-          {picked && (
-            <span aria-hidden style={{
-              width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-              display: "grid", placeItems: "center", background: C.p600,
-            }}>
-              <Check size={14} strokeWidth={3.5} color="#fff" />
-            </span>
-          )}
+          {/* ─── The one thing to tap ───
+              The tick used to appear only once a city was chosen, so an
+              unchosen card showed nothing at all: a photograph, a name and a
+              sentence, with no sign that it was something you pick. The circle
+              is always there now, empty and waiting, and fills when it is
+              answered. Small and quiet on purpose: it is the whole card that
+              takes the press, and this only has to say that the card takes
+              one. */}
+          <span aria-hidden style={{
+            width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 1,
+            display: "grid", placeItems: "center",
+            background: picked ? C.p600 : C.white,
+            // Quiet enough to be a mark on the card rather than a thing
+            // competing with the name, and a shade darker than the card's own
+            // border so it still reads as a control.
+            border: picked ? "none" : `1.5px solid ${C.icon}`,
+            boxSizing: "border-box",
+            transition: "background .15s, border-color .15s",
+          }}>
+            {picked && <Check size={11} strokeWidth={3.6} color="#fff" />}
+          </span>
         </div>
 
         <p style={{
