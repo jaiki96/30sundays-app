@@ -18,15 +18,18 @@ import { cityCoords } from "../data/buildData";
 import { sightCoords } from "../data/sightCoords";
 import { areaCoords } from "../data/areaCoords";
 import { regionsFor } from "../data/discoverData";
+import { cityVibes } from "../data/dayOptions";
 import { useSaves } from "../data/saves";
 import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
 import { SKY_WORD, SKY_SENTENCE } from "../data/weatherData";
-import { KIND_TONE } from "../data/activityKind";
+import { activityRating } from "../data/activityRating";
+import { activityFlags, flagChipList } from "../data/activityData";
+import { KIND_TONE, activityKind } from "../data/activityKind";
 import { kindGlyph } from "../data/kindGlyph";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
 import SaveHeart from "../components/SaveHeart";
-import { SKY_STYLE } from "../components/skyStyle";
+import { SKY_STYLE, SKY_CHIP } from "../components/skyStyle";
 import { SEASON_COLOR, SEASON_TINT, SEASON_LABEL, SEASON_MEANING } from "../components/seasonStyle";
 import { R, SHADOW, T, WELL, A } from "../components/hotel_refined/tokens";
 import CardReel from "../components/CardReel";
@@ -689,15 +692,20 @@ function AllTripsSheet({ trips, onClose }) {
 
 // ─── Section furniture ───
 
+// A section without a title skips the header row rather than leaving an empty
+// one: a block whose own card carries its heading still wants the section's
+// spacing, not a twelve pixel gap where a heading would have been.
 function Sec({ title, action, children, flush }) {
   return (
     <div style={{ marginTop: 26 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: `0 ${PAD}px`, marginBottom: 12 }}>
-        <h2 style={{ margin: 0, ...T.h2, flex: 1 }}>{title}</h2>
-        {/* A title that wraps still has one first line, and that is the line
-            the action belongs on. */}
-        {action && <span style={{ flexShrink: 0, paddingTop: 2 }}>{action}</span>}
-      </div>
+      {(title || action) && (
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: `0 ${PAD}px`, marginBottom: 12 }}>
+          <h2 style={{ margin: 0, ...T.h2, flex: 1 }}>{title}</h2>
+          {/* A title that wraps still has one first line, and that is the line
+              the action belongs on. */}
+          {action && <span style={{ flexShrink: 0, paddingTop: 2 }}>{action}</span>}
+        </div>
+      )}
       <div style={flush ? undefined : { padding: `0 ${PAD}px` }}>{children}</div>
     </div>
   );
@@ -787,17 +795,24 @@ const SHOWN_TRIPS = 6;
 
 // ─── One thing to do ───
 //
-// The badge used to say "Recommended" on a screen where everything is already
-// recommended, so it says why instead: "Best at sunrise" tells a couple
-// something, "Recommended" does not.
+// The photograph carries the reason, when there is a particular one: "Best at
+// sunrise" tells a couple something. The generic "In most itineraries" came
+// off it, because that is the same claim the Recommended chip in the card
+// makes, and a card does not need to say it twice.
 //
-// It sits back on the photograph, not in the card. In the card it was a row
-// that only some cards had, and because a rail stretches every card to the
-// same height, the ones without it carried the gap where it would have been.
-// On the photograph it costs no height at all, so every card reads the same.
+// Under the words: what it is, whether we recommend it, whether it is off the
+// beaten path, then what travellers made of it and how long it takes. Every
+// card has the same rows whether or not it has every chip, so a rail of them
+// lines up rather than each one ending wherever its own facts ran out.
 function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
-  const tone = KIND_TONE[a.kind] || KIND_TONE.Culture;
   const imgs = a.imgs?.length ? a.imgs : [a.img].filter(Boolean);
+  const { rating, reviews } = activityRating(a.id);
+  // The activity page's own chips, read off the same flags, so a thing that is
+  // "Top activity" on a card is "Top activity" when you open it. Two at most
+  // here: the page has a column to spill into and a 255px card does not.
+  const chips = flagChipList(activityFlags(a.name)).slice(0, 2);
+  // Only a named reason earns the badge on the photograph now.
+  const badge = a.pick && a.pick !== "In most itineraries" ? a.pick : null;
 
   return (
     <div
@@ -813,7 +828,7 @@ function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
     >
       <div style={{ position: "relative" }}>
         <CardReel imgs={imgs} alt={a.name} height={imgH} />
-        {a.pick && (
+        {badge && (
           <span style={{
             position: "absolute", left: 9, top: 9, zIndex: 1,
             display: "inline-flex", alignItems: "center", gap: 5,
@@ -822,7 +837,7 @@ function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
             border: "1px solid rgba(240,213,168,0.9)", backdropFilter: "blur(6px)",
             boxShadow: "0 1px 6px rgba(16,24,40,0.18)",
             fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap",
-          }}><Sparkles size={10} /> {a.pick}</span>
+          }}><Sparkles size={10} /> {badge}</span>
         )}
       </div>
 
@@ -839,14 +854,31 @@ function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
         )}
         <span style={{ flex: 1 }} />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-          <span style={{
-            padding: "4px 9px", borderRadius: R.pill,
-            background: tone.bg, color: tone.fg,
-            fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-          }}>{a.kind}</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...T.micro, color: C.sub }}>
-            <Clock size={11} /> {a.hours}
+        {/* However many it has, up to two. A card with one chip shows one. */}
+        {chips.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+            {chips.map((c) => (
+              <span key={c.key} style={{
+                padding: "4px 9px", borderRadius: R.pill,
+                background: c.bg, color: c.color,
+                fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+              }}>{c.icon} {c.label}</span>
+            ))}
+          </div>
+        )}
+
+        {/* What travellers made of it, and how long it takes. Plain text
+            rather than two more chips: four chips on a 255px card is a row
+            that scrolls, and these two are read, not scanned. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...T.micro, color: C.head, whiteSpace: "nowrap" }}>
+            <Star size={11} color="#D99A00" fill="#D99A00" />
+            <strong style={{ fontWeight: 800 }}>{rating}</strong>
+            <span style={{ color: C.sub }}>({reviews})</span>
+          </span>
+          <span aria-hidden style={{ width: 3, height: 3, borderRadius: "50%", background: C.icon, flexShrink: 0 }} />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, ...T.micro, color: C.sub, minWidth: 0 }}>
+            <Clock size={11} style={{ flexShrink: 0 }} /> <span style={{ ...clamp(1) }}>{a.hours}</span>
           </span>
         </div>
       </div>
@@ -1089,15 +1121,15 @@ function HowToReach({ origins, city }) {
 // we come then": a verdict, then the numbers behind it, then what the crowds
 // will be like. The climate is the country's and the note says so. We hold one
 // set of averages per destination, not one per town.
-const VERDICT = {
-  sunny: { label: "Great time to go", bg: A.greenBg, fg: A.green },
-  cloudy: { label: "Good time to go", bg: A.greenBg, fg: A.green },
-  rainy: { label: "Fine, but expect rain", bg: "#FFF4E0", fg: "#B54708" },
-  heavy: { label: "Not the best time", bg: "#FEF3F2", fg: "#B42318" },
-};
-// The season's name and what it means come from the dates step's own wording,
-// not a second copy of them here. Two names for the same three seasons in one
-// app is one of them being wrong.
+// The sky and the season both come from the dates step's own words and
+// colours, not a second copy of them here. Two names, or two colours, for the
+// same thing in one app is one of them being wrong.
+//
+// This used to carry a verdict of its own: green for "Great time to go", amber
+// for "Fine, but expect rain" and red for "Not the best time". A red chip on a
+// month we sell trips in argues with the page it is on, and the judgement was
+// never ours to make in one word. The sky says what the sky does, the season
+// chips say what the crowds and the prices do, and the couple decides.
 
 function WhenToGo({ r }) {
   const now = new Date().getMonth();
@@ -1107,7 +1139,7 @@ function WhenToGo({ r }) {
   const run = Array.from({ length: 12 }, (_, k) => r.months[(now + k) % 12]);
   const mo = r.months[pick];
   const Sky = SKY_STYLE[mo.sky] || SKY_STYLE.cloudy;
-  const v = VERDICT[mo.sky] || VERDICT.cloudy;
+  const chip = SKY_CHIP[mo.sky] || SKY_CHIP.cloudy;
   const days = mo.rain == null ? null : Math.min(28, Math.round(mo.rain / 11));
 
   return (
@@ -1128,7 +1160,10 @@ function WhenToGo({ r }) {
               </span>
               <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, margin: "7px 0 5px" }}>
                 <S.Icon size={14} color={S.color} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: C.sub, whiteSpace: "nowrap" }}>
+                {/* The sky's own ink, the calendar's. It was grey here, so
+                    every month's weather read the same until you got to the
+                    word. */}
+                <span style={{ fontSize: 11, fontWeight: 700, color: (SKY_CHIP[x.sky] || SKY_CHIP.cloudy).fg, whiteSpace: "nowrap" }}>
                   {SKY_WORD[x.sky] || "Mixed"}
                 </span>
               </span>
@@ -1144,10 +1179,19 @@ function WhenToGo({ r }) {
         <Card>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <p style={{ margin: 0, ...T.lead }}>{mo.name}</p>
+            {/* The calendar's weather chip, exactly: the sky's icon, its word
+                and the two temperatures, on the sky's own ground. */}
             <span style={{
-              flexShrink: 0, padding: "4px 11px", borderRadius: R.pill,
-              background: v.bg, color: v.fg, fontSize: 11.5, fontWeight: 700,
-            }}>{v.label}</span>
+              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "4px 10px", borderRadius: R.pill,
+              background: chip.bg, color: chip.fg, fontSize: 11, fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}>
+              <Sky.Icon size={11} color={Sky.color} />
+              {SKY_WORD[mo.sky] || "Mixed"}
+              <span style={{ opacity: 0.45 }}>·</span>
+              <span style={{ fontWeight: 500 }}>{mo.low}° / {mo.high}°</span>
+            </span>
           </div>
           <p style={{ margin: "7px 0 0", ...T.body }}>
             {SKY_SENTENCE[mo.sky] || "A mixed sky"}, {mo.low}° at night and {mo.high}° by afternoon.
@@ -1408,12 +1452,24 @@ function Restaurants({ list, city, onMap }) {
     <>
       <Sec
         title={`Where to eat in ${city}`}
+        /* Two text links, not a boxed button beside a text link. The map was a
+           34 by 24 bordered box sitting ten pixels from "View all", which put
+           a control and a link at two different heights touching each other
+           and read as one crowded thing. They are the same kind of thing, so
+           they are now set the same way with a hairline between them. */
         action={list.length > 0 && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-            {/* The map first, because it is the thing you tap to see where any
-                of this is in relation to anything else. */}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 11 }}>
             {mappable && (
-              <MapsButton onClick={onMap} label={false} w={34} h={24} pin={13} />
+              <>
+                <button onClick={onMap} style={{
+                  flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
+                  border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 12.5, fontWeight: 700, color: C.p600,
+                }}>
+                  <MapPin size={13} strokeWidth={2.4} /> Map
+                </button>
+                <span aria-hidden style={{ width: 1, height: 13, background: C.div, flexShrink: 0 }} />
+              </>
             )}
             <ViewAll onClick={() => setAll(true)} />
           </span>
@@ -1660,6 +1716,24 @@ function WhereToStay({ stay, hotels, onOpenHotel }) {
 // existed. The distance is measured off the real coordinates, in a straight
 // line, which is why it says "apart" rather than a number of hours we do not
 // hold.
+// ─── What the place is, in two words ───
+//
+// A paired city used to carry two clamped lines of prose that ended in an
+// ellipsis on every card, which is a sentence nobody finishes reading on a
+// 150px card. The kinds of thing its days are built around say it faster: Ha
+// Long is on the water and an adventure, Hoi An is culture and food. Read off
+// the city's own plans, so a chip here means what it means everywhere else.
+function pairThemes(city) {
+  const counts = new Map();
+  for (const v of cityVibes[city] || []) {
+    for (const name of v.activities || []) {
+      const k = activityKind(name);
+      if (k) counts.set(k, (counts.get(k) || 0) + 1);
+    }
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k);
+}
+
 function PairWith({ city, others, onPick }) {
   const here = cityCoords[city];
   if (!others.length) return null;
@@ -1670,7 +1744,10 @@ function PairWith({ city, others, onPick }) {
           const there = cityCoords[o.city];
           return (
             <button key={o.city} onClick={() => onPick(o.city)} style={{
-              flexShrink: 0, width: 150, background: C.white, borderRadius: R.card,
+              // Wide enough for two theme chips on one line. At 150 the long
+              // kinds wrapped, and a rail stretches every card to the tallest,
+              // so one wrap left a band of nothing under all the others.
+              flexShrink: 0, width: 164, background: C.white, borderRadius: R.card,
               overflow: "hidden", boxShadow: SHADOW.card, display: "block",
               border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
             }}>
@@ -1681,7 +1758,25 @@ function PairWith({ city, others, onPick }) {
                   {o.dayTrip ? "Day trip" : `${o.n} ${o.n === 1 ? "night" : "nights"}`}
                   {here && there ? ` · ${Math.round(kmApart(here, there))} km apart` : ""}
                 </p>
-                <p style={{ margin: "5px 0 0", ...T.meta, lineHeight: 1.4, ...clamp(2) }}>{o.blurb}</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 7 }}>
+                  {pairThemes(o.city).map((k) => {
+                    const t = KIND_TONE[k] || KIND_TONE.Culture;
+                    return (
+                      <span key={k} style={{
+                        padding: "3px 7px", borderRadius: R.pill,
+                        background: t.bg, color: t.fg,
+                        fontSize: 9.5, fontWeight: 700, whiteSpace: "nowrap",
+                      }}>{k}</span>
+                    );
+                  })}
+                  {o.dayTrip && (
+                    <span style={{
+                      padding: "3px 7px", borderRadius: R.pill,
+                      background: WELL.neutral.bg, color: WELL.neutral.fg,
+                      fontSize: 9.5, fontWeight: 700, whiteSpace: "nowrap",
+                    }}>Day trip</span>
+                  )}
+                </div>
               </div>
             </button>
           );
@@ -2017,16 +2112,28 @@ export default function RegionDetail({
           </div>
 
           {r.acts.length > 0 && <ThingsToDo acts={r.acts} city={r.city} onOpen={setActivity} />}
+          {/* No section heading over the postcard. "The honest bit" sat
+              directly above the card's own handwritten "Hanoi, honestly",
+              which is the same heading twice and the card's is the better
+              one. */}
           {(r.pros.length > 0 || r.cons.length > 0) && (
-            <Sec title="The honest bit">
+            <Sec>
               <Postcard city={r.city} pros={r.pros} cons={r.cons} />
             </Sec>
           )}
-          {reach.length > 0 && <HowToReach origins={reach} city={r.city} />}
           <WhenToGo r={r} />
+          {/* The home screen's heading, word for word, because it is the same
+              rail of the same cards. */}
           {trips.length > 0 && (
             <Sec
-              title="Real traveller itineraries"
+              title={<>
+                Real itineraries{" "}
+                <span style={{
+                  display: "inline-block", transform: "rotate(-5deg)", whiteSpace: "nowrap",
+                  fontFamily: "Caveat, cursive", fontSize: 17, fontWeight: 700, color: "#007E72",
+                  letterSpacing: 0, marginLeft: 3,
+                }}>by real travellers</span>
+              </>}
               action={<ViewAll onClick={() => setAllTrips(trips)} />}
               flush
             >
@@ -2035,6 +2142,10 @@ export default function RegionDetail({
               </div>
             </Sec>
           )}
+          {/* After the itineraries. Getting there is a question somebody asks
+              once they have decided to come, and the trips are what decides
+              it. */}
+          {reach.length > 0 && <HowToReach origins={reach} city={r.city} />}
           {g?.transport?.length > 0 && <TransportModes items={g.transport} />}
           {(g?.stay || hotels.length > 0) && <WhereToStay stay={g?.stay} hotels={hotels} onOpenHotel={setHotel} />}
           {r.food?.length > 0 && (

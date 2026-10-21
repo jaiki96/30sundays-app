@@ -7,6 +7,7 @@ import {
   Sparkles, Play, GripVertical, Map as MapIcon, Search, Star, Users, MapPin,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
+import { activityRating } from "../data/activityRating";
 import { SEASON_LABEL, SEASON_COLOR } from "../components/seasonStyle";
 import {
   BUILD_DESTS, destMeta, destAreas, MONTHS, monthRating,
@@ -37,14 +38,6 @@ function couplePct(sig) {
   let h = 0;
   for (let i = 0; i < sig.length; i++) h = (h * 31 + sig.charCodeAt(i)) % 100;
   return 55 + (h % 34);
-}
-// Deterministic Google-style rating + review count from an activity id
-// (4.3-4.9, 80-480 reviews). No live ratings feed yet, so this keeps every
-// activity looking real and consistent across visits.
-function activityRating(id) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 10000;
-  return { rating: (4.3 + ((h % 7) * 0.1)).toFixed(1), reviews: 80 + (h % 400) };
 }
 const CROWD_COLOR = { Low: C.sText, Mixed: C.wText, High: C.dText };
 // User-facing: collapse crowd levels into a friendlier Popular / Offbeat label.
