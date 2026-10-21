@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { C, customerPhotos } from "../data";
 import { regionDetail } from "../data/regionData";
-import { buildActivityDetail } from "../data/activityData";
 import { regionFaq } from "../data/regionFaq";
 import { regionReach } from "../data/regionReach";
 import { cityCoords } from "../data/buildData";
@@ -23,8 +22,7 @@ import { useSaves } from "../data/saves";
 import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
 import { SKY_WORD, SKY_SENTENCE } from "../data/weatherData";
-import { activityRating } from "../data/activityRating";
-import { activityFlags, flagChipList } from "../data/activityData";
+import { buildActivityDetail, activityFlags, flagChipList } from "../data/activityData";
 import { KIND_TONE, activityKind } from "../data/activityKind";
 import { kindGlyph } from "../data/kindGlyph";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
@@ -447,7 +445,7 @@ function Zoom() {
 // The whole card is the way in. There is no separate button, because a card
 // that appears when you press a pin and does nothing when you press it is a
 // card that has taught you not to press it.
-function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
+function PinCard({ img, title, meta, chips = [], rating, onOpen, onClose }) {
   return (
     <div style={{
       position: "absolute", left: 12, right: 12, bottom: 16, zIndex: 650,
@@ -462,16 +460,13 @@ function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
           background: "none", border: "none", padding: 11, cursor: "pointer", fontFamily: "inherit",
         }}>
           <img src={img} alt="" style={{ width: 64, height: 64, flexShrink: 0, borderRadius: R.well, objectFit: "cover", display: "block", background: A.photoBg }} />
-          <span style={{ flex: 1, minWidth: 0, paddingRight: 22 }}>
-            <span style={{ ...T.h3, fontSize: 14.5, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            {/* Only the title clears the close button, which sits on its line.
+                Giving the whole column that padding pushed the chips onto a
+                second row for no reason. */}
+            <span style={{ ...T.h3, fontSize: 14.5, display: "block", paddingRight: 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
             <span style={{ ...T.micro, display: "block", marginTop: 3 }}>{meta}</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 7 }}>
-              {tag && (
-                <span style={{
-                  padding: "3px 8px", borderRadius: R.pill,
-                  background: tag.bg, color: tag.fg, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-                }}>{tag.label}</span>
-              )}
+            <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
               {/* The same score the activity page opens with, off the same
                   generator, so the card cannot disagree with the page it
                   leads to. */}
@@ -482,6 +477,15 @@ function PinCard({ img, title, meta, tag, rating, onOpen, onClose }) {
                   <span style={{ ...T.micro }}>({rating.count})</span>
                 </span>
               )}
+              {/* And the chips it opens with too, both of them where it has
+                  two. It used to carry one tag of this page's own invention,
+                  which said a different thing from the page behind it. */}
+              {chips.map((c) => (
+                <span key={c.key} style={{
+                  padding: "3px 8px", borderRadius: R.pill,
+                  background: c.bg, color: c.color, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+                }}>{c.icon} {c.label}</span>
+              ))}
             </span>
           </span>
         </button>
@@ -592,11 +596,7 @@ function RegionMapScreen({ dest, city, acts, onOpenAct, onClose }) {
           img={chosen.img}
           title={chosen.name}
           meta={kmLabel(chosen.km)}
-          tag={{
-            label: chosen.kind,
-            bg: (KIND_TONE[chosen.kind] || KIND_TONE.Culture).bg,
-            fg: (KIND_TONE[chosen.kind] || KIND_TONE.Culture).fg,
-          }}
+          chips={flagChipList(activityFlags(chosen.name)).slice(0, 2)}
           rating={rating}
           onOpen={() => onOpenAct(chosen)}
           onClose={() => setPick(null)}
@@ -804,9 +804,15 @@ const SHOWN_TRIPS = 6;
 // beaten path, then what travellers made of it and how long it takes. Every
 // card has the same rows whether or not it has every chip, so a rail of them
 // lines up rather than each one ending wherever its own facts ran out.
-function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
+function ActCard({ a, city, dest, onOpen, width = 255, imgH = 165 }) {
   const imgs = a.imgs?.length ? a.imgs : [a.img].filter(Boolean);
-  const { rating, reviews } = activityRating(a.id);
+  // The score the activity page will open with, read off the same builder the
+  // map card reads, so the three places this activity appears on one screen
+  // cannot show three different numbers.
+  const { rating, reviews } = useMemo(() => {
+    const d = buildActivityDetail({ name: a.name }, { city, country: dest });
+    return { rating: d.rating, reviews: Number(d.reviewCount).toLocaleString("en-IN") };
+  }, [a.name, city, dest]);
   // The activity page's own chips, read off the same flags, so a thing that is
   // "Top activity" on a card is "Top activity" when you open it. Two at most
   // here: the page has a column to spill into and a 255px card does not.
@@ -886,7 +892,7 @@ function ActCard({ a, onOpen, width = 255, imgH = 165 }) {
   );
 }
 
-function ThingsToDo({ acts, city, onOpen }) {
+function ThingsToDo({ acts, city, dest, onOpen }) {
   const [all, setAll] = useState(false);
 
   return (
@@ -898,7 +904,7 @@ function ThingsToDo({ acts, city, onOpen }) {
       >
         <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
           {acts.slice(0, SHOWN_ACTS).map((a) => (
-            <ActCard key={a.id} a={a} onOpen={onOpen} />
+            <ActCard key={a.id} a={a} city={city} dest={dest} onOpen={onOpen} />
           ))}
         </div>
       </Sec>
@@ -906,7 +912,7 @@ function ThingsToDo({ acts, city, onOpen }) {
       <ListSheet open={all} title={`Things to do in ${city}`} count={acts.length} onClose={() => setAll(false)}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {acts.map((a) => (
-            <ActCard key={a.id} a={a} width="100%" imgH={200} onOpen={(x) => { setAll(false); onOpen(x); }} />
+            <ActCard key={a.id} a={a} city={city} dest={dest} width="100%" imgH={200} onOpen={(x) => { setAll(false); onOpen(x); }} />
           ))}
         </div>
       </ListSheet>
@@ -1867,8 +1873,16 @@ function RegionHero({ photos, city, count, saved, onSave, onBack, onGallery, hei
           scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch",
         }}
       >
+        {/* Tapping the picture opens the gallery, which is what the button in
+            the corner does and what a full-bleed photograph has promised on
+            every other app a couple already uses. A swipe still moves the
+            reel: a drag is not a tap, so the two do not fight. */}
         {photos.map((src, n) => (
-          <div key={n} style={{ flex: "0 0 100%", width: "100%", height: "100%", scrollSnapAlign: "start", background: A.photoBg }}>
+          <div
+            key={n}
+            onClick={onGallery}
+            style={{ flex: "0 0 100%", width: "100%", height: "100%", scrollSnapAlign: "start", background: A.photoBg, cursor: "pointer" }}
+          >
             <img
               src={src}
               alt={n === 0 ? city : ""}
@@ -2111,7 +2125,7 @@ export default function RegionDetail({
             <ReadMore lead={g?.lead || r.blurb} sub={g?.sub}>{g?.about}</ReadMore>
           </div>
 
-          {r.acts.length > 0 && <ThingsToDo acts={r.acts} city={r.city} onOpen={setActivity} />}
+          {r.acts.length > 0 && <ThingsToDo acts={r.acts} city={r.city} dest={r.dest} onOpen={setActivity} />}
           {/* No section heading over the postcard. "The honest bit" sat
               directly above the card's own handwritten "Hanoi, honestly",
               which is the same heading twice and the card's is the better
