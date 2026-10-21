@@ -23,6 +23,7 @@ import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
 import { SKY_WORD, SKY_SENTENCE } from "../data/weatherData";
 import { buildActivityDetail, activityFlags, flagChipList } from "../data/activityData";
+import { cityTags } from "../data/cityTags";
 import { KIND_TONE, activityKind } from "../data/activityKind";
 import { kindGlyph } from "../data/kindGlyph";
 import { FOOD_TAG, sortTags } from "../data/regionFood";
@@ -2065,6 +2066,10 @@ export default function RegionDetail({
     onScrollTop?.(e.currentTarget.scrollTop);
   }, [heroH, onScrollTop]);
 
+  // The same chips the cities step showed for this place. Above the early
+  // return, because a hook cannot sit below one.
+  const tags = useMemo(() => cityTags(dest, town), [dest, town]);
+
   if (!regions.length || !regions.some((x) => x.city === town) || !r) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
@@ -2119,6 +2124,20 @@ export default function RegionDetail({
               </h1>
               {hasMap && <MapsButton onClick={() => setMap(true)} />}
             </div>
+            {/* The chips this city wore on the step it was chosen from, so
+                somebody who tapped Ha Long because it was "Paired with Hanoi"
+                still sees that on the page they land on. */}
+            {tags.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                {tags.map((t) => (
+                  <span key={t.key} style={{
+                    padding: "4px 9px", borderRadius: R.pill,
+                    background: t.bg, color: t.fg,
+                    fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+                  }}>{t.label}</span>
+                ))}
+              </div>
+            )}
             {/* Lead and description are one block, capped at three lines, so
                 the page opens on a picture and a paragraph rather than a page
                 of prose. */}
