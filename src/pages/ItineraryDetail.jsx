@@ -685,6 +685,25 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [copyOpen, setCopyOpen] = useState(false); // "Use this trip" flow, view-only screens
   const [explorePax, setExplorePax] = useState(2);
 
+  // ─── Keeping Customise clear of the bar ───
+  //
+  // The pill used to sit a fixed distance up from the bottom of the screen,
+  // which was fine while the bottom bar was one row. The bar is not one row:
+  // it grows a save note, a price-rose warning and a list of unsaved changes,
+  // and once it is taller than that fixed distance the pill lands on top of it.
+  // It covered the save note's own close button, so the note could not be
+  // dismissed at all, which is the kind of bug nobody reports as a bug.
+  //
+  // So the pill is measured off the bar instead of off the screen. The bar
+  // tells us how tall it is and the pill rides above it, whatever it carries.
+  const [footerEl, setFooterEl] = useState(null);
+  const [footerH, setFooterH] = useState(84);
+  // And it steps aside while somebody is reading down the page, so it is not
+  // parked over a day card or a hotel the whole way down.
+  const [pillAway, setPillAway] = useState(false);
+  // It also steps aside for a toast. They want the same corner, the toast is
+  // the thing that just happened, and it is gone in five seconds.
+
   // ─── Versioned-deal context ───
   // When opened with ?dealId&versionId, this screen edits a specific copy.
   // Every copy is always editable - changes are allowed from anywhere and
@@ -1237,6 +1256,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
+  const pillHidden = pillAway || !!toast;
+
   const showToast = (message, undoData) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, undoData });
@@ -1321,6 +1342,47 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [copiedFlag, soldFlag]);
+
+  // How tall the bottom bar is right now. It changes as strips come and go, so
+  // it is watched rather than read once.
+  useEffect(() => {
+    if (!footerEl) return;
+    const read = () => setFooterH(footerEl.offsetHeight || 84);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(footerEl);
+    return () => ro.disconnect();
+  }, [footerEl]);
+
+  // Out of the way on the way down, back on the way up or the moment the page
+  // stops moving. Coming back on a pause matters: somebody who scrolls to the
+  // hotels and stops reading should still be able to see how to change them.
+  useEffect(() => {
+    if (!footerEl) return;
+    let n = footerEl.parentElement;
+    while (n) {
+      const oy = getComputedStyle(n).overflowY;
+      if (oy === "auto" || oy === "scroll") break;
+      n = n.parentElement;
+    }
+    const sc = n;
+    if (!sc) return;
+    let last = sc.scrollTop;
+    let idle;
+    const onScroll = () => {
+      const y = sc.scrollTop;
+      const dy = y - last;
+      // A few pixels of drift is a finger resting, not a scroll.
+      if (Math.abs(dy) > 6) {
+        setPillAway(dy > 0 && y > 140);
+        last = y;
+      }
+      clearTimeout(idle);
+      idle = setTimeout(() => setPillAway(false), 600);
+    };
+    sc.addEventListener("scroll", onScroll, { passive: true });
+    return () => { sc.removeEventListener("scroll", onScroll); clearTimeout(idle); };
+  }, [footerEl]);
 
   // Open the hotel-change flow, carrying deal context so the change lands back
   // in editing mode on this same copy.
@@ -2276,7 +2338,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <div style={{ height: 20 }} />
 
       {/* ═══ Sticky footer - changes panel (floating) + price/CTA row ═══ */}
-      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
+      <div ref={setFooterEl} style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
         {/* Floating "changes since last version" panel */}
         {inDeal && !closedDeal && hasChanges && !fetchingPrice && (
           <div style={{ background: C.white, borderTop: `1px solid ${C.div}`, boxShadow: "0 -6px 20px rgba(0,0,0,0.07)" }}>
@@ -2783,7 +2845,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <div style={{ ...overlayFrame, zIndex: 150, pointerEvents: "none" }}>
           <div style={{
             position: "absolute",
-            bottom: 70, left: 16, right: 16,
+            // Above the bar, measured the same way the Customise pill is. A
+            // fixed distance up from the screen put it across the save note,
+            // so the one line explaining what Save does was covered by a line
+            // about something else.
+            bottom: footerH + 12, left: 16, right: 16,
             background: "rgba(24,29,39,0.95)",
             color: "#fff",
             borderRadius: 12,
@@ -2881,9 +2947,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
            of the shell. Every other overlay here hangs off `overlayFrame`; this
            one now does too, as a layer that passes clicks through to the page
            with one button in it that does not. */
-        <div style={{ ...overlayFrame, zIndex: 55, pointerEvents: "none" }}>
-        <button onClick={() => setCustomiseOpen(true)} style={{
-          position: "absolute", right: 14, bottom: 88, pointerEvents: "auto",
+        /* Clipped, so the pill leaves at the edge of the phone rather than
+           sliding across the page behind it. */
+        <div style={{ ...overlayFrame, zIndex: 55, pointerEvents: "none", overflow: "hidden" }}>
+        <button onClick={() => setCustomiseOpen(true)} aria-hidden={pillHidden} style={{
+          position: "absolute", right: 14, pointerEvents: pillHidden ? "none" : "auto",
+          // Measured off the bar, not off the screen. Twelve is the gap, and
+          // the bar is whatever it is at this moment.
+          bottom: footerH + 12,
+          transform: pillHidden ? "translateX(calc(100% + 22px))" : "none",
+          opacity: pillHidden ? 0 : 1,
+          transition: "transform 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease-out, bottom 0.18s ease-out",
           display: "inline-flex", alignItems: "center", gap: 7,
           padding: "10px 15px 10px 13px", borderRadius: 999, border: "none",
           // Ink, not pink. The bar underneath already has the pink button, and
@@ -2892,6 +2966,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           // buy it, and only one of those is the point.
           background: C.ink, color: "#fff", cursor: "pointer", fontFamily: "inherit",
           fontSize: 13.5, fontWeight: 700, boxShadow: "0 8px 24px rgba(24,30,76,0.34)",
+          whiteSpace: "nowrap",
         }}>
           <SlidersHorizontal size={16} /> Customise
         </button>
