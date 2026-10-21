@@ -1,87 +1,88 @@
-# View and Copy a Real Itinerary
+# Recreate a Real Traveller's Itinerary
 
-**Scope:** Only from the "Real itineraries by real travellers" section. The home rail, its View all list, and the same rail on city pages. Nowhere else, for now.
-**What:** Tapping a card opens that trip in full, read only. From there a couple can download it as a PDF, or copy it as their own and edit it.
+**Where:** From "Real itineraries by real travellers" on the home page, its View all list, and the same rail on city pages.
+**What:** Tapping a card opens that traveller's trip read-only. From there it can be recreated on your own dates as your own itinerary.
+**Why:** The hardest part of planning is the blank page. Someone else's finished trip is the answer, and it should take two questions to have it.
 
-## A. The view-only itinerary
+## A. Reading the trip
 
-- Opens the same itinerary layout a customer sees for their own trip: section nav, trip header, day by day plan, hotels, flights, journey map, cost.
-- Trip header keeps its format: cities, nights, travellers. Dates show the month the trip ran and the number of nights, not the exact date range. The viewer is not booking those dates, and an exact range ties back to a real customer.
-- Every edit entry point is removed: change dates, change cities, change day plan, change hotel, change flights, save version, compare versions.
-- Price is shown in full, inclusive of GST and TCS, with the same cost split, labelled as the price that trip was sold at. A line says the price for their own dates will differ.
-- **No personal information, on screen or in the PDF:** no surname, no contact details, no traveller list, no documents, no consultant name, no payment or invoice detail. The card's "first name, home city" is the most that is ever shown.
-- Bottom bar carries two actions only: **Download PDF** and **Use this itinerary**.
-- PDF is the same itinerary with the same exclusions, marked as a sample.
+- Opens the normal itinerary screen, read-only: hero, day plans, hotels, flights, map, cost.
+- Title names the traveller, for example "Karan's Vietnam trip · 7N". Dates carry the year.
+- No edit anywhere: no change day, change hotel, change flights, save, customise, consultant or co-planner.
+- Hotels are tappable and read-only, showing only the room the trip was priced on.
+- Flights show the legs and the departure city, no fares.
+- Cost breakdown in full, taxes and the TCS claim line included.
+- Bottom bar: the total including GST and TCS, a PDF, and **Recreate this trip**.
+- No personal details anywhere, on screen or in the PDF: first name and home city at most.
 
-## B. Copying it
+## B. The recreate sheet
 
-- Action is called "Use this itinerary" in the product. "Steal their itinerary" stays in marketing copy only.
-- Two inputs, nothing else:
-  - **Start date.** The length is fixed at the original trip's nights, so only a start is picked. Same calendar as the wizard, with season and weather labels, and the end date filled in automatically and locked.
-  - **Travellers.** Adults, and children if any.
-- **What copies:** the route, the nights per city, the day order, the activities on each day, and the hotels.
-- **What does not copy:** flights. We cannot promise availability or fare, so flights are chosen fresh in the normal flight step after the copy.
-- On confirm, a new itinerary is created in that user's account, fully editable from then on, with all the usual change actions restored.
-- Price is recalculated for the new dates and party. The original price is never carried across.
-- The copy is independent. Later changes to the source trip never affect it, and the viewer can never edit the source.
-- Copying the same trip more than once is allowed.
+Two questions, on one sheet. Not the wizard: the wizard builds from nothing, this takes a trip that exists.
 
-## C. When something is not available
+- Header names the owner: "Recreate Karan's trip".
+- **Start date.** One field. The length is fixed at the trip's own nights, because changing it adds or drops hotels and the trip would arrive as a different trip. The sheet says when they are back.
+- **Travellers.** Adults and children as counts. The wizard's rule applies: couples only, so an even number of adults and no children yet. Breaking it shows one line in error red, names the sales team as the way forward, and disables the button.
+- **Flights.** Stated before anything is made: not part of the itinerary we create, fares and availability move by the hour, our team quotes them.
+- CTA: **Create my itinerary**. The wait names what it is doing, ticking off hotels, pricing and creation.
 
-The copy never fails. It completes, and says what changed.
+## C. What gets created
 
-- **All available:** straight into the new itinerary, no banner.
-- **A hotel is sold out:** substitute the nearest equivalent in the same area, star band and price band. A banner at the top lists each swap, with one tap to review or change it.
-- **No hotel available in a city:** keep the city and its nights, mark the stay "to be confirmed", and flag it to the consultant.
-- **An activity is not available on those dates:** keep the day, flag the activity, and offer that city's alternatives.
-- **Price moved:** if the recalculated total differs from the original by more than a set threshold, say so on arrival rather than leaving them to notice.
-- **Season mismatch:** if the original ran in peak and the new dates are off season, or the reverse, note that the days may read differently.
+- A new itinerary owned by that user, with its own deal and version.
+- **Carried over:** cities, order, nights per city, day plans, activities, hotels.
+- **Not carried over:** flights, which the app does not sell, and the price, which is worked out for the new dates and party.
+- The source trip is never touched and stays read-only. The same trip can be recreated again.
+- Everything is editable from then on, and changes re-price.
 
-## D. Events
+## D. Two endings
+
+- **Everything available.** The version is priced and saved on the spot. The traveller lands on a finished itinerary (V1, final price, PDF) with a toast saying it is saved and that changes re-price it.
+- **A hotel sold out.** The itinerary is still created, as an unsaved draft. It lands scrolled to the Hotels section with that stay badged Sold out and pulsing, the rail scrolled across to it, and a toast saying to pick another and then save. The decision stays with the traveller.
+
+## E. Events
 
 Every event carries: source_itinerary_id, destination, nights, surface (home_rail / view_all / city_page).
 
-**View only**
+**Reading**
 
-- real_itinerary_opened (entry_point, destination, nights, price_band)
+- real_itinerary_opened (entry_point, owner_first_name, price_band)
 - real_itinerary_section_viewed (section_name)
 - real_itinerary_scroll_depth (percent: 25 / 50 / 75 / 100)
 - real_itinerary_pdf_downloaded (scroll_depth_percent)
-- real_itinerary_closed (scroll_depth_percent, time_seconds, copied: true / false)
+- real_itinerary_hotel_opened (city, stay_index)
+- real_itinerary_closed (scroll_depth_percent, time_seconds, recreated: true / false)
 
-**Copy flow**
+**The sheet**
 
-- copy_itinerary_started (scroll_depth_percent, time_on_view_seconds)
-- copy_start_date_selected (start_date, days_from_today, month_season, nights_locked)
-- copy_travellers_set (adults, children)
-- copy_itinerary_confirmed (start_date, adults, children, nights)
-- copy_itinerary_abandoned (step: date / travellers / confirm)
+- recreate_opened (scroll_depth_percent, time_on_trip_seconds)
+- recreate_date_selected (start_date, days_from_today, month_season)
+- recreate_party_changed (adults, children)
+- recreate_party_blocked (reason: odd_adults / solo / children, adults, children)
+- recreate_submitted (start_date, adults, children, nights)
+- recreate_abandoned (had_date, had_valid_party, time_on_sheet_seconds)
 
-**Result**
+**The result**
 
-- copy_itinerary_created (new_itinerary_id, source_itinerary_id, price_original, price_new, price_delta_percent, swaps_count, cities_unresolved_count)
-- copy_substitution_shown (city, original_hotel, substitute_hotel, reason: sold_out / unavailable_dates)
-- copy_substitution_reviewed (city, action: kept / changed)
-- copy_activity_flagged (city, day, activity_name)
-- copy_price_change_shown (price_delta_percent)
-- copy_season_mismatch_shown (original_season, new_season)
-- copy_itinerary_edited_first_action (action_type, minutes_after_create)
-- copy_flights_added (new_itinerary_id, minutes_after_create)
+- recreate_availability_checked (result: clear / sold_out, sold_out_city, sold_out_stay_index)
+- itinerary_created (new_itinerary_id, source_itinerary_id, start_date, nights, travellers, price, state: saved / draft_sold_out)
+- recreate_soldout_surfaced (city, stay_index)
+- recreate_soldout_resolved (city, old_hotel, new_hotel, minutes_after_create)
+- recreate_first_edit (action_type, minutes_after_create)
+- recreate_saved (new_itinerary_id, minutes_after_create, edits_before_save)
+- recreate_flights_requested (new_itinerary_id, channel: call / whatsapp)
 
-## E. Success metrics
+## F. Success metrics
 
-- Share of real itinerary views that start a copy, and that finish one.
-- Drop-off by input step: date, travellers, confirm.
-- Share of copies that hit a substitution, and how many substitutions get changed afterwards.
-- Price delta distribution between original and copy.
-- Share of copies that go on to add flights, and to a booking.
-- Copies against trips started from a blank wizard, on completion rate and on value.
+- Share of real-itinerary views that open the sheet, and that finish it.
+- Drop-off inside the sheet: no date, blocked party, abandoned.
+- How often the party rule blocks, and which reason, as a read on demand we turn away.
+- Share of creations that hit a sold-out stay, and how many resolve it rather than abandoning the draft.
+- Recreated trips against wizard-built trips: completion, time to save, and conversion to booking.
+- Which source trips get recreated most, as an input to what the rail shows.
 
-## F. Open items
+## G. Open items
 
-- Confirm that showing the month rather than the exact dates is acceptable, or whether the exact range is wanted.
-- Agree the price delta threshold that triggers a warning.
-- Confirm hotel availability can be checked live at copy time. If not, the copy proceeds optimistically and the consultant resolves it, which needs a different banner.
-- Decide whether a copied itinerary is visible to the consultant immediately, or only once the traveller engages with it.
-- Confirm with legal that an anonymised itinerary of a real booking can be shown and downloaded without that customer's explicit consent.
-- Decide what happens if the source trip is later cancelled or the itinerary is withdrawn.
+- Live hotel availability at create time. The check is seeded today.
+- Flights: decide how the sales handoff is triggered from a created itinerary, and track it.
+- Confirm with legal that an anonymised real booking can be shown, downloaded and recreated without that customer's explicit consent.
+- Decide whether a recreated trip reaches a consultant immediately or only once the traveller engages.
+- Decide what happens to the source card if that trip is later cancelled.
