@@ -594,13 +594,13 @@ function RoomSheet({ room, chosen, onClose, onPick }) {
   );
 }
 
-export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3 }) {
+export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title }) {
   const [detail, setDetail] = useState(null);
 
   return (
     <>
       <Section
-        title={readOnly ? (hotel.rooms.length === 1 ? "Your room" : "Rooms") : "Select your room"}
+        title={title || (readOnly ? (hotel.rooms.length === 1 ? "Your room" : "Rooms") : "Select your room")}
         // "for 3 nights" was printed on all three cards and then wrapped to a
         // second line once the Select control sat beside it. It is the same
         // sentence three times, so it says it once, here.

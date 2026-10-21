@@ -10,6 +10,7 @@ import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
 import ConsultantSection from "../components/ConsultantSection";
+import CopyTripScreen from "../components/CopyTripScreen";
 import { getConsultant } from "../data/consultants";
 import JourneyMap from "../components/JourneyMap";
 import ItineraryMapScreen from "../components/ItineraryMapScreen";
@@ -40,6 +41,8 @@ import { toMediaDays } from "../data/dayMediaShape";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
+import { copyOf } from "../data/copyTrip";
+import { BOOKED_TRIPS } from "../data/bookedTrips";
 import InclusionsDrawer from "../components/InclusionsDrawer";
 import HotelStayCard from "../components/HotelStayCard";
 
@@ -584,7 +587,7 @@ const NAV_SECTIONS = [
   { key: "cost", label: "Cost", Icon: IndianRupee },
 ];
 
-export default function ItineraryDetail({ selectedFlights, selectedHotels, setSelectedHotels }) {
+export default function ItineraryDetail({ selectedFlights, selectedHotels, setSelectedHotels, viewOnly = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -658,7 +661,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // re-generates the available flights.
   const [departureCity, setDepartureCity] = useState("Indore");
   // Customer can drop flights entirely and book the land package only.
-  const [flightsIncluded, setFlightsIncluded] = useState(true);
+  // A copied trip carries no flights at all: the app does not sell them, so
+  // they are out of the total from the moment it is made.
+  const noFlights = !!rawIt?.noFlights;
+  const [flightsIncluded, setFlightsIncluded] = useState(!rawIt?.noFlights);
+  // The trip can arrive a render after this screen does, when the copy that
+  // made it is still settling into the deals store. So the initial value is a
+  // guess and this is the correction: once we know it is a copy, flights come
+  // out of the total.
+  useEffect(() => { if (noFlights) setFlightsIncluded(false); }, [noFlights]);
   // Explore itineraries: capture dates/travellers inline here (login is deferred
   // to the final step), instead of bouncing to the login-gated plan flow.
   const [showTripSheet, setShowTripSheet] = useState(false);
@@ -671,6 +682,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [showTour, setShowTour] = useState(false); // guided customisation tour
   const [dayScore, setDayScore] = useState(null); // { metric, scoring, dayLabel, dayIdx } for the score drawer
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
+  const [copyOpen, setCopyOpen] = useState(false); // "Use this trip" flow, view-only screens
   const [explorePax, setExplorePax] = useState(2);
 
   // ─── Versioned-deal context ───
@@ -686,7 +698,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // closed plan would quietly bring it back into My Plans. The way forward is
   // a fresh plan, which is what Regenerate makes.
   const closedDeal = inDeal && dealsCtx.getDeal(dealId)?.status === "lost";
-  const editable = !closedDeal;
+  // ─── Reading somebody else's trip ───
+  //
+  // `viewOnly` is a real itinerary opened off the home rail. It is the same
+  // screen a traveller gets for their own plan, with every door that changes
+  // something taken off: no change day, no change hotel, no dates, no cities,
+  // no save. What is left is the trip, the price it sold at, a PDF, and the
+  // one thing somebody reading it actually wants, which is to have it.
+  const editable = !closedDeal && !viewOnly;
   // The quote/PDF bar applies only to plans opened from the Plan tab (a deal).
   // Explore itineraries (no deal) show no version/PDF until the first edit
   // creates one. Quoted = a PDF exists; a deal copy is quoted once priced.
@@ -775,6 +794,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
     return `${f(st)} – ${f(en)}`;
   })();
+  // ─── The year, on a trip that is not yours ───
+  //
+  // "31 Mar - 5 Apr" is enough on your own plan, where the year is this one or
+  // the next and you booked it. On somebody else's trip it is a date with no
+  // anchor: the reader has no idea whether that was last spring or next. Both
+  // years show when the trip crosses one.
+  const viewDateLabel = (() => {
+    const st = new Date(tripStart);
+    const en = new Date(st); en.setDate(en.getDate() + (it?.nights || 0));
+    const d = (x) => x.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return st.getFullYear() === en.getFullYear()
+      ? `${d(st)} – ${d(en)} ${en.getFullYear()}`
+      : `${d(st)} ${st.getFullYear()} – ${d(en)} ${en.getFullYear()}`;
+  })();
+
   // Who is going never changes a single day of the plan, so it is a patch
   // rather than a rebuild: it lands in the version's own customisations and
   // saves itself, forking nothing and throwing no hotel away.
@@ -905,6 +939,31 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   ];
 
   // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
+  // Two of the sections do not exist on a trip somebody is only reading, so
+  // the chips for them do not either.
+  // ─── Whose trip this is ───
+  //
+  // "Your Vietnam trip" is a lie on a trip somebody else booked, and it is the
+  // first line on the page. The rail already knows who booked each one, so the
+  // title says their name. If this trip is not on the rail, it drops the owner
+  // rather than inventing one.
+  const booker = useMemo(
+    () => (viewOnly ? BOOKED_TRIPS.find((t) => t.id === Number(id))?.who || null : null),
+    [viewOnly, id]
+  );
+  const tripTitle = viewOnly
+    ? `${booker ? `${booker}'s ` : ""}${it?.dest} trip`
+    : `Your ${it?.dest} Trip`;
+
+  const navSections = useMemo(
+    () => NAV_SECTIONS.filter((x) => {
+      if (viewOnly && (x.key === "together" || x.key === "consultant")) return false;
+      if (noFlights && x.key === "flights") return false;
+      return true;
+    }),
+    [viewOnly, noFlights]
+  );
+
   const overlayFrame = isMobile
     ? { position: "fixed", inset: 0 }
     : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 390, height: 844, borderRadius: 44, overflow: "hidden" };
@@ -1184,6 +1243,85 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   };
 
+  // ─── Taking this trip ───
+  //
+  // The copy is a plan of its own from the moment it is made: its own deal, its
+  // own version, its own dates and party, and every change door back open. The
+  // trip it came from is untouched and stays unreadable-only, so the same one
+  // can be taken again tomorrow by somebody else.
+  // ─── Making it theirs ───
+  //
+  // One copy, its own deal and version, with the dates and the party they just
+  // gave. Then one of two endings, and neither of them is a dialogue:
+  //
+  //   Everything available  the version is priced and saved on the spot, so
+  //                         what they land on is a finished itinerary.
+  //   A stay sold out       the version stays a draft and the trip opens with
+  //                         the hotel marked, because the decision is theirs
+  //                         and the screen they make it on is this one.
+  const makeCopy = ({ startIso, adults, kids, swaps }) => {
+    const copy = copyOf(it, { startIso, adults, kids });
+    const travelers = adults + kids;
+    const perPerson = Number(String(copy.price).replace(/,/g, "")) || 0;
+    const { dealId: newDeal, versionId: newVersion } = dealsCtx.createDeal({
+      itineraryId: copy.id,
+      dest: copy.dest,
+      title: copy.name,
+      img: copy.img,
+      createdBy: "customer",
+      customItinerary: copy,
+      customizations: {
+        selectedDayOptions: {}, selectedHotels: {},
+        travelDates: { fromDate: startIso, nights: copy.nights, travelers },
+        builtItinerary: copy,
+      },
+      indicativePrice: perPerson,
+    });
+    const gone = swaps?.[0];
+    if (!gone) dealsCtx.requestPricing(newDeal, newVersion, perPerson);
+    setCopyOpen(false);
+    navigate(
+      `/itinerary/${copy.id}?dealId=${newDeal}&versionId=${newVersion}&copied=1${gone ? `&soldout=${gone.index}&soldcity=${encodeURIComponent(gone.city)}&soldname=${encodeURIComponent(gone.from)}` : "&saved=1"}`,
+      { replace: true }
+    );
+  };
+
+  // The copy lands on a screen that looks like any other plan, so it says once
+  // where it came from, and says it louder when a hotel had to move.
+  // Which stay, if any, the copy already knows is sold out.
+  const seededSoldOut = params.get("soldout") !== null ? Number(params.get("soldout")) : -1;
+
+  const greeted = useRef(false);
+  // ─── Keyed off the url, not off the mount ───
+  //
+  // Both the trip being read and the copy it makes are this same component, so
+  // React keeps the instance and swaps the route under it: no second mount, and
+  // an effect with no dependencies never runs again. Which is why the toast
+  // only ever appeared on a hard reload. It watches the flag instead.
+  const copiedFlag = params.get("copied");
+  const soldFlag = params.get("soldout");
+  useEffect(() => {
+    if (greeted.current || copiedFlag !== "1") return;
+    greeted.current = true;
+    showToast(soldFlag !== null
+      ? "One hotel is sold out on your dates. Pick another, then save."
+      : "Your itinerary is saved. Change anything and we will re-price it.");
+    // A sold-out stay is the one thing on a new copy that needs them, so the
+    // page goes to it rather than leaving the pulse to be found. A beat first,
+    // so it scrolls over a page that has finished arriving.
+    if (soldFlag === null) return;
+    const t = setTimeout(() => {
+      document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // And the rail along to it. The stay that is gone is rarely the first
+      // card, and a pulse happening off the right edge is no help at all.
+      const card = document.querySelector(`[data-stay="${soldFlag}"]`);
+      const rail = card?.parentElement;
+      if (card && rail) rail.scrollTo({ left: Math.max(0, card.offsetLeft - 16), behavior: "smooth" });
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [copiedFlag, soldFlag]);
+
   // Open the hotel-change flow, carrying deal context so the change lands back
   // in editing mode on this same copy.
   const dealQS = inDeal ? `&dealId=${dealId}&versionId=${versionId}` : "";
@@ -1347,7 +1485,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
     }, 1800);
   };
-  const handleDownloadPdf = () => showToast("Quote PDF downloaded (demo)");
+  const handleDownloadPdf = () => showToast(viewOnly
+    ? "Itinerary PDF downloaded. No traveller details in it."
+    : "Quote PDF downloaded (demo)");
 
   // ─── Planning a closed trip again ───
   //
@@ -1433,7 +1573,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-            <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
+            <span>{tripTitle} · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
             {inDeal && versionId && (
               <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", flexShrink: 0, padding: 0 }}>
                 <Heart size={16} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
@@ -1464,7 +1604,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           overview. It shows itself once the day plan comes up to meet it.
           The hotel page's chip, so jumping from the trip to a hotel and back is
           the same control twice rather than two that look unrelated. */}
-      <SectionNav sections={NAV_SECTIONS} elFor={elForSection} variant="soft" />
+      <SectionNav sections={navSections} elFor={elForSection} variant="soft" />
 
       {/* ─── The trip, in two lines ───
           Cities first, because that is the trip, and the one that says out loud
@@ -1474,7 +1614,46 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           and cost three lines between them, which pushed the itinerary itself
           below the fold, and an icon says "when" and "how many" perfectly well
           next to a date and a number. */}
-      {wizardEditable ? (
+      {/* ─── The same three facts, read ───
+          A trip being read opens on the same three answers in the same places:
+          the cities with their nights across the top, the dates and the party
+          under them. Same boxes, same order, same type. What is gone is the
+          caret and the press: there is nothing here to set, so nothing here
+          says it can be. */}
+      {viewOnly ? (
+        <div style={{ padding: "12px 16px 4px" }}>
+          {(() => {
+            const box = {
+              display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0,
+              padding: "8px 11px", borderRadius: 10,
+              border: `1px solid ${C.div}`, background: C.bg, textAlign: "left",
+            };
+            const value = (t) => (
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t}</span>
+            );
+            return (
+              <>
+                <div style={{ display: "flex" }}>
+                  <div style={{ ...box, flex: 1 }}>
+                    <MapPin size={14} color={C.sub} style={{ flexShrink: 0 }} />
+                    <CityLine days={it.days} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <div style={box}>
+                    <Calendar size={14} color={C.sub} style={{ flexShrink: 0 }} />
+                    {value(viewDateLabel)}
+                  </div>
+                  <div style={box}>
+                    <Users size={14} color={C.sub} style={{ flexShrink: 0 }} />
+                    {value(`${travellers} traveller${travellers > 1 ? "s" : ""}`)}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      ) : wizardEditable ? (
         <div style={{ padding: "12px 16px 4px" }}>
           {/* ─── Three fields, one language ───
               Cities, dates and travellers are the three answers this trip was
@@ -1700,13 +1879,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <Divider />
 
       {/* ═══ 4. Hotels ═══ */}
-      <div id="hotels-section" ref={setSectionEl("hotels")}>
+      <div id="hotels-section" ref={setSectionEl("hotels")} style={{ scrollMarginTop: 62 }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
+
         <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
           {hotels.map((h, i) => {
             const selfBooked = selfBookedStays.has(i);
             const ls = stayState(liveResult, i);
-            const soldOut = ls && ls.status === "sold_out";
+            // Either the live check found it, or the copy arrived knowing the
+            // stay was gone on these dates. Same badge, same way out.
+            const soldOut = (ls && ls.status === "sold_out") || seededSoldOut === i;
             if (selfBooked) {
               return (
                 <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
@@ -1724,7 +1906,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               );
             }
             return (
-            <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
+            <div key={i} data-stay={i} style={{
+              width: 280, minWidth: 280, flexShrink: 0,
+              // A stay the copy arrived knowing was gone. The toast said it on
+              // the way in and then left; this is what is still saying it
+              // afterwards, so nobody has to remember which city it was.
+              borderRadius: 14,
+              animation: seededSoldOut === i ? "soldPulse 1.7s ease-out 4" : undefined,
+            }}>
               <HotelStayCard
                 image={h.img}
                 imageAlt={h.name}
@@ -1739,7 +1928,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 roomType={h.type}
                 city={h.city}
                 freeCancellation={h.freeCancellation}
-                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}${viewOnly ? "&view=1" : ""}`}
                 footer={
                   <>
                     {ls?.status === "price_up" && (
@@ -1809,20 +1998,35 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       <Divider />
 
-      {/* ═══ Invite partner (co-planner) ═══ */}
-      <div ref={setSectionEl("together")}>
-        <InvitePartnerSection destination={it.dest} />
-      </div>
+      {/* ═══ Invite partner (co-planner) ═══
+          Not on somebody else's trip: there is nothing here yet to plan
+          together, and the invite would go out against a trip they do not own. */}
+      {!viewOnly && (
+        <>
+          <div ref={setSectionEl("together")}>
+            <InvitePartnerSection destination={it.dest} />
+          </div>
+          <Divider />
+        </>
+      )}
 
-      <Divider />
-
-      {/* ═══ 5. Flights ═══ */}
+      {/* ═══ 5. Flights ═══
+          Gone entirely on a copied trip. Showing an empty flights section, or
+          one with somebody else's fares in it, invites a tap we cannot answer. */}
+      {!noFlights && (
+      <>
       <div ref={setSectionEl("flights")}>
       {(() => {
         const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
         const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
         const divider = <div style={{ borderTop: `1px solid ${C.div}`, margin: "12px 0" }} />;
-        const priceRow = (price, left) => (
+        // ─── No fare on a trip being read ───
+        //
+        // The flights on somebody else's trip were bought on their dates. A
+        // price beside them is a number this reader cannot have, so the row
+        // keeps whatever control it was given and drops the fare. With neither,
+        // there is no row at all.
+        const priceRow = (price, left) => viewOnly ? (left || null) : (
           <div style={{ display: "flex", justifyContent: left ? "space-between" : "flex-end", alignItems: "baseline", gap: 8 }}>
             {left}
             <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
@@ -1845,18 +2049,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         const outTo = `/flights/${it.id}/${intlOutIdx}?current=${encodeURIComponent(selOut?.id || "")}${dealQS}${homeQS}`;
         // Per-leg "Change" — selection is one flight at a time, so each leg links
         // to its own single-leg chooser (one-way mode).
-        const changeCtrl = (legIdx, f) => (
+        // Nothing on a trip being read is changeable, flights least of all:
+        // they are the one part a copy cannot carry, so the screen does not
+        // offer to swap them.
+        const changeCtrl = (legIdx, f) => viewOnly ? null : (
           <Link to={`/flights/${it.id}/${legIdx}?current=${encodeURIComponent(f?.id || "")}${dealQS}${homeQS}&mode=oneway`} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
             <ArrowLeftRight size={13} /> Change
           </Link>
         );
 
-        const removeBtn = (onClick) => (
+        const removeBtn = (onClick) => viewOnly ? null : (
           <button onClick={onClick} aria-label="Remove flight" style={{ display: "inline-flex", alignItems: "center", gap: 2, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.sub, border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}>
             <XIcon size={12} /> Remove
           </button>
         );
-        const addEmpty = (label, onClick) => (
+        const addEmpty = (label, onClick) => viewOnly ? null : (
           <button onClick={onClick} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "24px 14px", border: `1.5px dashed ${C.p300}`, borderRadius: 16, background: C.white, color: C.p600, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             <Plus size={18} /> Add {label} flight
           </button>
@@ -1873,7 +2080,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
         // Kebab menu: lets the customer hand flight booking back to themselves
         // (drops flights from our package + cost) or undo that.
-        const flightsMenu = (
+        const flightsMenu = viewOnly ? null : (
           <div style={{ position: "relative" }}>
             <button onClick={() => setFlightsMenuOpen(o => !o)} aria-label="Flight options" style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <MoreHorizontal size={16} color={C.sub} />
@@ -1913,12 +2120,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
                   <Plane size={13} color={C.sub} />
                   <span style={{ fontSize: 12.5, color: C.sub }}>Departing from</span>
-                  <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-                    <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", border: `1px solid ${C.div}`, borderRadius: 8, background: C.white, padding: "4px 24px 4px 10px", fontSize: 12.5, fontWeight: 600, color: C.head, fontFamily: "inherit", cursor: "pointer" }}>
-                      {["Indore", "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata", "Ahmedabad"].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown size={13} color={C.sub} style={{ position: "absolute", right: 7, pointerEvents: "none" }} />
-                  </div>
+                  {viewOnly ? (
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>{departureCity}</span>
+                  ) : (
+                    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                      <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", border: `1px solid ${C.div}`, borderRadius: 8, background: C.white, padding: "4px 24px 4px 10px", fontSize: 12.5, fontWeight: 600, color: C.head, fontFamily: "inherit", cursor: "pointer" }}>
+                        {["Indore", "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata", "Ahmedabad"].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <ChevronDown size={13} color={C.sub} style={{ position: "absolute", right: 7, pointerEvents: "none" }} />
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1938,9 +2149,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                       {selRet && <>{legHead("Return", selRet)}<FlightLegRow f={selRet} /></>}
                       {divider}
                       {priceRow((selOut?.price || 0) + (selRet?.price || 0),
-                        <Link to={outTo} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
-                          <ArrowLeftRight size={13} /> Change flights
-                        </Link>
+                        viewOnly ? null : (
+                          <Link to={outTo} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
+                            <ArrowLeftRight size={13} /> Change flights
+                          </Link>
+                        )
                       )}
                     </div>
                   ) : (
@@ -1971,16 +2184,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       </div>
 
       <Divider />
+      </>
+      )}
 
-      {/* ═══ 6.5 Your travel consultant ═══ */}
-      <div ref={setSectionEl("consultant")}>
-        <ConsultantSection
-          consultant={consultant}
-          onVersionChange={setConsultantVersion}
-        />
-      </div>
-
-      <Divider />
+      {/* ═══ 6.5 Your travel consultant ═══
+          The consultant belongs to a plan. A trip being read is not one yet,
+          and the consultant on it was that couple's, not this one's. */}
+      {!viewOnly && (
+        <>
+          <div ref={setSectionEl("consultant")}>
+            <ConsultantSection
+              consultant={consultant}
+              onVersionChange={setConsultantVersion}
+            />
+          </div>
+          <Divider />
+        </>
+      )}
 
       {/* ═══ 7. Traveler Stories ═══ */}
       <div ref={setSectionEl("reviews")} style={{ padding: "0 16px" }}>
@@ -2024,7 +2244,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>Cost breakdown</p>
         <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden" }}>
           {[
-            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0, note: "This flight price may be outdated. Contact your travel consultant for the latest fares." },
+            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0, note: viewOnly ? null : "This flight price may be outdated. Contact your travel consultant for the latest fares." },
             { label: "Hotels", value: costSplit.hotels },
             { label: "Activities", value: costSplit.activities },
             { label: "Taxes (incl. TCS)", value: costSplit.gst + costSplit.tcs },
@@ -2130,6 +2350,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>{FETCH_MSGS[fetchMsgIdx % FETCH_MSGS.length]}</p>
             </div>
           </div>
+        ) : viewOnly ? (
+          /* ─── Somebody else's trip, and the one thing to do with it ───
+             The price it sold at, with tax in it, because a price with the tax
+             still to come is not a price. Then the PDF, which carries no names,
+             and the button this whole screen exists for. */
+          <>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 11, color: C.sub, whiteSpace: "nowrap" }}>Total</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact, whiteSpace: "nowrap" }}>incl. GST &amp; TCS</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button data-testid="view-only-pdf" onClick={handleDownloadPdf} aria-label="Download PDF" style={{ display: "flex", alignItems: "center", gap: 5, padding: "12px 13px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#027A48", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                <Download size={15} /> PDF
+              </button>
+              <button data-testid="use-this-trip" onClick={() => setCopyOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 15px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
+                <Sparkles size={14} /> Recreate this trip
+              </button>
+            </div>
+          </>
         ) : !inDeal ? (
           /* Explore itinerary - no quote/PDF; just start planning. */
           <>
@@ -2250,7 +2490,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             tripDays={daysWithActivities.length}
             jumpTo={dayDetailJump}
             onClose={() => { setDayDetailIndex(null); setDayDetailJump(null); }}
-            onChangeDay={dayHasOptions(dayDetailIndex)
+            onChangeDay={editable && dayHasOptions(dayDetailIndex)
               ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setDayDetailJump(null); setChangeDayIndex(i); }
               : null}
           />
@@ -2327,7 +2567,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           activeDay={drawerActiveDay}
           setActiveDay={setDrawerActiveDay}
           onPlay={(day, activity) => setShowViewer({ day, activity })}
-          onChangeDay={(globalDayIndex) => setChangeDayIndex(globalDayIndex)}
+          onChangeDay={editable ? (globalDayIndex) => setChangeDayIndex(globalDayIndex) : null}
           onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
           dayHasOptions={dayHasOptions}
           onClose={() => setShowDayWiseDrawer(false)}
@@ -2656,6 +2896,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <SlidersHorizontal size={16} /> Customise
         </button>
         </div>
+      )}
+
+      {/* ═══ Use this trip: the copy flow, over the trip being read ═══ */}
+      {copyOpen && (
+        <CopyTripScreen
+          it={it}
+          owner={booker}
+          frame={overlayFrame}
+          onDone={makeCopy}
+          onClose={() => setCopyOpen(false)}
+        />
       )}
 
       {/* ═══ Day Traveller Photos Fullscreen ═══ */}

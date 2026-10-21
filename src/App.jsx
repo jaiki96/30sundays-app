@@ -188,6 +188,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
         <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
+        {/* The same screen, read-only: a trip somebody else booked, opened off
+            the "Real itineraries by real travellers" rails. */}
+        <Route path="/real/:id" element={<ItineraryDetail viewOnly selectedFlights={selectedFlights} selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/compare/:dealId" element={<CompareVersions />} />

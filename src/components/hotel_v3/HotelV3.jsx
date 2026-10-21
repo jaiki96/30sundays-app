@@ -168,6 +168,9 @@ export default function HotelV3({
   // A booked or saved hotel has nothing to choose and nothing to pay, so the
   // room prices and the picker come off.
   readOnly = false,
+  // What the rooms section is called. A booked hotel says "Your room"; a hotel
+  // on somebody else's trip is not yours, so that screen passes its own.
+  roomsTitle,
   nights = 3,
   // Which paper the honest bit is written on. The postcard is the one we
   // picked, so it is what every screen gets unless it asks for the other.
@@ -255,6 +258,7 @@ export default function HotelV3({
             onPick={onPickRoom}
             selectedId={selectedRoomId}
             readOnly={readOnly}
+            title={roomsTitle}
             nights={nights}
           />
         </div>

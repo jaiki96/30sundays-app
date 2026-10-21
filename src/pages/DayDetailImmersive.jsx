@@ -595,16 +595,20 @@ function DayActionBar({ day, tripDays, onChangeDay, ctaLabel = "Change this day"
             </p>
           )}
         </div>
-        <button onClick={onChangeDay || undefined} style={{
-          flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7,
-          background: "#fff", border: "none", borderRadius: 999, padding: "12px 16px",
-          fontSize: 14, fontWeight: 700, color: HEAD,
-          cursor: onChangeDay ? "pointer" : "default", opacity: onChangeDay ? 1 : 0.55,
-          fontFamily: "inherit",
-        }}>
-          <RefreshCw size={14} color={HEAD} />
-          {ctaLabel}
-        </button>
+        {/* No handler, no button. A greyed "Change this day" on a trip being
+            read is a control that cannot be pressed, which is worse than the
+            day simply not offering one. */}
+        {onChangeDay && (
+          <button onClick={onChangeDay} style={{
+            flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7,
+            background: "#fff", border: "none", borderRadius: 999, padding: "12px 16px",
+            fontSize: 14, fontWeight: 700, color: HEAD,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>
+            <RefreshCw size={14} color={HEAD} />
+            {ctaLabel}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -812,10 +816,15 @@ function DayCard({
         </div>
       )}
 
-      {/* 6 · the day's action bar, part of the card the way District's is */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6 }}>
-        <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} ctaLabel={ctaLabel} ctaNote={ctaNote} />
-      </div>
+      {/* 6 · the day's action bar, part of the card the way District's is.
+             With nothing to do with the day, the bar goes too: the header above
+             already says which day this is, so an empty pill repeating it is a
+             control-shaped thing that is not a control. */}
+      {(onChangeDay || ctaNote) && (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6 }}>
+          <DayActionBar day={day} tripDays={tripDays} onChangeDay={onChangeDay} ctaLabel={ctaLabel} ctaNote={ctaNote} />
+        </div>
+      )}
 
       {active && metric && scoring && (
         <DayScoreModal metric={metric} scoring={scoring} dayLabel={`Day ${day.dayNum} · ${day.city}`} onClose={() => setMetric(null)} />
