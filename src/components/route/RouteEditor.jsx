@@ -175,6 +175,10 @@ export default function RouteEditor({
   // route over. The itinerary screen has its own, shared with dates and
   // travellers, so it turns this off.
   buildOnSave = true,
+  // The itinerary says "Change cities"; the wizard, where the route is being
+  // set for the first time, says so.
+  title = "Change cities",
+  saveLabel = "Save changes",
   frame,
 }) {
   const areas = destAreas[dest] || [];
@@ -508,7 +512,7 @@ export default function RouteEditor({
             <XIcon size={17} color={C.head} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" }}>Change cities</p>
+            <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" }}>{title}</p>
             <p data-testid="route-summary" style={{ margin: "1px 0 0", fontSize: 11.5, color: total < minNights ? "#B42318" : C.sub, fontWeight: total < minNights ? 700 : 400 }}>
               {empty ? "No cities yet" : `${route.length} ${route.length === 1 ? "city" : "cities"}`}
               {empty ? (start ? ` · starts ${fmtDay(start)}` : "") : start && end ? ` · ${fmtDay(start)} to ${fmtDay(end)}` : ` · ${nightsWord(total)}`}
@@ -668,7 +672,7 @@ export default function RouteEditor({
             background: changed && !empty ? C.p600 : C.div, color: changed && !empty ? "#fff" : C.inact,
             fontSize: 15, fontWeight: 700, cursor: changed && !empty ? "pointer" : "not-allowed", fontFamily: "inherit",
           }}
-        >Save changes</button>
+        >{saveLabel}</button>
       </div>
       )}
 

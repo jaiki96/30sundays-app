@@ -887,6 +887,11 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
               </span>
             ))}
           </div>
+          {/* The order and the nights are ours. Said once, under the cities,
+              with where it can be changed, so nobody looks for it here. */}
+          <p data-testid="route-note" style={{ margin: "7px 2px 0", fontSize: 10.5, lineHeight: "14px", color: C.sub }}>
+            We'll set the order and nights. You can customise them once your itinerary is created.
+          </p>
         </div>
       )}
 

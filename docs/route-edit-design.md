@@ -52,7 +52,9 @@ The third fear is the one nobody has addressed. The order is not arbitrary: two 
 ## 3. The decisions that will come up in the meeting
 
 ### 3.1 Where does it live
-The cities chip at the top of the itinerary (Da Nang 2N · Phu Quoc 3N) and the Cities entry in the Customise picker. Both open this screen now; the wizard's tick-list picker that used to open there is gone from the itinerary and stays in the wizard. Save goes through the itinerary's own building screen, the same one dates and travellers use, and lands on the new version.
+Two doors, one screen, both on the itinerary. The wizard's city step does not open it. There, under the chosen cities, one line says what happens and where it can be changed: "We'll set the order and nights. You can customise them once your itinerary is created." A door on that step was built and tried, and taken out again: it made the step more complex than the few who would use it are worth, and the itinerary is where the route is read anyway.
+
+The cities chip at the top (Da Nang 2N · Phu Quoc 3N) and the Cities entry in the Customise picker. Both open this screen now; the wizard's tick-list picker that used to open there is gone from the itinerary and stays in the wizard. Save goes through the itinerary's own building screen, the same one dates and travellers use, and lands on the new version.
 
 A bug came out while wiring it in: every built trip carries the same synthetic id, and the lookup that resolves a trip from the URL returned the first deal holding that id, so after a rebuild the page could show another deal's trip. The lookup now prefers the version asked for, then the deal in the URL.
 
