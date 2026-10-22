@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { C } from "../../data";
@@ -16,16 +16,22 @@ import { hop } from "../../data/routeBuilder";
 // So the path goes through the airports it actually uses, the changes are
 // marked, and every leg carries its own mode and time.
 
-function FitBounds({ points }) {
+// Framed against what can be seen: the map can grow or shrink with its box,
+// and a sheet can sit over the foot of it, so it is measured again and fitted
+// again whenever either changes. Room on both sides: the change labels hang
+// off the left, the leg pills off the right.
+function FitBounds({ points, height, covered = 0 }) {
   const map = useMap();
   useEffect(() => {
-    if (points.length === 1) map.setView(points[0], 9);
-    // Extra room on the right: the leg pills hang off that side of the line.
-    // Room on both sides now: the change labels hang off the left, the leg
-    // pills off the right.
-    else if (points.length > 1) map.fitBounds(points, { paddingTopLeft: [88, 30], paddingBottomRight: [96, 26] });
+    const id = setTimeout(() => {
+      map.invalidateSize();
+      const clear = Math.min(covered, Math.max(0, height - 120));
+      if (points.length === 1) map.setView(points[0], 9);
+      else if (points.length > 1) map.fitBounds(points, { paddingTopLeft: [88, 46], paddingBottomRight: [96, 26 + clear], animate: false });
+    }, 60);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(points)]);
+  }, [JSON.stringify(points), height, covered]);
   return null;
 }
 
@@ -63,6 +69,32 @@ function legIcon(mode, label) {
   return L.divIcon({ className: "", html, iconSize: [w, 20], iconAnchor: [-32, 10] });
 }
 
+// The mode alone, for a map that is showing the shape of the trip and not
+// its timetable: a car or a plane beside the line, and nothing to read.
+function modeIcon(mode) {
+  const glyph = GLYPH[mode] || GLYPH.car;
+  const html = `<div style="width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid ${C.div};box-shadow:0 1px 5px rgba(24,29,39,.25);display:flex;align-items:center;justify-content:center;">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="${C.p600}">${glyph}</svg>
+  </div>`;
+  return L.divIcon({ className: "", html, iconSize: [22, 22], iconAnchor: [-14, 11] });
+}
+
+// Zoom in and out, drawn by us so they match the app rather than Leaflet's
+// grey boxes. At the top right, under whatever header sits over the map, and
+// clear of the sheet that comes up over the foot of it.
+function Zoom({ map }) {
+  const btn = {
+    width: 34, height: 34, border: "none", background: C.white, display: "grid", placeItems: "center",
+    cursor: "pointer", padding: 0, fontFamily: "inherit", fontSize: 20, fontWeight: 600, color: C.head, lineHeight: 1,
+  };
+  return (
+    <div style={{ position: "absolute", top: 12, right: 12, zIndex: 1000, display: "flex", flexDirection: "column", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 6px rgba(24,29,39,.25)", border: `1px solid ${C.div}` }}>
+      <button onClick={() => map?.zoomIn()} aria-label="Zoom in" data-testid="map-zoom-in" style={{ ...btn, borderBottom: `1px solid ${C.div}` }}>+</button>
+      <button onClick={() => map?.zoomOut()} aria-label="Zoom out" data-testid="map-zoom-out" style={btn}>−</button>
+    </div>
+  );
+}
+
 const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 const short = (label = "") => (label.match(/\d+h(?:\s\d+m)?|\d+m/) || ["", ""])[0] || "";
 const pt = (city) => {
@@ -70,7 +102,8 @@ const pt = (city) => {
   return c ? [c.lat, c.lng] : null;
 };
 
-export default function RouteMap({ dest, route, height = 215 }) {
+export default function RouteMap({ dest, route, height = 215, times = true, covered = 0, interactive = false }) {
+  const [map, setMap] = useState(null);
   const stops = route.map((r) => ({ city: r.city, co: cityCoords[r.city] })).filter((s) => s.co);
   if (!stops.length) return null;
 
@@ -90,14 +123,20 @@ export default function RouteMap({ dest, route, height = 215 }) {
   const changes = [...new Set(segs.map((s) => s.to).filter((c) => !stopCities.has(c) && pt(c)))];
   const bounds = [...stops.map((s) => [s.co.lat, s.co.lng]), ...changes.map(pt)];
 
+  // The height lives on a box of our own and the map fills it. Leaflet's own
+  // box is sized once, so a map that has to grow with its screen (the editor
+  // measures the screen after the first paint) was staying at its first size.
   return (
+    <div style={{ height, width: "100%", background: "#aadaff", position: "relative" }}>
+    {interactive && <Zoom map={map} />}
     <MapContainer
-      center={bounds[0]} zoom={8} style={{ height, width: "100%", background: "#aadaff" }}
-      scrollWheelZoom={false} dragging={false} zoomControl={false} doubleClickZoom={false}
-      touchZoom={false} boxZoom={false} keyboard={false} attributionControl={false}
+      ref={setMap}
+      center={bounds[0]} zoom={8} zoomSnap={0} style={{ height: "100%", width: "100%", background: "#aadaff" }}
+      scrollWheelZoom={false} dragging={interactive} zoomControl={false} doubleClickZoom={interactive}
+      touchZoom={interactive} boxZoom={false} keyboard={false} attributionControl={false}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <FitBounds points={bounds} />
+      <FitBounds points={bounds} height={height} covered={covered} />
 
       {/* Roads solid, flights dashed, so the shape of the day is readable
           before a single label is. */}
@@ -116,12 +155,12 @@ export default function RouteMap({ dest, route, height = 215 }) {
 
       {segs.map((s, i) => {
         const label = short(s.label);
-        if (!label) return null;
+        if (times && !label) return null;
         return (
           <Marker
             key={`p${i}-${s.from}>${s.to}`}
             position={mid(s.a, s.b)}
-            icon={legIcon(s.mode, label)}
+            icon={times ? legIcon(s.mode, label) : modeIcon(s.mode)}
             interactive={false}
             zIndexOffset={400}
           />
@@ -142,5 +181,6 @@ export default function RouteMap({ dest, route, height = 215 }) {
         </Marker>
       ))}
     </MapContainer>
+    </div>
   );
 }

@@ -30,10 +30,11 @@ import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import SectionNav from "../components/SectionNav";
-import RoutePicker from "../components/wizard/RoutePicker";
+import RouteEditor from "../components/route/RouteEditor";
 import DateRange from "../components/wizard/DateRange";
 import { buildDayMeta, routeNights, respread, destMeta, synthesizeItinerary } from "../data/buildData";
 import SaveVersionNote from "../components/SaveVersionNote";
+import BuildingScreen from "../components/BuildingScreen";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { DayMediaDetail } from "./DayDetailImmersive";
@@ -479,58 +480,9 @@ function DateScreen({ dest, value, nights, minNights, onPick, onClose, frame }) 
 
 // ─── Cities ───
 //
-// Its own screen, because it is its own question. Which towns you sleep in and
-// for how long is the shape of the holiday, and the answer is a map and a list,
-// not a row in a sheet. It is the route step of the wizard, lifted out of the
-// wizard: the same map, the same cards, the same region pages, opened over the
-// itinerary and closed back onto it.
-//
-// Saving rebuilds the plan, which is unavoidable: a day in Hoi An cannot
-// survive Hoi An being removed. That is said plainly on the way in rather than
-// discovered on the way out.
-function CitiesScreen({ dest, nights, route, onSave, onClose, frame }) {
-  const [draft, setDraft] = useState(route);
-  const spent = draft.reduce((t, r) => t + r.n, 0);
-  const ok = draft.length > 0 && spent === nights;
-
-  return (
-    <div style={{ ...frame, zIndex: 170, background: C.white, display: "flex", flexDirection: "column" }}>
-      <div style={{
-        flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
-        padding: `calc(12px + env(safe-area-inset-top)) 14px 10px`,
-        borderBottom: `1px solid ${C.div}`, background: C.white,
-      }}>
-        <button onClick={onClose} aria-label="Close" style={{
-          width: 34, height: 34, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white,
-          display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
-        }}><XIcon size={17} color={C.head} /></button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" }}>Cities in your trip</p>
-          <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>
-            {spent} of {nights} nights spent · changing these rebuilds the day plan
-          </p>
-        </div>
-      </div>
-
-      <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
-        <RoutePicker dest={dest} nights={nights} route={draft} setRoute={setDraft} title={null} />
-      </div>
-
-      <div style={{
-        flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white,
-        padding: "10px 16px calc(12px + env(safe-area-inset-bottom))",
-      }}>
-        <button onClick={() => ok && onSave(draft)} disabled={!ok} style={{
-          width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-          background: ok ? C.p600 : C.div, color: ok ? "#fff" : C.inact,
-          fontSize: 15, fontWeight: 700, cursor: ok ? "pointer" : "not-allowed", fontFamily: "inherit",
-        }}>
-          {ok ? "Save cities" : `${nights - spent > 0 ? `${nights - spent} night${nights - spent > 1 ? "s" : ""} left to spend` : `${spent - nights} night${spent - nights > 1 ? "s" : ""} too many`}`}
-        </button>
-      </div>
-    </div>
-  );
-}
+// The route editor: order, nights, cities in and out, with the map a tap away.
+// Saving sends the trip back through the builder, behind the building screen,
+// the way dates and travellers do.
 
 // ─── The customise picker ───
 //
@@ -605,7 +557,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const dealsCtx = useDeals();
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
-  const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
+  const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId, dealId);
   // Trips built before the Build flow laid out arrival, free and departure days
   // are still saved without one, so give them the same shape on the way in
   // rather than leaving those plans looking like tours run on the fly-home day.
@@ -828,10 +780,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       : `${d(st)} ${st.getFullYear()} – ${d(en)} ${en.getFullYear()}`;
   })();
 
-  // Who is going never changes a single day of the plan, so it is a patch
-  // rather than a rebuild: it lands in the version's own customisations and
-  // saves itself, forking nothing and throwing no hotel away.
-  const applyPax = (n) => setTravelDates((d) => ({ ...(d || {}), travelers: n }));
+  // ─── Everything goes back through the builder ───
+  //
+  // Cities, dates and the party all send the trip back to the builder: a new
+  // version with new hotels, day plans and prices, and only the destination
+  // (and, unless the party is what changed, the travellers) carried over.
+  // That takes a moment, and the moment has a screen that says what is being
+  // built and why; the change itself runs when the screen is done.
+  const [building, setBuilding] = useState(null); // { reason, summary, run }
+  const startBuild = (reason, summary, run) => setBuilding({ reason, summary, run });
 
   // The route this trip is made of, however it was saved: the built route when
   // there is one, otherwise read back off the days.
@@ -845,7 +802,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // builds it and forked into a version of its own, which is what a version is
   // for. Hotels and day picks do not survive it, which is why the old version
   // stays where it was.
-  const rebuild = (nextRoute, startIso) => {
+  const rebuild = (nextRoute, startIso, pax = travellers) => {
     const built = synthesizeItinerary({
       dest: it.dest,
       nights: routeNights(nextRoute),
@@ -853,7 +810,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       picksByCity: {},
       vibes: it._vibes || [],
       startDate: startIso,
-      party: { travellers },
+      party: { travellers: pax },
       id: it.custom ? it.id : undefined,
     });
     built._vibes = it._vibes || [];
@@ -862,7 +819,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       customizations: {
         selectedDayOptions: {},
         selectedHotels: {},
-        travelDates: { fromDate: startIso, nights: built.nights, travelers: travellers },
+        travelDates: { fromDate: startIso, nights: built.nights, travelers: pax },
         builtItinerary: built,
       },
       indicativePrice: Number(String(built.price).replace(/,/g, "")) || 0,
@@ -873,20 +830,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   const applyCities = (nextRoute) => {
     setCitiesScreen(false);
-    rebuild(nextRoute, tripStart);
+    startBuild("route", `${nextRoute.map((r) => r.city).join(" · ")} · ${routeNights(nextRoute)} nights`, () => rebuild(nextRoute, tripStart));
   };
 
-  // Moving a trip is a patch: not one day of the plan changes, so it writes
-  // itself into the version and nothing is forked or thrown away. Making it
-  // longer or shorter is not, so that goes through the rebuild with the nights
-  // shared out across the cities it already has.
+  // New dates, same length or not: the plan is built again for those days,
+  // with the nights shared out across the cities it already has when the
+  // length changed.
   const applyDates = (d0, n) => {
-    if (!n || n === (it.nights || 0)) {
-      setTravelDates((d) => ({ ...(d || {}), fromDate: d0 }));
-      return;
-    }
-    rebuild(respread(tripRoute, n), d0);
+    const nextRoute = n && n !== (it.nights || 0) ? respread(tripRoute, n) : tripRoute;
+    const from = new Date(d0);
+    const to = new Date(from.getTime() + routeNights(nextRoute) * 86400000);
+    const day = (x) => x.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    startBuild("dates", `${day(from)} to ${day(to)}`, () => rebuild(nextRoute, d0));
   };
+
+  // A different party: rooms, prices and the plan built for it.
+  const applyPax = (n) => startBuild("travellers", `${n} traveller${n > 1 ? "s" : ""}`, () => rebuild(tripRoute, tripStart, n));
 
   // ─── Scroll to a control and point at it ───
   //
@@ -2910,6 +2869,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       {/* ═══ Changing the trip ═══ */}
+      {building && (
+        <BuildingScreen
+          frame={overlayFrame}
+          dest={it.dest}
+          reason={building.reason}
+          summary={building.summary}
+          onDone={() => { const run = building.run; setBuilding(null); run(); }}
+        />
+      )}
       {paxSheet && (
         <PartyScreen value={travellers} frame={overlayFrame} onPick={applyPax} onClose={() => setPaxSheet(false)} />
       )}
@@ -2925,11 +2893,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         />
       )}
       {citiesScreen && (
-        <CitiesScreen
+        <RouteEditor
           dest={it.dest}
-          nights={it.nights || routeNights(tripRoute)}
           route={tripRoute}
+          startDate={tripStart}
           frame={overlayFrame}
+          buildOnSave={false}
           onSave={applyCities}
           onClose={() => setCitiesScreen(false)}
         />

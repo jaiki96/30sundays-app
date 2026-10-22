@@ -319,26 +319,40 @@ export function DealsProvider({ children }) {
   }, [deals]);
 
   // Resolve a from-scratch itinerary by its (high, synthetic) id, so pages that
-  // look up `allItineraries.find(...)` can fall back to a built trip. A specific
-  // version's route (after a route-change fork) wins over the deal's base.
-  const findCustomItinerary = useCallback((itineraryId, versionId) => {
-    // 1. Resolve by the built itinerary's own id — works even when a curated
-    //    deal forks into a synthesized trip whose id differs from d.itineraryId.
-    for (const d of deals) {
-      for (const v of (d.versions || [])) {
-        const bi = v.customizations?.builtItinerary;
-        if (bi && bi.id === itineraryId && (!versionId || v.id === versionId)) return bi;
+  // look up `allItineraries.find(...)` can fall back to a built trip.
+  //
+  // Every built trip carries the same synthetic id, so the id alone does not
+  // say which trip is meant. The version asked for wins, wherever it lives;
+  // then the deal named in the URL; only then the first deal that has a trip
+  // with that id, which is what every route change used to land on.
+  const findCustomItinerary = useCallback((itineraryId, versionId, dealId) => {
+    const pool = dealId ? [...deals.filter(d => d.id === dealId), ...deals.filter(d => d.id !== dealId)] : deals;
+    const builtOf = (v) => v.customizations?.builtItinerary;
+    // 1. The version itself.
+    if (versionId) {
+      for (const d of pool) {
+        for (const v of (d.versions || [])) {
+          const bi = builtOf(v);
+          if (bi && bi.id === itineraryId && v.id === versionId) return bi;
+        }
       }
-      if (d.customItinerary && d.customItinerary.id === itineraryId) return d.customItinerary;
     }
-    // 2. Legacy fallback: deal keyed by itineraryId (built-from-scratch deals).
-    for (const d of deals) {
+    // 2. A deal's base trip with that id, the named deal first.
+    for (const d of pool) {
+      if (d.customItinerary && d.customItinerary.id === itineraryId) return d.customItinerary;
+      for (const v of (d.versions || [])) {
+        const bi = builtOf(v);
+        if (bi && bi.id === itineraryId) return bi;
+      }
+    }
+    // 3. Legacy fallback: deal keyed by itineraryId (built-from-scratch deals).
+    for (const d of pool) {
       if (d.itineraryId !== itineraryId) continue;
       if (versionId) {
         const v = d.versions.find(x => x.id === versionId);
-        if (v?.customizations?.builtItinerary) return v.customizations.builtItinerary;
+        if (builtOf(v)) return builtOf(v);
       }
-      return d.customItinerary || d.versions[0]?.customizations?.builtItinerary || null;
+      return d.customItinerary || builtOf(d.versions[0] || {}) || null;
     }
     return null;
   }, [deals]);
