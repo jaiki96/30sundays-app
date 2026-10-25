@@ -626,20 +626,25 @@ function ReadSummary({ days = [], plans = [], dateLabel, travellers, party, nigh
 
 // ─── The customise picker ───
 //
-// Five things a customer can change, in one place, because the other five
-// places they live are spread over three thousand pixels of page. Two of them
-// are sheets, one is a screen, and two are controls further down that this
-// scrolls to and points at rather than duplicating. Duplicating them would mean
-// two doors to the same room that drift apart.
-// In the order a trip is actually questioned: where you go, where you sleep,
-// what you do there, and only then when and with whom. Cities first because
-// everything under it hangs off the answer.
+// Four things a customer can change, in one place, because the places they
+// live are spread over three thousand pixels of page. One is a screen, one is
+// a sheet, and two are controls further down that this scrolls to and points
+// at rather than duplicating. Duplicating them would mean two doors to the
+// same room that drift apart.
+//
+// In the order a trip is actually questioned, widest first: where you go,
+// then when, then where you sleep, then what you do each day. Each answer
+// hangs off the one above it, and a change at the top rebuilds everything
+// under it.
+//
+// Travellers is not here. It is the one answer that does not shape the trip,
+// only what it costs, and it already has its own chip at the top of the
+// screen next to the dates.
 const CUSTOMISE = [
   { key: "cities", label: "Cities", hint: "Where you stay, and for how long", Icon: MapPin },
+  { key: "dates", label: "Travel dates", hint: "Change when you go, and for how long", Icon: Calendar },
   { key: "hotel", label: "Hotels", hint: "Change the hotel in any city", Icon: BedDouble },
   { key: "day", label: "Day plans", hint: "Change what happens on a day", Icon: Route },
-  { key: "dates", label: "Travel dates", hint: "Change when you go, and for how long", Icon: Calendar },
-  { key: "pax", label: "Travellers", hint: "Change how many are going", Icon: Users },
 ];
 
 function CustomisePicker({ onPick, onClose, frame }) {
@@ -1035,8 +1040,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   const customise = (key) => {
     setCustomiseOpen(false);
-    if (key === "pax") setPaxSheet(true);
-    else if (key === "dates") setDateSheet(true);
+    if (key === "dates") setDateSheet(true);
     else if (key === "cities") setCitiesScreen(true);
     else if (key === "hotel") pointAt("hotels", '[data-tour="change-hotel"]');
     else if (key === "day") pointAt("itinerary", '[data-tour="change-day"]');
