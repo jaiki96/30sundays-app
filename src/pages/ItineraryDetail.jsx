@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronU
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
 import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
-import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee } from "lucide-react";
+import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee, Moon, Car, Baby, User } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
 import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
@@ -478,6 +478,146 @@ function DateScreen({ dest, value, nights, minNights, onPick, onClose, frame }) 
   );
 }
 
+// ─── A trip being read, across rather than down ───
+//
+// Somebody else's trip answers three questions before anything else: where
+// it went and when, what was in it, and what it cost. All three are here,
+// and none of them is stacked on something it could sit beside: the trip and
+// its inclusions run down the left, the price takes a rail of its own on the
+// right. Half the height of the same three facts in a column, and the thing
+// under it is the trip itself, which should not start below the fold.
+//
+// The rail is tinted rather than titled. A block of colour in the corner
+// where a price lives is read as the price without a heading saying so.
+//
+// Who went is drawn rather than written. "2 travellers" is a sentence to
+// read; two figures are a glance, and a trip with a child on it says so
+// without a second clause.
+//
+// The full cost split is not repeated here. It is one section further down,
+// it is six lines long, and a summary that reprints the thing it summarises
+// is not a summary.
+
+// Who is going, as figures. Past six of anything the row turns into a count:
+// eight little heads is a crowd to be deciphered, not read.
+function Party({ adults, kids }) {
+  const size = 18;
+  const dot = (bg) => ({
+    width: size, height: size, borderRadius: "50%", background: bg,
+    display: "grid", placeItems: "center", flexShrink: 0,
+    marginLeft: -6, border: `1.5px solid ${C.white}`,
+  });
+  // Past six of anything the row turns into a count: eight little heads is a
+  // crowd to be deciphered, not read.
+  const many = adults > 4 || kids > 4;
+  const title = kids
+    ? `${adults} adult${adults === 1 ? "" : "s"}, ${kids} child${kids === 1 ? "" : "ren"}`
+    : `${adults} traveller${adults === 1 ? "" : "s"}`;
+  return (
+    <span data-testid="read-party" title={title} aria-label={title} style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+      {many ? (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, color: C.head }}>
+          <Users size={13} color={C.sub} />
+          {adults}{kids ? ` + ${kids}` : ""}
+        </span>
+      ) : (
+        // The figures carry the count on their own: four heads is four, and
+        // two of them amber is two children. A number beside them says the
+        // same thing twice and costs the dates their year.
+        <span style={{ display: "flex", paddingLeft: 6 }}>
+          {Array.from({ length: Math.max(1, adults) }).map((_, i) => (
+            <span key={`a${i}`} style={dot(C.p100)}><User size={10} color={C.p600} strokeWidth={2.5} /></span>
+          ))}
+          {Array.from({ length: kids }).map((_, i) => (
+            <span key={`k${i}`} style={dot("#FEF0C7")}><Baby size={10} color="#B54708" strokeWidth={2.5} /></span>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function ReadSummary({ days = [], plans = [], dateLabel, travellers, party, nights, stays, total, onBreakdown }) {
+  // Counted off the day plans, not off the stays: a stay is a city and a
+  // number of nights, and what happens inside it lives on the days.
+  const counts = (() => {
+    let activities = 0;
+    let transfers = 0;
+    plans.forEach((d) => {
+      activities += (d.activities || []).length;
+      transfers += (d.transfers || []).length;
+    });
+    // Every trip starts and ends with an airport run, and those are on the
+    // plan whether or not a day carries one.
+    return { activities, transfers: transfers + 2 };
+  })();
+
+  const kids = party?.kids || 0;
+  const adults = Math.max(1, (party ? (party.couples || 0) * 2 + (party.adults || 0) : travellers - kids) || travellers);
+  const perPerson = travellers > 0 ? Math.round(total / travellers) : total;
+  const money = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+  const INCLUDED = [
+    { Icon: Moon, n: nights, label: nights === 1 ? "night" : "nights" },
+    { Icon: BedDouble, n: stays, label: stays === 1 ? "hotel" : "hotels" },
+    { Icon: Compass, n: counts.activities, label: counts.activities === 1 ? "activity" : "activities" },
+    { Icon: Car, n: counts.transfers, label: counts.transfers === 1 ? "transfer" : "transfers" },
+  ];
+
+  const ellipsis = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
+
+  return (
+    <div data-testid="read-summary" style={{
+      margin: "12px 16px 0", border: `1px solid ${C.div}`, borderRadius: 14,
+      display: "flex", overflow: "hidden", background: C.white,
+    }}>
+      {/* ── Where it went, when, who, and what was in it ── */}
+      <div style={{ flex: 1, minWidth: 0, padding: "11px 12px" }}>
+        <div data-testid="read-route" style={{ display: "flex", minWidth: 0 }}>
+          <CityLine days={days} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 4, minWidth: 0 }}>
+          <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 12, color: C.sub, ...ellipsis }}>{dateLabel}</p>
+          <Party adults={adults} kids={kids} />
+        </div>
+        <div data-testid="read-included" style={{ display: "flex", alignItems: "center", gap: 11, marginTop: 10, flexWrap: "wrap" }}>
+          {INCLUDED.map(({ Icon, n, label }) => (
+            <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <Icon size={13} color={C.p600} strokeWidth={2.2} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.head }}>{n}</span>
+              <span style={{ fontSize: 11, color: C.sub }}>{label}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── What it came to ──
+          The price this trip sold at, with the tax in it, because a price
+          with the tax still to come is not a price. */}
+      <div style={{
+        width: 122, flexShrink: 0, background: "#FFF1F4", padding: "11px 11px",
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        alignItems: "flex-end", textAlign: "right",
+      }}>
+        <p style={{ margin: 0, fontSize: 9, fontWeight: 800, letterSpacing: "0.6px", textTransform: "uppercase", color: C.p600 }}>Total</p>
+        <p data-testid="read-total" style={{ margin: "2px 0 0", fontSize: 16.5, fontWeight: 800, color: C.head, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+          {money(total)}
+        </p>
+        <p style={{ margin: "3px 0 0", fontSize: 10.5, color: C.sub, lineHeight: "14px" }}>
+          {money(perPerson)}<br />per person
+        </p>
+        <button onClick={onBreakdown} style={{
+          marginTop: 7, padding: 0, border: "none", background: "none", color: C.p600,
+          fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          display: "inline-flex", alignItems: "center", gap: 1,
+        }}>
+          Breakdown <ChevronRight size={11} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Cities ───
 //
 // The route editor: order, nights, cities in and out, with the map a tap away.
@@ -742,7 +882,18 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   // The version's own answer wins, because that is where this screen's edits
   // are written; the built trip's figure is the fallback it started from.
-  const travellers = travelDates?.travelers ?? it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax);
+  const bookedTrip = useMemo(
+    () => (viewOnly ? BOOKED_TRIPS.find((t) => t.id === Number(id)) || null : null),
+    [viewOnly, id]
+  );
+  const booker = bookedTrip?.who || null;
+  // Who actually went. Most of these are two adults; a few are a family, and
+  // a trip with children on it prices for four, not two.
+  const readParty = bookedTrip
+    ? { adults: bookedTrip.adults ?? 2, kids: bookedTrip.kids ?? 0 }
+    : null;
+  const travellers = (viewOnly && bookedTrip?.travellers)
+    ?? travelDates?.travelers ?? it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax);
   // Explore: dates set inline (start + the trip's nights → range label).
   const exploreDateLabel = exploreStart ? (() => {
     const s = new Date(exploreStart);
@@ -925,10 +1076,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // first line on the page. The rail already knows who booked each one, so the
   // title says their name. If this trip is not on the rail, it drops the owner
   // rather than inventing one.
-  const booker = useMemo(
-    () => (viewOnly ? BOOKED_TRIPS.find((t) => t.id === Number(id))?.who || null : null),
-    [viewOnly, id]
-  );
   const tripTitle = viewOnly
     ? `${booker ? `${booker}'s ` : ""}${it?.dest} trip`
     : `Your ${it?.dest} Trip`;
@@ -1239,10 +1386,26 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   //   A stay sold out       the version stays a draft and the trip opens with
   //                         the hotel marked, because the decision is theirs
   //                         and the screen they make it on is this one.
-  const makeCopy = ({ startIso, adults, kids, swaps }) => {
-    const copy = copyOf(it, { startIso, adults, kids });
+  const makeCopy = ({ startIso, adults, kids, nights, swaps }) => {
+    const copy = copyOf(it, { startIso, adults, kids, nights, swaps });
     const travelers = adults + kids;
     const perPerson = Number(String(copy.price).replace(/,/g, "")) || 0;
+    // A stay that is gone comes back as the nearest equivalent in the same
+    // city, already in place. Handing somebody an itinerary with a hotel on it
+    // that cannot be booked, and a note saying so, is worse than swapping it
+    // and telling them what we swapped.
+    const selectedHotelsOnCopy = {};
+    (swaps || []).forEach(({ index, hotel }) => {
+      if (!hotel) return;
+      selectedHotelsOnCopy[index] = {
+        hotelId: hotel.id,
+        hotelName: hotel.name,
+        roomName: hotel.roomType,
+        image: hotel.images?.[0]?.url,
+        bookingScore: hotel.bookingScore,
+        stars: hotel.stars,
+      };
+    });
     const { dealId: newDeal, versionId: newVersion } = dealsCtx.createDeal({
       itineraryId: copy.id,
       dest: copy.dest,
@@ -1251,25 +1414,33 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       createdBy: "customer",
       customItinerary: copy,
       customizations: {
-        selectedDayOptions: {}, selectedHotels: {},
+        selectedDayOptions: {}, selectedHotels: selectedHotelsOnCopy,
         travelDates: { fromDate: startIso, nights: copy.nights, travelers },
         builtItinerary: copy,
       },
       indicativePrice: perPerson,
     });
-    const gone = swaps?.[0];
-    if (!gone) dealsCtx.requestPricing(newDeal, newVersion, perPerson);
+    // Nothing is left hanging now: the trip is complete on arrival, so it is
+    // priced like any other finished copy.
+    dealsCtx.requestPricing(newDeal, newVersion, perPerson);
     setCopyOpen(false);
     navigate(
-      `/itinerary/${copy.id}?dealId=${newDeal}&versionId=${newVersion}&copied=1${gone ? `&soldout=${gone.index}&soldcity=${encodeURIComponent(gone.city)}&soldname=${encodeURIComponent(gone.from)}` : "&saved=1"}`,
+      `/itinerary/${copy.id}?dealId=${newDeal}&versionId=${newVersion}&copied=1&saved=1`,
       { replace: true }
     );
   };
 
   // The copy lands on a screen that looks like any other plan, so it says once
-  // where it came from, and says it louder when a hotel had to move.
-  // Which stay, if any, the copy already knows is sold out.
-  const seededSoldOut = params.get("soldout") !== null ? Number(params.get("soldout")) : -1;
+  // where it came from, and says it again on each stay that had to move.
+  //
+  // The stays that moved ride on the trip itself. They used to ride in the
+  // address bar, which held exactly one of them; a four-city trip over New
+  // Year can lose two, and the second had nowhere to be said.
+  const swapped = it.hotelSwaps || [];
+  const swapFor = (i) => swapped.find((x) => x.index === i) || null;
+  // Each strip closes on its own, and nothing remembers it: this is a note
+  // about one arrival, not a setting.
+  const [swapsSeen, setSwapsSeen] = useState([]);
 
   const greeted = useRef(false);
   // ─── Keyed off the url, not off the mount ───
@@ -1279,28 +1450,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // an effect with no dependencies never runs again. Which is why the toast
   // only ever appeared on a hard reload. It watches the flag instead.
   const copiedFlag = params.get("copied");
-  const soldFlag = params.get("soldout");
   useEffect(() => {
     if (greeted.current || copiedFlag !== "1") return;
     greeted.current = true;
-    showToast(soldFlag !== null
-      ? "One hotel is sold out on your dates. Pick another, then save."
+    const moved = (it.hotelSwaps || []).length;
+    showToast(moved
+      ? `${moved === 1 ? "One hotel was" : `${moved} hotels were`} sold out on your dates, so we swapped ${moved === 1 ? "it" : "them"}.`
       : "Your itinerary is saved. Change anything and we will re-price it.");
     // A sold-out stay is the one thing on a new copy that needs them, so the
     // page goes to it rather than leaving the pulse to be found. A beat first,
     // so it scrolls over a page that has finished arriving.
-    if (soldFlag === null) return;
+    if (!moved) return;
     const t = setTimeout(() => {
       document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      // And the rail along to it. The stay that is gone is rarely the first
-      // card, and a pulse happening off the right edge is no help at all.
-      const card = document.querySelector(`[data-stay="${soldFlag}"]`);
+      // And the rail along to the first one. The stay that moved is rarely the
+      // first card, and a pulse happening off the right edge is no help at all.
+      const card = document.querySelector(`[data-stay="${it.hotelSwaps[0].index}"]`);
       const rail = card?.parentElement;
       if (card && rail) rail.scrollTo({ left: Math.max(0, card.offsetLeft - 16), behavior: "smooth" });
     }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [copiedFlag, soldFlag]);
+  }, [copiedFlag]);
 
   // How tall the bottom bar is right now. It changes as strips come and go, so
   // it is watched rather than read once.
@@ -1607,6 +1778,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </span>
             )}
           </p>
+          {/* Not on somebody else's trip. The screen has one thing to do on
+              it, and a second control in the hero competes with it for no
+              reason: a trip being read is read, not played. */}
+          {!viewOnly && (
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
@@ -1617,6 +1792,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>Watch the trip</span>
             </button>
           </div>
+          )}
         </div>
       </div>
 
@@ -1642,38 +1818,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           caret and the press: there is nothing here to set, so nothing here
           says it can be. */}
       {viewOnly ? (
-        <div style={{ padding: "12px 16px 4px" }}>
-          {(() => {
-            const box = {
-              display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0,
-              padding: "8px 11px", borderRadius: 10,
-              border: `1px solid ${C.div}`, background: C.bg, textAlign: "left",
-            };
-            const value = (t) => (
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t}</span>
-            );
-            return (
-              <>
-                <div style={{ display: "flex" }}>
-                  <div style={{ ...box, flex: 1 }}>
-                    <MapPin size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                    <CityLine days={it.days} />
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  <div style={box}>
-                    <Calendar size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                    {value(viewDateLabel)}
-                  </div>
-                  <div style={box}>
-                    <Users size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                    {value(`${travellers} traveller${travellers > 1 ? "s" : ""}`)}
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
+        <ReadSummary
+          days={it.days}
+          plans={daysWithActivities}
+          party={readParty}
+          dateLabel={viewDateLabel}
+          travellers={travellers}
+          nights={it.nights}
+          stays={hotels.length}
+          total={grandTotal}
+          onBreakdown={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        />
       ) : wizardEditable ? (
         <div style={{ padding: "12px 16px 4px" }}>
           {/* ─── Three fields, one language ───
@@ -1909,7 +2064,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             const ls = stayState(liveResult, i);
             // Either the live check found it, or the copy arrived knowing the
             // stay was gone on these dates. Same badge, same way out.
-            const soldOut = (ls && ls.status === "sold_out") || seededSoldOut === i;
+            const soldOut = ls && ls.status === "sold_out";
+            // A stay the copy arrived having already replaced. The card shows
+            // the hotel that is on the trip; the strip under it says which one
+            // it stands in for.
+            const swap = swapFor(i);
+            const swapOpen = !!swap && !swapsSeen.includes(i);
             if (selfBooked) {
               return (
                 <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
@@ -1933,7 +2093,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               // the way in and then left; this is what is still saying it
               // afterwards, so nobody has to remember which city it was.
               borderRadius: 14,
-              animation: seededSoldOut === i ? "soldPulse 1.7s ease-out 4" : undefined,
+              animation: swapOpen ? "soldPulse 1.7s ease-out 4" : undefined,
             }}>
               <HotelStayCard
                 image={h.img}
@@ -1952,6 +2112,24 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}${viewOnly ? "&view=1" : ""}`}
                 footer={
                   <>
+                    {swapOpen && (
+                      <div data-testid={`hotel-swapped-${i}`} style={{
+                        display: "flex", alignItems: "flex-start", gap: 7, marginTop: 8,
+                        background: "#FFFAEB", border: "1px solid #FEDF89", borderRadius: 9, padding: "7px 8px 7px 9px",
+                      }}>
+                        <ArrowLeftRight size={12} color="#B54708" strokeWidth={2.3} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, lineHeight: "16px", color: "#93370D", fontWeight: 600 }}>
+                          {swap.from} is sold out on your dates. We put this one in its place.
+                        </span>
+                        <button
+                          aria-label="Dismiss"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSwapsSeen((prev) => [...prev, i]); }}
+                          style={{ flexShrink: 0, border: "none", background: "none", padding: 0, cursor: "pointer", display: "flex", marginTop: 1 }}
+                        >
+                          <XIcon size={13} color="#B54708" />
+                        </button>
+                      </div>
+                    )}
                     {ls?.status === "price_up" && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFF4ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "6px 8px", marginTop: 4 }}>
                         <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
@@ -2361,7 +2539,32 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           />
         )}
 
-        {/* Price + CTA row */}
+        {/* ═══ The one thing to do with somebody else's trip ═══
+            A capsule floating over the page, the shape the day plan uses, not
+            a bar: a white strip across the bottom of a screen that is being
+            read is a second surface competing with the one being read. Pink,
+            because it is the only action on the screen, and the icon keeps a
+            slow beat so the corner stays live. */}
+        {viewOnly && (
+          <div style={{ padding: "0 16px calc(16px + env(safe-area-inset-bottom))", pointerEvents: "none" }}>
+            <button data-testid="use-this-trip" onClick={() => setCopyOpen(true)} style={{
+              width: "100%", pointerEvents: "auto",
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
+              padding: "16px 0", borderRadius: 999, border: "none",
+              background: C.p600, color: "#fff", fontSize: 15.5, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+              boxShadow: "0 12px 30px -8px rgba(227,27,83,0.55)",
+            }}>
+              <span style={{ display: "inline-flex", animation: "recreateSpark 2.4s ease-in-out infinite" }}>
+                <Sparkles size={17} />
+              </span>
+              Recreate this trip
+            </button>
+          </div>
+        )}
+
+        {/* Price + CTA row. */}
+        {!viewOnly && (
         <div style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", borderTop: `1px solid ${C.div}` }}>
         {fetchingPrice ? (
           <div data-testid="price-loader" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "2px 0" }}>
@@ -2371,27 +2574,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>{FETCH_MSGS[fetchMsgIdx % FETCH_MSGS.length]}</p>
             </div>
           </div>
-        ) : viewOnly ? (
-          /* ─── Somebody else's trip, and the one thing to do with it ───
-             The price it sold at, with tax in it, because a price with the tax
-             still to come is not a price. Then the PDF, which carries no names,
-             and the button this whole screen exists for. */
-          <>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 11, color: C.sub, whiteSpace: "nowrap" }}>Total</p>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: C.head }}>₹{grandTotal.toLocaleString("en-IN")}</p>
-              <p style={{ margin: "2px 0 0", fontSize: 10.5, color: C.inact, whiteSpace: "nowrap" }}>incl. GST &amp; TCS</p>
-            </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button data-testid="view-only-pdf" onClick={handleDownloadPdf} aria-label="Download PDF" style={{ display: "flex", alignItems: "center", gap: 5, padding: "12px 13px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white, color: "#027A48", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                <Download size={15} /> PDF
-              </button>
-              <button data-testid="use-this-trip" onClick={() => setCopyOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 15px", borderRadius: 12, border: "none", background: C.p600, color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(227,27,83,0.3)" }}>
-                <Sparkles size={14} /> Recreate this trip
-              </button>
-            </div>
-          </>
-        ) : !inDeal ? (
+        ) : viewOnly ? null : !inDeal ? (
+
           /* Explore itinerary - no quote/PDF; just start planning. */
           <>
             <div>
@@ -2481,6 +2665,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </>
         )}
         </div>
+        )}
       </div>
 
       {/* ═══ Stories-Style Video Viewer ═══ */}
@@ -2873,6 +3058,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <BuildingScreen
           frame={overlayFrame}
           dest={it.dest}
+          cities={tripRoute.map((r) => r.city)}
           reason={building.reason}
           summary={building.summary}
           onDone={() => { const run = building.run; setBuilding(null); run(); }}
