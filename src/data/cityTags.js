@@ -1,4 +1,4 @@
-import { allItineraries } from "../data";
+import { allItineraries, destData } from "../data";
 import { destAreas, areaImg } from "./buildData";
 import { cityVibes } from "./dayOptions";
 import { activityKind, KIND_TONE } from "./activityKind";
@@ -137,8 +137,18 @@ export function cityPhotos(dest, city, limit = 4) {
   if (PHOTOS.has(key)) return PHOTOS.get(key);
   const areas = destAreas[dest] || [];
   const i = Math.max(0, areas.findIndex((a) => a.city === city));
-  const pool = [];
-  for (let k = 0; k < limit; k += 1) pool.push(areaImg(dest, city, i + k));
+  // areaImg answers with the city's own stay-area photograph whenever we
+  // hold one, and ignores the index while doing it, so asking four times
+  // used to return the same frame four times and the reel had nothing to
+  // swipe. The city's own photograph leads, then the destination's pool
+  // fills in behind it, offset by where this city sits in the list so two
+  // cities never open on the same picture.
+  const own = areaImg(dest, city, i);
+  const pool = [own];
+  const spread = (destData[dest]?.actImgs || []).length || 1;
+  for (let k = 1; k < limit + 3 && pool.length < limit + 3; k += 1) {
+    pool.push((destData[dest]?.actImgs || [])[(i * 3 + k) % spread]);
+  }
   const out = [...new Set(pool.filter(Boolean))].slice(0, limit);
   PHOTOS.set(key, out);
   return out;

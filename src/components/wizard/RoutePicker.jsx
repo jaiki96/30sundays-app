@@ -561,7 +561,19 @@ function RegionSheet({ dest, city, added, onAdd, onClose }) {
 // `title` is the step's question. The itinerary screen opens this same picker
 // as its own screen with its own header bar, so there it passes none and keeps
 // one title on the screen instead of two saying the same thing.
-export default function RoutePicker({ dest, nights, route, setRoute, nudge, title = "Choose the cities you want to visit" }) {
+export default function RoutePicker({
+  dest, nights, route, setRoute, nudge,
+  title = "Choose the cities you want to visit",
+  // What happens to the cities once they are chosen. True in the wizard,
+  // where the order and the nights are ours; the route chooser overrides it,
+  // because there the next screen hands the order back.
+  nightsNote = "We'll set the order and nights. You can customise them once your itinerary is created.",
+  // The "too much to see" warning compares the cities against the trip's
+  // length. Off where the cities being picked are a pool to draw routes
+  // from rather than the route itself, because then the length is not yet
+  // a thing they are deciding.
+  showFit = true,
+}) {
   const areas = useMemo(() => destAreas[dest] || [], [dest]);
   // The region page opens over the step rather than navigating to it. Leaving
   // the wizard loses every answer given so far, and reading about Ubud is not
@@ -857,7 +869,7 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
           padding: `10px ${PAD}px 12px`,
           boxShadow: "0 -2px 10px rgba(24,29,39,0.05)",
         }}>
-          {note.kind === "over" && (
+          {showFit && note.kind === "over" && (
             <p style={{
               margin: "0 0 9px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               fontSize: 12.5, fontWeight: 700, color: "#B54708", textAlign: "center",
@@ -890,7 +902,7 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
           {/* The order and the nights are ours. Said once, under the cities,
               with where it can be changed, so nobody looks for it here. */}
           <p data-testid="route-note" style={{ margin: "7px 2px 0", fontSize: 10.5, lineHeight: "14px", color: C.sub }}>
-            We'll set the order and nights. You can customise them once your itinerary is created.
+            {nightsNote}
           </p>
         </div>
       )}

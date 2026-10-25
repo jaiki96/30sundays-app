@@ -30,7 +30,7 @@ import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import SectionNav from "../components/SectionNav";
-import RouteEditor from "../components/route/RouteEditor";
+import RouteChooser from "../components/route/RouteChooser";
 import DateRange from "../components/wizard/DateRange";
 import { buildDayMeta, routeNights, respread, destMeta, synthesizeItinerary } from "../data/buildData";
 import SaveVersionNote from "../components/SaveVersionNote";
@@ -1645,9 +1645,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 {travellers} traveller{travellers > 1 ? "s" : ""}
               </span>
             )}
-            {/* Version badge only once the itinerary is created (priced) */}
+            {/* Which version this is, beside the heart. A trip that has been
+                rebuilt a few times has several, and the number is how
+                somebody tells the one they are reading from the one they
+                remember. Only once it is priced: before that there is
+                nothing to be a second version of. */}
             {quoted && (
-              <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
+              <span style={{
+                fontSize: 12, fontWeight: 800, color: "#fff",
+                background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)",
+                backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4,
+              }}>
                 V{version.num}
               </span>
             )}
@@ -1711,10 +1719,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               its dates and no wider, so there is no gap between the value
               and its pencil to explain.
 
-              The nights are off this line. Four of them cost about sixty
-              pixels, which is the difference between naming every city and
-              counting most of them, and they are on every day card below
-              and on every row of the route screen itself.
+              The nights are on this line. Four of them cost about sixty
+              pixels, which can be the difference between naming every city
+              and counting most of them, but how long a trip spends in each
+              place is half of what the route is.
 
               The party is not here either. It is set when the trip is
               enquired for and moved by the consultant, so it reads up in the
@@ -1735,7 +1743,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   style={{ ...box, flex: "1 1 100%" }}
                 >
                   <MapPin size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                  <CityLine days={it.days} nights={false} />
+                  <CityLine days={it.days} />
                   <Pencil size={13} color={C.p600} style={{ flexShrink: 0 }} />
                 </button>
                 <button
@@ -2926,16 +2934,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         />
       )}
       {citiesScreen && (
-        <RouteEditor
+        <RouteChooser
           dest={it.dest}
           route={tripRoute}
-          startDate={tripStart}
+          nights={it.nights}
+          startOnCities
           frame={overlayFrame}
           buildOnSave={false}
           onSave={applyCities}
+          // Nothing we can fly links the cities they want. The consultant
+          // can, so the screen hands them over rather than ending there.
+          onSupport={() => { setCitiesScreen(false); pointAt("consultant", null); }}
           onClose={() => setCitiesScreen(false)}
         />
       )}
+
       {customiseOpen && (
         <CustomisePicker frame={overlayFrame} onPick={customise} onClose={() => setCustomiseOpen(false)} />
       )}

@@ -61,6 +61,7 @@ import ReadSummaryLab from "./pages/ReadSummaryLab";
 import TripHeaderLab from "./pages/TripHeaderLab";
 import TripEditLab from "./pages/TripEditLab";
 import TripChipLab from "./pages/TripChipLab";
+import RouteChooserLab from "./pages/RouteChooserLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -236,6 +237,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/trip-header-lab" element={<TripHeaderLab />} />
         <Route path="/trip-edit-lab" element={<TripEditLab />} />
         <Route path="/trip-chip-lab" element={<TripChipLab />} />
+        <Route path="/route-chooser-lab" element={<RouteChooserLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
