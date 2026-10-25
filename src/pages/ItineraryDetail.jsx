@@ -174,8 +174,8 @@ function FlightLegRow({ f }) {
 const CITY_FONT = '700 13px Figtree, system-ui, sans-serif';
 const SEP = "  \u00b7  ";
 
-function fitCities(days, px) {
-  const parts = days.map((d) => `${d.city} ${d.n}N`);
+function fitCities(days, px, nights = true) {
+  const parts = days.map((d) => (nights ? `${d.city} ${d.n}N` : d.city));
   if (!parts.length) return "";
   if (!px) return parts.join(SEP);
   const cv = fitCities.cv || (fitCities.cv = document.createElement("canvas"));
@@ -191,7 +191,7 @@ function fitCities(days, px) {
   return `${parts.length} cities`;
 }
 
-function CityLine({ days }) {
+function CityLine({ days, nights = true }) {
   const box = useRef(null);
   const [px, setPx] = useState(0);
   useEffect(() => {
@@ -207,7 +207,7 @@ function CityLine({ days }) {
   return (
     <span ref={box} style={{ flex: 1, minWidth: 0, display: "block", overflow: "hidden" }}>
       <span style={{ fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>
-        {fitCities(days, px)}
+        {fitCities(days, px, nights)}
       </span>
     </span>
   );
@@ -260,161 +260,11 @@ function Sheet({ title, sub, onClose, children, frame }) {
 
 // ─── Travellers ───
 //
-// The wizard's own travellers screen, opened on its own rather than as step two
-// of five: the same four choices, the same stepper behind "4 or More Adults",
-// the same notes when the answer is one we cannot plan for. The only thing left
-// out is the name field, which is lead capture and was captured when the trip
-// was created.
-//
-// The blocked answers are kept deliberately. 30 Sundays plans for couples, so
-// one traveller, three travellers and a party with children are all real things
-// somebody will tap and all three need to be told why, not quietly prevented.
-// Save stays disabled while one of them is showing.
-const PARTY_NOTE = {
-  odd: {
-    body: "Right now, 30 Sundays only plans trips for couples, so the group needs an even number of travellers.",
-    close: "Pick an even number and let's plan something unforgettable. 💕",
-  },
-  kids: {
-    body: "Right now, 30 Sundays is exclusively crafted for couples, romantic getaways, sunset dinners for two, that kind of magic. We don't have kids' itineraries yet, but we're working on it!",
-    close: "For now, maybe plan a couples-only escape? You deserve it. 💕",
-  },
-  solo: {
-    body: "Right now, 30 Sundays is exclusively crafted for couples, so we don't have solo itineraries yet. We're working on it!",
-    close: "Grab a partner and let's plan something unforgettable together. 💕",
-  },
-};
-const PARTY_COUNTS = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+// The screen that set them is gone with the control that opened it. Who is
+// going is decided when the trip is enquired for and moved by the consultant,
+// so on the itinerary it is a fact in the hero rather than a field. The
+// wizard still asks the question, and its own screen is the one that asks it.
 
-// A saved trip stores a count; this screen thinks in the wizard's shape.
-const partyFrom = (n) => (n === 2
-  ? { couples: 1, adults: 0, kids: 0, solo: false }
-  : n === 1
-    ? { couples: 0, adults: 1, kids: 0, solo: true }
-    : { couples: 0, adults: n, kids: 0, solo: false });
-
-function PartyScreen({ value, onPick, onClose, frame }) {
-  const [party, setParty] = useState(() => partyFrom(value));
-  const [countOpen, setCountOpen] = useState(false);
-
-  const isGroup = party.couples === 0 && party.kids === 0 && !party.solo;
-  const kidsBlocked = party.kids > 0;
-  const soloBlocked = !!party.solo;
-  const oddBlocked = isGroup && party.adults % 2 !== 0;
-  const blocked = kidsBlocked || soloBlocked || oddBlocked;
-  const note = soloBlocked ? PARTY_NOTE.solo : kidsBlocked ? PARTY_NOTE.kids : oddBlocked ? PARTY_NOTE.odd : null;
-  const count = party.couples === 1 ? 2 : party.adults;
-
-  const cards = [
-    { key: "couple", emoji: "💑", label: "2 Adults", on: party.couples === 1 && !kidsBlocked && !soloBlocked },
-    { key: "group", emoji: "👯", label: "4 or More Adults", on: isGroup },
-    { key: "kids", emoji: "👨‍👩‍👧", label: "Adults with Children", on: kidsBlocked },
-    { key: "solo", emoji: "🧍", label: "Solo Traveller", on: soloBlocked },
-  ];
-  const pick = (key) => {
-    if (key === "kids") setParty({ couples: 1, adults: 0, kids: 1, solo: false });
-    else if (key === "solo") setParty({ couples: 0, adults: 1, kids: 0, solo: true });
-    else if (key === "couple") setParty({ couples: 1, adults: 0, kids: 0, solo: false });
-    else setParty({ couples: 0, adults: Math.max(4, party.adults || 4), kids: 0, solo: false });
-  };
-
-  return (
-    <div style={{ ...frame, zIndex: 170, background: C.white, display: "flex", flexDirection: "column" }}>
-      <div style={{
-        flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
-        padding: "calc(12px + env(safe-area-inset-top)) 14px 10px",
-        borderBottom: `1px solid ${C.div}`, background: C.white,
-      }}>
-        <button onClick={onClose} aria-label="Close" style={{
-          width: 34, height: 34, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white,
-          display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
-        }}><XIcon size={17} color={C.head} /></button>
-        <h1 style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
-          Who is Travelling?
-        </h1>
-      </div>
-
-      <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "16px 16px 24px" }}>
-        <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>
-          Select number of travellers
-        </label>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-          {cards.map((c) => (
-            <div key={c.key}>
-              <button onClick={() => pick(c.key)} style={{
-                display: "flex", alignItems: "center", gap: 13, padding: 16, borderRadius: 14, width: "100%",
-                border: c.on ? `2px solid ${C.p600}` : `1px solid ${C.div}`,
-                background: c.on ? C.p100 : C.white, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-              }}>
-                <span style={{ fontSize: 26 }}>{c.emoji}</span>
-                <span style={{ flex: 1, fontSize: 16, fontWeight: 700, color: c.on ? C.p600 : C.head }}>{c.label}</span>
-                {c.on && <Check size={20} color={C.p600} strokeWidth={2.5} />}
-              </button>
-              {c.key === "group" && isGroup && (
-                <div style={{ marginTop: 10, border: `1px solid ${C.div}`, borderRadius: 14, animation: "fadeUp 0.2s ease-out" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>Travellers</span>
-                    <div style={{ position: "relative" }}>
-                      <button onClick={() => setCountOpen((v) => !v)} style={{
-                        display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10,
-                        background: C.white, border: `1.5px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit",
-                        minWidth: 64, justifyContent: "center",
-                      }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>{party.adults}</span>
-                        <ChevronDown size={14} color={C.head} style={{ transition: "transform 0.2s", transform: countOpen ? "rotate(180deg)" : "none" }} />
-                      </button>
-                      {countOpen && (
-                        <div style={{
-                          position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 50, background: C.white,
-                          borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                          overflow: "auto", width: 80, maxHeight: 240,
-                        }}>
-                          {PARTY_COUNTS.map((n, i) => (
-                            <button key={n} onClick={() => { setParty((pp) => ({ ...pp, adults: n })); setCountOpen(false); }} style={{
-                              display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "12px 0",
-                              background: n === party.adults ? C.p100 : C.white, border: "none", cursor: "pointer",
-                              fontFamily: "inherit", borderBottom: i < PARTY_COUNTS.length - 1 ? `1px solid ${C.div}` : "none",
-                              fontSize: 15, fontWeight: n === party.adults ? 700 : 500, color: n === party.adults ? C.p600 : C.head,
-                            }}>{n}</button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {note && (
-          <div style={{
-            marginTop: 14, padding: 16, borderRadius: 14,
-            background: "linear-gradient(135deg, #FFF5F0 0%, #FFE4E8 100%)",
-            border: "1px solid rgba(254,163,180,0.27)", animation: "fadeUp 0.3s ease-out",
-          }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#89123E", margin: "0 0 4px" }}>We&apos;re so sorry! 😔</p>
-            <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>{note.body}</p>
-            <p style={{ fontSize: 13, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>{note.close}</p>
-          </div>
-        )}
-      </div>
-
-      <div style={{
-        flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white,
-        padding: "10px 16px calc(12px + env(safe-area-inset-bottom))",
-      }}>
-        <button onClick={() => { onPick(count); onClose(); }} disabled={blocked} style={{
-          width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-          background: blocked ? C.div : C.p600, color: blocked ? C.inact : "#fff",
-          fontSize: 15, fontWeight: 700, cursor: blocked ? "not-allowed" : "pointer", fontFamily: "inherit",
-        }}>
-          {blocked ? "Pick a party we can plan for" : `Save ${count} traveller${count > 1 ? "s" : ""}`}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Travel dates ───
 //
@@ -772,7 +622,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [showTripSheet, setShowTripSheet] = useState(false);
   // The three facts, each edited where it is read, plus one picker that reaches
   // all five changeable things from anywhere on the page.
-  const [paxSheet, setPaxSheet] = useState(false);
   const [dateSheet, setDateSheet] = useState(false);
   const [citiesScreen, setCitiesScreen] = useState(false);
   const [customiseOpen, setCustomiseOpen] = useState(false);
@@ -1007,7 +856,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   };
 
   // A different party: rooms, prices and the plan built for it.
-  const applyPax = (n) => startBuild("travellers", `${n} traveller${n > 1 ? "s" : ""}`, () => rebuild(tripRoute, tripStart, n));
 
   // ─── Scroll to a control and point at it ───
   //
@@ -1781,6 +1629,22 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 <Heart size={16} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
               </button>
             )}
+            {/* ─── Who is going ───
+                A fact, not a field: the party is set when the trip is
+                enquired for and moved by the consultant. It sits here, on
+                the photo beside the nights, because nothing up here can be
+                tapped and that is exactly what needs saying about it. No
+                chip around it either: a pill is the shape of a control, and
+                this is a line of information. */}
+            {!viewOnly && (
+              <span data-testid="hero-party" style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.92)", whiteSpace: "nowrap",
+              }}>
+                <Users size={13} color="rgba(255,255,255,0.92)" />
+                {travellers} traveller{travellers > 1 ? "s" : ""}
+              </span>
+            )}
             {/* Version badge only once the itinerary is created (priced) */}
             {quoted && (
               <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
@@ -1788,21 +1652,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               </span>
             )}
           </p>
-          {/* Not on somebody else's trip. The screen has one thing to do on
-              it, and a second control in the hero competes with it for no
-              reason: a trip being read is read, not played. */}
-          {!viewOnly && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
-              display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
-              background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)",
-              backdropFilter: "blur(8px)", cursor: "pointer",
-            }}>
-              <Play size={12} color="#fff" fill="#fff" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>Watch the trip</span>
-            </button>
-          </div>
-          )}
+          {/* No play button here. Every day card below carries its own
+              videos, which is where somebody looking for them is already
+              looking, and a control in the hero only competes with the one
+              thing the screen is for. */}
         </div>
       </div>
 
@@ -1841,73 +1694,60 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         />
       ) : wizardEditable ? (
         <div style={{ padding: "12px 16px 4px" }}>
-          {/* ─── Three fields, one language ───
-              Cities, dates and travellers are the three answers this trip was
-              built from, so they are set the way answers are set: a field each
-              with the value in it. Labels, pencils and a heading all came and
-              went; what makes a thing look changeable is that it looks like
-              something a value was typed into.
+          {/* ─── Two boxes, two doors ───
+              The route and the dates are the two answers still open on a
+              trip that exists, and changing either one sends it back through
+              the builder. So they are the same shape twice: an outlined box
+              each, an icon to say which is which, and a pencil to say it can
+              be changed.
 
-              The cities field runs full width because the nights belong in it.
-              "3 cities" is shorter and tells a couple nothing, and the whole
-              point of the line is to say where the week goes. It ends in a
-              same caret as the other two: all three are fields that open
-              something, and which kind of something it opens is not a
-              distinction worth two different arrows. */}
+              Outlined, not filled. A box only needs an edge to stop being a
+              stretch of nothing, and two grey blocks above the day plan is
+              more weight than two facts deserve.
+
+              Each box ends where its content ends. The route takes the full
+              line, because beside the dates a four-city route has room for
+              one city and a count of the rest; the dates box is as wide as
+              its dates and no wider, so there is no gap between the value
+              and its pencil to explain.
+
+              The nights are off this line. Four of them cost about sixty
+              pixels, which is the difference between naming every city and
+              counting most of them, and they are on every day card below
+              and on every row of the route screen itself.
+
+              The party is not here either. It is set when the trip is
+              enquired for and moved by the consultant, so it reads up in the
+              photo beside the nights, where nothing else is tappable. */}
           {(() => {
-            const field = ({ key, Icon, text, days, aria, Caret, wide, go, tour }) => (
-              <button
-                key={key}
-                data-tour={tour}
-                onClick={go}
-                aria-label={aria}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0,
-                  flex: wide ? 1 : "0 0 auto",
-                  padding: "8px 9px 8px 11px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-                  border: `1px solid ${C.div}`, background: C.bg, textAlign: "left",
-                }}
-              >
-                <Icon size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                {days
-                  ? <CityLine days={days} />
-                  : <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{text}</span>}
-                <Caret size={14} color={C.sub} style={{ flexShrink: 0, marginLeft: 1 }} />
-              </button>
-            );
+            const box = {
+              display: "flex", alignItems: "center", gap: 8, minWidth: 0,
+              padding: "9px 10px", borderRadius: 10,
+              background: C.white, border: `1px solid ${C.div}`,
+              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+            };
             return (
-              <>
-                <div style={{ display: "flex" }}>
-                  {field({
-                    key: "cities",
-                    Icon: MapPin,
-                    days: it.days,
-                    aria: "Change cities",
-                    Caret: ChevronDown,
-                    wide: true,
-                    go: () => setCitiesScreen(true),
-                    tour: "edit",
-                  })}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  {field({
-                    key: "dates",
-                    Icon: Calendar,
-                    text: dateLabel,
-                    aria: "Change travel dates",
-                    Caret: ChevronDown,
-                    go: () => setDateSheet(true),
-                  })}
-                  {field({
-                    key: "pax",
-                    Icon: Users,
-                    text: `${travellers} traveller${travellers > 1 ? "s" : ""}`,
-                    aria: "Change travellers",
-                    Caret: ChevronDown,
-                    go: () => setPaxSheet(true),
-                  })}
-                </div>
-              </>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <button
+                  data-tour="edit"
+                  onClick={() => setCitiesScreen(true)}
+                  aria-label="Change cities"
+                  style={{ ...box, flex: "1 1 100%" }}
+                >
+                  <MapPin size={14} color={C.sub} style={{ flexShrink: 0 }} />
+                  <CityLine days={it.days} nights={false} />
+                  <Pencil size={13} color={C.p600} style={{ flexShrink: 0 }} />
+                </button>
+                <button
+                  onClick={() => setDateSheet(true)}
+                  aria-label="Change travel dates"
+                  style={{ ...box, flex: "0 0 auto" }}
+                >
+                  <Calendar size={14} color={C.sub} style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>{dateLabel}</span>
+                  <Pencil size={13} color={C.p600} style={{ flexShrink: 0 }} />
+                </button>
+              </div>
             );
           })()}
         </div>
@@ -3073,9 +2913,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           summary={building.summary}
           onDone={() => { const run = building.run; setBuilding(null); run(); }}
         />
-      )}
-      {paxSheet && (
-        <PartyScreen value={travellers} frame={overlayFrame} onPick={applyPax} onClose={() => setPaxSheet(false)} />
       )}
       {dateSheet && (
         <DateScreen
