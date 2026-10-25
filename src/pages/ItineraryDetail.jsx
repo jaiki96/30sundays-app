@@ -892,8 +892,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const readParty = bookedTrip
     ? { adults: bookedTrip.adults ?? 2, kids: bookedTrip.kids ?? 0 }
     : null;
+  // A trip being read knows who actually went; everything else falls through
+  // the usual chain. Written as a ternary on purpose: `(viewOnly && x) ?? y`
+  // yields `false` whenever viewOnly is false, because ?? only steps past
+  // null and undefined, and `false` multiplied into every price is a trip
+  // that costs nothing.
   const travellers = (viewOnly && bookedTrip?.travellers)
-    ?? travelDates?.travelers ?? it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax);
+    ? bookedTrip.travellers
+    : (travelDates?.travelers ?? it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax));
   // Explore: dates set inline (start + the trip's nights → range label).
   const exploreDateLabel = exploreStart ? (() => {
     const s = new Date(exploreStart);
