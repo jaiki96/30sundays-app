@@ -25,6 +25,11 @@ import NextStepNote from "../components/NextStepNote";
 import MonthWeather from "../components/MonthWeather";
 import DateRange from "../components/wizard/DateRange";
 import RoutePicker from "../components/wizard/RoutePicker";
+import { BuildingView } from "./Generating";
+
+// How long the wait screen holds before the itinerary opens. The real build
+// takes about a minute; this is a preview of it, long enough to read.
+const BUILD_WAIT = 6000;
 
 // Steps: 0 Destination · 1 Party · 2 When · 3 Cities · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
@@ -300,7 +305,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       // Skip the reveal: drop straight onto the itinerary screen. Replace so
       // Back from the itinerary doesn't return into the half-built wizard.
       navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
-    }, 1400);
+    }, BUILD_WAIT);
   };
 
   // Mobile OTP verification before the itinerary is created (non-skippable).
@@ -327,7 +332,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       else if (tier) qs.set("tier", tier);
       if (mealPrefs.size) qs.set("meal", [...mealPrefs].join(","));
       navigate(`/maldives-quote?${qs.toString()}`, { replace: true });
-    }, 1400);
+    }, BUILD_WAIT);
   };
 
   // ─── Save the sequential edit → fork a new version (no confirmation) ───
@@ -482,7 +487,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   }
 
   if (leadRedirect) return null;
-  if (building) return <Building dest={dest} />;
+  if (building) return <Building dest={dest} cities={(route || []).map((r) => r.city)} />;
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.white }}>
@@ -1552,19 +1557,15 @@ function ActivityReel({ a, dest, on, onToggle, onClose }) {
 }
 
 // ════════════════════ Building ════════════════════
-function Building({ dest }) {
-  const msgs = ["Mapping your route…", "Picking your stays…", "Slotting in your experiences…", "Pricing it up…"];
-  const [i, setI] = useState(0);
-  useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % msgs.length), 380); return () => clearInterval(t); }, []);
+// The same wait the itinerary shows when a trip is built again: a countdown,
+// the five areas it works through, what goes into every trip, and reels from
+// the destination. The real build takes about a minute, which is what the
+// countdown says; the prototype lands on the itinerary after a few seconds,
+// so the screen is a preview of the wait rather than the whole of it.
+function Building({ dest, cities = [] }) {
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.white, padding: 30 }}>
-      <div style={{ position: "relative", width: 70, height: 70 }}>
-        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.p100}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite" }} />
-        <Sparkles size={28} color={C.p600} style={{ position: "absolute", top: 21, left: 21 }} />
-      </div>
-      <p style={{ margin: "22px 0 0", fontSize: 17, fontWeight: 800, color: C.head }}>Building your {dest} trip</p>
-      <p style={{ margin: "6px 0 0", fontSize: 14, color: C.sub }}>{msgs[i]}</p>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.bg }}>
+      <BuildingView dest={dest} cities={cities} />
     </div>
   );
 }
