@@ -33,6 +33,7 @@ import SectionNav from "../components/SectionNav";
 import RouteChooser from "../components/route/RouteChooser";
 import DateRange from "../components/wizard/DateRange";
 import { buildDayMeta, routeNights, respread, destMeta, synthesizeItinerary } from "../data/buildData";
+import { hop } from "../data/routeBuilder";
 import SaveVersionNote from "../components/SaveVersionNote";
 import BuildingScreen from "../components/BuildingScreen";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
@@ -343,54 +344,16 @@ function DateScreen({ dest, value, nights, minNights, onPick, onClose, frame }) 
 // The rail is tinted rather than titled. A block of colour in the corner
 // where a price lives is read as the price without a heading saying so.
 //
-// Who went is drawn rather than written. "2 travellers" is a sentence to
-// read; two figures are a glance, and a trip with a child on it says so
-// without a second clause.
+// What is deliberately not here: the dates they went and how many of them
+// there were. This is somebody else's trip, read by a stranger, and the
+// week they travelled and who they travelled with is theirs, not ours to
+// publish. None of it helps anybody decide whether to take the trip.
 //
-// The full cost split is not repeated here. It is one section further down,
-// it is six lines long, and a summary that reprints the thing it summarises
-// is not a summary.
+// The full cost split is not repeated here either. It is one section
+// further down, it is six lines long, and a summary that reprints the thing
+// it summarises is not a summary.
 
-// Who is going, as figures. Past six of anything the row turns into a count:
-// eight little heads is a crowd to be deciphered, not read.
-function Party({ adults, kids }) {
-  const size = 18;
-  const dot = (bg) => ({
-    width: size, height: size, borderRadius: "50%", background: bg,
-    display: "grid", placeItems: "center", flexShrink: 0,
-    marginLeft: -6, border: `1.5px solid ${C.white}`,
-  });
-  // Past six of anything the row turns into a count: eight little heads is a
-  // crowd to be deciphered, not read.
-  const many = adults > 4 || kids > 4;
-  const title = kids
-    ? `${adults} adult${adults === 1 ? "" : "s"}, ${kids} child${kids === 1 ? "" : "ren"}`
-    : `${adults} traveller${adults === 1 ? "" : "s"}`;
-  return (
-    <span data-testid="read-party" title={title} aria-label={title} style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-      {many ? (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, color: C.head }}>
-          <Users size={13} color={C.sub} />
-          {adults}{kids ? ` + ${kids}` : ""}
-        </span>
-      ) : (
-        // The figures carry the count on their own: four heads is four, and
-        // two of them amber is two children. A number beside them says the
-        // same thing twice and costs the dates their year.
-        <span style={{ display: "flex", paddingLeft: 6 }}>
-          {Array.from({ length: Math.max(1, adults) }).map((_, i) => (
-            <span key={`a${i}`} style={dot(C.p100)}><User size={10} color={C.p600} strokeWidth={2.5} /></span>
-          ))}
-          {Array.from({ length: kids }).map((_, i) => (
-            <span key={`k${i}`} style={dot("#FEF0C7")}><Baby size={10} color="#B54708" strokeWidth={2.5} /></span>
-          ))}
-        </span>
-      )}
-    </span>
-  );
-}
-
-function ReadSummary({ days = [], plans = [], dateLabel, travellers, party, nights, stays, total, onBreakdown }) {
+function ReadSummary({ days = [], plans = [], travellers, stays, flights, total, onBreakdown }) {
   // Counted off the day plans, not off the stays: a stay is a city and a
   // number of nights, and what happens inside it lives on the days.
   const counts = (() => {
@@ -405,39 +368,38 @@ function ReadSummary({ days = [], plans = [], dateLabel, travellers, party, nigh
     return { activities, transfers: transfers + 2 };
   })();
 
-  const kids = party?.kids || 0;
-  const adults = Math.max(1, (party ? (party.couples || 0) * 2 + (party.adults || 0) : travellers - kids) || travellers);
   const perPerson = travellers > 0 ? Math.round(total / travellers) : total;
   const money = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
+  // No nights here. The title above this says how long the trip is, and the
+  // route beside it says how those nights were spent, so a third count of
+  // them is the same fact for the third time in two inches.
   const INCLUDED = [
-    { Icon: Moon, n: nights, label: nights === 1 ? "night" : "nights" },
     { Icon: BedDouble, n: stays, label: stays === 1 ? "hotel" : "hotels" },
     { Icon: Compass, n: counts.activities, label: counts.activities === 1 ? "activity" : "activities" },
     { Icon: Car, n: counts.transfers, label: counts.transfers === 1 ? "transfer" : "transfers" },
-  ];
-
-  const ellipsis = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
+    { Icon: Plane, n: flights, label: flights === 1 ? "flight" : "flights" },
+  ].filter((x) => x.n > 0);
 
   return (
     <div data-testid="read-summary" style={{
       margin: "12px 16px 0", border: `1px solid ${C.div}`, borderRadius: 14,
-      display: "flex", overflow: "hidden", background: C.white,
+      display: "flex", alignItems: "stretch", overflow: "hidden", background: C.white,
     }}>
-      {/* ── Where it went, when, who, and what was in it ── */}
-      <div style={{ flex: 1, minWidth: 0, padding: "11px 12px" }}>
+      {/* ── Where it went, and what was in it ── */}
+      <div style={{ flex: 1, minWidth: 0, padding: "10px 11px" }}>
         <div data-testid="read-route" style={{ display: "flex", minWidth: 0 }}>
-          <CityLine days={days} />
+          <CityLine days={days} size={12} />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 4, minWidth: 0 }}>
-          <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 12, color: C.sub, ...ellipsis }}>{dateLabel}</p>
-          <Party adults={adults} kids={kids} />
-        </div>
-        <div data-testid="read-included" style={{ display: "flex", alignItems: "center", gap: 11, marginTop: 10, flexWrap: "wrap" }}>
+        <div data-testid="read-included" style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 8, flexWrap: "wrap" }}>
           {INCLUDED.map(({ Icon, n, label }) => (
-            <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <Icon size={13} color={C.p600} strokeWidth={2.2} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.head }}>{n}</span>
+            <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 3.5 }}>
+              {/* Slate, not pink. Four pink glyphs in a row had the whole
+                  line reading as four small buttons, and the only pink
+                  thing in this band should be the one part of it that can
+                  actually be pressed. */}
+              <Icon size={12} color="#667085" strokeWidth={2.2} />
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>{n}</span>
               <span style={{ fontSize: 11, color: C.sub }}>{label}</span>
             </span>
           ))}
@@ -445,28 +407,48 @@ function ReadSummary({ days = [], plans = [], dateLabel, travellers, party, nigh
       </div>
 
       {/* ── What it came to ──
-          The price this trip sold at, with the tax in it, because a price
-          with the tax still to come is not a price. */}
-      <div style={{
-        width: 122, flexShrink: 0, background: "#FFF1F4", padding: "11px 11px",
-        display: "flex", flexDirection: "column", justifyContent: "center",
-        alignItems: "flex-end", textAlign: "right",
-      }}>
-        <p style={{ margin: 0, fontSize: 9, fontWeight: 800, letterSpacing: "0.6px", textTransform: "uppercase", color: C.p600 }}>Total</p>
-        <p data-testid="read-total" style={{ margin: "2px 0 0", fontSize: 16.5, fontWeight: 800, color: C.head, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
-          {money(total)}
-        </p>
-        <p style={{ margin: "3px 0 0", fontSize: 10.5, color: C.sub, lineHeight: "14px" }}>
-          {money(perPerson)}<br />per person
-        </p>
-        <button onClick={onBreakdown} style={{
-          marginTop: 7, padding: 0, border: "none", background: "none", color: C.p600,
-          fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          display: "inline-flex", alignItems: "center", gap: 1,
-        }}>
-          Breakdown <ChevronRight size={11} />
-        </button>
-      </div>
+          One number, per person, and a word to say it is a guide rather
+          than a quote. The total was the bigger figure and the wrong one:
+          nobody reading somebody else's trip is buying the same number of
+          seats, and a total is only a price once you know how many went.
+
+          No chevron and no "Breakdown". The panel still takes a press and
+          still jumps to the full split further down, but the split is also
+          a section anybody scrolling will reach on their own, so this is a
+          shortcut rather than the only way in, and a shortcut does not
+          need to announce itself in a band this small. */}
+      <button
+        onClick={onBreakdown}
+        style={{
+          // Every pixel here is a pixel the route does not have, so this is
+          // as narrow as the widest figure allows: a lakh-and-a-half trip
+          // is nine characters before the icon beside it.
+          width: 112, flexShrink: 0, borderLeft: `1px solid ${C.div}`,
+          background: C.white, padding: "10px 9px 10px 11px", margin: 0,
+          border: "none", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: C.div,
+          cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+          display: "flex", alignItems: "center", gap: 4,
+        }}
+      >
+        <span style={{ flex: 1, minWidth: 0 }}>
+          {/* ─── A guide, not a quote ───
+              The word APPROX was a line of its own at the top of a panel
+              three lines tall, which is a lot of room for one caveat. An
+              information circle was no better: it says "there is more to
+              read here", which is a different thing from "this number is
+              not exact". The approximation sign says only the second, in
+              front of the figure it qualifies, and costs six pixels. */}
+          <span style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+            <span aria-hidden style={{ fontSize: 13, fontWeight: 700, color: C.sub, flexShrink: 0 }}>≈</span>
+            <span data-testid="read-total" style={{ fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+              {money(perPerson)}
+            </span>
+          </span>
+          <span style={{ display: "block", margin: "3px 0 0", fontSize: 10, color: C.sub, lineHeight: "13px" }}>
+            Cost per person
+          </span>
+        </span>
+      </button>
     </div>
   );
 }
@@ -754,6 +736,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const booker = bookedTrip?.who || null;
   // Who actually went. Most of these are two adults; a few are a family, and
   // a trip with children on it prices for four, not two.
+  // ─── How many flights were in it ───
+  // The two international legs everybody takes, plus any hop between two
+  // cities on this route that the travel engine says is flown rather than
+  // driven. Same engine the route chooser and the "How to reach" lines use,
+  // so the number on the card is the number of boarding passes.
+  const readFlights = useMemo(() => {
+    const cities = (it?.days || []).map((d) => d.city);
+    let n = 2;
+    for (let i = 0; i < cities.length - 1; i += 1) {
+      if (hop(it.dest, cities[i], cities[i + 1])?.mode === "flight") n += 1;
+    }
+    return n;
+  }, [it?.days, it?.dest]);
+
   const readParty = bookedTrip
     ? { adults: bookedTrip.adults ?? 2, kids: bookedTrip.kids ?? 0 }
     : null;
@@ -1702,11 +1698,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <ReadSummary
           days={it.days}
           plans={daysWithActivities}
-          party={readParty}
-          dateLabel={viewDateLabel}
           travellers={travellers}
-          nights={it.nights}
           stays={hotels.length}
+          flights={readFlights}
           total={grandTotal}
           onBreakdown={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })}
         />
