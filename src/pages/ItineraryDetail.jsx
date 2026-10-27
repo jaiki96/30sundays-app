@@ -171,16 +171,19 @@ function FlightLegRow({ f }) {
 // stops overflowing: one pass, no layout thrash, and it can be redone the
 // moment the real font lands, which matters because the fallback is narrower
 // and would let one city too many through.
-const CITY_FONT = '700 13px Figtree, system-ui, sans-serif';
-const SEP = "  \u00b7  ";
+const cityFont = (size, weight) => `${weight} ${size}px Figtree, system-ui, sans-serif`;
+// One space either side, not two. Two reads as airy on a line with room
+// to spare and costs a city name on a line without it, and the city names
+// are the whole reason the line is there.
+const SEP = " \u00b7 ";
 
-function fitCities(days, px, nights = true) {
+function fitCities(days, px, nights = true, size = 13, weight = 700) {
   const parts = days.map((d) => (nights ? `${d.city} ${d.n}N` : d.city));
   if (!parts.length) return "";
   if (!px) return parts.join(SEP);
   const cv = fitCities.cv || (fitCities.cv = document.createElement("canvas"));
   const ctx = cv.getContext("2d");
-  ctx.font = CITY_FONT;
+  ctx.font = cityFont(size, weight);
   for (let n = parts.length; n > 0; n -= 1) {
     const rest = parts.length - n;
     const label = parts.slice(0, n).join(SEP)
@@ -191,7 +194,7 @@ function fitCities(days, px, nights = true) {
   return `${parts.length} cities`;
 }
 
-function CityLine({ days, nights = true }) {
+function CityLine({ days, nights = true, size = 13, weight = 700, color = C.head }) {
   const box = useRef(null);
   const [px, setPx] = useState(0);
   useEffect(() => {
@@ -206,8 +209,8 @@ function CityLine({ days, nights = true }) {
   }, []);
   return (
     <span ref={box} style={{ flex: 1, minWidth: 0, display: "block", overflow: "hidden" }}>
-      <span style={{ fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>
-        {fitCities(days, px, nights)}
+      <span style={{ fontSize: size, fontWeight: weight, color, whiteSpace: "nowrap" }}>
+        {fitCities(days, px, nights, size, weight)}
       </span>
     </span>
   );
@@ -647,6 +650,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // And it steps aside while somebody is reading down the page, so it is not
   // parked over a day card or a hotel the whole way down.
   const [pillAway, setPillAway] = useState(false);
+  // ─── One Customise at a time ───
+  //
+  // There are two of them now: one beside the route and the dates, and the
+  // floating one for the three thousand pixels of scroll where that one is
+  // long out of sight. Both on screen at once is the same button twice, so
+  // the floating one waits until the inline one has gone.
+  const [topCustomiseEl, setTopCustomiseEl] = useState(null);
+  const [topCustomiseSeen, setTopCustomiseSeen] = useState(true);
   // It also steps aside for a toast. They want the same corner, the toast is
   // the thing that just happened, and it is gone in five seconds.
 
@@ -919,7 +930,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   }, []);
 
   const TOUR_STEPS = [
-    { selector: '[data-tour="edit"]', gesture: "tap", text: "Tap any of these three to change your cities, dates or travellers." },
+    { selector: '[data-tour="edit"]', gesture: "tap", text: "Tap Customise to change your cities, dates, hotels or day plans." },
     { selector: '[data-tour="change-day"]', gesture: "tap", text: "Tap Change day plan to swap a day's activities." },
     { selector: '[data-tour="change-hotel"]', gesture: "tap", text: "Tap Change hotel to pick a different stay." },
     { selector: '[data-tour="save"]', gesture: "tap", text: "Happy with it? Tap Save Itinerary to lock your price and get a PDF." },
@@ -1220,7 +1231,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
-  const pillHidden = pillAway || !!toast;
+  const pillHidden = pillAway || !!toast || topCustomiseSeen;
 
   const showToast = (message, undoData) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -1341,6 +1352,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     ro.observe(footerEl);
     return () => ro.disconnect();
   }, [footerEl]);
+
+  // Watched rather than measured against a scroll position: the hero, the
+  // nav and the details block are each their own height, and "has it gone"
+  // is the actual question.
+  useEffect(() => {
+    if (!topCustomiseEl) { setTopCustomiseSeen(false); return undefined; }
+    const io = new IntersectionObserver(([e]) => setTopCustomiseSeen(e.isIntersecting));
+    io.observe(topCustomiseEl);
+    return () => io.disconnect();
+  }, [topCustomiseEl]);
 
   // Out of the way on the way down, back on the way up or the moment the page
   // stops moving. Coming back on a pause matters: somebody who scrolls to the
@@ -1620,7 +1641,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>How customising works</span>
           </button>
         )}
-        {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
+        {/* ─── One line, four things ───
+            The trip's name, how long it is, the heart, and which version
+            this is. They are the same kind of fact (what this screen is)
+            and they belong on one line together. Who is going is not one of
+            them: that reads below with the route and the dates, where the
+            other two answers about the trip are. */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
           <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <span>{tripTitle} · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
@@ -1628,22 +1654,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <button onClick={() => dealsCtx.toggleWish(versionId)} aria-label={dealsCtx.isWished(versionId) ? "Remove from wishlist" : "Save to wishlist"} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", border: "none", cursor: "pointer", flexShrink: 0, padding: 0 }}>
                 <Heart size={16} color="#fff" fill={dealsCtx.isWished(versionId) ? "#fff" : "none"} />
               </button>
-            )}
-            {/* ─── Who is going ───
-                A fact, not a field: the party is set when the trip is
-                enquired for and moved by the consultant. It sits here, on
-                the photo beside the nights, because nothing up here can be
-                tapped and that is exactly what needs saying about it. No
-                chip around it either: a pill is the shape of a control, and
-                this is a line of information. */}
-            {!viewOnly && (
-              <span data-testid="hero-party" style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.92)", whiteSpace: "nowrap",
-              }}>
-                <Users size={13} color="rgba(255,255,255,0.92)" />
-                {travellers} traveller{travellers > 1 ? "s" : ""}
-              </span>
             )}
             {/* Which version this is, beside the heart. A trip that has been
                 rebuilt a few times has several, and the number is how
@@ -1701,63 +1711,67 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onBreakdown={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })}
         />
       ) : wizardEditable ? (
-        <div style={{ padding: "12px 16px 4px" }}>
-          {/* ─── Two boxes, two doors ───
-              The route and the dates are the two answers still open on a
-              trip that exists, and changing either one sends it back through
-              the builder. So they are the same shape twice: an outlined box
-              each, an icon to say which is which, and a pencil to say it can
-              be changed.
+        /* ─── The trip, in two plain lines ───
+            The route on the first, the dates and the party on the second.
+            No boxes and no pencils: an outline is the shape of a control
+            and a pencil is a promise that tapping does something, and these
+            are three facts, read the way facts are read. Two boxes side by
+            side also left a ragged gap wherever the dates ran short, which
+            is a lot of white for nothing.
 
-              Outlined, not filled. A box only needs an edge to stop being a
-              stretch of nothing, and two grey blocks above the day plan is
-              more weight than two facts deserve.
+            The party reads here now rather than up on the photo. It is an
+            answer about the trip in the same way the route and the dates
+            are, and keeping the three together is worth more than keeping
+            the hero company.
 
-              Each box ends where its content ends. The route takes the full
-              line, because beside the dates a four-city route has room for
-              one city and a count of the rest; the dates box is as wide as
-              its dates and no wider, so there is no gap between the value
-              and its pencil to explain.
+            One door serves all of it, named rather than drawn, sitting
+            beside the things it changes. */
+        /* ─── Dates first, route under it ───
+            The dates and who is going are the line somebody checks, so they
+            are the line in black. The route is the line somebody reads, and
+            it sits under them in grey at the smaller size, which is also
+            what lets it name three cities instead of two.
 
-              The nights are on this line. Four of them cost about sixty
-              pixels, which can be the difference between naming every city
-              and counting most of them, but how long a trip spends in each
-              place is half of what the route is.
+            No icons on either. A calendar beside a date and a pin beside a
+            list of places say nothing the words have not already said, and
+            every one of them costs the route a city name. */
+        <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {dateLabel} · <span data-testid="hero-party">{travellers} traveller{travellers > 1 ? "s" : ""}</span>
+            </p>
+            <CityLine days={it.days} size={12.5} weight={500} color={C.sub} />
+          </div>
+          {/* ─── The same button in two places ───
+              This and the one that floats above the bar are the same door,
+              so they are the same button: same ink, same white, same shape,
+              same words. Somebody who scrolls back up should find the thing
+              they just used, not a paler relative of it.
 
-              The party is not here either. It is set when the trip is
-              enquired for and moved by the consultant, so it reads up in the
-              photo beside the nights, where nothing else is tappable. */}
-          {(() => {
-            const box = {
-              display: "flex", alignItems: "center", gap: 8, minWidth: 0,
-              padding: "9px 10px", borderRadius: 10,
-              background: C.white, border: `1px solid ${C.div}`,
-              cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-            };
-            return (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <button
-                  data-tour="edit"
-                  onClick={() => setCitiesScreen(true)}
-                  aria-label="Change cities"
-                  style={{ ...box, flex: "1 1 100%" }}
-                >
-                  <MapPin size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                  <CityLine days={it.days} />
-                  <Pencil size={13} color={C.p600} style={{ flexShrink: 0 }} />
-                </button>
-                <button
-                  onClick={() => setDateSheet(true)}
-                  aria-label="Change travel dates"
-                  style={{ ...box, flex: "0 0 auto" }}
-                >
-                  <Calendar size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>{dateLabel}</span>
-                  <Pencil size={13} color={C.p600} style={{ flexShrink: 0 }} />
-                </button>
-              </div>
-            );
-          })()}
+              Centred against both lines rather than sitting on one of them.
+              On a line it pushed that line out of step with the other and
+              left the block looking assembled rather than laid out. */}
+          <button
+            ref={setTopCustomiseEl}
+            data-tour="edit"
+            data-testid="customise-top"
+            onClick={() => setCustomiseOpen(true)}
+            style={{
+              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
+              // Smaller than the floating one, on purpose. That one has a
+              // whole page behind it and has to be found; this one is
+              // already beside the thing it changes, and at full size it
+              // weighed more than the two lines of trip it sits next to.
+              padding: "7px 12px 7px 10px", borderRadius: 999, border: "none",
+              background: C.ink, color: "#fff", cursor: "pointer", fontFamily: "inherit",
+              fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
+              // Sitting on the page rather than floating over it, so the
+              // shadow is the weight of something resting, not hovering.
+              boxShadow: "0 3px 10px rgba(24,30,76,0.20)",
+            }}
+          >
+            <SlidersHorizontal size={14} /> Customise
+          </button>
         </div>
       ) : (
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>

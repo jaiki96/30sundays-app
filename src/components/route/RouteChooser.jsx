@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X as XIcon, Check, ArrowRight, ArrowLeft, Headphones } from "lucide-react";
 import { C } from "../../data";
 import { destAreas } from "../../data/buildData";
-import { cityPhotos } from "../../data/cityTags";
 import { routeOptions } from "../../data/routeOptions";
 import RoutePicker from "../wizard/RoutePicker";
 import BuildingScreen from "../BuildingScreen";
@@ -20,10 +19,10 @@ import BuildingScreen from "../BuildingScreen";
 //   arrows, not dots    a route is an order, and an arrow is the only mark
 //                       that says so. Hanoi then Ha Long then Hoi An, in
 //                       that direction
-//   pictures of the
-//   places              one photo per stop, swipeable, so the route can be
-//                       seen as well as read. The same reel the wizard's
-//                       city cards carry
+//   no pictures         the photographs belong to the cities, so every
+//                       route out of a destination carried the same few.
+//                       A column of them slowed the list down and settled
+//                       nothing
 //   one earned label    Recommended, Most booked, Trending, Affordable,
 //                       Relaxed. Each one belongs to a single route, so the
 //                       list reads as distinct answers rather than six
@@ -38,21 +37,40 @@ import BuildingScreen from "../BuildingScreen";
 // Everything offered comes from the same engine as the route editor, so a
 // route in this list is a route that can be flown and booked.
 
+// ─── The labels, with the pink taken out ───
+//
+// Pink is the app's "press this": the buttons, the save, the chosen card.
+// On a label it was telling somebody a route was urgent, which no route is.
+// So the recommendation goes purple, the booking counts go slate (they are
+// facts about other people, not advice about this trip), and the rest keep
+// the three quiet tones they already had.
 const TONE = {
-  pink: { bg: "#FFF1F4", fg: C.p600 },
-  green: { bg: "#ECFDF3", fg: "#027A48" },
-  blue: { bg: "#EFF4FF", fg: "#1F78FF" },
-  amber: { bg: "#FFFAEB", fg: "#B54708" },
+  green: { fg: "#027A48", dot: "#17B26A" },
+  blue: { fg: "#1849A9", dot: "#2E90FA" },
+  amber: { fg: "#B54708", dot: "#F79009" },
+  purple: { fg: "#5925DC", dot: "#7A5AF8" },
+  slate: { fg: "#475467", dot: "#98A2B3" },
 };
 
+const KEY_TONE = {
+  pick: "purple", value: "green", relaxed: "blue", offbeat: "purple",
+  wide: "amber", sold: "slate", trending: "amber", popular: "blue",
+  classic: "amber", easy: "green",
+};
+
+// A dot and a word, not a pill. A pill is a container, and these are
+// adjectives: the dot carries the colour, the word carries the meaning, and
+// the row costs half the height it did as a line of capsules.
 function Tag({ tag }) {
-  const t = TONE[tag.tone] || TONE.pink;
+  const t = TONE[KEY_TONE[tag.key]] || TONE.slate;
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: 999,
-      background: t.bg, color: t.fg, fontSize: 10.5, fontWeight: 800, letterSpacing: "0.2px",
-      whiteSpace: "nowrap",
-    }}>{tag.text}</span>
+      display: "inline-flex", alignItems: "center", gap: 5,
+      fontSize: 11, fontWeight: 700, color: t.fg, whiteSpace: "nowrap",
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: t.dot, flexShrink: 0 }} />
+      {tag.text}
+    </span>
   );
 }
 
@@ -73,146 +91,126 @@ function Tick({ on }) {
   );
 }
 
-// ─── The reel down the left of a card ───
-// The wizard's city card carries its photographs in a column flush to the
-// left edge, full height, swipeable, with dots. Both cards here use the same
-// one so the two screens are visibly the same family: on a city it is that
-// city's pictures, on a route it is one frame per stop in visiting order.
-function Reel({ shots, label }) {
-  const [shot, setShot] = useState(0);
-  return (
-    <div style={{
-      position: "relative", width: 104, alignSelf: "stretch",
-      flexShrink: 0, overflow: "hidden", background: "#F4F2F0",
-    }}>
-      <div
-        className="hide-scrollbar"
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          const n = Math.round(el.scrollLeft / (el.clientWidth || 1));
-          if (n !== shot) setShot(n);
-        }}
-        style={{
-          position: "absolute", inset: 0, display: "flex",
-          overflowX: "auto", overflowY: "hidden",
-          scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {shots.map((s, n) => (
-          <div key={s.key} style={{ position: "relative", flex: "0 0 100%", width: "100%", height: "100%", scrollSnapAlign: "start" }}>
-            <img
-              src={s.src}
-              alt={n === 0 ? (label || "") : ""}
-              loading={n === 0 ? "eager" : "lazy"}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-          </div>
-        ))}
-      </div>
-      {shots.length > 1 && (
-        <div style={{
-          position: "absolute", left: 0, right: 0, bottom: 7,
-          display: "flex", justifyContent: "center", gap: 3.5, pointerEvents: "none",
-        }}>
-          {shots.map((s, n) => (
-            <span key={s.key} style={{
-              width: n === shot ? 5 : 4, height: n === shot ? 5 : 4, borderRadius: "50%",
-              background: n === shot ? "#fff" : "rgba(255,255,255,0.55)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-            }} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
+// ─── The card ───
+//
+// A route is a line of text. It was a line of text beside a photo reel for a
+// while, and the reel was the same four beaches on every card: the pictures
+// belong to the cities, not to the order they are visited in, so every route
+// out of a destination showed more or less the same ones. A column of them
+// made the list slower to read and told nobody anything.
+//
+// So: the route, a tick, and its labels. Nothing else. The labels are the
+// only commentary, which is as much as a list of eight needs.
 const CARD = (on) => ({
-  display: "flex", cursor: "pointer", overflow: "hidden", borderRadius: 16, background: C.white,
-  border: `${on ? 1.5 : 1}px solid ${on ? C.p600 : C.div}`,
-  boxShadow: "0 1px 3px rgba(24,29,39,0.05)", transition: "border-color .15s",
+  display: "block", width: "100%", textAlign: "left", cursor: "pointer",
+  overflow: "hidden", borderRadius: 14, fontFamily: "inherit",
+  // ─── Chosen, and obviously so ───
+  // An outline alone is a hairline somebody has to go looking for. The one
+  // that is picked gets the pink edge, a tinted ground and a shadow in the
+  // brand colour, which is three signals rather than one and reads at a
+  // glance from the top of the list.
+  background: on ? "#FFF6F8" : C.white,
+  // The edge stays one pixel and the second one is drawn inside it. A border
+  // that grows when a card is picked makes that card two pixels taller than
+  // the rest, and the whole list below it steps down as you choose.
+  border: `1px solid ${on ? C.p600 : C.div}`,
+  boxShadow: on
+    ? `inset 0 0 0 1px ${C.p600}, 0 2px 10px rgba(227,27,83,0.13)`
+    : "0 1px 3px rgba(24,29,39,0.05)",
+  transition: "border-color .15s, background .15s, box-shadow .15s",
 });
 
-// Every card is this tall, whatever the route. A list where the cards grow
-// with the number of cities reads as a ranking by size, and scanning it means
-// re-finding the tick on every row.
-// Tall enough for the longest route this list can produce, its line and its
-// labels. Every card takes it, so the list does not read as a ranking by
-// size and the tick never moves down the page as you scan.
-const ROUTE_CARD_H = 128;
+// ─── How tall the route line is, for all of them ───
+//
+// Every card is the same height, because a list whose cards grow with the
+// number of cities reads as a ranking by size and the tick moves down the
+// page as you scan it. But fixing that height at two lines when nothing in
+// the list wraps leaves a band of nothing under every route.
+//
+// So it is measured: one canvas pass over the whole list, and if a single
+// route needs a second line they all get one. Same heights, no dead space,
+// and the answer changes with the destination rather than being guessed
+// once for all of them.
+const ROUTE_FONT = '600 12.5px Figtree, system-ui, sans-serif';
+const LINE_H = 17;
+const ARROW_W = 19; // the glyph and its two margins
 
-function RouteCard({ dest, opt, chosen, current, onPick }) {
-  const shots = useMemo(
-    () => opt.route.map((r) => ({ key: r.city, src: cityPhotos(dest, r.city)[0] })),
-    [dest, opt.route]
-  );
+function routeLines(options, width) {
+  if (!width) return 1;
+  const cv = routeLines.cv || (routeLines.cv = document.createElement("canvas"));
+  const ctx = cv.getContext("2d");
+  ctx.font = ROUTE_FONT;
+  const fits = options.every((o) => {
+    const w = o.route.reduce((sum, r, i) => sum + ctx.measureText(`${r.city} ${r.n}N`).width + (i ? ARROW_W : 0), 0);
+    return w <= width;
+  });
+  return fits ? 1 : 2;
+}
+
+function RouteCard({ opt, chosen, current, onPick, lines = 2 }) {
   return (
-    <div
+    <button
+      type="button"
       data-testid={`route-option-${opt.id}`}
       onClick={onPick}
-      role="button"
       aria-pressed={chosen}
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(); } }}
-      style={{ ...CARD(chosen), height: ROUTE_CARD_H }}
+      // The current card trades its label row for the kicker, which is the
+      // shorter of the two by six pixels. The six go back on underneath, so
+      // every card in the list is the same height whichever one you are on.
+      style={{ ...CARD(chosen), padding: current ? "9px 11px 15px" : "9px 11px" }}
     >
-      <Reel shots={shots} label={opt.cities.join(" to ")} />
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", padding: "11px 12px 11px 13px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+      <div>
+        {/* ─── Which one you are on ───
+            Said in words, over the route, the way a heading sits over a
+            section. It was a filled pink tab, which read as a warning
+            rather than a statement, and pink on this screen now means one
+            thing only: the card you have picked. */}
+        {current && (
+          <span style={{
+            display: "block", fontSize: 9.5, fontWeight: 800, color: C.sub,
+            letterSpacing: "0.7px", textTransform: "uppercase", marginBottom: 3,
+          }}>Your current route</span>
+        )}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           {/* ─── The order, as an order ───
               Arrows, because a route is a sequence and a middot is not.
               Nothing in it is bold: every city on the line matters the same
               amount, and bolding all of them is the same as bolding none. */}
           <p style={{
             flex: 1, minWidth: 0, margin: 0,
-            fontSize: 12, fontWeight: 600, color: C.head, lineHeight: "17px", letterSpacing: "-0.1px",
-            overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+            fontSize: 12.5, fontWeight: 600, color: C.head, lineHeight: `${LINE_H}px`, letterSpacing: "-0.1px",
+            // Held at the list's height, so every card's labels start on the
+            // same line whether this route wrapped or not.
+            height: lines * LINE_H,
+            overflow: "hidden", display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical",
           }}>
             {opt.route.map((r, i) => (
               <span key={r.city} style={{ whiteSpace: "nowrap" }}>
                 {/* inline-block on purpose: the app sets svg { display: block }
                     globally, which turns every arrow into its own line. */}
-                {i > 0 && <ArrowRight size={11} color={C.icon} style={{ display: "inline-block", margin: "0 4px", verticalAlign: "middle" }} />}
+                {/* Mid-grey at a heavier stroke. At C.icon on white it was
+                    a suggestion of an arrow rather than an arrow. */}
+                {i > 0 && <ArrowRight size={11} color="#667085" strokeWidth={2.5} style={{ display: "inline-block", margin: "0 5px", verticalAlign: "middle" }} />}
                 {r.city}
-                <span style={{ color: C.sub }}> {r.n}N</span>
+                <span style={{ color: C.sub, fontWeight: 500 }}> {r.n}N</span>
               </span>
             ))}
           </p>
           <Tick on={chosen} />
         </div>
 
-        {/* What this route is, in one line. The labels say which one it is
-            best at; this says what that means for the holiday. */}
-        {(current || opt.line) && (
-          <p style={{
-            margin: "4px 0 0", fontSize: 11.5, color: C.sub, lineHeight: "16px",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          }}>
-            {current ? "What your trip is built on now." : opt.line}
-          </p>
-        )}
-
-        {(current || !!opt.tags.length) && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "auto", paddingTop: 8, minWidth: 0 }}>
-            {current && (
-              <span style={{
-                padding: "4px 10px", borderRadius: 999, background: C.bg, color: C.sub,
-                fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
-              }}>Current</span>
-            )}
-            {opt.tags.slice(0, current ? 1 : 2).map((t) => {
-              const tone = TONE[t.tone] || TONE.pink;
-              return (
-                <span key={t.key} style={{
-                  padding: "4px 10px", borderRadius: 999, background: tone.bg, color: tone.fg,
-                  fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
-                }}>{t.text}</span>
-              );
-            })}
+        {/* What the route is good at, and nothing else. Both labels fit on
+            every card now that they are not capsules. */}
+        {/* Collapsed when there is nothing to say. The route you are on
+            carries its kicker instead, and an empty row under it is just a
+            gap at the bottom of the first card. */}
+        {!!opt.tags.length && (
+          <div style={{ display: "flex", alignItems: "center", gap: 11, marginTop: 6, minWidth: 0 }}>
+            {opt.tags.slice(0, 2).map((t) => <Tag key={t.key} tag={t} />)}
           </div>
         )}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -348,6 +346,24 @@ export default function RouteChooser({
   }, [dest, total, pool, currentId, current]);
 
   const [pickedId, setPickedId] = useState(currentId);
+  // The width a route has on a card: the list, less the card's padding, the
+  // gap and the tick. Measured off the real element rather than assumed, so
+  // it holds on whatever the phone frame turns out to be.
+  const [listEl, setListEl] = useState(null);
+  const [listW, setListW] = useState(0);
+  useEffect(() => {
+    if (!listEl) return undefined;
+    const read = () => setListW(listEl.clientWidth);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(listEl);
+    document.fonts?.ready.then(read).catch(() => {});
+    return () => ro.disconnect();
+  }, [listEl]);
+  const lines = useMemo(
+    () => (listW ? routeLines(options, listW - 26 - 10 - 18) : 2),
+    [options, listW]
+  );
   const picked = options.find((o) => o.id === pickedId) || null;
   const changed = pickedId !== currentId;
   const narrowed = pool.length < allCities.length;
@@ -453,15 +469,12 @@ export default function RouteChooser({
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-            <p style={{ margin: "0 0 1px 2px", fontSize: 12, color: C.sub, lineHeight: "17px" }}>
-              Same cities, same {total} nights. What changes is the order and how long you stay in each.
-            </p>
+          <div ref={setListEl} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {options.map((opt) => (
               <RouteCard
                 key={opt.id}
-                dest={dest}
                 opt={opt}
+                lines={lines}
                 chosen={opt.id === pickedId}
                 current={opt.id === currentId}
                 onPick={() => setPickedId(opt.id)}
