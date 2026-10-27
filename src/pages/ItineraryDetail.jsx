@@ -391,9 +391,19 @@ function ReadSummary({ days = [], plans = [], travellers, stays, flights, total,
         <div data-testid="read-route" style={{ display: "flex", minWidth: 0 }}>
           <CityLine days={days} size={12} />
         </div>
-        <div data-testid="read-included" style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 8, flexWrap: "wrap" }}>
+        {/* ─── Two by two, always ───
+            A wrapping row put three on the first line and one on the
+            second whenever the words happened to be short, and two and
+            two when they were not, so the block changed shape from one
+            trip to the next and the second line never started where the
+            first one did. A grid of two columns cannot do that: the
+            second item always sits above the fourth, whatever is in
+            them. */}
+        <div data-testid="read-included" style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 8, rowGap: 5, marginTop: 8,
+        }}>
           {INCLUDED.map(({ Icon, n, label }) => (
-            <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 3.5 }}>
+            <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 3.5, minWidth: 0 }}>
               {/* Slate, not pink. Four pink glyphs in a row had the whole
                   line reading as four small buttons, and the only pink
                   thing in this band should be the one part of it that can
@@ -438,11 +448,21 @@ function ReadSummary({ days = [], plans = [], travellers, stays, flights, total,
               read here", which is a different thing from "this number is
               not exact". The approximation sign says only the second, in
               front of the figure it qualifies, and costs six pixels. */}
+          {/* Two marks, two jobs. The approximation sign says the number
+              is a guide; the circle says there is a full split behind it
+              and this is the way in. Running them together under one of
+              the two was what made the panel ambiguous: a reader could
+              not tell whether the icon meant "not exact" or "tap me". */}
           <span style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
             <span aria-hidden style={{ fontSize: 13, fontWeight: 700, color: C.sub, flexShrink: 0 }}>≈</span>
             <span data-testid="read-total" style={{ fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
               {money(perPerson)}
             </span>
+            {/* Slate, like the four icons on the other side of the band.
+                Pink is this screen's "act on this", and the only pink on
+                a trip somebody else booked should be the button that
+                copies it. */}
+            <Info size={12} color="#667085" style={{ flexShrink: 0, alignSelf: "center" }} />
           </span>
           <span style={{ display: "block", margin: "3px 0 0", fontSize: 10, color: C.sub, lineHeight: "13px" }}>
             Cost per person
