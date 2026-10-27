@@ -475,30 +475,32 @@ function ReadSummary({ days = [], plans = [], travellers, stays, flights, total,
 // Travellers is not here. It is the one answer that does not shape the trip,
 // only what it costs, and it already has its own chip at the top of the
 // screen next to the dates.
+// Four words and no explanations. "Change the hotel in any city" under the
+// word Hotels is the word Hotels again in a sentence: somebody who opened a
+// sheet headed "What would you like to change?" is not wondering what Hotels
+// means, they are looking for the row to press.
 const CUSTOMISE = [
-  { key: "cities", label: "Cities", hint: "Where you stay, and for how long", Icon: MapPin },
-  { key: "dates", label: "Travel dates", hint: "Change when you go, and for how long", Icon: Calendar },
-  { key: "hotel", label: "Hotels", hint: "Change the hotel in any city", Icon: BedDouble },
-  { key: "day", label: "Day plans", hint: "Change what happens on a day", Icon: Route },
+  { key: "cities", label: "Cities", Icon: MapPin },
+  { key: "dates", label: "Travel dates", Icon: Calendar },
+  { key: "hotel", label: "Hotels", Icon: BedDouble },
+  { key: "day", label: "Day plans", Icon: Route },
 ];
 
 function CustomisePicker({ onPick, onClose, frame }) {
   return (
     <Sheet title="What would you like to change?" onClose={onClose} frame={frame}>
       <div style={{ marginTop: 6 }}>
-        {CUSTOMISE.map(({ key, label, hint, Icon }, i) => (
+        {CUSTOMISE.map(({ key, label, Icon }, i) => (
           <button key={key} onClick={() => onPick(key)} style={{
             display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
-            padding: "13px 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
+            // A row of one line, so it is a row of one line's height.
+            padding: "11px 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
             borderTop: i ? `1px solid ${C.bg}` : "none",
           }}>
-            <span style={{ width: 38, height: 38, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>
-              <Icon size={18} color={C.p600} />
+            <span style={{ width: 34, height: 34, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <Icon size={17} color={C.p600} />
             </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.head }}>{label}</span>
-              <span style={{ display: "block", fontSize: 12.5, color: C.sub }}>{hint}</span>
-            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 700, color: C.head }}>{label}</span>
             <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
           </button>
         ))}
@@ -1705,66 +1707,55 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           onBreakdown={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })}
         />
       ) : wizardEditable ? (
-        /* ─── The trip, in two plain lines ───
-            The route on the first, the dates and the party on the second.
-            No boxes and no pencils: an outline is the shape of a control
-            and a pencil is a promise that tapping does something, and these
-            are three facts, read the way facts are read. Two boxes side by
-            side also left a ragged gap wherever the dates ran short, which
-            is a lot of white for nothing.
-
-            The party reads here now rather than up on the photo. It is an
-            answer about the trip in the same way the route and the dates
-            are, and keeping the three together is worth more than keeping
-            the hero company.
-
-            One door serves all of it, named rather than drawn, sitting
-            beside the things it changes. */
         /* ─── Dates first, route under it ───
-            The dates and who is going are the line somebody checks, so they
-            are the line in black. The route is the line somebody reads, and
-            it sits under them in grey at the smaller size, which is also
-            what lets it name three cities instead of two.
+            The dates and who is going are the line somebody checks, so
+            they are the line in black. The route is the line somebody
+            reads, and it sits under them in grey at the smaller size.
 
-            No icons on either. A calendar beside a date and a pin beside a
-            list of places say nothing the words have not already said, and
-            every one of them costs the route a city name. */
-        <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            The route wraps rather than counting. It used to measure
+            itself against the width it had and fall back to "+1 city"
+            once it ran out, which saves a line and loses the city that
+            somebody might be opening this screen to change. Four cities
+            over two lines costs seventeen pixels and names all four.
+
+            No icons on either line. A calendar beside a date and a pin
+            beside a list of places say nothing the words have not already
+            said. */
+        <div style={{ padding: "12px 16px 10px", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head }}>
               {dateLabel} · <span data-testid="hero-party">{travellers} traveller{travellers > 1 ? "s" : ""}</span>
             </p>
-            <CityLine days={it.days} size={12.5} weight={500} color={C.sub} />
+            <p data-testid="trip-route" style={{
+              margin: "3px 0 0", fontSize: 12.5, fontWeight: 500, color: C.sub, lineHeight: "18px",
+            }}>
+              {it.days.map((d) => `${d.city} ${d.n}N`).join("  ·  ")}
+            </p>
           </div>
-          {/* ─── The same button in two places ───
-              This and the one that floats above the bar are the same door,
-              so they are the same button: same ink, same white, same shape,
-              same words. Somebody who scrolls back up should find the thing
-              they just used, not a paler relative of it.
+          {/* ─── Outlined, not filled ───
+              The ink pill had the weight of a primary action, which this
+              is not: buying the trip is, and that button is in the bar at
+              the foot. An outline with the pencil in it says the same
+              thing at the weight the thing deserves, and it is the shape
+              the rest of the app uses for "change this".
 
-              Centred against both lines rather than sitting on one of them.
-              On a line it pushed that line out of step with the other and
-              left the block looking assembled rather than laid out. */}
+              The floating one stays filled. It has a photograph and a day
+              plan behind it and has to be found; this one is sitting in
+              white space next to the words it edits. */}
           <button
             ref={setTopCustomiseEl}
             data-tour="edit"
             data-testid="customise-top"
             onClick={() => setCustomiseOpen(true)}
             style={{
-              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
-              // Smaller than the floating one, on purpose. That one has a
-              // whole page behind it and has to be found; this one is
-              // already beside the thing it changes, and at full size it
-              // weighed more than the two lines of trip it sits next to.
-              padding: "7px 12px 7px 10px", borderRadius: 999, border: "none",
-              background: C.ink, color: "#fff", cursor: "pointer", fontFamily: "inherit",
+              flexShrink: 0, alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 13px 8px 11px", borderRadius: 999,
+              border: `1.5px solid ${C.p300}`, background: C.white, color: C.p600,
+              cursor: "pointer", fontFamily: "inherit",
               fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
-              // Sitting on the page rather than floating over it, so the
-              // shadow is the weight of something resting, not hovering.
-              boxShadow: "0 3px 10px rgba(24,30,76,0.20)",
             }}
           >
-            <SlidersHorizontal size={14} /> Customise
+            <Pencil size={13} color={C.p600} /> Customise
           </button>
         </div>
       ) : (
@@ -2981,17 +2972,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           transform: pillHidden ? "translateX(calc(100% + 22px))" : "none",
           opacity: pillHidden ? 0 : 1,
           transition: "transform 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease-out, bottom 0.18s ease-out",
-          display: "inline-flex", alignItems: "center", gap: 7,
-          padding: "10px 15px 10px 13px", borderRadius: 999, border: "none",
-          // Ink, not pink. The bar underneath already has the pink button, and
-          // two of them floating over each other is two primary actions on one
-          // screen: this one is how you change the trip, that one is how you
-          // buy it, and only one of those is the point.
-          background: C.ink, color: "#fff", cursor: "pointer", fontFamily: "inherit",
-          fontSize: 13.5, fontWeight: 700, boxShadow: "0 8px 24px rgba(24,30,76,0.34)",
-          whiteSpace: "nowrap",
+          display: "inline-flex", alignItems: "center", gap: 6,
+          // ─── The same button, wherever it is ───
+          // The one at the top of the page is an outlined pill with a
+          // pencil in it. This is that button, so it is that button:
+          // same border, same pink, same pencil, same word. It was ink
+          // and filled, which made the two read as different doors when
+          // only one of them is ever on screen at a time.
+          padding: "9px 14px 9px 12px", borderRadius: 999,
+          border: `1.5px solid ${C.p300}`,
+          background: C.white, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+          fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+          // It is over a photograph and a day plan rather than white
+          // space, so it keeps a shadow to lift it off them. White on
+          // white needs the shadow more than ink did, not less.
+          boxShadow: "0 6px 20px rgba(24,30,76,0.18)",
         }}>
-          <SlidersHorizontal size={16} /> Customise
+          <Pencil size={14} color={C.p600} /> Customise
         </button>
         </div>
       )}
