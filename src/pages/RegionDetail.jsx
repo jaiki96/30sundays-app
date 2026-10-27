@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import {
   ArrowLeft, ArrowRight, Check, X as XIcon, Star, MapPin, Clock, Images,
-  Plane, Car, TrainFront, TramFront, Ship, Footprints, Bike, Bus,
+  Plane, CarTaxiFront, TrainFront, TramFront, Ship, Footprints, Bike,
   BedDouble, ChevronDown, ChevronUp, Sparkles, Hotel,
   Plus, Minus,
 } from "lucide-react";
@@ -21,7 +21,7 @@ import { cityVibes } from "../data/dayOptions";
 import { useSaves } from "../data/saves";
 import { tripsThroughCity } from "../data/bookedTrips";
 import { generateHotelsForCity } from "../data/hotelData";
-import { SKY_WORD, SKY_SENTENCE } from "../data/weatherData";
+import { SKY_WORD, monthAdvice } from "../data/weatherData";
 import { buildActivityDetail, activityFlags, flagChipList } from "../data/activityData";
 import { cityTags } from "../data/cityTags";
 import { KIND_TONE, activityKind } from "../data/activityKind";
@@ -63,22 +63,6 @@ const PAD = 16;
 // stepping between regions already has two better doors, the destination
 // screen and Pair with at the foot of this page.
 
-const MODE_ICON = {
-  flight: Plane, car: Car, train: TrainFront, metro: TramFront,
-  boat: Ship, walk: Footprints,
-};
-
-// Which picture goes with a way of getting around. Matching on the label beats
-// a fixed order: "Scooter hire" should never come up with a train.
-const TRANSPORT_RULES = [
-  [/scooter|bike|cycl|motorbike/i, Bike],
-  [/train|metro|rail|skytrain|tram/i, TrainFront],
-  [/bus|shuttle|coach|songthaew/i, Bus],
-  [/boat|ferry|speedboat|dhoni|tender|gondola/i, Ship],
-  [/walk|foot/i, Footprints],
-];
-const transportIcon = (label = "") =>
-  (TRANSPORT_RULES.find(([re]) => re.test(label)) || [])[1] || Car;
 
 const clamp = (lines) => ({
   display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden",
@@ -712,14 +696,6 @@ function Sec({ title, action, children, flush }) {
   );
 }
 
-function Well({ Icon, tone = WELL.neutral, size = 34 }) {
-  return (
-    <span style={{
-      width: size, height: size, borderRadius: R.well, flexShrink: 0, background: tone.bg,
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}><Icon size={Math.round(size * 0.47)} color={tone.fg} /></span>
-  );
-}
 
 function Card({ children, pad = 14 }) {
   return (
@@ -933,25 +909,22 @@ function ThingsToDo({ acts, city, dest, onOpen }) {
 // because they are all answers to the same question and a caption over each
 // half was two labels doing the work of an order.
 //
-// Each way is a line you read left to right: the places, with the plane or the
-// boat or the car between them. No words for the modes, no times per leg, no
-// summary of what you are about to look at. The journey is the answer and the
-// only number on it is how long the whole thing takes.
-
-// A place on the way. The code sits under the name rather than beside it, so a
-// four-stop journey stays a line rather than a paragraph.
-function Stop({ name, code }) {
-  return (
-    /* inline-block, or the width cap does nothing and "Nusa Penida" pushes the
-       end of the line off the screen instead of taking two lines. */
-    <span style={{ flexShrink: 0, display: "inline-block", textAlign: "center", maxWidth: 86 }}>
-      <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: C.head, lineHeight: 1.25 }}>{name}</span>
-      {code && (
-        <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.inact, letterSpacing: "0.5px", marginTop: 1 }}>{code}</span>
-      )}
-    </span>
-  );
-}
+// ─── Why this is a list and not a line ───
+//
+// It was a timeline: the places left to right with a little plane or boat on
+// the rule between them. On Delhi to Wanaka that is five stops, which does
+// not fit a phone, so it scrolled sideways with a fade at the end, and the
+// one thing somebody wants from it, "what do I actually do", was spread
+// across a gesture.
+//
+// A journey of more than one leg is a list of instructions, so it is a list
+// now. One row per leg, in order, each one naming the thing you board:
+// Flight, Cab, Train, Metro, Ferry. The total sits above them, because that
+// is the number a couple compares origins with, and the airport codes are
+// gone: DPS is for a boarding pass, not for deciding.
+//
+// Where every way is a single hop, they are not steps at all, they are
+// alternatives, so they read as a short menu with a time against each.
 
 // ─── What each way of moving looks like ───
 //
@@ -964,115 +937,142 @@ const MODE_TONE = {
   flight: { bg: "#EAF2FE", fg: "#1570EF" },
   car: { bg: "#FFF4E0", fg: "#B54708" },
   train: { bg: "#E5F6F5", fg: "#007E72" },
+  scooter: { bg: "#FDF2E8", fg: "#C4320A" },
   metro: { bg: "#EBE9FE", fg: "#6938EF" },
   boat: { bg: "#E0F2FE", fg: "#0369A1" },
   walk: { bg: "#F2F4F7", fg: "#475467" },
 };
 
-// And the bit between two places: a rule with the mode sitting on it. The icon
-// is the whole message, so it is the only thing on this line with any colour.
-function Hop({ mode }) {
-  const Icon = MODE_ICON[mode] || Car;
+// The word for the thing you board. Said out loud on every row, because an
+// icon at thirteen pixels is a shape you interpret and a word is a word.
+const MODE_WORD = {
+  flight: "Flight", car: "Cab", train: "Train",
+  metro: "Metro", boat: "Ferry", walk: "Walk", scooter: "Scooter",
+};
+
+// ─── A train somebody can recognise at sixteen pixels ───
+//
+// Lucide's is a rounded cab with two round windows, which at this size is a
+// bean with eyes and reads as a bus as readily as a train. Drawn here
+// instead: a square front, a flat roof, a funnel on top, one wide cab
+// window, a headlamp and the wheels under it. The funnel is the thing that
+// makes it unmistakable, which is why every child draws one.
+function TrainIcon({ size = 16, color = "currentColor", strokeWidth = 2 }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* the funnel */}
+      <path d="M10 2h4v2h-4z" />
+      {/* the body, square at the front */}
+      <rect x="4" y="4" width="16" height="13" rx="1.5" />
+      {/* the cab window, one wide pane */}
+      <path d="M7.5 7.5h9v4h-9z" />
+      {/* the headlamp */}
+      <path d="M12 14h.01" />
+      {/* the wheels */}
+      <circle cx="8" cy="19.5" r="1.6" />
+      <circle cx="16" cy="19.5" r="1.6" />
+    </svg>
+  );
+}
+
+// A taxi for the cab rather than a saloon car: the roof sign is what makes
+// the glyph read as something you hail at this size.
+const REACH_ICON = {
+  flight: Plane, car: CarTaxiFront, train: TrainIcon,
+  metro: TramFront, boat: Ship, walk: Footprints, scooter: Bike,
+};
+
+function ModeDot({ mode, size = 30 }) {
+  const Icon = REACH_ICON[mode] || CarTaxiFront;
   const tone = MODE_TONE[mode] || MODE_TONE.walk;
   return (
     <span aria-hidden style={{
-      flexShrink: 0, width: 46, display: "flex", alignItems: "center", justifyContent: "center",
-      position: "relative", alignSelf: "center",
+      width: size, height: size, borderRadius: "50%", flexShrink: 0, background: tone.bg,
+      display: "grid", placeItems: "center",
     }}>
-      <span style={{ position: "absolute", left: 2, right: 2, height: 1, background: C.div }} />
-      <span style={{
-        position: "relative", width: 24, height: 24, borderRadius: "50%", background: tone.bg,
-        display: "grid", placeItems: "center", border: `2px solid ${C.white}`,
-      }}>
-        <Icon size={13} color={tone.fg} strokeWidth={2.1} />
-      </span>
+      {/* Bigger than the thirteen pixels the timeline gave it. A train at
+          thirteen is a smudge with windows. */}
+      <Icon size={Math.round(size * 0.53)} color={tone.fg} strokeWidth={2} />
     </span>
   );
 }
 
-// One journey, left to right. It scrolls rather than wraps: a line that folds
-// onto three rows is the vertical version again with worse alignment.
+// ─── One leg ───
 //
-// Delhi to Wanaka is five stops and does not fit on a phone, so the right edge
-// fades when there is more of the line past it. Measured, not guessed: a fade
-// over the end of a journey that already fits says there is more when there
-// is not.
-function Timeline({ legs }) {
-  const rail = useRef(null);
-  const [more, setMore] = useState(false);
-
-  useEffect(() => {
-    const el = rail.current;
-    if (!el) return undefined;
-    const read = () => setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
-    read();
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    el.addEventListener("scroll", read, { passive: true });
-    return () => { ro.disconnect(); el.removeEventListener("scroll", read); };
-  }, [legs]);
-
-  if (!legs?.length) return null;
+// Both ends of it, in the order you travel them, and the thing you board
+// named underneath. Naming only the far end was shorter and left somebody
+// counting rows back to work out where a leg starts: "Delhi to Hanoi" is
+// the whole fact, and on a two-leg journey the repeat of the middle city is
+// what makes it read as a change of train rather than two unrelated trips.
+function LegRow({ leg, last, time = false }) {
   return (
-    <div style={{ position: "relative" }}>
-      <div ref={rail} className="hide-scrollbar" style={{
-        display: "flex", alignItems: "center", gap: 2, overflowX: "auto",
-        margin: "0 -2px", padding: "0 2px",
-      }}>
-        <Stop name={legs[0].from} code={legs[0].fromCode} />
-        {legs.map((l, i) => (
-          <Fragment key={`${l.mode}-${l.to}-${i}`}>
-            <Hop mode={l.mode} />
-            <Stop name={l.to} code={l.toCode} />
-          </Fragment>
-        ))}
+    <div style={{ display: "flex", gap: 11 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+        <ModeDot mode={leg.mode} />
+        {/* The thread down the side, so the rows read as one journey in
+            order rather than three things that can be done in any of them. */}
+        {!last && <span aria-hidden style={{ flex: 1, width: 2, background: C.div, borderRadius: 2, marginTop: 3 }} />}
       </div>
-      {more && (
-        <span aria-hidden style={{
-          position: "absolute", top: 0, bottom: 0, right: -2, width: 28, pointerEvents: "none",
-          background: `linear-gradient(90deg, rgba(255,255,255,0) 0%, ${C.white} 85%)`,
-        }} />
-      )}
+      <div style={{ flex: 1, minWidth: 0, paddingBottom: last ? 0 : 13 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.head }}>
+            {leg.from} to {leg.to}
+          </p>
+          {/* Only when this row is the whole journey. On a journey of two
+              or three legs the total is above them, and ten minutes here
+              and twenty there is arithmetic nobody asked to check. */}
+          {time && (
+            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>
+              <span aria-hidden style={{ marginRight: 2, fontWeight: 600, color: C.sub }}>~</span>{hhmmShort(leg.mins)}
+            </span>
+          )}
+        </div>
+        {/* The mode, said in a word, under the two places it joins. An icon
+            at sixteen pixels is a shape somebody interprets; the word is
+            the word. */}
+        <p style={{ margin: "1px 0 0", fontSize: 11.5, fontWeight: 600, color: C.sub }}>
+          {MODE_WORD[leg.mode] || "Transfer"}
+          {leg.note ? <span style={{ fontWeight: 400, color: C.inact }}> · {leg.note}</span> : null}
+        </p>
+      </div>
     </div>
   );
 }
 
-// A way: how long it takes, and the line it takes to get there.
-//
-// A cab from Da Nang to Hoi An is two place names and a car. Given a row of its
-// own for the time and another for the journey, it left most of a card empty,
-// so a single-leg way puts both on one line and the time fills the space the
-// short line was leaving. Anything longer needs the full width for the journey
-// and keeps the time above it.
-function Way({ w, first }) {
-  // "About 3h 45m" in a green chip with a clock on it was three devices saying
-  // one thing. The sign says it, the way the nights do on the route step.
-  //
-  // No "Quickest" either. The ways are in order, shortest first, and a green
-  // word on the top one only told you what its position already had.
-  const time = (
-    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: C.head, whiteSpace: "nowrap" }}>
-      <span aria-hidden style={{ marginRight: 4 }}>~</span>{w.time}
-    </span>
-  );
-  const oneLeg = w.legs?.length === 1;
+// Minutes as a short duration. The data holds them; hhmm lives in the reach
+// module and is not exported, and a leg is never a number of days.
+function hhmmShort(mins) {
+  if (mins == null) return "";
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  if (!h) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 
+// A single-hop alternative: one thing you board, and how long it takes. No
+// thread down the side, because these are choices rather than steps.
+function OptionRow({ w, first }) {
+  const mode = w.legs[0]?.mode;
   return (
     <div style={{
-      padding: first ? "0 0 12px" : "12px 0",
+      display: "flex", alignItems: "center", gap: 11,
+      padding: first ? "0 0 11px" : "11px 0",
       borderTop: first ? "none" : `1px solid ${C.div}`,
     }}>
-      {oneLeg ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ flex: 1, minWidth: 0 }}><Timeline legs={w.legs} /></span>
-          {time}
-        </div>
-      ) : (
-        <>
-          <div style={{ marginBottom: 8 }}>{time}</div>
-          <Timeline legs={w.legs} />
-        </>
-      )}
+      <ModeDot mode={mode} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: C.head }}>
+          {MODE_WORD[mode] || w.label || "Transfer"}
+        </p>
+        {w.hint && <p style={{ margin: "2px 0 0", ...T.micro, lineHeight: "16px" }}>{w.hint}</p>}
+      </div>
+      <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: C.head, whiteSpace: "nowrap" }}>
+        <span aria-hidden style={{ marginRight: 3, fontWeight: 600, color: C.sub }}>~</span>{w.time}
+      </span>
     </div>
   );
 }
@@ -1081,6 +1081,10 @@ function HowToReach({ origins, city }) {
   const [pick, setPick] = useState(origins[0]?.id);
   const from = origins.find((o) => o.id === pick) || origins[0];
   if (!from) return null;
+  // The ways arrive shortest first, so the one we would put somebody on is
+  // the first of them.
+  const best = from.ways[0];
+  if (!best) return null;
 
   return (
     <Sec title={`How to reach ${city}`} flush>
@@ -1108,13 +1112,45 @@ function HowToReach({ origins, city }) {
 
       <div style={{ padding: `12px ${PAD}px 0` }}>
         <Card>
-          {/* No note under the ways and no small print under the card. "Along
-              the coast road past An Bang" is a nice line about a thirty minute
-              drive and it was the fourth thing in a box that answers one
-              question; every time on here already says "about". */}
-          {from.ways.map((w, i) => (
-            <Way key={w.label} w={w} first={i === 0} />
-          ))}
+          {/* ─── Steps, or choices ───
+              Where the best way has more than one leg, getting here is a
+              sequence and only that way is shown: offering four versions of
+              a journey somebody has not decided to make yet is a list to
+              get through rather than an answer. Where every way is a single
+              hop they are alternatives, and then all of them are worth
+              seeing, because the choice between a three hour cab and a one
+              hour flight is the whole question. */}
+          {best.legs.length > 1 ? (
+            <>
+              {/* The one number on a journey of several legs. "Door to
+                  door" was a caption on a figure that could not mean
+                  anything else. */}
+              <p style={{ margin: "0 0 13px", fontSize: 15, fontWeight: 800, color: C.head, whiteSpace: "nowrap" }}>
+                <span aria-hidden style={{ marginRight: 3, fontWeight: 600, color: C.sub }}>~</span>{best.time}
+              </p>
+              {best.legs.map((l, i) => (
+                <LegRow key={`${l.mode}-${l.to}-${i}`} leg={l} last={i === best.legs.length - 1} />
+              ))}
+            </>
+          ) : from.ways.length === 1 ? (
+            /* One hop and one way of making it. Written as a leg, so it
+               names both ends: "Delhi to Hanoi", and the word Flight under
+               it. A label on its own ("Non-stop to Hanoi") never said
+               where it was non-stop from. */
+            <LegRow leg={{ ...best.legs[0], note: best.legs[0].note || best.hint }} last time />
+          ) : (
+            <>
+              {/* Every one of these joins the same two places, so the
+                  places are said once at the top and each row below is
+                  only the thing you board and how long it takes. */}
+              <p style={{ margin: "0 0 11px", fontSize: 13, fontWeight: 700, color: C.head }}>
+                {from.label} to {city}
+              </p>
+              {from.ways.map((w, i) => (
+                <OptionRow key={w.label} w={w} first={i === 0} />
+              ))}
+            </>
+          )}
         </Card>
       </div>
     </Sec>
@@ -1146,116 +1182,206 @@ function WhenToGo({ r }) {
   const run = Array.from({ length: 12 }, (_, k) => r.months[(now + k) % 12]);
   const mo = r.months[pick];
   const Sky = SKY_STYLE[mo.sky] || SKY_STYLE.cloudy;
-  const chip = SKY_CHIP[mo.sky] || SKY_CHIP.cloudy;
-  const days = mo.rain == null ? null : Math.min(28, Math.round(mo.rain / 11));
+  // Millimetres as days, which is the form the number is useful in. Rounded
+  // and stated as a guide, the way the rest of this section is.
+  const rainDays = mo.rain == null ? null : Math.min(28, Math.round(mo.rain / 11));
+
+  // ─── The nib under the chosen month ───
+  //
+  // The strip and the card below it are one control and one answer, and
+  // without a mark between them they read as two things that happen to sit
+  // near each other. A nib pointing up at the month that is selected says
+  // "this panel is about that tab" before a word of it is read.
+  //
+  // Measured rather than placed: the strip scrolls, so the tab the nib
+  // belongs to moves, and it follows on every scroll and every pick.
+  const wrap = useRef(null);
+  const strip = useRef(null);
+  const tabs = useRef({});
+  const [nib, setNib] = useState(null);
+  useEffect(() => {
+    const read = () => {
+      const el = tabs.current[pick];
+      const box = wrap.current;
+      if (!el || !box) return;
+      const a = el.getBoundingClientRect();
+      const b = box.getBoundingClientRect();
+      const x = a.left + a.width / 2 - b.left;
+      // Hidden when the month it belongs to has been scrolled off, rather
+      // than pinned to an edge pointing at nothing.
+      setNib(x > 24 && x < b.width - 24 ? x : null);
+    };
+    read();
+    const sc = strip.current;
+    sc?.addEventListener("scroll", read, { passive: true });
+    window.addEventListener("resize", read);
+    return () => {
+      sc?.removeEventListener("scroll", read);
+      window.removeEventListener("resize", read);
+    };
+  }, [pick, run.length]);
 
   return (
     <Sec title="When to go" flush>
-      <div className="hs" style={{ gap: 8, paddingLeft: PAD, paddingRight: PAD }}>
-        {run.map((x) => {
-          const on = x.m === pick;
-          const S = SKY_STYLE[x.sky] || SKY_STYLE.cloudy;
-          return (
-            <button key={x.m} onClick={() => setPick(x.m)} style={{
-              flexShrink: 0, minWidth: 82, padding: "10px 12px 11px", borderRadius: 13,
-              textAlign: "center", cursor: "pointer", fontFamily: "inherit",
-              border: `1px solid ${on ? C.p300 : C.div}`,
-              background: on ? C.p100 : C.white,
-            }}>
-              <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: on ? C.p600 : C.head }}>
-                {x.name.slice(0, 3)}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, margin: "7px 0 5px" }}>
-                <S.Icon size={14} color={S.color} />
-                {/* The sky's own ink, the calendar's. It was grey here, so
-                    every month's weather read the same until you got to the
-                    word. */}
-                <span style={{ fontSize: 11, fontWeight: 700, color: (SKY_CHIP[x.sky] || SKY_CHIP.cloudy).fg, whiteSpace: "nowrap" }}>
-                  {SKY_WORD[x.sky] || "Mixed"}
+      <div ref={wrap} style={{ position: "relative" }}>
+        <div ref={strip} className="hs" style={{ gap: 8, paddingLeft: PAD, paddingRight: PAD }}>
+          {run.map((x) => {
+            const on = x.m === pick;
+            const S = SKY_STYLE[x.sky] || SKY_STYLE.cloudy;
+            return (
+              <button
+                key={x.m}
+                ref={(el) => { tabs.current[x.m] = el; }}
+                onClick={() => setPick(x.m)}
+                aria-pressed={on}
+                style={{
+                  flexShrink: 0, minWidth: 82, padding: "10px 12px 11px", borderRadius: 13,
+                  textAlign: "center", cursor: "pointer", fontFamily: "inherit",
+                  border: `1px solid ${on ? C.p300 : C.div}`,
+                  background: on ? C.p100 : C.white,
+                }}
+              >
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: on ? C.p600 : C.head }}>
+                  {x.name.slice(0, 3)}
                 </span>
-              </span>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: C.head, whiteSpace: "nowrap" }}>
-                {x.low}° / {x.high}°
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, margin: "7px 0 5px" }}>
+                  <S.Icon size={14} color={S.color} />
+                  {/* The sky's own ink, the calendar's. It was grey here, so
+                      every month's weather read the same until you got to the
+                      word. */}
+                  <span style={{ fontSize: 11, fontWeight: 700, color: (SKY_CHIP[x.sky] || SKY_CHIP.cloudy).fg, whiteSpace: "nowrap" }}>
+                    {SKY_WORD[x.sky] || "Mixed"}
+                  </span>
+                </span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: C.head, whiteSpace: "nowrap" }}>
+                  {x.low}° / {x.high}°
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <div style={{ padding: `12px ${PAD}px 0` }}>
-        <Card>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <p style={{ margin: 0, ...T.lead }}>{mo.name}</p>
-            {/* The calendar's weather chip, exactly: the sky's icon, its word
-                and the two temperatures, on the sky's own ground. */}
-            <span style={{
-              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "4px 10px", borderRadius: R.pill,
-              background: chip.bg, color: chip.fg, fontSize: 11, fontWeight: 700,
-              whiteSpace: "nowrap",
-            }}>
-              <Sky.Icon size={11} color={Sky.color} />
-              {SKY_WORD[mo.sky] || "Mixed"}
-              <span style={{ opacity: 0.45 }}>·</span>
-              <span style={{ fontWeight: 500 }}>{mo.low}° / {mo.high}°</span>
-            </span>
-          </div>
-          <p style={{ margin: "7px 0 0", ...T.body }}>
-            {SKY_SENTENCE[mo.sky] || "A mixed sky"}, {mo.low}° at night and {mo.high}° by afternoon.
-          </p>
-          {/* One line. The three facts are read together, and wrapping them
-              turned a glance into a paragraph. */}
-          <div className="hide-scrollbar" style={{
-            display: "flex", alignItems: "center", gap: 7, marginTop: 11, paddingTop: 11,
-            borderTop: `1px solid ${C.div}`, overflowX: "auto",
+        {/* ─── What we would say about that month ───
+            Not the month, the sky and the temperatures again: those are on
+            the tab that was just pressed, and printing them underneath is
+            the same glance twice. Not a count of rain days either, which is
+            a number somebody has to interpret, and interpreting it is the
+            job this card exists to do. */}
+        <div style={{ position: "relative", margin: `10px ${PAD}px 0` }}>
+          {nib != null && (
+            <span aria-hidden style={{
+              position: "absolute", top: -6, left: nib - PAD - 5, width: 10, height: 10,
+              background: C.white, borderLeft: `1px solid ${C.p300}`, borderTop: `1px solid ${C.p300}`,
+              transform: "rotate(45deg)", borderTopLeftRadius: 2,
+            }} />
+          )}
+          <div style={{
+            // White, with the edge in the strip's pink. A tinted panel
+            // behind a paragraph is a lot of brand for one sentence, and
+            // the nib and the edge say "this belongs to that tab" on their
+            // own.
+            background: C.white, border: `1px solid ${C.p300}`, borderRadius: R.card, padding: 13,
           }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, ...T.micro, color: C.sub, whiteSpace: "nowrap", flexShrink: 0 }}>
-              <Sky.Icon size={13} color={Sky.color} />
-              {days != null ? `${days} rain days` : "rain not recorded"}
-            </span>
-            {[SEASON_LABEL[mo.rating], SEASON_MEANING[mo.rating]].map((t) => (
-              <span key={t} style={{
-                flexShrink: 0, padding: "3px 9px", borderRadius: R.pill,
-                background: SEASON_TINT[mo.rating], color: SEASON_COLOR[mo.rating],
-                fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
-              }}>{t}</span>
-            ))}
+            {/* ─── The place and the month, as a sentence would say it ───
+                "October" on its own was the word the tab above had just
+                said. "Hanoi in October" is what a person asks about, and
+                it names the subject of the paragraph under it. */}
+            <p style={{ margin: 0, ...T.h3, letterSpacing: "-0.2px" }}>
+              {r.city} in {mo.name}
+            </p>
+            <p data-testid="month-advice" style={{
+              margin: "6px 0 0", fontSize: 13, fontWeight: 400, color: C.sub, lineHeight: "20px",
+            }}>
+              {monthAdvice(mo)}
+            </p>
+
+            {/* ─── The two numbers behind it ───
+                Under a rule, in the smallest type on the card, because they
+                are the evidence rather than the answer. The paragraph is
+                what we think; these are what it is built on, there for
+                anybody who wants to check our working. */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+              marginTop: 11, paddingTop: 10, borderTop: `1px solid ${C.div}`,
+            }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, ...T.micro, color: C.sub, whiteSpace: "nowrap" }}>
+                <Sky.Icon size={13} color={Sky.color} />
+                {rainDays != null ? `${rainDays} rain days` : "rain not recorded"}
+              </span>
+              {/* The season and what it means for a couple, which is the
+                  pair of them or neither: "Mid-season" on its own is a
+                  word from our side of the desk. */}
+              {[SEASON_LABEL[mo.rating], SEASON_MEANING[mo.rating]].filter(Boolean).map((t) => (
+                <span key={t} style={{
+                  padding: "3px 9px", borderRadius: R.pill,
+                  background: SEASON_TINT[mo.rating], color: SEASON_COLOR[mo.rating],
+                  fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+                }}>{t}</span>
+              ))}
+            </div>
           </div>
-        </Card>
-        <p style={{ margin: "10px 2px 0", ...T.micro, lineHeight: "16px" }}>
-          Averages across {r.dest}, indicative rather than a forecast.
-        </p>
+          <p style={{ margin: "10px 2px 0", ...T.micro, lineHeight: "16px" }}>
+            Averages across {r.dest}, indicative rather than a forecast.
+          </p>
+        </div>
       </div>
     </Sec>
   );
 }
 
-// ─── Transport modes ───
+// ─── Getting about inside the place ───
 //
 // Plain pointers were honest and grey. These are the same four facts with the
 // picture back on them: one card, a row per mode, each in its own colour so
 // the list is something you scan rather than read.
-const TONE_CYCLE = [WELL.lagoon, WELL.ocean, WELL.brand, WELL.gold, WELL.neutral];
-
-function TransportModes({ items }) {
+//
+// It was headed "Transport modes", which sat under "How to reach Hanoi" and
+// read as more of the same subject. Two things are being answered on this
+// page and they are a day apart: how you get to the place, and how you get
+// about once you are standing in it. The second one says "within" now, and
+// names the city, because a heading that leaves the difference to be
+// inferred is a heading somebody has to stop and work out.
+function TransportModes({ items, city }) {
   return (
-    <Sec title="Transport modes">
+    <Sec title={`How to travel within ${city}`}>
       <Card pad={0}>
-        {items.map((t, i) => {
-          const Icon = transportIcon(t.label);
-          return (
-            <div key={t.label} style={{
-              display: "flex", gap: 12, alignItems: "flex-start", padding: "13px 14px",
-              borderTop: i === 0 ? "none" : `1px solid ${C.div}`,
-            }}>
-              <Well Icon={Icon} tone={TONE_CYCLE[i % TONE_CYCLE.length]} size={36} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, ...T.h3 }}>{t.label}</p>
-                <p style={{ margin: "3px 0 0", ...T.meta, lineHeight: 1.5 }}>{t.note}</p>
-              </div>
+        {/* ─── A list that is laid out, not just typed ───
+            Name over sentence, which is the right shape: the names are
+            not all short ("Walking and cycling"), so a column for them
+            either squeezes the sentence or wraps the name, and both look
+            worse than simply putting one above the other.
+            
+            What was missing was not structure but air. The first version
+            was four bold run-ins with a dot each, stacked tight and with
+            nothing between them, which reads as notes somebody pasted in.
+            Rules between the rows, a line of space inside each one, and a
+            sentence set at a comfortable measure, and the same content is
+            a list a person reads down.
+            
+            No pictures. A disc with a scooter in it beside the words
+            "Scooter hire" is the word twice, and this is background on
+            the place rather than a set of things to choose between. */}
+        {items.map((t, i) => (
+          <div key={t.label} style={{
+            display: "flex", gap: 9, alignItems: "flex-start",
+            padding: "12px 15px",
+            borderTop: i === 0 ? "none" : `1px solid ${C.div}`,
+          }}>
+            <span aria-hidden style={{
+              flexShrink: 0, width: 5, height: 5, borderRadius: "50%",
+              background: C.p300, marginTop: 7,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                margin: 0, fontSize: 13, fontWeight: 800, color: C.head,
+                lineHeight: "18px", letterSpacing: "-0.1px",
+              }}>{t.label}</p>
+              <p style={{
+                margin: "3px 0 0", fontSize: 12.5, color: C.sub, lineHeight: "19px",
+              }}>{t.note}</p>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </Card>
     </Sec>
   );
@@ -2179,7 +2305,7 @@ export default function RegionDetail({
               once they have decided to come, and the trips are what decides
               it. */}
           {reach.length > 0 && <HowToReach origins={reach} city={r.city} />}
-          {g?.transport?.length > 0 && <TransportModes items={g.transport} />}
+          {g?.transport?.length > 0 && <TransportModes items={g.transport} city={r.city} />}
           {(g?.stay || hotels.length > 0) && <WhereToStay stay={g?.stay} hotels={hotels} onOpenHotel={setHotel} />}
           {r.food?.length > 0 && (
             <Restaurants list={r.food} city={r.city} onMap={() => setEateries(true)} />

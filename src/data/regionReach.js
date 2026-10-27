@@ -179,6 +179,19 @@ const BY_BOAT = new Set(["Nusa Penida"]);
 const BY_AIR = new Set(["Labuan Bajo", "Phu Quoc", "Koh Samui"]);
 // Past this, a cab stops being something anyone would book.
 const MAX_DRIVE_KM = 400;
+
+// ─── Riding it yourself ───
+//
+// On a short hop in these three countries a scooter is not an eccentric
+// choice, it is what most people around you are on, and it costs a tenth of
+// a car. It is not offered everywhere: hiring one in New Zealand to cross a
+// mountain pass, or in the Maldives where there are no roads between
+// islands, is not a thing anybody does.
+//
+// Past about thirty-five kilometres it stops being fun and starts being a
+// long time in the sun with luggage on your knees, so that is where it ends.
+const SCOOTER_DESTS = new Set(["Bali", "Thailand", "Vietnam"]);
+const MAX_SCOOTER_KM = 35;
 // Under this, flying is slower than driving once the airport is counted.
 const MIN_FLY_KM = 150;
 
@@ -252,6 +265,21 @@ export function waysTo(dest, from, to) {
   // ─── Road ───
   if (!islandHop && !airOnly && d <= MAX_DRIVE_KM) {
     out.push(wayOf([leg("car", from, to, carMins(d))], "Cab"));
+
+    // The same road and the same time: slower than a cab on the open
+    // stretches, quicker through a town, and over thirty-five kilometres
+    // those cancel out. Inventing a difference would be precision we do
+    // not have. What is actually different is the money and who is
+    // driving, and that is what the line says.
+    if (SCOOTER_DESTS.has(dest) && d <= MAX_SCOOTER_KM) {
+      out.push(wayOf(
+        [leg("scooter", from, to, carMins(d), { note: "You ride it yourself" })],
+        "Scooter",
+        // On the leg for the journey rows, on the way for the options
+        // list: the two paths read different fields.
+        "You ride it yourself, for a fraction of the cab",
+      ));
+    }
   }
 
   // ─── Air ───
@@ -269,7 +297,9 @@ export function waysTo(dest, from, to) {
       out.push(wayOf(
         [...toAir, flight, ...(post ? [leg("car", ht.name, to, post)] : [])],
         extra ? "Flight and cab" : "Flight",
-        `${hf.code} to ${ht.code}`,
+        // No "DAD to HAN". The codes are for a boarding pass; the rows
+        // below already name the places.
+        null,
       ));
 
       // Same flight, different way out of the airport. In Bangkok and Saigon
@@ -389,15 +419,18 @@ function fromIndia(dest, origin, city) {
     if (best.rest === Infinity) return null;
 
     const hop = leg("flight", origin.city, best.at, flyMins(km(origin.city, best.at) ?? 0), {
-      fromCode: origin.code, toCode: best.code, note: "Non-stop",
+      // No "Non-stop" note. The row shows one flight between two cities,
+      // which is what non-stop means, and a journey with a change shows
+      // the change as a second row.
+      fromCode: origin.code, toCode: best.code,
     });
     const legs = [hop, ...(best.onward ? best.onward.legs : [])];
     return wayOf(
       legs,
       `Non-stop to ${best.at}`,
-      best.here
-        ? `Lands at ${best.code}, in the city itself`
-        : `${origin.code} to ${best.code}, then ${best.onward.label.toLowerCase()}`,
+      // Same again: what matters is whether the plane puts you in the city
+      // or an hour outside it, which is a fact about the place, not a code.
+      best.here ? "Lands in the city itself" : null,
     );
   }
 
@@ -460,7 +493,12 @@ function indiaOrigin(dest, city) {
     .map((c) => c.code)
     .slice(0, 3);
 
-  const legs = [{ ...first, from: "India", fromCode: codes.join(" · ") }, ...best.way.legs.slice(1)];
+  // ─── The leg starts in a city, not in a country ───
+  // "India to Hanoi" is not a journey anybody takes. The quickest Indian
+  // airport with this flight is the one we would put them on, so the leg
+  // says its name and the chip above stays "India", which is still the
+  // right question: can I get there from here.
+  const legs = [{ ...first, from: best.origin.city, fromCode: codes.join(" · ") }, ...best.way.legs.slice(1)];
   return {
     id: "IN",
     label: "India",
