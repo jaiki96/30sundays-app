@@ -5,68 +5,60 @@ import { C } from "../data";
 import { destMeta } from "../data/buildData";
 import { routeOptions } from "../data/routeOptions";
 
-// ─── Five ways to show a route: the lab ───
+// ─── Marking the route you are on: the lab ───
 //
-// Same four routes, same data, five card designs, so the choice is about the
-// design and not about which one got the nicer example.
+// The card is settled: route, tick, chips. What is not settled is how the
+// one you are already travelling says so. It has been a filled pink tab
+// (read as a warning), grey small caps (easy to miss on a list of nine) and
+// a filled slate chip. Five formats here, same three routes under each, so
+// the comparison is about the mark and not about the route it landed on.
 //
-// What every one of them has to answer:
-//
-//   which one am I on now      without a red tab, which read as a warning
-//                              rather than a statement
-//   which one have I picked    different question, different answer, and
-//                              the two have to be tellable apart
-//   what is this route good at  labels, in colours that are not the brand's
-//                              pink, because pink on a card means "act on
-//                              this" everywhere else in the app
-//   where does it go           arrows dark enough to be seen, which the
-//                              old ones were not
+// The question each one answers: you have opened a list of nine routes to
+// find a better one. Which of these tells you fastest which one you are
+// comparing against, and which of them costs the least room to do it?
 //
 // ?dest=Bali and ?nights=9 to try other destinations and lengths.
 // Live at: /route-style-lab
 
-// ─── The label palette, with the pink taken out ───
-// Pink is the app's "press me". On a label it says a route is urgent, which
-// no route is. These are the four quiet tones plus slate for the ones that
-// are statements of fact rather than recommendations.
 const TONE = {
-  green: { bg: "#ECFDF3", fg: "#027A48", br: "#A6F4C5", dot: "#17B26A" },
-  blue: { bg: "#EFF4FF", fg: "#1849A9", br: "#B2CCFF", dot: "#2E90FA" },
-  amber: { bg: "#FFFAEB", fg: "#B54708", br: "#FEDF89", dot: "#F79009" },
-  purple: { bg: "#F4F3FF", fg: "#5925DC", br: "#D9D6FE", dot: "#7A5AF8" },
-  slate: { bg: "#F2F4F7", fg: "#475467", br: "#D0D5DD", dot: "#98A2B3" },
+  green: { bg: "#ECFDF3", fg: "#027A48" },
+  blue: { bg: "#EFF4FF", fg: "#1849A9" },
+  amber: { bg: "#FFFAEB", fg: "#B54708" },
+  purple: { bg: "#F4F3FF", fg: "#5925DC" },
+  slate: { bg: "#F2F4F7", fg: "#475467" },
 };
-
-// Which label gets which tone. The three that used to be pink are moved out:
-// the recommendation goes purple, the booking counts go slate, because they
-// are facts about other people rather than advice about this trip.
 const KEY_TONE = {
   pick: "purple", value: "green", relaxed: "blue", offbeat: "purple",
   wide: "amber", sold: "slate", trending: "amber", popular: "blue",
   classic: "amber", easy: "green",
 };
-const toneOf = (tag) => TONE[KEY_TONE[tag.key]] || TONE.slate;
 
-// Dark enough to see. The old one was #D5D7DA, which on a white card is a
-// suggestion of an arrow rather than an arrow.
+const SLATE = "#344054";
+
+function Tag({ tag }) {
+  const t = TONE[KEY_TONE[tag.key]] || TONE.slate;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: 6,
+      background: t.bg, color: t.fg, fontSize: 10.5, fontWeight: 800,
+      letterSpacing: "0.2px", whiteSpace: "nowrap",
+    }}>{tag.text}</span>
+  );
+}
+
 const Arrow = () => (
-  <ArrowRight
-    size={11}
-    color="#667085"
-    strokeWidth={2.5}
-    // inline-block on purpose: the app sets svg { display: block } globally,
-    // which turns every arrow into its own line.
-    style={{ display: "inline-block", margin: "0 5px", verticalAlign: "middle" }}
-  />
+  <ArrowRight size={11} color="#667085" strokeWidth={2.5}
+    style={{ display: "inline-block", margin: "0 5px", verticalAlign: "middle" }} />
 );
 
-function Route({ opt, size = 12.5 }) {
+function Route({ opt, lead }) {
   return (
     <p style={{
       flex: 1, minWidth: 0, margin: 0,
-      fontSize: size, fontWeight: 600, color: C.head, lineHeight: "17px", letterSpacing: "-0.1px",
-      overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+      fontSize: 12.5, fontWeight: 600, color: C.head, lineHeight: "17px", letterSpacing: "-0.1px",
+      maxHeight: 34, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
     }}>
+      {lead}
       {opt.route.map((r, i) => (
         <span key={r.city} style={{ whiteSpace: "nowrap" }}>
           {i > 0 && <Arrow />}
@@ -85,221 +77,163 @@ function Tick({ on }) {
       display: "grid", placeItems: "center", boxSizing: "border-box",
       background: on ? C.p600 : C.white,
       border: on ? "none" : `1.5px solid ${C.icon}`,
-      transition: "background .15s, border-color .15s",
     }}>
       {on && <Check size={11} strokeWidth={3.6} color="#fff" />}
     </span>
   );
 }
 
-// The shell every card shares: white, one pixel of edge, and the picked one
-// ringed in pink from the inside so choosing it does not make it taller.
 const shell = (on) => ({
   display: "block", width: "100%", textAlign: "left", cursor: "pointer",
-  borderRadius: 14, fontFamily: "inherit", background: C.white,
+  borderRadius: 14, fontFamily: "inherit", padding: "9px 11px",
+  background: on ? "#FFF6F8" : C.white,
   border: `1px solid ${on ? C.p600 : C.div}`,
-  boxShadow: on ? `inset 0 0 0 1px ${C.p600}` : "none",
-  transition: "border-color .15s, box-shadow .15s",
+  boxShadow: on ? `inset 0 0 0 1px ${C.p600}` : "0 1px 3px rgba(24,29,39,0.05)",
 });
 
-// ─── 1. Rail ───
-// A bar down the left edge for the route you are on. It marks the card
-// without taking a line, and it is the one mark that cannot be confused
-// with a label, because nothing else on the card is a shape like it.
-function CardRail({ opt, on, current, pick }) {
-  return (
-    <button type="button" onClick={pick} aria-pressed={on}
-      style={{ ...shell(on), padding: 0, overflow: "hidden", display: "flex" }}>
-      <span style={{ width: 3, flexShrink: 0, background: current ? TONE.slate.fg : "transparent" }} />
-      <span style={{ flex: 1, minWidth: 0, display: "block", padding: "9px 11px 9px 10px" }}>
-        <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <Route opt={opt} />
-          <Tick on={on} />
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, flexWrap: "wrap" }}>
-          {current && (
-            <span style={{ fontSize: 10, fontWeight: 800, color: C.sub, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-              On this now
-            </span>
-          )}
-          {opt.tags.slice(0, 2).map((t) => {
-            const k = toneOf(t);
-            return (
-              <span key={t.key} style={{
-                padding: "2px 8px", borderRadius: 999, border: `1px solid ${k.br}`,
-                color: k.fg, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-              }}>{t.text}</span>
-            );
-          })}
-        </span>
-      </span>
-    </button>
-  );
-}
+const tags = (opt) => (
+  <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+    {opt.tags.slice(0, 2).map((t) => <Tag key={t.key} tag={t} />)}
+  </span>
+);
 
-// ─── 2. Kicker ───
-// A line of small caps over the route, the way a section heading sits over
-// a section. Costs eleven pixels on one card in the list and nothing on the
-// rest, and it says the thing in words instead of asking anyone to learn
-// what a colour means.
-function CardKicker({ opt, on, current, pick }) {
+// ─── A. Chip above ───
+// What is live now. The mark gets a line of its own above the route, which
+// is the clearest place to put it and the most expensive.
+function ChipAbove({ opt, on, current, pick }) {
   return (
-    <button type="button" onClick={pick} aria-pressed={on}
-      style={{ ...shell(on), padding: "9px 11px" }}>
+    <button type="button" onClick={pick} aria-pressed={on} style={shell(on)}>
       {current && (
         <span style={{
-          display: "block", fontSize: 9.5, fontWeight: 800, color: C.sub,
-          letterSpacing: "0.7px", textTransform: "uppercase", marginBottom: 3,
-        }}>Your current route</span>
+          display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 5,
+          padding: "2px 8px 2px 6px", borderRadius: 5, background: SLATE, color: "#fff",
+          fontSize: 9.5, fontWeight: 800, letterSpacing: "0.6px", textTransform: "uppercase",
+        }}>
+          <Check size={10} strokeWidth={3.4} color="#fff" /> Your current route
+        </span>
       )}
       <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <Route opt={opt} />
         <Tick on={on} />
       </span>
-      {/* Labels as text with a coloured dot, not as pills. A pill is a
-          container and these are adjectives: the dot carries the colour and
-          the row costs half the height. */}
-      <span style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
-        {opt.tags.slice(0, 2).map((t) => {
-          const k = toneOf(t);
-          return (
-            <span key={t.key} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: k.fg }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: k.dot }} />
-              {t.text}
-            </span>
-          );
-        })}
-      </span>
+      {tags(opt)}
     </button>
   );
 }
 
-// ─── 3. One line ───
-// The route and its first label on the same row. The shortest card of the
-// five by a long way, which means more routes on screen at once, and the
-// list becomes something you scan rather than scroll.
-function CardOneLine({ opt, on, current, pick }) {
-  const t = opt.tags[0];
-  const k = t ? toneOf(t) : null;
+// ─── B. Beside the tick ───
+// The mark moves to the top right, stacked over the tick, where there is
+// already room. Costs no line at all, and sits where the eye ends up after
+// reading the route.
+function BesideTick({ opt, on, current, pick }) {
   return (
-    <button type="button" onClick={pick} aria-pressed={on}
-      style={{ ...shell(on), padding: "10px 11px", display: "flex", alignItems: "center", gap: 9 }}>
-      <Tick on={on} />
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <Route opt={opt} size={12} />
-        {current && (
-          <span style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: C.sub, marginTop: 2 }}>
-            Your current route
-          </span>
-        )}
-      </span>
-      {t && (
-        <span style={{
-          flexShrink: 0, padding: "3px 9px", borderRadius: 6, background: k.bg,
-          color: k.fg, fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap",
-        }}>{t.text}</span>
-      )}
-    </button>
-  );
-}
-
-// ─── 4. Tinted ───
-// The current route sits on a grey ground with no badge at all. Nothing is
-// added to the card: it is the one that looks different, and the words
-// under it say why. Quietest of the five.
-function CardTint({ opt, on, current, pick }) {
-  return (
-    <button type="button" onClick={pick} aria-pressed={on}
-      style={{
-        ...shell(on), padding: "9px 11px",
-        background: current ? "#F8F9FB" : C.white,
-        border: `1px solid ${current && !on ? "#D0D5DD" : on ? C.p600 : C.div}`,
-      }}>
+    <button type="button" onClick={pick} aria-pressed={on} style={shell(on)}>
       <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <Route opt={opt} />
-        <Tick on={on} />
-      </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, flexWrap: "wrap" }}>
-        {current && (
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999,
-            background: C.white, border: `1px solid ${TONE.slate.br}`, color: TONE.slate.fg,
-            fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-          }}>
-            <Check size={10} strokeWidth={3} color={TONE.slate.fg} /> Current route
-          </span>
-        )}
-        {opt.tags.slice(0, current ? 1 : 2).map((t) => {
-          const k = toneOf(t);
-          return (
-            <span key={t.key} style={{
-              padding: "2px 8px", borderRadius: 999, background: k.bg,
-              color: k.fg, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-            }}>{t.text}</span>
-          );
-        })}
-      </span>
-    </button>
-  );
-}
-
-// ─── 5. Lead chip ───
-// "Current" sits at the front of the route line, in the reading order, so
-// it is read as part of the sentence rather than found afterwards in a row
-// of labels. The labels then only ever carry recommendations.
-function CardLead({ opt, on, current, pick }) {
-  return (
-    <button type="button" onClick={pick} aria-pressed={on}
-      style={{ ...shell(on), padding: "9px 11px" }}>
-      <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, flexShrink: 0 }}>
+          <Tick on={on} />
           {current && (
             <span style={{
-              display: "inline-block", marginRight: 7, padding: "1px 7px", borderRadius: 5,
-              background: TONE.slate.fg, color: "#fff", fontSize: 9.5, fontWeight: 800,
+              fontSize: 9, fontWeight: 800, color: SLATE,
+              letterSpacing: "0.5px", textTransform: "uppercase", whiteSpace: "nowrap",
+            }}>On this now</span>
+          )}
+        </span>
+      </span>
+      {tags(opt)}
+    </button>
+  );
+}
+
+// ─── C. Its own section ───
+// The current route is lifted out of the list and given a heading, and the
+// alternatives get a heading of their own. Nothing is marked, because
+// nothing needs to be: where a card sits says what it is. Answers "always
+// at the top" by making it structurally impossible for it not to be.
+function Sectioned({ opt, on, current, pick }) {
+  return (
+    <button type="button" onClick={pick} aria-pressed={on} style={shell(on)}>
+      <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <Route opt={opt} />
+        <Tick on={on} />
+      </span>
+      {(current || !!opt.tags.length) && tags(opt)}
+    </button>
+  );
+}
+
+// ─── D. In the sentence ───
+// "Current" reads at the front of the route itself, so it is part of what
+// the line says rather than a thing found afterwards. Costs nothing but the
+// width of the word.
+function InSentence({ opt, on, current, pick }) {
+  return (
+    <button type="button" onClick={pick} aria-pressed={on} style={shell(on)}>
+      <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <Route
+          opt={opt}
+          lead={current && (
+            <span style={{
+              display: "inline-block", marginRight: 7, padding: "1px 6px", borderRadius: 4,
+              background: SLATE, color: "#fff", fontSize: 9, fontWeight: 800,
               letterSpacing: "0.4px", textTransform: "uppercase", verticalAlign: "2px",
             }}>Current</span>
           )}
-          <span style={{ display: "inline" }}>
-            {opt.route.map((r, i) => (
-              <span key={r.city} style={{ whiteSpace: "nowrap", fontSize: 12.5, fontWeight: 600, color: C.head, lineHeight: "19px" }}>
-                {i > 0 && <Arrow />}
-                {r.city}
-                <span style={{ color: C.sub, fontWeight: 500 }}> {r.n}N</span>
-              </span>
-            ))}
-          </span>
-        </span>
+        />
         <Tick on={on} />
       </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, flexWrap: "wrap" }}>
-        {opt.tags.slice(0, 2).map((t) => {
-          const k = toneOf(t);
-          return (
-            <span key={t.key} style={{
-              padding: "2px 8px", borderRadius: 5, background: k.bg,
-              color: k.fg, fontSize: 10.5, fontWeight: 800, whiteSpace: "nowrap",
-            }}>{t.text}</span>
-          );
-        })}
+      {tags(opt)}
+    </button>
+  );
+}
+
+// ─── E. A chip among chips ───
+// The mark joins the label row as the first chip in it, in slate so it is
+// plainly a different kind of thing from the recommendations beside it. No
+// new line, and the card has exactly one row of chips however it is marked.
+function AmongChips({ opt, on, current, pick }) {
+  return (
+    <button type="button" onClick={pick} aria-pressed={on} style={shell(on)}>
+      <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <Route opt={opt} />
+        <Tick on={on} />
+      </span>
+      <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+        {current && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px 3px 7px",
+            borderRadius: 6, background: SLATE, color: "#fff", fontSize: 10.5, fontWeight: 800,
+            letterSpacing: "0.2px", whiteSpace: "nowrap",
+          }}>
+            <Check size={10} strokeWidth={3.4} color="#fff" /> Current
+          </span>
+        )}
+        {opt.tags.slice(0, current ? 1 : 2).map((t) => <Tag key={t.key} tag={t} />)}
       </span>
     </button>
   );
 }
 
 const VERSIONS = [
-  { n: 1, name: "Rail", note: "A bar down the left edge marks the route you are on. Outline labels.", Card: CardRail },
-  { n: 2, name: "Kicker", note: "Small caps over the route. Labels as coloured dots, not pills.", Card: CardKicker },
-  { n: 3, name: "One line", note: "Route and label on the same row. The most routes on screen.", Card: CardOneLine },
-  { n: 4, name: "Tinted", note: "The current route sits on a grey ground, with a quiet outlined chip.", Card: CardTint },
-  { n: 5, name: "Lead chip", note: "Current reads at the front of the route, in the sentence.", Card: CardLead },
+  { n: "A", name: "Chip above", note: "What is live now. Clearest, and costs a line of its own.", Card: ChipAbove },
+  { n: "B", name: "Beside the tick", note: "Top right, under the tick. Costs no line.", Card: BesideTick },
+  { n: "C", name: "Its own section", note: "Lifted out under a heading, with the rest under theirs. Nothing to mark.", Card: Sectioned, sectioned: true },
+  { n: "D", name: "In the sentence", note: "Reads at the front of the route, as part of the line.", Card: InSentence },
+  { n: "E", name: "A chip among chips", note: "First chip in the label row, slate so it is a different kind of thing.", Card: AmongChips },
 ];
+
+const Heading = ({ children }) => (
+  <p style={{
+    margin: "0 0 7px 2px", fontSize: 10.5, fontWeight: 800, color: C.sub,
+    letterSpacing: "0.6px", textTransform: "uppercase",
+  }}>{children}</p>
+);
 
 export default function RouteStyleLab() {
   const [params] = useSearchParams();
   const dest = params.get("dest") || "Vietnam";
   const nights = Number(params.get("nights")) || destMeta[dest]?.defaultNights || 7;
-  const options = useMemo(() => routeOptions(dest, nights).slice(0, 4), [dest, nights]);
+  const options = useMemo(() => routeOptions(dest, nights).slice(0, 3), [dest, nights]);
   const currentId = options[0]?.id;
   const [picked, setPicked] = useState({});
 
@@ -307,34 +241,46 @@ export default function RouteStyleLab() {
     <div style={{ height: "100%", overflowY: "auto", background: C.white }}>
       <div style={{ padding: "16px 16px 10px" }}>
         <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: C.head, letterSpacing: "-0.3px" }}>
-          Five ways to show a route
+          Marking the route you are on
         </h1>
         <p style={{ margin: "5px 0 0", fontSize: 12.5, color: C.sub, lineHeight: "18px" }}>
-          {dest}, {nights} nights. The same four routes in each. Tap to pick one and see how
-          the chosen card and the current card tell themselves apart.
+          {dest}, {nights} nights. Same three routes under each, the first one being the
+          one you are travelling. Tap to pick a different one and watch the two marks,
+          current and picked, stay apart.
         </p>
       </div>
 
-      {VERSIONS.map(({ n, name, note, Card }) => (
-        <section key={n} style={{ padding: "14px 16px 18px", borderTop: `1px solid ${C.div}` }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: C.p600, letterSpacing: "0.6px", textTransform: "uppercase" }}>
-            Version {n}
-          </p>
-          <p style={{ margin: "3px 0 2px", fontSize: 15, fontWeight: 700, color: C.head }}>{name}</p>
-          <p style={{ margin: "0 0 11px", fontSize: 12, color: C.sub, lineHeight: "17px" }}>{note}</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {options.map((opt) => (
-              <Card
-                key={opt.id}
-                opt={opt}
-                current={opt.id === currentId}
-                on={(picked[n] || currentId) === opt.id}
-                pick={() => setPicked((p) => ({ ...p, [n]: opt.id }))}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {VERSIONS.map(({ n, name, note, Card, sectioned }) => {
+        const cards = options.map((opt) => (
+          <Card
+            key={opt.id}
+            opt={opt}
+            current={opt.id === currentId}
+            on={(picked[n] || currentId) === opt.id}
+            pick={() => setPicked((p) => ({ ...p, [n]: opt.id }))}
+          />
+        ));
+        return (
+          <section key={n} style={{ padding: "14px 16px 18px", borderTop: `1px solid ${C.div}` }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: C.p600, letterSpacing: "0.6px", textTransform: "uppercase" }}>
+              Option {n}
+            </p>
+            <p style={{ margin: "3px 0 2px", fontSize: 15, fontWeight: 700, color: C.head }}>{name}</p>
+            <p style={{ margin: "0 0 11px", fontSize: 12, color: C.sub, lineHeight: "17px" }}>{note}</p>
+            {sectioned ? (
+              <>
+                <Heading>The route you have now</Heading>
+                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>{cards[0]}</div>
+                <div style={{ height: 1, background: C.div, margin: "14px 0 12px" }} />
+                <Heading>{options.length - 1} other routes</Heading>
+                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>{cards.slice(1)}</div>
+              </>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>{cards}</div>
+            )}
+          </section>
+        );
+      })}
 
       <div style={{ height: 40 }} />
     </div>

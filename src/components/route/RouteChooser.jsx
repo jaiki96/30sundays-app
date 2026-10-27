@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { X as XIcon, Check, ArrowRight, ArrowLeft, Headphones } from "lucide-react";
 import { C } from "../../data";
 import { destAreas } from "../../data/buildData";
@@ -45,11 +45,11 @@ import BuildingScreen from "../BuildingScreen";
 // facts about other people, not advice about this trip), and the rest keep
 // the three quiet tones they already had.
 const TONE = {
-  green: { fg: "#027A48", dot: "#17B26A" },
-  blue: { fg: "#1849A9", dot: "#2E90FA" },
-  amber: { fg: "#B54708", dot: "#F79009" },
-  purple: { fg: "#5925DC", dot: "#7A5AF8" },
-  slate: { fg: "#475467", dot: "#98A2B3" },
+  green: { bg: "#ECFDF3", fg: "#027A48" },
+  blue: { bg: "#EFF4FF", fg: "#1849A9" },
+  amber: { bg: "#FFFAEB", fg: "#B54708" },
+  purple: { bg: "#F4F3FF", fg: "#5925DC" },
+  slate: { bg: "#F2F4F7", fg: "#475467" },
 };
 
 const KEY_TONE = {
@@ -58,19 +58,18 @@ const KEY_TONE = {
   classic: "amber", easy: "green",
 };
 
-// A dot and a word, not a pill. A pill is a container, and these are
-// adjectives: the dot carries the colour, the word carries the meaning, and
-// the row costs half the height it did as a line of capsules.
+// A chip, on its own ground. The dot-and-word version was lighter on the
+// page and too light to be read as a label at all: a chip has an edge, and
+// an edge is what says "this is a thing somebody has said about the route"
+// rather than a stray word under it.
 function Tag({ tag }) {
   const t = TONE[KEY_TONE[tag.key]] || TONE.slate;
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", gap: 5,
-      fontSize: 11, fontWeight: 700, color: t.fg, whiteSpace: "nowrap",
-    }}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: t.dot, flexShrink: 0 }} />
-      {tag.text}
-    </span>
+      display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: 6,
+      background: t.bg, color: t.fg, fontSize: 10.5, fontWeight: 800,
+      letterSpacing: "0.2px", whiteSpace: "nowrap",
+    }}>{tag.text}</span>
   );
 }
 
@@ -120,57 +119,39 @@ const CARD = (on) => ({
   transition: "border-color .15s, background .15s, box-shadow .15s",
 });
 
-// ─── How tall the route line is, for all of them ───
+// ─── Each card as tall as it needs to be ───
 //
-// Every card is the same height, because a list whose cards grow with the
-// number of cities reads as a ranking by size and the tick moves down the
-// page as you scan it. But fixing that height at two lines when nothing in
-// the list wraps leaves a band of nothing under every route.
-//
-// So it is measured: one canvas pass over the whole list, and if a single
-// route needs a second line they all get one. Same heights, no dead space,
-// and the answer changes with the destination rather than being guessed
-// once for all of them.
-const ROUTE_FONT = '600 12.5px Figtree, system-ui, sans-serif';
+// They were all held at the height of the longest route in the list, so a
+// three-city route carried a band of nothing above its labels. The reason
+// was that cards growing with the number of cities read as a ranking by
+// size, which was true when they were photo cards of wildly different
+// heights. As lines of text the difference is one line, seventeen pixels,
+// and a short route simply looks like a short route.
 const LINE_H = 17;
-const ARROW_W = 19; // the glyph and its two margins
 
-function routeLines(options, width) {
-  if (!width) return 1;
-  const cv = routeLines.cv || (routeLines.cv = document.createElement("canvas"));
-  const ctx = cv.getContext("2d");
-  ctx.font = ROUTE_FONT;
-  const fits = options.every((o) => {
-    const w = o.route.reduce((sum, r, i) => sum + ctx.measureText(`${r.city} ${r.n}N`).width + (i ? ARROW_W : 0), 0);
-    return w <= width;
-  });
-  return fits ? 1 : 2;
+// Nothing on the card says which route you are on. It does not need to:
+// the one you are on is in a section of its own above the rest, under its
+// own heading, and where a card sits says what it is. A mark as well would
+// be the same fact twice.
+function SectionHead({ children }) {
+  return (
+    <p style={{
+      margin: "0 0 8px 2px", fontSize: 10.5, fontWeight: 800, color: C.sub,
+      letterSpacing: "0.6px", textTransform: "uppercase",
+    }}>{children}</p>
+  );
 }
 
-function RouteCard({ opt, chosen, current, onPick, lines = 2 }) {
+function RouteCard({ opt, chosen, onPick }) {
   return (
     <button
       type="button"
       data-testid={`route-option-${opt.id}`}
       onClick={onPick}
       aria-pressed={chosen}
-      // The current card trades its label row for the kicker, which is the
-      // shorter of the two by six pixels. The six go back on underneath, so
-      // every card in the list is the same height whichever one you are on.
-      style={{ ...CARD(chosen), padding: current ? "9px 11px 15px" : "9px 11px" }}
+      style={{ ...CARD(chosen), padding: "9px 11px" }}
     >
       <div>
-        {/* ─── Which one you are on ───
-            Said in words, over the route, the way a heading sits over a
-            section. It was a filled pink tab, which read as a warning
-            rather than a statement, and pink on this screen now means one
-            thing only: the card you have picked. */}
-        {current && (
-          <span style={{
-            display: "block", fontSize: 9.5, fontWeight: 800, color: C.sub,
-            letterSpacing: "0.7px", textTransform: "uppercase", marginBottom: 3,
-          }}>Your current route</span>
-        )}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           {/* ─── The order, as an order ───
               Arrows, because a route is a sequence and a middot is not.
@@ -179,10 +160,10 @@ function RouteCard({ opt, chosen, current, onPick, lines = 2 }) {
           <p style={{
             flex: 1, minWidth: 0, margin: 0,
             fontSize: 12.5, fontWeight: 600, color: C.head, lineHeight: `${LINE_H}px`, letterSpacing: "-0.1px",
-            // Held at the list's height, so every card's labels start on the
-            // same line whether this route wrapped or not.
-            height: lines * LINE_H,
-            overflow: "hidden", display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical",
+            // A ceiling, not a height. Two lines is as long as any route
+            // this list produces; one-line routes stop at one line.
+            maxHeight: 2 * LINE_H,
+            overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
           }}>
             {opt.route.map((r, i) => (
               <span key={r.city} style={{ whiteSpace: "nowrap" }}>
@@ -335,7 +316,13 @@ export default function RouteChooser({
     // trip they already have on top of an empty list would read as an answer
     // when the answer is that we have none.
     if (!list.length) return [];
-    if (!currentId || list.some((o) => o.id === currentId)) return list;
+    if (!currentId) return list;
+    // When the generator produced the route they are on, it comes back
+    // wherever the ranking put it, which can be halfway down. Hoisted, not
+    // left there: the thing every other route is being compared against has
+    // to be the first thing read.
+    const found = list.find((o) => o.id === currentId);
+    if (found) return [found, ...list.filter((o) => o !== found)];
     const mine = {
       id: currentId,
       route: current.map((r) => ({ ...r })),
@@ -345,25 +332,11 @@ export default function RouteChooser({
     return [mine, ...list];
   }, [dest, total, pool, currentId, current]);
 
+  // The one they are travelling, and everything else.
+  const here = options.find((o) => o.id === currentId) || null;
+  const rest = options.filter((o) => o !== here);
+
   const [pickedId, setPickedId] = useState(currentId);
-  // The width a route has on a card: the list, less the card's padding, the
-  // gap and the tick. Measured off the real element rather than assumed, so
-  // it holds on whatever the phone frame turns out to be.
-  const [listEl, setListEl] = useState(null);
-  const [listW, setListW] = useState(0);
-  useEffect(() => {
-    if (!listEl) return undefined;
-    const read = () => setListW(listEl.clientWidth);
-    read();
-    const ro = new ResizeObserver(read);
-    ro.observe(listEl);
-    document.fonts?.ready.then(read).catch(() => {});
-    return () => ro.disconnect();
-  }, [listEl]);
-  const lines = useMemo(
-    () => (listW ? routeLines(options, listW - 26 - 10 - 18) : 2),
-    [options, listW]
-  );
   const picked = options.find((o) => o.id === pickedId) || null;
   const changed = pickedId !== currentId;
   const narrowed = pool.length < allCities.length;
@@ -469,18 +442,32 @@ export default function RouteChooser({
             </div>
           </div>
         ) : (
-          <div ref={setListEl} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {options.map((opt) => (
-              <RouteCard
-                key={opt.id}
-                opt={opt}
-                lines={lines}
-                chosen={opt.id === pickedId}
-                current={opt.id === currentId}
-                onPick={() => setPickedId(opt.id)}
-              />
-            ))}
-          </div>
+          /* ─── Two sections, not nine cards ───
+              The route they are on is lifted out and given a heading, and
+              the alternatives get one of their own. Nothing on any card has
+              to say which is which, because where a card sits already does,
+              and the one being compared against cannot drift down a list it
+              is not in. */
+          <>
+            {here && (
+              <>
+                <SectionHead>The route you have now</SectionHead>
+                <RouteCard opt={here} chosen={here.id === pickedId} onPick={() => setPickedId(here.id)} />
+                <div style={{ height: 1, background: C.div, margin: "16px 0 14px" }} />
+              </>
+            )}
+            {!!rest.length && <SectionHead>{here ? "Other routes" : "Routes to choose from"}</SectionHead>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {rest.map((opt) => (
+                <RouteCard
+                  key={opt.id}
+                  opt={opt}
+                  chosen={opt.id === pickedId}
+                  onPick={() => setPickedId(opt.id)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
