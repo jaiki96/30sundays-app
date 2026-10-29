@@ -623,6 +623,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // they are out of the total from the moment it is made.
   const noFlights = !!rawIt?.noFlights;
   const [flightsIncluded, setFlightsIncluded] = useState(!rawIt?.noFlights);
+  // A draft carries no flights. They come in when they are added (where the
+  // app can add them) or through the consultant (where it cannot yet).
+  const [draftFlightsAdded, setDraftFlightsAdded] = useState(false);
   // The trip can arrive a render after this screen does, when the copy that
   // made it is still settling into the deals store. So the initial value is a
   // guess and this is the correction: once we know it is a copy, flights come
@@ -1060,7 +1063,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // (they were priced from the trip's home). Until the customer re-selects, the
   // intl flights show an empty prompt and drop out of the costing.
   const deptChanged = departureCity !== "Indore";
-  const flightPerPerson = !flightsIncluded ? 0 : (
+  // ?flights=add shows the version with an Add flights button; without it,
+  // flights are added by the consultant.
+  const draftFlightsMode = params.get("flights") === "add" ? "add" : "consultant";
+  const draftNoFlights = !quoted && !viewOnly && flightsIncluded && !draftFlightsAdded;
+  const flightPerPerson = (!flightsIncluded || draftNoFlights) ? 0 : (
     (!deptChanged && (intlMode === "roundtrip" || outAdded) && selOut ? selOut.price : 0) +
     (!deptChanged && (intlMode === "roundtrip" || retAdded) && selRet ? selRet.price : 0) +
     domesticLegs.reduce((s, { i }) => s + (getFlightForLeg(i)?.price || 0), 0)
@@ -1272,14 +1279,47 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // than off the stay's activity list. Used by the glance cards and the day
   // detail, so the two cannot drift apart.
   const dayIsFree = (day, i) => !selectedDayOptions[i] && (day.leisure || day.departure);
+  // Demo switches, so the two empty states can be seen on a real trip:
+  // ?unrated=5 shows Day 5 with no rating yet, ?noscore=6 shows Day 6 with no
+  // score yet. Comma lists work too.
+  const demoDays = (key) => new Set((params.get(key) || "").split(",").map(Number).filter(Boolean));
+  const unratedDays = demoDays("unrated");
+  const noScoreDays = demoDays("noscore");
+  // The score (how the day feels) is for days with tours. A leisure day,
+  // arrival or departure included, is not scored at all.
   const scoringForDay = (day, i) => {
+    if (noScoreDays.has(day.dayNum) || dayIsFree(day, i)) return null;
+    return getDayScoring(day, i, daysWithActivities);
+  };
+  const ratingForDay = (day, i) => (dayIsFree(day, i) || unratedDays.has(day.dayNum) ? null : dayRatingFor(day, i));
+  // Any day built around a transfer (arriving, leaving, moving hotels) cannot
+  // be changed: the rest of the day hangs off the drive. The bar inside the
+  // day says why; the glance card only shows a lock. A trip that cannot be
+  // edited at all is not "locked" day by day, so it says nothing.
+  const lockReasonFor = (day, i) => {
+    if (!editable) return null;
     const isFirst = i === 0;
     const isLast = i === daysWithActivities.length - 1;
-    const hasTransfer = !!day.transfers?.length || isFirst || isLast;
-    if (!dayIsFree(day, i)) return getDayScoring(day, i, daysWithActivities);
-    return hasTransfer ? getDayScoring({ ...day, activities: [] }, i, daysWithActivities) : null;
+    if (day.departure || isLast) return "Departure day, so it can't be changed.";
+    if (isFirst) return "Arrival day, so it can't be changed.";
+    if (day.transfers?.length) return "Hotel change day, so it can't be changed.";
+    return null;
   };
-  const ratingForDay = (day, i) => (dayIsFree(day, i) ? null : dayRatingFor(day, i));
+  // Why a day has no rating, said where the rating would be.
+  const dayKindFor = (day, i) => {
+    if (dayIsFree(day, i)) return "No tours today";
+    return ratingForDay(day, i) ? null : "Not rated yet";
+  };
+  // Dates on the glance cards only when they are the traveller's own. The
+  // demo start date fills the day detail, but on the list it would read as a
+  // booking somebody never made.
+  // A saved plan already shows its dates at the top, so its days do too.
+  const hasOwnDates = !!(inDeal || exploreStart || travelDates?.fromDate || (it.custom && it.startDate));
+  const glanceDate = (i) => {
+    const d = new Date(tripStart);
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
 
   // The day detail screen takes days in its own shape. Built here so the day
   // deck can swipe across the whole trip without rebuilding on every swipe.
@@ -1290,7 +1330,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
     },
     scoringFor: (day, i) => scoringForDay(day, i),
-  }), [daysWithActivities, it.dest, tripStart]);
+    lockFor: (day, i) => lockReasonFor(day, i),
+  }), [daysWithActivities, it.dest, tripStart, editable, selectedDayOptions]);
 
   // Every plan on offer for the day being changed, as cards.
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
@@ -1938,8 +1979,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 .filter(Boolean);
             }
 
+            // One heads-up on the whole list, on the first day that has one.
+            // A band on every other day taught people to skip them all.
             const candidate = getDayNote(free ? { city: day.city } : { activities: acts });
-            const note = candidate && !notesShown.has(candidate) ? candidate : null;
+            const note = candidate && notesShown.size === 0 ? candidate : null;
             if (note) notesShown.add(note);
 
             return (
@@ -1949,6 +1992,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 changeTestId={`change-day-${i}`}
                 dayNum={day.dayNum}
                 city={day.city}
+                date={hasOwnDates ? glanceDate(i) : null}
+                locked={!!lockReasonFor(day, i)}
+                kind={dayKindFor(day, i)}
                 lines={lines}
                 poster={poster}
                 videoCount={videoCount}
@@ -1958,7 +2004,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 note={note}
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
-                canChange={editable && dayHasOptions(i) && !(free && hasTransfer)}
+                canChange={editable && dayHasOptions(i) && !lockReasonFor(day, i)}
                 onOpen={() => { setDayDetailJump(null); setDayDetailIndex(i); }}
                 onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
@@ -2236,10 +2282,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             {/* Section header: Flights + remove/add-flights toggle */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
               <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Flights</p>
-              {flightsMenu}
+              {!draftNoFlights && flightsMenu}
             </div>
 
-            {!flightsIncluded ? (
+            {draftNoFlights ? (
+              /* A draft: no flight cards at all, one line saying so and the
+                 one way to get them. */
+              <div data-testid="flights-draft" style={{ display: "flex", alignItems: "center", gap: 12, marginTop: -4 }}>
+                <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 13, color: C.sub, lineHeight: "19px" }}>
+                  <strong style={{ color: C.head, fontWeight: 700 }}>Flights not included.</strong>{" "}
+                  {draftFlightsMode === "add" ? "Add them to see the full price." : "Your travel consultant can add them."}
+                </p>
+                {draftFlightsMode === "add" ? (
+                  <button onClick={() => setDraftFlightsAdded(true)} style={{
+                    flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 20,
+                    border: `1px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 12.5, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                    <Plus size={13} strokeWidth={2.6} /> Add
+                  </button>
+                ) : null}
+              </div>
+            ) : !flightsIncluded ? (
               /* Package only — no flights, no flight cost */
               <div style={{ ...padCard, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", padding: "24px 16px" }}>
                 <Plane size={20} color={C.sub} />
@@ -2629,7 +2693,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             tripDays={daysWithActivities.length}
             jumpTo={dayDetailJump}
             onClose={() => { setDayDetailIndex(null); setDayDetailJump(null); }}
-            onChangeDay={editable && dayHasOptions(dayDetailIndex)
+            // A locked day is locked here too: the glance card offers no change
+            // on it, so the day itself cannot either.
+            onChangeDay={editable && dayHasOptions(dayDetailIndex) && !lockReasonFor(daysWithActivities[dayDetailIndex], dayDetailIndex)
               ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setDayDetailJump(null); setChangeDayIndex(i); }
               : null}
           />
