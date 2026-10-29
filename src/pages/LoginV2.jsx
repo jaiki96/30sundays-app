@@ -155,7 +155,7 @@ function renderWithHighlights(text, highlights, color) {
 
 
 // ─── Static hero: logo + 3 value ticks (no title, no circle bg on tick) ───
-function StaticHero({ collapsed, onSkip, onBack, hideSkip = false }) {
+function StaticHero({ collapsed, onSkip, onBack, hideSkip = false, reason }) {
   return (
     <div style={{
       position: "absolute", inset: 0, overflow: "hidden",
@@ -221,6 +221,10 @@ function StaticHero({ collapsed, onSkip, onBack, hideSkip = false }) {
             animation: "lv2Up 0.7s cubic-bezier(0.4,0,0.2,1) 60ms both",
           }}
         />
+        {/* Why we are asking, when a tap brought them here (a heart, say). */}
+        {reason && (
+          <p style={{ margin: collapsed ? "-14px 0 20px" : "-24px 0 28px", fontSize: 17, fontWeight: 800, color: T.navy, lineHeight: 1.35 }}>{reason}</p>
+        )}
 
         {/* 3 value ticks - colored check only, no circle bg */}
         <ul style={{
@@ -330,8 +334,10 @@ const Divider = () => (
 // Props (all optional - defaults make this work as a standalone /login-v2 page):
 //   onComplete({ country, phone, otp })  - called after OTP verifies successfully
 //   onSkip()                              - called when Skip tapped (default: navigate("/"))
+//   onBack()                              - called when Back tapped (default: navigate(-1))
+//   reason                                - one line saying why we ask, shown under the logo
 //   validateOtp(otpString) -> string|null - return error string to keep on OTP screen, or null/undefined to proceed
-export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp, hideSkip = false }) {
+export default function LoginV2({ onComplete, onSkip: onSkipProp, onBack: onBackProp, validateOtp, hideSkip = false, reason }) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState("phone"); // phone | otp
   const [country, setCountry] = useState(countryCodes[0]);
@@ -439,8 +445,9 @@ export default function LoginV2({ onComplete, onSkip: onSkipProp, validateOtp, h
           <StaticHero
             collapsed={collapsed}
             onSkip={skip}
-            onBack={() => navigate(-1)}
+            onBack={onBackProp || (() => navigate(-1))}
             hideSkip={hideSkip}
+            reason={reason}
           />
         </div>
       )}

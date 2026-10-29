@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { X, Check, ChevronRight, AlertTriangle } from "lucide-react";
+import { X, Check, ChevronRight, AlertTriangle, Heart } from "lucide-react";
 import { C } from "../../data";
 import { destAreas, areaImg, cityCoords } from "../../data/buildData";
 import { regionGuide } from "../../data/regionGuide";
 import RegionDetail from "../../pages/RegionDetail";
 import { useWishlist } from "../../data/wishlist";
-import WishlistPickSheet, { SavedHint, SavedMark } from "../WishlistPickSheet";
+import { SavedMark } from "../WishlistPickSheet";
 
 // ─── Choose the cities ───
 //
@@ -34,7 +34,7 @@ const PAD = 16;
 //
 // Our suggested length per city, scaled to fit the trip they have booked, with
 // the remainder going to the longer stays first so nothing ends up at nought.
-function split(cities, rec, target) {
+export function split(cities, rec, target) {
   if (!cities.length) return [];
   const want = cities.map((c) => Math.max(1, rec[c] ?? 2));
   const total = want.reduce((a, b) => a + b, 0);
@@ -245,15 +245,16 @@ function CityCard({ area, picked, saved, onToggle, onOpen }) {
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {area.city}
           </span>
-          {saved && <SavedMark size={20} />}
-          {picked && (
-            <span aria-hidden style={{
-              width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-              display: "grid", placeItems: "center", background: C.p600,
-            }}>
-              <Check size={14} strokeWidth={3.5} color="#fff" />
-            </span>
-          )}
+          {saved && <SavedMark size={18} />}
+          {/* Always drawn, so an empty one says the card can be chosen. */}
+          <span aria-hidden style={{
+            width: 20, height: 20, borderRadius: "50%", flexShrink: 0, boxSizing: "border-box",
+            display: "grid", placeItems: "center",
+            background: picked ? C.p600 : C.white, border: picked ? "none" : `1.5px solid ${C.icon}`,
+            transition: "background .15s",
+          }}>
+            {picked && <Check size={12} strokeWidth={3.5} color="#fff" />}
+          </span>
         </div>
 
         <p style={{
@@ -518,19 +519,17 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
     [ofKind, dest, cards]
   );
   const savedCities = useMemo(() => new Set(savedRegions.map((i) => i.id)), [savedRegions]);
-  // Arriving from a board's "Plan from these saves", the saved places open
-  // straight away: that is what the button promised. Still nothing pre-ticked.
-  const [picking, setPicking] = useState(() =>
-    savedRegions.length > 0 && new URLSearchParams(window.location.search).get("from") === "wishlist" && route.length === 0);
 
-  // Chosen cities first, in the order the trip runs them, then the rest. The
-  // list can be a dozen long; what somebody has already decided should not be
-  // something they scroll to find.
+  // The saved cities come first, under their own heading, right here in the
+  // list they are chosen from: nobody has to go somewhere else to find what
+  // they already said they wanted. Within each group, chosen cities first, in
+  // the order the trip runs them. Still nothing pre-ticked.
   const shown = useMemo(() => {
     const order = route.map((s) => s.city);
     const rank = (a) => (order.includes(a.city) ? order.indexOf(a.city) : 1000 + cards.indexOf(a));
-    return [...cards].sort((a, b) => rank(a) - rank(b));
-  }, [cards, route]);
+    return [...cards].sort((a, b) => (savedCities.has(b.city) - savedCities.has(a.city)) || (rank(a) - rank(b)));
+  }, [cards, route, savedCities]);
+  const savedShown = shown.filter((a) => savedCities.has(a.city)).length;
 
   const seen = useRef(false);
   if (nudge) seen.current = true;
@@ -731,7 +730,6 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
             {title}
           </h1>
         )}
-        <SavedHint count={savedRegions.length} dest={dest} onOpen={() => setPicking(true)} style={{ marginTop: title ? 6 : 0, padding: title ? 0 : `10px ${PAD}px 0` }} />
       </div>
 
       {/* ─── The map, and most of the screen ───
@@ -773,20 +771,34 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
             color: C.head, textAlign: "center", letterSpacing: "-0.2px",
           }}>
             {cards.length} cities in {dest}
+            {savedShown > 0 && <span style={{ color: C.p600 }}> · {savedShown} saved</span>}
           </p>
         </div>
 
         <div style={{ padding: `4px ${PAD}px 16px`, borderTop: `1px solid ${C.div}` }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 12 }}>
-            {shown.map((a) => (
-              <CityCard
-                key={a.city}
-                area={a}
-                picked={picked.has(a.city)}
-                saved={savedCities.has(a.city)}
-                onToggle={() => toggle(a)}
-                onOpen={() => setReading(a.city)}
-              />
+            {shown.map((a, i) => (
+              <div key={a.city} style={{ display: "contents" }}>
+                {savedShown > 0 && i === 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 -2px" }}>
+                    <Heart size={16} color={C.p600} fill={C.p600} />
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: C.head }}>From your wishlist</p>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.p600 }}>{savedShown} saved</span>
+                  </div>
+                )}
+                {savedShown > 0 && i === savedShown && (
+                  <p style={{ margin: "8px 0 -2px", paddingTop: 16, borderTop: `1px solid ${C.div}`, fontSize: 15, fontWeight: 800, color: C.head }}>
+                    All cities in {dest}
+                  </p>
+                )}
+                <CityCard
+                  area={a}
+                  picked={picked.has(a.city)}
+                  saved={savedCities.has(a.city)}
+                  onToggle={() => toggle(a)}
+                  onOpen={() => setReading(a.city)}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -836,18 +848,6 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
             ))}
           </div>
         </div>
-      )}
-
-      {/* The saves, as a sheet over the step, each with an Add button. */}
-      {picking && createPortal(
-        <WishlistPickSheet
-          dest={dest} kind="region" items={savedRegions}
-          isAdded={(it) => picked.has(it.id)}
-          onAdd={(it) => { const a = cards.find((c) => c.city === it.id); if (a) toggle(a); }}
-          canAdd={(it) => canonical.includes(it.id) ? null : "Not one of the cities we plan here"}
-          onClose={() => setPicking(false)}
-        />,
-        document.getElementById("phone-frame") || document.body
       )}
 
       {/* The region page gets the same add button the cards have, because

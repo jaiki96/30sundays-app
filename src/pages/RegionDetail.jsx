@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import {
@@ -2070,8 +2070,12 @@ export default function RegionDetail({
   const [allTrips, setAllTrips] = useState(null);
   const [activity, setActivity] = useState(null);
   const [hotel, setHotel] = useState(null);
-  const [eateries, setEateries] = useState(false);
-  const [shopping, setShopping] = useState(false);
+  // A saved place to eat or shop opens its town's list of them straight away
+  // (?open=eat or ?open=shop), since neither has a page of its own.
+  const [search] = useSearchParams();
+  const opening = destProp ? null : search.get("open");
+  const [eateries, setEateries] = useState(opening === "eat");
+  const [shopping, setShopping] = useState(opening === "shop");
 
   const box = useRef(null);
   const scroller = useRef(null);
