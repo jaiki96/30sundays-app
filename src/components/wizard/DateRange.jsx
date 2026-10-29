@@ -73,7 +73,7 @@ function WeatherChip({ w, small }) {
 }
 
 // ─── One month ───
-function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, pulse }) {
+function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, pulse, grips = true }) {
   const ndays = new Date(y, m + 1, 0).getDate();
   const firstDow = new Date(y, m, 1).getDay();
   const r = monthRating(dest, m);
@@ -145,7 +145,7 @@ function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, p
                 }}
               >{day}</button>
 
-              {cap && start && end && (
+              {grips && cap && start && end && (
                 <span
                   onPointerDown={(e) => onGrab(e, isStart ? "start" : "end")}
                   style={{
@@ -169,7 +169,10 @@ function Month({ m, y, idx, dest, today, start, end, ghostEnd, onPick, onGrab, p
   );
 }
 
-export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights }) {
+// `startOnly` is a trip whose length is already decided: recreating somebody
+// else's holiday, where the nights are the thing being copied. One end is
+// picked, the other follows it, and nothing on the calendar offers to move it.
+export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDate, setStartDate, nights, setNights, startOnly = false }) {
   const today = useMemo(() => midnight(new Date()), []);
   const wrapRef = useRef(null);
   const footRef = useRef(null);
@@ -247,6 +250,11 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   };
 
   const onPick = (d) => {
+    // A fixed-length trip: every tap is a start, and the end follows it.
+    if (startOnly) {
+      commit(d, addDays(d, nights));
+      return;
+    }
     // The marker is on the end and this day can be one, so this tap moves it.
     if (start && focus === "end" && d > midnight(start)) {
       commit(start, d);
@@ -260,6 +268,7 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   // Tapping a date box takes the marker and flashes the day it refers to, so
   // the link between the box and the calendar is shown rather than assumed.
   const focusLeg = (which) => {
+    if (startOnly && which === "end") return;
     setFocus(which);
     const d = which === "start" ? start : end;
     if (!d) return;
@@ -278,6 +287,7 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
   };
 
   const onGrab = (e, which) => {
+    if (startOnly) return;
     e.preventDefault();
     e.stopPropagation();
     // Capture on the calendar, not on the grip: the grip belongs to whichever
@@ -428,7 +438,7 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
         {months.map(({ m, y }, i) => (
           <Month
             key={`${m}-${y}`} m={m} y={y} idx={i} dest={dest} today={today}
-            start={start} end={end} ghostEnd={ghostEnd} onPick={onPick} onGrab={onGrab} pulse={pulse}
+            start={start} end={end} ghostEnd={ghostEnd} onPick={onPick} onGrab={onGrab} pulse={pulse} grips={!startOnly}
           />
         ))}
         {/* Room for the footer to sit over, so the last rows are never trapped
@@ -450,12 +460,16 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
               : short ? <AlertTriangle size={15} color="#B54708" style={{ flexShrink: 0 }} />
                       : <CheckCircle2 size={15} color="#027A48" style={{ flexShrink: 0 }} />}
             <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, lineHeight: "17px", color: !hasRange ? C.sub : short ? "#B54708" : "#027A48" }}>
-              {!start ? "Tap the day you want to start"
+              {startOnly
+                ? (!start
+                    ? "Tap the day you want to start"
+                    : `${nights} ${nights === 1 ? "night" : "nights"}, the same as the trip you are copying`)
+                : !start ? "Tap the day you want to start"
                 : !end ? `We recommend at least ${minNights} nights in ${dest}`
                 : short ? `We recommend at least ${minNights} nights`
                         : `That is a perfect length for your ${dest} trip`}
             </span>
-            {hasRange && short && (
+            {!startOnly && hasRange && short && (
               <button
                 onClick={() => commit(start, addDays(start, minNights))}
                 style={{
@@ -474,8 +488,8 @@ export default function DateRange({ dest, minNights = 7, stickyTop = 0, startDat
               background: C.white, color: C.sub,
               fontSize: 9.5, fontWeight: 800, letterSpacing: "0.5px", whiteSpace: "nowrap",
             }}>{hasRange ? `${n} ${n === 1 ? "NIGHT" : "NIGHTS"}` : "NIGHTS"}</span>
-            <Leg label="End date" date={end} active={focus === "end"} right
-                 disabled={!start} onClick={() => focusLeg("end")} />
+            <Leg label="End date" date={end} active={!startOnly && focus === "end"} right
+                 disabled={startOnly || !start} onClick={() => focusLeg("end")} />
           </div>
         </div>
       </div>

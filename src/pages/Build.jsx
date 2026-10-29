@@ -7,6 +7,7 @@ import {
   Sparkles, Play, GripVertical, Map as MapIcon, Search, Star, Users, MapPin,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
+import { activityRating } from "../data/activityRating";
 import { SEASON_LABEL, SEASON_COLOR } from "../components/seasonStyle";
 import {
   BUILD_DESTS, destMeta, destAreas, MONTHS, monthRating,
@@ -27,10 +28,15 @@ import RoutePicker, { split as splitNights } from "../components/wizard/RoutePic
 import { useWishlist } from "../data/wishlist";
 import { regionByCity } from "../data/discoverData";
 import WishlistPickSheet, { SavedHint, SavedMark } from "../components/WishlistPickSheet";
+import { BuildingView } from "./Generating";
+import ActivityPicker from "../components/wizard/ActivityPicker";
+// How long the wait screen holds before the itinerary opens. The real build
+// takes about a minute; this is a preview of it, long enough to read.
+const BUILD_WAIT = 6000;
 
-// Steps: 0 Destination · 1 Party · 2 When · 3 Route · 4 Activities.
+// Steps: 0 Destination · 1 Party · 2 When · 3 Cities · 4 Activities.
 // Maldives swaps the last two: 3 Resort preference · 4 Meal preference.
-const STEP_LABELS_DEFAULT = ["Destination", "Travelers", "Travel dates", "Route", "Activities"];
+const STEP_LABELS_DEFAULT = ["Destination", "Travelers", "Travel dates", "Cities", "Activities"];
 const STEP_LABELS_MALDIVES = ["Destination", "Travelers", "Travel dates", "Resort", "Meal plan"];
 // Only these get the in-app itinerary wizard; other countries go to lead capture.
 const AUTO_ITINERARY_DESTS = ["Thailand", "Vietnam", "Bali"];
@@ -40,14 +46,6 @@ function couplePct(sig) {
   let h = 0;
   for (let i = 0; i < sig.length; i++) h = (h * 31 + sig.charCodeAt(i)) % 100;
   return 55 + (h % 34);
-}
-// Deterministic Google-style rating + review count from an activity id
-// (4.3-4.9, 80-480 reviews). No live ratings feed yet, so this keeps every
-// activity looking real and consistent across visits.
-function activityRating(id) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 10000;
-  return { rating: (4.3 + ((h % 7) * 0.1)).toFixed(1), reviews: 80 + (h % 400) };
 }
 const CROWD_COLOR = { Low: C.sText, Mixed: C.wText, High: C.dText };
 // User-facing: collapse crowd levels into a friendlier Popular / Offbeat label.
@@ -322,7 +320,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       // Skip the reveal: drop straight onto the itinerary screen. Replace so
       // Back from the itinerary doesn't return into the half-built wizard.
       navigate(`/itinerary/${it.id}?dealId=${dealId}&versionId=${versionId}`, { replace: true });
-    }, 1400);
+    }, BUILD_WAIT);
   };
 
   // ─── Straight from a board ───
@@ -394,7 +392,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
       else if (tier) qs.set("tier", tier);
       if (mealPrefs.size) qs.set("meal", [...mealPrefs].join(","));
       navigate(`/maldives-quote?${qs.toString()}`, { replace: true });
-    }, 1400);
+    }, BUILD_WAIT);
   };
 
   // ─── Save the sequential edit → fork a new version (no confirmation) ───
@@ -483,11 +481,14 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   };
   const cta = ctaFor();
 
-  // ─── progress stepper: a concise summary + jump-to per stage ───
-  // Each step shows its stage name and a short value of what's picked. Tapping a
-  // completed step jumps back to it. A pre-seeded destination locks step 0.
-  const pad2 = (n) => String(n).padStart(2, "0");
-  const ddmm = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+  // ─── progress stepper: what each stage answered ───
+  // A stage shows its answer once it has one, and its own name until then.
+  // Tapping a completed stage jumps back to it, and a pre-seeded destination
+  // locks stage 0.
+  // "10 Nov", not "10/11". A slash date is two numbers to decode, and on a
+  // step whose whole job is to say what you already answered, that is the one
+  // thing it must not be. The month is short so two of them still fit the row.
+  const ddmm = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   let whenVal = null;
   if (startDate) {
     const s = new Date(startDate);
@@ -499,14 +500,21 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
     : tier ? TIER_META[tier]?.label : null;
   const stepSummary = [
     dest || null,                                                            // Destination
-    step >= 1 ? `${adultCount}A${party.kids ? ` ${party.kids}K` : ""}` : null, // Travelers
+    // "2 adults", not "2A". The same point as the activities stage: a code
+    // saves four characters in a row that scrolls anyway, and costs the reader
+    // the one thing the stage is there to tell them.
+    step >= 1
+      ? `${adultCount} adult${adultCount === 1 ? "" : "s"}${party.kids ? `, ${party.kids} ${party.kids === 1 ? "child" : "children"}` : ""}`
+      : null,                                                                // Travelers
     whenVal,                                                                 // Travel dates
     isMaldives
       ? resortPrefVal                                                        // Resort preference
-      : (route?.length ? `${route.length} ${route.length === 1 ? "city" : "cities"}` : null), // Route
+      : (route?.length ? `${route.length} ${route.length === 1 ? "city" : "cities"}` : null), // Cities
+    // What was picked, not how many picks. "2 picks" on the Activities step is
+    // a count of taps; "2 activities" is the answer the step was asking for.
     isMaldives
-      ? (mealPrefs.size ? `${mealPrefs.size} pick${mealPrefs.size === 1 ? "" : "s"}` : null)  // Meal plan
-      : (picks.size ? `${picks.size} pick${picks.size === 1 ? "" : "s"}` : null),             // Activities
+      ? (mealPrefs.size ? `${mealPrefs.size} meal plan${mealPrefs.size === 1 ? "" : "s"}` : null) // Meal plan
+      : (picks.size ? `${picks.size} activit${picks.size === 1 ? "y" : "ies"}` : null),           // Activities
   ];
   // Sequential edit: tap back to any already-reached editable step (from the
   // entry field up to the current step) to edit it again; forward still only via
@@ -541,7 +549,7 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
   }
 
   if (leadRedirect) return null;
-  if (building) return <Building dest={dest} />;
+  if (building) return <Building dest={dest} cities={(route || []).map((r) => r.city)} />;
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: C.white }}>
@@ -555,8 +563,16 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
               stepper - the wizard only appears once a wizard-eligible country is
               chosen. Edit mode keeps the stepper on step 0. */}
           {(editMode || step > 0) && (
-          /* Clickable stage stepper: name + a concise value; tap a done step to
-              jump back. Scrolls sideways so full stage names stay readable. */
+          /* ─── The stepper ───
+              One line per stage, not two. It used to carry the stage's name
+              and its answer stacked on top of each other, which is the same
+              word twice: "Destination" over "Vietnam" tells you nothing that
+              "Vietnam" does not, and five of those made a header taller than
+              the question underneath it.
+
+              So a stage shows its answer once it has one, and its name until
+              then. The bar above says where you are, the pink says which stage
+              you are on, and tapping a done one jumps back. */
           <div ref={stepBarRef} className="hide-scrollbar" style={{ flex: 1, display: "flex", gap: 10, minWidth: 0, overflowX: "auto" }}>
             {/* Activities is dropped for the edit flow and the ready-made-itinerary
                 flow (both non-Maldives end on Route). */}
@@ -584,8 +600,13 @@ export default function Build({ userState = "new", otpVerified = false, setOtpVe
                   }}
                 >
                   <div style={{ height: 4, borderRadius: 4, background: active ? C.p600 : C.div, transition: "background .2s" }} />
-                  <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 500, color: current ? C.p600 : C.inact, whiteSpace: "nowrap" }}>{label}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, fontWeight: 500, color: !val ? C.div : current ? C.p600 : done ? C.head : C.inact, whiteSpace: "nowrap" }}>{val || "–"}</p>
+                  {/* An answer reads as an answer: darker and heavier than the
+                      question it replaced. */}
+                  <p style={{
+                    margin: "6px 0 0", fontSize: 11.5, whiteSpace: "nowrap",
+                    fontWeight: val ? 700 : 500,
+                    color: current ? C.p600 : val ? C.head : C.inact,
+                  }}>{val || label}</p>
                 </button>
               );
             })}
@@ -1256,7 +1277,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
       <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${C.div}` }}>
         <button onClick={onClose} style={iconBtn} aria-label="Close map"><XIcon size={20} color={C.head} /></button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head }}>Your route</p>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head }}>Your cities</p>
           <p style={{ margin: 0, fontSize: 12, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.map(s => `${s.city} ${s.n}N`).join(" · ")}</p>
         </div>
         <button onClick={onClose} style={{ ...pillBtn, color: C.p600, borderColor: C.p300 }}>Done</button>
@@ -1269,7 +1290,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
       {/* Recommended routes: tap to switch, the map re-frames live */}
       {variants.length > 0 && (
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.div}`, padding: "12px 0 calc(14px + env(safe-area-inset-bottom))", background: C.white }}>
-          <p style={{ margin: "0 16px 10px", fontSize: 12, fontWeight: 800, color: C.head }}>Recommended routes</p>
+          <p style={{ margin: "0 16px 10px", fontSize: 12, fontWeight: 800, color: C.head }}>City options</p>
           <div className="hs" style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}>
             {variants.map((r, idx) => {
               const on = sigOf(r) === selectedSig;
@@ -1279,7 +1300,7 @@ function RouteMapView({ dest, nights, route, setRoute, onClose }) {
                   border: `${on ? 2 : 1}px solid ${on ? C.p600 : C.div}`, background: on ? C.p100 : C.white,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 5 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>Route {idx + 1}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>Option {idx + 1}</span>
                     {on ? <Check size={15} color={C.p600} strokeWidth={2.5} /> : <span style={{ fontSize: 11.5, fontWeight: 700, color: C.p600 }}>Select</span>}
                   </div>
                   <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1470,59 +1491,20 @@ function CityDetail({ dest, city, onClose }) {
 // Portrait reel cards, 2 per row; tap opens the full-screen reel. A corner tick
 // toggles selection. "See more" reveals the rest; "Skip" auto-builds the best.
 function StepActivities({ dest, route, vibes, picks, setPicks }) {
-  const all = useMemo(() => flatActivities(dest, route, vibes), [dest, route, vibes]);
-  const [showAll, setShowAll] = useState(false);
-  const [reel, setReel] = useState(null);
-  const toggle = (id) => setPicks(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
-
-  // What the couple hearted for this destination before they got here. A mark
-  // on the cards that are already on the wishlist, and one line that opens
-  // the saves so they can be added without leaving the step. Nothing is
-  // pre-ticked: a save is interest, a tick is a decision.
-  const { ofKind } = useWishlist();
-  const savedActs = useMemo(
-    () => ofKind("activity", dest).map((it) => ({ ...it, img: it.img || all.find((a) => a.id === it.id)?.img || null })),
-    [ofKind, dest, all]
-  );
-  const savedIds = useMemo(() => new Set(savedActs.map(i => i.id)), [savedActs]);
-  const onRoute = useMemo(() => new Set(all.map(a => a.id)), [all]);
-  const [picking, setPicking] = useState(false);
-
-  const TOP = 8;
-  const shown = showAll ? all : all.slice(0, TOP);
-
   return (
     <div style={{ padding: "18px 16px 24px" }}>
-      <h1 style={titleStyle}>What sounds fun?</h1>
-      <p style={subStyle}>Pick anything you like. Some may make it into your final trip, some may not, depending on what's possible on the ground.</p>
-      <SavedHint count={savedActs.length} dest={dest} onOpen={() => setPicking(true)} style={{ marginTop: 8 }} />
+      {/* The name of the step, like every other step. "What sounds fun?" asked
+          a question the screen then answered for you, and the line under it
+          ran to three of them: a caveat about what is possible on the ground,
+          at the moment somebody is being invited to choose. The caveat is true
+          and worth one short clause, not a paragraph. */}
+      <h1 style={titleStyle}>Select activities</h1>
+      <p style={subStyle}>Choose what you’d love to do. We’ll plan your days around it.</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
-        {shown.map(a => (
-          <ActivityCard key={a.id} a={a} on={picks.has(a.id)} saved={savedIds.has(a.id)} onOpen={() => setReel(a)} onToggle={() => toggle(a.id)} />
-        ))}
-      </div>
-
-      {!showAll && all.length > TOP && (
-        <button onClick={() => setShowAll(true)} style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 16,
-          padding: "13px", borderRadius: 12, border: `1px solid ${C.div}`, background: C.white,
-          fontSize: 14, fontWeight: 700, color: C.head, cursor: "pointer", fontFamily: "inherit",
-        }}>
-          See more activities <ChevronDown size={15} color={C.sub} />
-        </button>
-      )}
-
-      {reel && <ActivityReel a={reel} dest={dest} on={picks.has(reel.id)} onToggle={() => toggle(reel.id)} onClose={() => setReel(null)} />}
-      {picking && (
-        <WishlistPickSheet
-          dest={dest} kind="activity" items={savedActs}
-          isAdded={(it) => picks.has(it.id)}
-          onAdd={(it) => toggle(it.id)}
-          canAdd={(it) => onRoute.has(it.id) ? null : `Not on this route (${it.city || "another town"})`}
-          onClose={() => setPicking(false)}
-        />
-      )}
+      {/* Saved activities carry their heart on the card and lead each city's
+          row. No separate list of saves to open: that took people off the
+          step to find what was already here. */}
+      <ActivityPicker dest={dest} route={route} vibes={vibes} picks={picks} setPicks={setPicks} />
     </div>
   );
 }
@@ -1620,19 +1602,15 @@ function ActivityReel({ a, dest, on, onToggle, onClose }) {
 }
 
 // ════════════════════ Building ════════════════════
-function Building({ dest }) {
-  const msgs = ["Mapping your route…", "Picking your stays…", "Slotting in your experiences…", "Pricing it up…"];
-  const [i, setI] = useState(0);
-  useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % msgs.length), 380); return () => clearInterval(t); }, []);
+// The same wait the itinerary shows when a trip is built again: a countdown,
+// the five areas it works through, what goes into every trip, and reels from
+// the destination. The real build takes about a minute, which is what the
+// countdown says; the prototype lands on the itinerary after a few seconds,
+// so the screen is a preview of the wait rather than the whole of it.
+function Building({ dest, cities = [] }) {
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.white, padding: 30 }}>
-      <div style={{ position: "relative", width: 70, height: 70 }}>
-        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.p100}`, borderTopColor: C.p600, animation: "spin 0.8s linear infinite" }} />
-        <Sparkles size={28} color={C.p600} style={{ position: "absolute", top: 21, left: 21 }} />
-      </div>
-      <p style={{ margin: "22px 0 0", fontSize: 17, fontWeight: 800, color: C.head }}>Building your {dest} trip</p>
-      <p style={{ margin: "6px 0 0", fontSize: 14, color: C.sub }}>{msgs[i]}</p>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div className="hide-scrollbar" style={{ height: "100%", overflowY: "auto", background: C.bg }}>
+      <BuildingView dest={dest} cities={cities} />
     </div>
   );
 }
@@ -1657,7 +1635,10 @@ function ConfirmEdit({ target, onCancel, onConfirm }) {
 
 // ─── shared styles ───
 const titleStyle = { margin: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" };
-const subStyle = { margin: "8px 0 0", fontSize: 14, color: C.sub, lineHeight: 1.45 };
+// Supporting text, under a 26px title. It was 14px, which is body size: at
+// that weight it argued with the heading instead of sitting under it. Every
+// step's line is one short sentence now, so it can afford to be a caption.
+const subStyle = { margin: "7px 0 0", fontSize: 13, color: C.sub, lineHeight: 1.4 };
 const iconBtn = { width: 38, height: 38, borderRadius: 12, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 };
 const roundBtn = { width: 32, height: 32, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 };
 const primaryBtn = { width: "100%", padding: "15px", borderRadius: 14, border: "none", background: C.p600, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };

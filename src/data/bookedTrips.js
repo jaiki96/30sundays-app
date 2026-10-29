@@ -104,9 +104,10 @@ export const BOOKED_TRIPS = pick().map((it, i) => {
   return {
     id: it.id,
     key: it.key || `i${it.id}`,
-    // Where the card goes. Itineraries open themselves; the two destinations
-    // with no itineraries yet open their destination screen.
-    target: it.target || `/itinerary/${it.id}`,
+    // Where the card goes: the trip, read-only, because it is somebody else's.
+    // The two destinations with no itineraries yet open their destination
+    // screen instead.
+    target: it.target || `/real/${it.id}`,
     dest: it.dest,
     style: it.vibe,
     nights: it.nights,
@@ -186,7 +187,7 @@ export function tripsThroughCity(dest, city) {
       const h = spin(`${it.id}`);
       return {
         key: `r${it.id}`,
-        target: `/itinerary/${it.id}`,
+        target: `/real/${it.id}`,
         dest: it.dest,
         style: it.vibe,
         nights: it.nights,

@@ -18,6 +18,13 @@ export default function HotelPDP() {
   const currentHotelId = params.get("current");
   const dealId = params.get("dealId");
   const versionId = params.get("versionId");
+  // ─── Somebody else's hotel ───
+  //
+  // Opened from a trip being read, this page is the hotel and nothing else:
+  // no room to pick, no room prices, no change, no upgrade, no replace bar.
+  // Everything that would alter a stay belongs to the person who owns the
+  // trip, and a reader does not.
+  const readOnly = params.get("view") === "1";
   const dealsCtx = useDeals();
   const wishlist = useWishlist();
   const [showCurrentDetails, setShowCurrentDetails] = useState(false); // expand current-hotel in the bar
@@ -74,7 +81,7 @@ export default function HotelPDP() {
   const basePrice = baseHotel?.rooms?.[0]?.pricePerNight || currentRoomPrice;
   const storedDelta = (selectedRoom.pricePerNight - basePrice) * nights;
 
-  const hotelsQS = `?current=${encodeURIComponent(currentHotelId || "")}${dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : ""}`;
+  const hotelsQS = `?current=${encodeURIComponent(currentHotelId || "")}${dealId && versionId ? `&dealId=${dealId}&versionId=${versionId}` : ""}${readOnly ? "&view=1" : ""}`;
 
   // Back goes back. It used to always push the alternatives list, so opening
   // this from the itinerary and pressing back landed you in a list you never
@@ -156,7 +163,7 @@ export default function HotelPDP() {
   // shown right after the Select room section when the user is viewing their
   // own hotel. Change hotel opens the alternatives list; View upgrade opens the
   // single 5-star upgrade for this stay.
-  const changeHotelNode = isCurrentHotel ? (
+  const changeHotelNode = isCurrentHotel && !readOnly ? (
     <div style={{ margin: "16px 16px 0" }}>
       <button
         onClick={() => navigate(`/hotels/${itineraryId}/${stayIndex}${hotelsQS}`)}
@@ -393,12 +400,23 @@ export default function HotelPDP() {
     } : undefined,
   });
 
+  // ─── One room, because one room is what the trip is on ───
+  //
+  // The full list is a chooser, and the price on this trip was struck against
+  // one of them. A reader seeing three rooms at three prices would be reading
+  // a menu for a meal that has already been ordered.
+  const shown = readOnly && detail.rooms?.length > 1
+    ? { ...detail, rooms: [detail.rooms.find((r) => r.id === selectedRoomId) || detail.rooms[0]] }
+    : detail;
+
   return (
     <HotelV3
-      hotel={detail}
+      hotel={shown}
       onBack={goBack}
-      selectedRoomId={selectedRoomId}
-      onPickRoom={(room) => setSelectedRoomId(room.id)}
+      selectedRoomId={readOnly ? null : selectedRoomId}
+      onPickRoom={readOnly ? undefined : (room) => setSelectedRoomId(room.id)}
+      readOnly={readOnly}
+      roomsTitle={readOnly ? "The room on this trip" : undefined}
       onOpenSimilar={(h) => navigate(`/hotel-detail/${itineraryId}/${stayIndex}/${encodeURIComponent(h.id)}${hotelsQS}`)}
       nights={nights}
       stay={stayNode}
@@ -408,8 +426,8 @@ export default function HotelPDP() {
           <InclusionsSection inclusions={inclusions} />
         </>
       )}
-      bottomBar={isSameAsCurrent ? null : bottomBar}
-      overlay={overlay}
+      bottomBar={readOnly || isSameAsCurrent ? null : bottomBar}
+      overlay={readOnly ? null : overlay}
       saved={isWished}
       onSave={toggleWish}
     />

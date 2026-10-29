@@ -1,9 +1,9 @@
 import { GraduationCap } from "lucide-react";
 import { C } from "../../data";
 
-// Editorial Sunday School masthead - matches S1 (single) + M1 (multi) designs.
-// Wrap the accent word in [brackets] in `valueTitle`: it renders coral italic
-// in DM Serif Display with a thin wavy underline below.
+// Sunday School masthead - matches S1 (single) + M1 (multi) designs.
+// Wrap the accent word in [brackets] in `valueTitle`: it renders in the brand
+// pink with a thin wavy underline below.
 //   "Where to stay in [Bali]"        →   Where to stay in *Bali*~~
 //   "Bali [activities], compared"    →   Bali *activities*~~, compared
 //   "Pick the right [week]"          →   Pick the right *week*~~
@@ -20,23 +20,25 @@ function renderTitle(valueTitle) {
       const word = p.slice(1, -1);
       return (
         <span key={i} style={{ position: "relative", display: "inline-block" }}>
-          <em style={{ fontStyle: "italic", color: "#ED1B5B", fontWeight: 400 }}>{word}</em>
-          {/* Wavy coral underline */}
+          {/* The accent word keeps the pink and the wavy line, and loses the
+              serif italic: at the page's heading weight a synthetic italic is
+              a slant, not a typeface. */}
+          <span style={{ color: C.p600 }}>{word}</span>
           <svg
             viewBox="0 0 200 14"
             preserveAspectRatio="none"
             style={{
               position: "absolute",
-              left: 2, right: 2, bottom: -4,
+              left: 2, right: 2, bottom: -3,
               width: "calc(100% - 4px)",
-              height: 8,
+              height: 7,
               pointerEvents: "none",
             }}
             aria-hidden="true"
           >
             <path
               d="M2 8 Q 22 2 44 8 T 88 8 T 132 8 T 198 8"
-              stroke="#ED1B5B"
+              stroke={C.p600}
               strokeWidth="2.6"
               fill="none"
               strokeLinecap="round"
@@ -90,16 +92,18 @@ export default function SundaySchoolMasthead({
         )}
       </div>
 
-      {/* Big serif value title with accent */}
+      {/* The value title, in the page's own section heading. It was DM Serif
+          Display at 30px in its own near-black, which made this the only
+          section on the home screen whose heading was a different typeface,
+          size, weight and colour from the other five. */}
       {valueTitle && (
         <h2 style={{
           margin: 0,
-          fontFamily: "'DM Serif Display', Georgia, serif",
-          fontWeight: 400,
-          fontSize: 30,
-          lineHeight: 1.1,
-          letterSpacing: "-0.6px",
-          color: "#1A1612",
+          fontSize: 22,
+          fontWeight: 800,
+          lineHeight: 1.15,
+          letterSpacing: "-0.4px",
+          color: C.ink,
           maxWidth: 340,
         }}>
           {renderTitle(valueTitle)}

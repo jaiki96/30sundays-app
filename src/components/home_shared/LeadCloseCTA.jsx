@@ -24,7 +24,9 @@ export default function LeadCloseCTA({ tone = "clean", pad = 16 }) {
   return (
     <div style={{ padding: `0 ${pad}px` }}>
       <div style={{ background: C.p100, borderRadius: 18, padding: "24px 20px", textAlign: "center" }}>
-        <h2 style={{ fontSize: 19, fontWeight: 800, color: C.head, margin: "0 0 5px", letterSpacing: "-0.3px" }}>
+        {/* The home screen's section heading, so the page closes on the same
+            size it has been using all the way down rather than a fourth one. */}
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: "0 0 5px", letterSpacing: "-0.4px" }}>
           Ready to plan your getaway?
         </h2>
         <p style={{ fontSize: 13, color: C.sub, margin: "0 0 16px" }}>Tell us where you'd love to go. We'll craft it for two.</p>

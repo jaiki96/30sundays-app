@@ -5,7 +5,7 @@ import L from "leaflet";
 import { X, Check, ChevronRight, AlertTriangle, Heart } from "lucide-react";
 import { C } from "../../data";
 import { destAreas, areaImg, cityCoords } from "../../data/buildData";
-import { regionGuide } from "../../data/regionGuide";
+import { cityTags, cityPhotos } from "../../data/cityTags";
 import RegionDetail from "../../pages/RegionDetail";
 import { useWishlist } from "../../data/wishlist";
 import { SavedMark } from "../WishlistPickSheet";
@@ -202,19 +202,20 @@ const nightsRange = (n) => {
 // the tick is the answer rather than the control. Reading about the place is
 // the other thing somebody wants here, so that is its own small link.
 //
-// The line under the name is the region's own written opening rather than the
-// three-word label the list used to carry: three words told nobody why they
-// would pick one city over another. Its opening sentence only, not the
-// paragraph: the sentence and the sentence after it filled the card to the
-// point of being a wall.
+// Under the name, two things. One line saying what the place is, which is the
+// city's own short label and not the region page's opening paragraph: a
+// paragraph on a card somebody is scanning six of is a wall, and they are not
+// reading six of them. Then a chip or two for what that line cannot say.
 //
-// And the photograph stretches to whatever the words need rather than being a
-// fixed square, so the card is as tall as its contents and there is no band of
-// nothing to manage in the first place.
+// The photograph runs the full height of the card and flush to its edge, so
+// the card is as tall as its words with no band of nothing to manage.
 // saved: the region is on the wishlist, which the card marks and nothing more.
 function CityCard({ area, picked, saved, onToggle, onOpen }) {
-  const g = regionGuide(area.dest, area.city);
-  const blurb = g?.lead || area.tag;
+  // A chip or two for what the line above cannot say: how booked the place is
+  // and how busy it gets. See cityTags.
+  const tags = useMemo(() => cityTags(area.dest, area.city), [area.dest, area.city]);
+  const photos = useMemo(() => cityPhotos(area.dest, area.city), [area.dest, area.city]);
+  const [shot, setShot] = useState(0);
   return (
     <div
       onClick={onToggle}
@@ -223,44 +224,116 @@ function CityCard({ area, picked, saved, onToggle, onOpen }) {
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
       style={{
-        display: "flex", gap: 12, padding: 11, cursor: "pointer",
+        display: "flex", cursor: "pointer", overflow: "hidden",
         borderRadius: 16, background: C.white,
         border: `${picked ? 1.5 : 1}px solid ${picked ? C.p600 : C.div}`,
         boxShadow: "0 1px 3px rgba(24,29,39,0.05)",
         transition: "border-color .15s",
       }}
     >
+      {/* Flush to the edge and the full height of the card. It used to sit in
+          eleven pixels of white on all four sides, which spends the width a
+          photograph is there to use and makes the card read as a thumbnail
+          with a margin rather than a place.
+
+          A reel rather than one frame, with dots, the way the region pages and
+          the hotel cards do it. A swipe moves the picture and a tap still
+          picks the city, because a drag is not a tap. */}
       <div style={{
-        position: "relative", width: 78, minHeight: 78, alignSelf: "stretch",
-        flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#F4F2F0",
+        position: "relative", width: 104, alignSelf: "stretch",
+        flexShrink: 0, overflow: "hidden", background: "#F4F2F0",
       }}>
-        <img src={area.img} alt="" style={{
-          position: "absolute", inset: 0,
-          width: "100%", height: "100%", objectFit: "cover", display: "block",
-        }} />
+        <div
+          className="hide-scrollbar"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const n = Math.round(el.scrollLeft / (el.clientWidth || 1));
+            if (n !== shot) setShot(n);
+          }}
+          style={{
+            position: "absolute", inset: 0, display: "flex",
+            overflowX: "auto", overflowY: "hidden",
+            scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {photos.map((src, n) => (
+            <img
+              key={n}
+              src={src}
+              alt={n === 0 ? area.city : ""}
+              loading={n === 0 ? "eager" : "lazy"}
+              style={{
+                flex: "0 0 100%", width: "100%", height: "100%",
+                objectFit: "cover", display: "block", scrollSnapAlign: "start",
+              }}
+            />
+          ))}
+        </div>
+
+        {photos.length > 1 && (
+          <div style={{
+            position: "absolute", left: 0, right: 0, bottom: 7,
+            display: "flex", justifyContent: "center", gap: 3.5, pointerEvents: "none",
+          }}>
+            {photos.map((_, n) => (
+              <span key={n} style={{
+                width: n === shot ? 5 : 4, height: n === shot ? 5 : 4, borderRadius: "50%",
+                background: n === shot ? "#fff" : "rgba(255,255,255,0.55)",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+              }} />
+            ))}
+          </div>
+        )}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", padding: "11px 12px 11px 13px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
           <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {area.city}
           </span>
           {saved && <SavedMark size={18} />}
-          {/* Always drawn, so an empty one says the card can be chosen. */}
+          {/* ─── The one thing to tap ───
+              The tick used to appear only once a city was chosen, so an
+              unchosen card showed nothing at all: a photograph, a name and a
+              sentence, with no sign that it was something you pick. The circle
+              is always there now, empty and waiting, and fills when it is
+              answered. Small and quiet on purpose: it is the whole card that
+              takes the press, and this only has to say that the card takes
+              one. */}
           <span aria-hidden style={{
-            width: 20, height: 20, borderRadius: "50%", flexShrink: 0, boxSizing: "border-box",
+            width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 1,
             display: "grid", placeItems: "center",
-            background: picked ? C.p600 : C.white, border: picked ? "none" : `1.5px solid ${C.icon}`,
-            transition: "background .15s",
+            background: picked ? C.p600 : C.white,
+            // Quiet enough to be a mark on the card rather than a thing
+            // competing with the name, and a shade darker than the card's own
+            // border so it still reads as a control.
+            border: picked ? "none" : `1.5px solid ${C.icon}`,
+            boxSizing: "border-box",
+            transition: "background .15s, border-color .15s",
           }}>
-            {picked && <Check size={12} strokeWidth={3.5} color="#fff" />}
+            {picked && <Check size={11} strokeWidth={3.6} color="#fff" />}
           </span>
         </div>
 
+        {/* What the place is, in its own line. The chips below say what it is
+            like; this says what it is, which is the thing a name alone does
+            not. */}
         <p style={{
           margin: "2px 0 0", fontSize: 12, lineHeight: "17px", color: C.sub,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-        }}>{blurb}</p>
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{area.tag}</p>
+
+        {tags.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 7 }}>
+            {tags.map((t) => (
+              <span key={t.key} style={{
+                padding: "3px 8px", borderRadius: 999,
+                background: t.bg, color: t.fg,
+                fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+              }}>{t.label}</span>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
           <span
@@ -492,7 +565,19 @@ function RegionSheet({ dest, city, added, onAdd, onClose }) {
 // `title` is the step's question. The itinerary screen opens this same picker
 // as its own screen with its own header bar, so there it passes none and keeps
 // one title on the screen instead of two saying the same thing.
-export default function RoutePicker({ dest, nights, route, setRoute, nudge, title = "Choose the cities you want to visit" }) {
+export default function RoutePicker({
+  dest, nights, route, setRoute, nudge,
+  title = "Choose the cities you want to visit",
+  // What happens to the cities once they are chosen. True in the wizard,
+  // where the order and the nights are ours; the route chooser overrides it,
+  // because there the next screen hands the order back.
+  nightsNote = "We'll set the order and nights. You can customise them once your itinerary is created.",
+  // The "too much to see" warning compares the cities against the trip's
+  // length. Off where the cities being picked are a pool to draw routes
+  // from rather than the route itself, because then the length is not yet
+  // a thing they are deciding.
+  showFit = true,
+}) {
   const areas = useMemo(() => destAreas[dest] || [], [dest]);
   // The region page opens over the step rather than navigating to it. Leaving
   // the wizard loses every answer given so far, and reading about Ubud is not
@@ -817,7 +902,7 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
           padding: `10px ${PAD}px 12px`,
           boxShadow: "0 -2px 10px rgba(24,29,39,0.05)",
         }}>
-          {note.kind === "over" && (
+          {showFit && note.kind === "over" && (
             <p style={{
               margin: "0 0 9px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               fontSize: 12.5, fontWeight: 700, color: "#B54708", textAlign: "center",
@@ -847,6 +932,11 @@ export default function RoutePicker({ dest, nights, route, setRoute, nudge, titl
               </span>
             ))}
           </div>
+          {/* The order and the nights are ours. Said once, under the cities,
+              with where it can be changed, so nobody looks for it here. */}
+          <p data-testid="route-note" style={{ margin: "7px 2px 0", fontSize: 10.5, lineHeight: "14px", color: C.sub }}>
+            {nightsNote}
+          </p>
         </div>
       )}
 

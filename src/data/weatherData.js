@@ -69,3 +69,56 @@ export function monthWeather(dest, monthIdx) {
     rainWord: seasonLabel(w.rain[monthIdx]),
   };
 }
+
+// ─── What we would tell them about a month ───
+//
+// The strip above this already says the month, what the sky does and the two
+// temperatures. Repeating those under it was the same three facts twice, and
+// a count of rain days nobody asked for: "12 rain days" is a number a couple
+// has to interpret, and interpreting it is our job, not theirs.
+//
+// So the card says what we would say if they rang and asked. Three clauses,
+// and every one of them earned: what the sky does, what that feels like at
+// this temperature, and whether the month is worth taking for the price and
+// the quiet. Never a verdict in one word. A red "Not the best time" on a
+// month we sell trips in argues with the page it is printed on.
+const SKY_CLAUSE = {
+  sunny: "Dry and bright nearly every day",
+  cloudy: "Cloud for part of the day and the odd shower",
+  rainy: "Light rain most days, usually short and over quickly",
+  heavy: "Rain on and off, heavy for an hour at a time",
+};
+
+// How the heat actually lands, which is the half of a forecast that decides
+// what you can do with an afternoon.
+function feelClause(high) {
+  if (high == null) return "";
+  if (high >= 33) return "and hot by midday, so the afternoons are for shade or water";
+  if (high >= 29) return "and warm right through, pleasant once the sun drops";
+  if (high >= 24) return "and warm without ever feeling heavy";
+  if (high >= 18) return "and mild, with a layer wanted after dark";
+  return "and cool enough to want a jacket";
+}
+
+// Whether to come, in terms of what a couple is actually trading.
+function worthClause(rating, sky) {
+  const wet = sky === "rainy" || sky === "heavy";
+  if (rating === "peak") {
+    return wet
+      ? "Still the month most couples pick, so hotels go early."
+      : "The month most couples pick, so hotels go early.";
+  }
+  if (rating === "shoulder") {
+    return wet
+      ? "Quieter than peak and easier on the price, which is the trade for the rain."
+      : "Quieter than peak and easier on the price.";
+  }
+  return wet
+    ? "The quietest and cheapest time of year, if the rain does not put you off."
+    : "The quietest and cheapest time of year.";
+}
+
+export function monthAdvice({ sky, rating, high }) {
+  const first = [SKY_CLAUSE[sky] || "A mixed sky", feelClause(high)].filter(Boolean).join(", ");
+  return `${first}. ${worthClause(rating, sky)}`;
+}

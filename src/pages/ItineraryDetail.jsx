@@ -3,15 +3,17 @@ import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
 import { getFlightLegs, generateFlightsForRoute, airports, formatPrice } from "../data/flightData";
-import { generateDayOptions, getAllDayCombinations } from "../data/dayOptions";
-import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee } from "lucide-react";
+import { generateDayOptions, getAllDayCombinations, cityVibes } from "../data/dayOptions";
+import { Camera, Volume2, VolumeX, FileText, ChevronLeft, Compass, Route, BedDouble, Headphones, Map as MapIcon, IndianRupee, Moon, Car, Baby, User } from "lucide-react";
 import ChangeDayScreen from "./ChangeDayScreen";
 import SaveHeart from "../components/SaveHeart";
+import MissedPicksNote, { NOTE_VARIANTS } from "../components/MissedPicksNote";
 import { useWishlist } from "../data/wishlist";
 import { toDayOptions, optionScoring } from "../data/dayOptionShape";
 import HotelUpgradeDrawer from "../components/HotelUpgradeDrawer";
 import ConsultantCard from "../components/ConsultantCard";
 import ConsultantSection from "../components/ConsultantSection";
+import CopyTripScreen from "../components/CopyTripScreen";
 import { getConsultant } from "../data/consultants";
 import JourneyMap from "../components/JourneyMap";
 import ItineraryMapScreen from "../components/ItineraryMapScreen";
@@ -31,10 +33,12 @@ import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
 import InvitePartnerSection from "../components/InvitePartnerSection";
 import SectionNav from "../components/SectionNav";
-import RoutePicker from "../components/wizard/RoutePicker";
+import RouteChooser from "../components/route/RouteChooser";
 import DateRange from "../components/wizard/DateRange";
 import { buildDayMeta, routeNights, respread, destMeta, synthesizeItinerary } from "../data/buildData";
+import { hop } from "../data/routeBuilder";
 import SaveVersionNote from "../components/SaveVersionNote";
+import BuildingScreen from "../components/BuildingScreen";
 import { LeisureCard, LeisureStrip, ExploreIdeas } from "../components/DayWiseExtras";
 import { ActivityDetailScroll } from "./ActivityDetail";
 import { DayMediaDetail } from "./DayDetailImmersive";
@@ -42,6 +46,8 @@ import { toMediaDays } from "../data/dayMediaShape";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
+import { copyOf } from "../data/copyTrip";
+import { BOOKED_TRIPS } from "../data/bookedTrips";
 import InclusionsDrawer from "../components/InclusionsDrawer";
 import HotelStayCard from "../components/HotelStayCard";
 
@@ -169,16 +175,19 @@ function FlightLegRow({ f }) {
 // stops overflowing: one pass, no layout thrash, and it can be redone the
 // moment the real font lands, which matters because the fallback is narrower
 // and would let one city too many through.
-const CITY_FONT = '700 13px Figtree, system-ui, sans-serif';
-const SEP = "  \u00b7  ";
+const cityFont = (size, weight) => `${weight} ${size}px Figtree, system-ui, sans-serif`;
+// One space either side, not two. Two reads as airy on a line with room
+// to spare and costs a city name on a line without it, and the city names
+// are the whole reason the line is there.
+const SEP = " \u00b7 ";
 
-function fitCities(days, px) {
-  const parts = days.map((d) => `${d.city} ${d.n}N`);
+function fitCities(days, px, nights = true, size = 13, weight = 700) {
+  const parts = days.map((d) => (nights ? `${d.city} ${d.n}N` : d.city));
   if (!parts.length) return "";
   if (!px) return parts.join(SEP);
   const cv = fitCities.cv || (fitCities.cv = document.createElement("canvas"));
   const ctx = cv.getContext("2d");
-  ctx.font = CITY_FONT;
+  ctx.font = cityFont(size, weight);
   for (let n = parts.length; n > 0; n -= 1) {
     const rest = parts.length - n;
     const label = parts.slice(0, n).join(SEP)
@@ -189,7 +198,7 @@ function fitCities(days, px) {
   return `${parts.length} cities`;
 }
 
-function CityLine({ days }) {
+function CityLine({ days, nights = true, size = 13, weight = 700, color = C.head }) {
   const box = useRef(null);
   const [px, setPx] = useState(0);
   useEffect(() => {
@@ -204,8 +213,8 @@ function CityLine({ days }) {
   }, []);
   return (
     <span ref={box} style={{ flex: 1, minWidth: 0, display: "block", overflow: "hidden" }}>
-      <span style={{ fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>
-        {fitCities(days, px)}
+      <span style={{ fontSize: size, fontWeight: weight, color, whiteSpace: "nowrap" }}>
+        {fitCities(days, px, nights, size, weight)}
       </span>
     </span>
   );
@@ -258,161 +267,11 @@ function Sheet({ title, sub, onClose, children, frame }) {
 
 // ─── Travellers ───
 //
-// The wizard's own travellers screen, opened on its own rather than as step two
-// of five: the same four choices, the same stepper behind "4 or More Adults",
-// the same notes when the answer is one we cannot plan for. The only thing left
-// out is the name field, which is lead capture and was captured when the trip
-// was created.
-//
-// The blocked answers are kept deliberately. 30 Sundays plans for couples, so
-// one traveller, three travellers and a party with children are all real things
-// somebody will tap and all three need to be told why, not quietly prevented.
-// Save stays disabled while one of them is showing.
-const PARTY_NOTE = {
-  odd: {
-    body: "Right now, 30 Sundays only plans trips for couples, so the group needs an even number of travellers.",
-    close: "Pick an even number and let's plan something unforgettable. 💕",
-  },
-  kids: {
-    body: "Right now, 30 Sundays is exclusively crafted for couples, romantic getaways, sunset dinners for two, that kind of magic. We don't have kids' itineraries yet, but we're working on it!",
-    close: "For now, maybe plan a couples-only escape? You deserve it. 💕",
-  },
-  solo: {
-    body: "Right now, 30 Sundays is exclusively crafted for couples, so we don't have solo itineraries yet. We're working on it!",
-    close: "Grab a partner and let's plan something unforgettable together. 💕",
-  },
-};
-const PARTY_COUNTS = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+// The screen that set them is gone with the control that opened it. Who is
+// going is decided when the trip is enquired for and moved by the consultant,
+// so on the itinerary it is a fact in the hero rather than a field. The
+// wizard still asks the question, and its own screen is the one that asks it.
 
-// A saved trip stores a count; this screen thinks in the wizard's shape.
-const partyFrom = (n) => (n === 2
-  ? { couples: 1, adults: 0, kids: 0, solo: false }
-  : n === 1
-    ? { couples: 0, adults: 1, kids: 0, solo: true }
-    : { couples: 0, adults: n, kids: 0, solo: false });
-
-function PartyScreen({ value, onPick, onClose, frame }) {
-  const [party, setParty] = useState(() => partyFrom(value));
-  const [countOpen, setCountOpen] = useState(false);
-
-  const isGroup = party.couples === 0 && party.kids === 0 && !party.solo;
-  const kidsBlocked = party.kids > 0;
-  const soloBlocked = !!party.solo;
-  const oddBlocked = isGroup && party.adults % 2 !== 0;
-  const blocked = kidsBlocked || soloBlocked || oddBlocked;
-  const note = soloBlocked ? PARTY_NOTE.solo : kidsBlocked ? PARTY_NOTE.kids : oddBlocked ? PARTY_NOTE.odd : null;
-  const count = party.couples === 1 ? 2 : party.adults;
-
-  const cards = [
-    { key: "couple", emoji: "💑", label: "2 Adults", on: party.couples === 1 && !kidsBlocked && !soloBlocked },
-    { key: "group", emoji: "👯", label: "4 or More Adults", on: isGroup },
-    { key: "kids", emoji: "👨‍👩‍👧", label: "Adults with Children", on: kidsBlocked },
-    { key: "solo", emoji: "🧍", label: "Solo Traveller", on: soloBlocked },
-  ];
-  const pick = (key) => {
-    if (key === "kids") setParty({ couples: 1, adults: 0, kids: 1, solo: false });
-    else if (key === "solo") setParty({ couples: 0, adults: 1, kids: 0, solo: true });
-    else if (key === "couple") setParty({ couples: 1, adults: 0, kids: 0, solo: false });
-    else setParty({ couples: 0, adults: Math.max(4, party.adults || 4), kids: 0, solo: false });
-  };
-
-  return (
-    <div style={{ ...frame, zIndex: 170, background: C.white, display: "flex", flexDirection: "column" }}>
-      <div style={{
-        flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
-        padding: "calc(12px + env(safe-area-inset-top)) 14px 10px",
-        borderBottom: `1px solid ${C.div}`, background: C.white,
-      }}>
-        <button onClick={onClose} aria-label="Close" style={{
-          width: 34, height: 34, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white,
-          display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
-        }}><XIcon size={17} color={C.head} /></button>
-        <h1 style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 26, fontWeight: 800, color: C.head, letterSpacing: "-0.5px" }}>
-          Who is Travelling?
-        </h1>
-      </div>
-
-      <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "16px 16px 24px" }}>
-        <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>
-          Select number of travellers
-        </label>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-          {cards.map((c) => (
-            <div key={c.key}>
-              <button onClick={() => pick(c.key)} style={{
-                display: "flex", alignItems: "center", gap: 13, padding: 16, borderRadius: 14, width: "100%",
-                border: c.on ? `2px solid ${C.p600}` : `1px solid ${C.div}`,
-                background: c.on ? C.p100 : C.white, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-              }}>
-                <span style={{ fontSize: 26 }}>{c.emoji}</span>
-                <span style={{ flex: 1, fontSize: 16, fontWeight: 700, color: c.on ? C.p600 : C.head }}>{c.label}</span>
-                {c.on && <Check size={20} color={C.p600} strokeWidth={2.5} />}
-              </button>
-              {c.key === "group" && isGroup && (
-                <div style={{ marginTop: 10, border: `1px solid ${C.div}`, borderRadius: 14, animation: "fadeUp 0.2s ease-out" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: C.head }}>Travellers</span>
-                    <div style={{ position: "relative" }}>
-                      <button onClick={() => setCountOpen((v) => !v)} style={{
-                        display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10,
-                        background: C.white, border: `1.5px solid ${C.div}`, cursor: "pointer", fontFamily: "inherit",
-                        minWidth: 64, justifyContent: "center",
-                      }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: C.head }}>{party.adults}</span>
-                        <ChevronDown size={14} color={C.head} style={{ transition: "transform 0.2s", transform: countOpen ? "rotate(180deg)" : "none" }} />
-                      </button>
-                      {countOpen && (
-                        <div style={{
-                          position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 50, background: C.white,
-                          borderRadius: 12, border: `1px solid ${C.div}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                          overflow: "auto", width: 80, maxHeight: 240,
-                        }}>
-                          {PARTY_COUNTS.map((n, i) => (
-                            <button key={n} onClick={() => { setParty((pp) => ({ ...pp, adults: n })); setCountOpen(false); }} style={{
-                              display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "12px 0",
-                              background: n === party.adults ? C.p100 : C.white, border: "none", cursor: "pointer",
-                              fontFamily: "inherit", borderBottom: i < PARTY_COUNTS.length - 1 ? `1px solid ${C.div}` : "none",
-                              fontSize: 15, fontWeight: n === party.adults ? 700 : 500, color: n === party.adults ? C.p600 : C.head,
-                            }}>{n}</button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {note && (
-          <div style={{
-            marginTop: 14, padding: 16, borderRadius: 14,
-            background: "linear-gradient(135deg, #FFF5F0 0%, #FFE4E8 100%)",
-            border: "1px solid rgba(254,163,180,0.27)", animation: "fadeUp 0.3s ease-out",
-          }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#89123E", margin: "0 0 4px" }}>We&apos;re so sorry! 😔</p>
-            <p style={{ fontSize: 13, color: C.sub, margin: 0, lineHeight: "18px" }}>{note.body}</p>
-            <p style={{ fontSize: 13, color: C.p600, fontWeight: 600, margin: "8px 0 0" }}>{note.close}</p>
-          </div>
-        )}
-      </div>
-
-      <div style={{
-        flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white,
-        padding: "10px 16px calc(12px + env(safe-area-inset-bottom))",
-      }}>
-        <button onClick={() => { onPick(count); onClose(); }} disabled={blocked} style={{
-          width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-          background: blocked ? C.div : C.p600, color: blocked ? C.inact : "#fff",
-          fontSize: 15, fontWeight: 700, cursor: blocked ? "not-allowed" : "pointer", fontFamily: "inherit",
-        }}>
-          {blocked ? "Pick a party we can plan for" : `Save ${count} traveller${count > 1 ? "s" : ""}`}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Travel dates ───
 //
@@ -476,96 +335,195 @@ function DateScreen({ dest, value, nights, minNights, onPick, onClose, frame }) 
   );
 }
 
-// ─── Cities ───
+// ─── A trip being read, across rather than down ───
 //
-// Its own screen, because it is its own question. Which towns you sleep in and
-// for how long is the shape of the holiday, and the answer is a map and a list,
-// not a row in a sheet. It is the route step of the wizard, lifted out of the
-// wizard: the same map, the same cards, the same region pages, opened over the
-// itinerary and closed back onto it.
+// Somebody else's trip answers three questions before anything else: where
+// it went and when, what was in it, and what it cost. All three are here,
+// and none of them is stacked on something it could sit beside: the trip and
+// its inclusions run down the left, the price takes a rail of its own on the
+// right. Half the height of the same three facts in a column, and the thing
+// under it is the trip itself, which should not start below the fold.
 //
-// Saving rebuilds the plan, which is unavoidable: a day in Hoi An cannot
-// survive Hoi An being removed. That is said plainly on the way in rather than
-// discovered on the way out.
-function CitiesScreen({ dest, nights, route, onSave, onClose, frame }) {
-  const [draft, setDraft] = useState(route);
-  const spent = draft.reduce((t, r) => t + r.n, 0);
-  const ok = draft.length > 0 && spent === nights;
+// The rail is tinted rather than titled. A block of colour in the corner
+// where a price lives is read as the price without a heading saying so.
+//
+// What is deliberately not here: the dates they went and how many of them
+// there were. This is somebody else's trip, read by a stranger, and the
+// week they travelled and who they travelled with is theirs, not ours to
+// publish. None of it helps anybody decide whether to take the trip.
+//
+// The full cost split is not repeated here either. It is one section
+// further down, it is six lines long, and a summary that reprints the thing
+// it summarises is not a summary.
+
+function ReadSummary({ days = [], plans = [], travellers, stays, flights, total, onBreakdown }) {
+  // Counted off the day plans, not off the stays: a stay is a city and a
+  // number of nights, and what happens inside it lives on the days.
+  const counts = (() => {
+    let activities = 0;
+    let transfers = 0;
+    plans.forEach((d) => {
+      activities += (d.activities || []).length;
+      transfers += (d.transfers || []).length;
+    });
+    // Every trip starts and ends with an airport run, and those are on the
+    // plan whether or not a day carries one.
+    return { activities, transfers: transfers + 2 };
+  })();
+
+  const perPerson = travellers > 0 ? Math.round(total / travellers) : total;
+  const money = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+  // No nights here. The title above this says how long the trip is, and the
+  // route beside it says how those nights were spent, so a third count of
+  // them is the same fact for the third time in two inches.
+  const INCLUDED = [
+    { Icon: BedDouble, n: stays, label: stays === 1 ? "hotel" : "hotels" },
+    { Icon: Compass, n: counts.activities, label: counts.activities === 1 ? "activity" : "activities" },
+    { Icon: Car, n: counts.transfers, label: counts.transfers === 1 ? "transfer" : "transfers" },
+    { Icon: Plane, n: flights, label: flights === 1 ? "flight" : "flights" },
+  ].filter((x) => x.n > 0);
 
   return (
-    <div style={{ ...frame, zIndex: 170, background: C.white, display: "flex", flexDirection: "column" }}>
-      <div style={{
-        flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
-        padding: `calc(12px + env(safe-area-inset-top)) 14px 10px`,
-        borderBottom: `1px solid ${C.div}`, background: C.white,
-      }}>
-        <button onClick={onClose} aria-label="Close" style={{
-          width: 34, height: 34, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white,
-          display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0,
-        }}><XIcon size={17} color={C.head} /></button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.2px" }}>Cities in your trip</p>
-          <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>
-            {spent} of {nights} nights spent · changing these rebuilds the day plan
-          </p>
+    <div data-testid="read-summary" style={{
+      margin: "12px 16px 0", border: `1px solid ${C.div}`, borderRadius: 14,
+      display: "flex", alignItems: "stretch", overflow: "hidden", background: C.white,
+    }}>
+      {/* ── Where it went, and what was in it ── */}
+      <div style={{ flex: 1, minWidth: 0, padding: "10px 11px" }}>
+        <div data-testid="read-route" style={{ display: "flex", minWidth: 0 }}>
+          <CityLine days={days} size={12} />
+        </div>
+        {/* ─── Two by two, always ───
+            A wrapping row put three on the first line and one on the
+            second whenever the words happened to be short, and two and
+            two when they were not, so the block changed shape from one
+            trip to the next and the second line never started where the
+            first one did. A grid of two columns cannot do that: the
+            second item always sits above the fourth, whatever is in
+            them. */}
+        <div data-testid="read-included" style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 8, rowGap: 5, marginTop: 8,
+        }}>
+          {INCLUDED.map(({ Icon, n, label }) => (
+            <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 3.5, minWidth: 0 }}>
+              {/* Slate, not pink. Four pink glyphs in a row had the whole
+                  line reading as four small buttons, and the only pink
+                  thing in this band should be the one part of it that can
+                  actually be pressed. */}
+              <Icon size={12} color="#667085" strokeWidth={2.2} />
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: C.head }}>{n}</span>
+              <span style={{ fontSize: 11, color: C.sub }}>{label}</span>
+            </span>
+          ))}
         </div>
       </div>
 
-      <div className="hide-scrollbar" style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
-        <RoutePicker dest={dest} nights={nights} route={draft} setRoute={setDraft} title={null} />
-      </div>
+      {/* ── What it came to ──
+          One number, per person, and a word to say it is a guide rather
+          than a quote. The total was the bigger figure and the wrong one:
+          nobody reading somebody else's trip is buying the same number of
+          seats, and a total is only a price once you know how many went.
 
-      <div style={{
-        flexShrink: 0, borderTop: `1px solid ${C.div}`, background: C.white,
-        padding: "10px 16px calc(12px + env(safe-area-inset-bottom))",
-      }}>
-        <button onClick={() => ok && onSave(draft)} disabled={!ok} style={{
-          width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
-          background: ok ? C.p600 : C.div, color: ok ? "#fff" : C.inact,
-          fontSize: 15, fontWeight: 700, cursor: ok ? "pointer" : "not-allowed", fontFamily: "inherit",
-        }}>
-          {ok ? "Save cities" : `${nights - spent > 0 ? `${nights - spent} night${nights - spent > 1 ? "s" : ""} left to spend` : `${spent - nights} night${spent - nights > 1 ? "s" : ""} too many`}`}
-        </button>
-      </div>
+          No chevron and no "Breakdown". The panel still takes a press and
+          still jumps to the full split further down, but the split is also
+          a section anybody scrolling will reach on their own, so this is a
+          shortcut rather than the only way in, and a shortcut does not
+          need to announce itself in a band this small. */}
+      <button
+        onClick={onBreakdown}
+        style={{
+          // Every pixel here is a pixel the route does not have, so this is
+          // as narrow as the widest figure allows: a lakh-and-a-half trip
+          // is nine characters before the icon beside it.
+          width: 112, flexShrink: 0, borderLeft: `1px solid ${C.div}`,
+          background: C.white, padding: "10px 9px 10px 11px", margin: 0,
+          border: "none", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: C.div,
+          cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+          display: "flex", alignItems: "center", gap: 4,
+        }}
+      >
+        <span style={{ flex: 1, minWidth: 0 }}>
+          {/* ─── A guide, not a quote ───
+              The word APPROX was a line of its own at the top of a panel
+              three lines tall, which is a lot of room for one caveat. An
+              information circle was no better: it says "there is more to
+              read here", which is a different thing from "this number is
+              not exact". The approximation sign says only the second, in
+              front of the figure it qualifies, and costs six pixels. */}
+          {/* Two marks, two jobs. The approximation sign says the number
+              is a guide; the circle says there is a full split behind it
+              and this is the way in. Running them together under one of
+              the two was what made the panel ambiguous: a reader could
+              not tell whether the icon meant "not exact" or "tap me". */}
+          <span style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+            <span aria-hidden style={{ fontSize: 13, fontWeight: 700, color: C.sub, flexShrink: 0 }}>≈</span>
+            <span data-testid="read-total" style={{ fontSize: 15.5, fontWeight: 800, color: C.head, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+              {money(perPerson)}
+            </span>
+            {/* Slate, like the four icons on the other side of the band.
+                Pink is this screen's "act on this", and the only pink on
+                a trip somebody else booked should be the button that
+                copies it. */}
+            <Info size={12} color="#667085" style={{ flexShrink: 0, alignSelf: "center" }} />
+          </span>
+          <span style={{ display: "block", margin: "3px 0 0", fontSize: 10, color: C.sub, lineHeight: "13px" }}>
+            Cost per person
+          </span>
+        </span>
+      </button>
     </div>
   );
 }
 
+// ─── Cities ───
+//
+// The route editor: order, nights, cities in and out, with the map a tap away.
+// Saving sends the trip back through the builder, behind the building screen,
+// the way dates and travellers do.
+
 // ─── The customise picker ───
 //
-// Five things a customer can change, in one place, because the other five
-// places they live are spread over three thousand pixels of page. Two of them
-// are sheets, one is a screen, and two are controls further down that this
-// scrolls to and points at rather than duplicating. Duplicating them would mean
-// two doors to the same room that drift apart.
-// In the order a trip is actually questioned: where you go, where you sleep,
-// what you do there, and only then when and with whom. Cities first because
-// everything under it hangs off the answer.
+// Four things a customer can change, in one place, because the places they
+// live are spread over three thousand pixels of page. One is a screen, one is
+// a sheet, and two are controls further down that this scrolls to and points
+// at rather than duplicating. Duplicating them would mean two doors to the
+// same room that drift apart.
+//
+// In the order a trip is actually questioned, widest first: where you go,
+// then when, then where you sleep, then what you do each day. Each answer
+// hangs off the one above it, and a change at the top rebuilds everything
+// under it.
+//
+// Travellers is not here. It is the one answer that does not shape the trip,
+// only what it costs, and it already has its own chip at the top of the
+// screen next to the dates.
+// Four words and no explanations. "Change the hotel in any city" under the
+// word Hotels is the word Hotels again in a sentence: somebody who opened a
+// sheet headed "What would you like to change?" is not wondering what Hotels
+// means, they are looking for the row to press.
 const CUSTOMISE = [
-  { key: "cities", label: "Cities", hint: "Where you stay, and for how long", Icon: MapPin },
-  { key: "hotel", label: "Hotels", hint: "Change the hotel in any city", Icon: BedDouble },
-  { key: "day", label: "Day plans", hint: "Change what happens on a day", Icon: Route },
-  { key: "dates", label: "Travel dates", hint: "Change when you go, and for how long", Icon: Calendar },
-  { key: "pax", label: "Travellers", hint: "Change how many are going", Icon: Users },
+  { key: "cities", label: "Cities", Icon: MapPin },
+  { key: "dates", label: "Travel dates", Icon: Calendar },
+  { key: "hotel", label: "Hotels", Icon: BedDouble },
+  { key: "day", label: "Day plans", Icon: Route },
 ];
 
 function CustomisePicker({ onPick, onClose, frame }) {
   return (
     <Sheet title="What would you like to change?" onClose={onClose} frame={frame}>
       <div style={{ marginTop: 6 }}>
-        {CUSTOMISE.map(({ key, label, hint, Icon }, i) => (
+        {CUSTOMISE.map(({ key, label, Icon }, i) => (
           <button key={key} onClick={() => onPick(key)} style={{
             display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
-            padding: "13px 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
+            // A row of one line, so it is a row of one line's height.
+            padding: "11px 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
             borderTop: i ? `1px solid ${C.bg}` : "none",
           }}>
-            <span style={{ width: 38, height: 38, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>
-              <Icon size={18} color={C.p600} />
+            <span style={{ width: 34, height: 34, borderRadius: 10, background: C.p100, display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <Icon size={17} color={C.p600} />
             </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: C.head }}>{label}</span>
-              <span style={{ display: "block", fontSize: 12.5, color: C.sub }}>{hint}</span>
-            </span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 700, color: C.head }}>{label}</span>
             <ChevronRight size={18} color={C.inact} style={{ flexShrink: 0 }} />
           </button>
         ))}
@@ -586,7 +544,7 @@ const NAV_SECTIONS = [
   { key: "cost", label: "Cost", Icon: IndianRupee },
 ];
 
-export default function ItineraryDetail({ selectedFlights, selectedHotels, setSelectedHotels }) {
+export default function ItineraryDetail({ selectedFlights, selectedHotels, setSelectedHotels, viewOnly = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -605,7 +563,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const wishlist = useWishlist();
   // Seed itineraries resolve from static data; trips built from scratch resolve
   // from the deal that stores their synthesized itinerary.
-  const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId);
+  const rawIt = allItineraries.find(i => i.id === Number(id)) || dealsCtx.findCustomItinerary(Number(id), versionId, dealId);
   // Trips built before the Build flow laid out arrival, free and departure days
   // are still saved without one, so give them the same shape on the way in
   // rather than leaving those plans looking like tours run on the fly-home day.
@@ -661,20 +619,58 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // re-generates the available flights.
   const [departureCity, setDepartureCity] = useState("Indore");
   // Customer can drop flights entirely and book the land package only.
-  const [flightsIncluded, setFlightsIncluded] = useState(true);
+  // A copied trip carries no flights at all: the app does not sell them, so
+  // they are out of the total from the moment it is made.
+  const noFlights = !!rawIt?.noFlights;
+  const [flightsIncluded, setFlightsIncluded] = useState(!rawIt?.noFlights);
+  // A draft carries no flights. They come in when they are added (where the
+  // app can add them) or through the consultant (where it cannot yet).
+  const [draftFlightsAdded, setDraftFlightsAdded] = useState(false);
+  // The trip can arrive a render after this screen does, when the copy that
+  // made it is still settling into the deals store. So the initial value is a
+  // guess and this is the correction: once we know it is a copy, flights come
+  // out of the total.
+  useEffect(() => { if (noFlights) setFlightsIncluded(false); }, [noFlights]);
   // Explore itineraries: capture dates/travellers inline here (login is deferred
   // to the final step), instead of bouncing to the login-gated plan flow.
   const [showTripSheet, setShowTripSheet] = useState(false);
   // The three facts, each edited where it is read, plus one picker that reaches
   // all five changeable things from anywhere on the page.
-  const [paxSheet, setPaxSheet] = useState(false);
   const [dateSheet, setDateSheet] = useState(false);
   const [citiesScreen, setCitiesScreen] = useState(false);
   const [customiseOpen, setCustomiseOpen] = useState(false);
   const [showTour, setShowTour] = useState(false); // guided customisation tour
   const [dayScore, setDayScore] = useState(null); // { metric, scoring, dayLabel, dayIdx } for the score drawer
   const [exploreStart, setExploreStart] = useState(""); // yyyy-mm-dd
+  const [copyOpen, setCopyOpen] = useState(false); // "Use this trip" flow, view-only screens
   const [explorePax, setExplorePax] = useState(2);
+
+  // ─── Keeping Customise clear of the bar ───
+  //
+  // The pill used to sit a fixed distance up from the bottom of the screen,
+  // which was fine while the bottom bar was one row. The bar is not one row:
+  // it grows a save note, a price-rose warning and a list of unsaved changes,
+  // and once it is taller than that fixed distance the pill lands on top of it.
+  // It covered the save note's own close button, so the note could not be
+  // dismissed at all, which is the kind of bug nobody reports as a bug.
+  //
+  // So the pill is measured off the bar instead of off the screen. The bar
+  // tells us how tall it is and the pill rides above it, whatever it carries.
+  const [footerEl, setFooterEl] = useState(null);
+  const [footerH, setFooterH] = useState(84);
+  // And it steps aside while somebody is reading down the page, so it is not
+  // parked over a day card or a hotel the whole way down.
+  const [pillAway, setPillAway] = useState(false);
+  // ─── One Customise at a time ───
+  //
+  // There are two of them now: one beside the route and the dates, and the
+  // floating one for the three thousand pixels of scroll where that one is
+  // long out of sight. Both on screen at once is the same button twice, so
+  // the floating one waits until the inline one has gone.
+  const [topCustomiseEl, setTopCustomiseEl] = useState(null);
+  const [topCustomiseSeen, setTopCustomiseSeen] = useState(true);
+  // It also steps aside for a toast. They want the same corner, the toast is
+  // the thing that just happened, and it is gone in five seconds.
 
   // ─── Versioned-deal context ───
   // When opened with ?dealId&versionId, this screen edits a specific copy.
@@ -689,7 +685,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // closed plan would quietly bring it back into My Plans. The way forward is
   // a fresh plan, which is what Regenerate makes.
   const closedDeal = inDeal && dealsCtx.getDeal(dealId)?.status === "lost";
-  const editable = !closedDeal;
+  // ─── Reading somebody else's trip ───
+  //
+  // `viewOnly` is a real itinerary opened off the home rail. It is the same
+  // screen a traveller gets for their own plan, with every door that changes
+  // something taken off: no change day, no change hotel, no dates, no cities,
+  // no save. What is left is the trip, the price it sold at, a PDF, and the
+  // one thing somebody reading it actually wants, which is to have it.
+  const editable = !closedDeal && !viewOnly;
   // The quote/PDF bar applies only to plans opened from the Plan tab (a deal).
   // Explore itineraries (no deal) show no version/PDF until the first edit
   // creates one. Quoted = a PDF exists; a deal copy is quoted once priced.
@@ -755,7 +758,38 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   // The version's own answer wins, because that is where this screen's edits
   // are written; the built trip's figure is the fallback it started from.
-  const travellers = travelDates?.travelers ?? it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax);
+  const bookedTrip = useMemo(
+    () => (viewOnly ? BOOKED_TRIPS.find((t) => t.id === Number(id)) || null : null),
+    [viewOnly, id]
+  );
+  const booker = bookedTrip?.who || null;
+  // Who actually went. Most of these are two adults; a few are a family, and
+  // a trip with children on it prices for four, not two.
+  // ─── How many flights were in it ───
+  // The two international legs everybody takes, plus any hop between two
+  // cities on this route that the travel engine says is flown rather than
+  // driven. Same engine the route chooser and the "How to reach" lines use,
+  // so the number on the card is the number of boarding passes.
+  const readFlights = useMemo(() => {
+    const cities = (it?.days || []).map((d) => d.city);
+    let n = 2;
+    for (let i = 0; i < cities.length - 1; i += 1) {
+      if (hop(it.dest, cities[i], cities[i + 1])?.mode === "flight") n += 1;
+    }
+    return n;
+  }, [it?.days, it?.dest]);
+
+  const readParty = bookedTrip
+    ? { adults: bookedTrip.adults ?? 2, kids: bookedTrip.kids ?? 0 }
+    : null;
+  // A trip being read knows who actually went; everything else falls through
+  // the usual chain. Written as a ternary on purpose: `(viewOnly && x) ?? y`
+  // yields `false` whenever viewOnly is false, because ?? only steps past
+  // null and undefined, and `false` multiplied into every price is a trip
+  // that costs nothing.
+  const travellers = (viewOnly && bookedTrip?.travellers)
+    ? bookedTrip.travellers
+    : (travelDates?.travelers ?? it.travellers ?? (inDeal ? (2 + (it.veg ? 0 : 1)) : explorePax));
   // Explore: dates set inline (start + the trip's nights → range label).
   const exploreDateLabel = exploreStart ? (() => {
     const s = new Date(exploreStart);
@@ -778,10 +812,30 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     const f = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
     return `${f(st)} – ${f(en)}`;
   })();
-  // Who is going never changes a single day of the plan, so it is a patch
-  // rather than a rebuild: it lands in the version's own customisations and
-  // saves itself, forking nothing and throwing no hotel away.
-  const applyPax = (n) => setTravelDates((d) => ({ ...(d || {}), travelers: n }));
+  // ─── The year, on a trip that is not yours ───
+  //
+  // "31 Mar - 5 Apr" is enough on your own plan, where the year is this one or
+  // the next and you booked it. On somebody else's trip it is a date with no
+  // anchor: the reader has no idea whether that was last spring or next. Both
+  // years show when the trip crosses one.
+  const viewDateLabel = (() => {
+    const st = new Date(tripStart);
+    const en = new Date(st); en.setDate(en.getDate() + (it?.nights || 0));
+    const d = (x) => x.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return st.getFullYear() === en.getFullYear()
+      ? `${d(st)} – ${d(en)} ${en.getFullYear()}`
+      : `${d(st)} ${st.getFullYear()} – ${d(en)} ${en.getFullYear()}`;
+  })();
+
+  // ─── Everything goes back through the builder ───
+  //
+  // Cities, dates and the party all send the trip back to the builder: a new
+  // version with new hotels, day plans and prices, and only the destination
+  // (and, unless the party is what changed, the travellers) carried over.
+  // That takes a moment, and the moment has a screen that says what is being
+  // built and why; the change itself runs when the screen is done.
+  const [building, setBuilding] = useState(null); // { reason, summary, run }
+  const startBuild = (reason, summary, run) => setBuilding({ reason, summary, run });
 
   // The route this trip is made of, however it was saved: the built route when
   // there is one, otherwise read back off the days.
@@ -795,7 +849,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // builds it and forked into a version of its own, which is what a version is
   // for. Hotels and day picks do not survive it, which is why the old version
   // stays where it was.
-  const rebuild = (nextRoute, startIso) => {
+  const rebuild = (nextRoute, startIso, pax = travellers) => {
     const built = synthesizeItinerary({
       dest: it.dest,
       nights: routeNights(nextRoute),
@@ -803,7 +857,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       picksByCity: {},
       vibes: it._vibes || [],
       startDate: startIso,
-      party: { travellers },
+      party: { travellers: pax },
       id: it.custom ? it.id : undefined,
     });
     built._vibes = it._vibes || [];
@@ -812,7 +866,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       customizations: {
         selectedDayOptions: {},
         selectedHotels: {},
-        travelDates: { fromDate: startIso, nights: built.nights, travelers: travellers },
+        travelDates: { fromDate: startIso, nights: built.nights, travelers: pax },
         builtItinerary: built,
       },
       indicativePrice: Number(String(built.price).replace(/,/g, "")) || 0,
@@ -823,20 +877,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
   const applyCities = (nextRoute) => {
     setCitiesScreen(false);
-    rebuild(nextRoute, tripStart);
+    startBuild("route", `${nextRoute.map((r) => r.city).join(" · ")} · ${routeNights(nextRoute)} nights`, () => rebuild(nextRoute, tripStart));
   };
 
-  // Moving a trip is a patch: not one day of the plan changes, so it writes
-  // itself into the version and nothing is forked or thrown away. Making it
-  // longer or shorter is not, so that goes through the rebuild with the nights
-  // shared out across the cities it already has.
+  // New dates, same length or not: the plan is built again for those days,
+  // with the nights shared out across the cities it already has when the
+  // length changed.
   const applyDates = (d0, n) => {
-    if (!n || n === (it.nights || 0)) {
-      setTravelDates((d) => ({ ...(d || {}), fromDate: d0 }));
-      return;
-    }
-    rebuild(respread(tripRoute, n), d0);
+    const nextRoute = n && n !== (it.nights || 0) ? respread(tripRoute, n) : tripRoute;
+    const from = new Date(d0);
+    const to = new Date(from.getTime() + routeNights(nextRoute) * 86400000);
+    const day = (x) => x.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    startBuild("dates", `${day(from)} to ${day(to)}`, () => rebuild(nextRoute, d0));
   };
+
+  // A different party: rooms, prices and the plan built for it.
 
   // ─── Scroll to a control and point at it ───
   //
@@ -867,10 +922,52 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     }, 520);
   };
 
+  // ─── Picks that did not fit ───
+  //
+  // A built trip carries the activities its days had no room for. They show
+  // once, above Itinerary at a glance, until closed; after that first visit
+  // they stay gone. ?actnote=<one of NOTE_VARIANTS> forces a version on,
+  // and on a seed trip (which was never built from picks) invents a pair of
+  // left-out picks so the versions can be compared on a real page.
+  const noteParam = params.get("actnote");
+  const noteVariant = NOTE_VARIANTS.includes(noteParam) ? noteParam : "stackCity";
+  const actReport = useMemo(() => {
+    if (it.actReport) return it.actReport;
+    if (!noteParam) return null;
+    // ?actdrop=N leaves out N (default 2), taken city by city, so the "N
+    // more" on the Not included list can be seen as well as on Included.
+    const want = Math.max(1, Number(params.get("actdrop")) || 2);
+    const dropped = [];
+    it.days.forEach((d) => {
+      // Nothing that shares a word with what the day already shows: "Old
+      // Quarter walking tour" left out of a day that says "Old Quarter" reads
+      // as a contradiction rather than a demo.
+      const inPlan = d.sub.split(" · ");
+      const words = new Set(inPlan.flatMap((p) => p.toLowerCase().split(/\s+/)));
+      const spare = (cityVibes[d.city] || []).flatMap((v) => v.activities)
+        .filter((a) => !a.toLowerCase().split(/\s+/).some((w) => words.has(w)));
+      spare.slice(0, 2).forEach((name) => {
+        if (dropped.length < want) dropped.push({ name, city: d.city, reason: `Not enough time in ${d.city}` });
+      });
+    });
+    return {
+      kept: it.days.flatMap((d) => d.sub.split(" · ").map((name) => ({ name, city: d.city }))),
+      dropped,
+    };
+  }, [it, noteParam, params]);
+  const noteKey = `actnote:${versionId || it.id}`;
+  const [noteOpen, setNoteOpen] = useState(() => {
+    if (noteParam) return true;
+    try { return !localStorage.getItem(noteKey); } catch { return true; }
+  });
+  useEffect(() => {
+    if (!actReport?.dropped?.length || noteParam) return;
+    try { localStorage.setItem(noteKey, "1"); } catch { /* private window */ }
+  }, [actReport, noteKey, noteParam]);
+
   const customise = (key) => {
     setCustomiseOpen(false);
-    if (key === "pax") setPaxSheet(true);
-    else if (key === "dates") setDateSheet(true);
+    if (key === "dates") setDateSheet(true);
     else if (key === "cities") setCitiesScreen(true);
     else if (key === "hotel") pointAt("hotels", '[data-tour="change-hotel"]');
     else if (key === "day") pointAt("itinerary", '[data-tour="change-day"]');
@@ -901,13 +998,34 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   }, []);
 
   const TOUR_STEPS = [
-    { selector: '[data-tour="edit"]', gesture: "tap", text: "Tap any of these three to change your cities, dates or travellers." },
+    { selector: '[data-tour="edit"]', gesture: "tap", text: "Tap Customise to change your cities, dates, hotels or day plans." },
     { selector: '[data-tour="change-day"]', gesture: "tap", text: "Tap Change day plan to swap a day's activities." },
     { selector: '[data-tour="change-hotel"]', gesture: "tap", text: "Tap Change hotel to pick a different stay." },
     { selector: '[data-tour="save"]', gesture: "tap", text: "Happy with it? Tap Save Itinerary to lock your price and get a PDF." },
   ];
 
   // Overlay frame: fills the viewport on mobile, matches the phone frame on desktop.
+  // Two of the sections do not exist on a trip somebody is only reading, so
+  // the chips for them do not either.
+  // ─── Whose trip this is ───
+  //
+  // "Your Vietnam trip" is a lie on a trip somebody else booked, and it is the
+  // first line on the page. The rail already knows who booked each one, so the
+  // title says their name. If this trip is not on the rail, it drops the owner
+  // rather than inventing one.
+  const tripTitle = viewOnly
+    ? `${booker ? `${booker}'s ` : ""}${it?.dest} trip`
+    : `Your ${it?.dest} Trip`;
+
+  const navSections = useMemo(
+    () => NAV_SECTIONS.filter((x) => {
+      if (viewOnly && (x.key === "together" || x.key === "consultant")) return false;
+      if (noFlights && x.key === "flights") return false;
+      return true;
+    }),
+    [viewOnly, noFlights]
+  );
+
   const overlayFrame = isMobile
     ? { position: "fixed", inset: 0 }
     : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 390, height: 844, borderRadius: 44, overflow: "hidden" };
@@ -945,7 +1063,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // (they were priced from the trip's home). Until the customer re-selects, the
   // intl flights show an empty prompt and drop out of the costing.
   const deptChanged = departureCity !== "Indore";
-  const flightPerPerson = !flightsIncluded ? 0 : (
+  // ?flights=add shows the version with an Add flights button; without it,
+  // flights are added by the consultant.
+  const draftFlightsMode = params.get("flights") === "add" ? "add" : "consultant";
+  const draftNoFlights = !quoted && !viewOnly && flightsIncluded && !draftFlightsAdded;
+  const flightPerPerson = (!flightsIncluded || draftNoFlights) ? 0 : (
     (!deptChanged && (intlMode === "roundtrip" || outAdded) && selOut ? selOut.price : 0) +
     (!deptChanged && (intlMode === "roundtrip" || retAdded) && selRet ? selRet.price : 0) +
     domesticLegs.reduce((s, { i }) => s + (getFlightForLeg(i)?.price || 0), 0)
@@ -1157,14 +1279,47 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // than off the stay's activity list. Used by the glance cards and the day
   // detail, so the two cannot drift apart.
   const dayIsFree = (day, i) => !selectedDayOptions[i] && (day.leisure || day.departure);
+  // Demo switches, so the two empty states can be seen on a real trip:
+  // ?unrated=5 shows Day 5 with no rating yet, ?noscore=6 shows Day 6 with no
+  // score yet. Comma lists work too.
+  const demoDays = (key) => new Set((params.get(key) || "").split(",").map(Number).filter(Boolean));
+  const unratedDays = demoDays("unrated");
+  const noScoreDays = demoDays("noscore");
+  // The score (how the day feels) is for days with tours. A leisure day,
+  // arrival or departure included, is not scored at all.
   const scoringForDay = (day, i) => {
+    if (noScoreDays.has(day.dayNum) || dayIsFree(day, i)) return null;
+    return getDayScoring(day, i, daysWithActivities);
+  };
+  const ratingForDay = (day, i) => (dayIsFree(day, i) || unratedDays.has(day.dayNum) ? null : dayRatingFor(day, i));
+  // Any day built around a transfer (arriving, leaving, moving hotels) cannot
+  // be changed: the rest of the day hangs off the drive. The bar inside the
+  // day says why; the glance card only shows a lock. A trip that cannot be
+  // edited at all is not "locked" day by day, so it says nothing.
+  const lockReasonFor = (day, i) => {
+    if (!editable) return null;
     const isFirst = i === 0;
     const isLast = i === daysWithActivities.length - 1;
-    const hasTransfer = !!day.transfers?.length || isFirst || isLast;
-    if (!dayIsFree(day, i)) return getDayScoring(day, i, daysWithActivities);
-    return hasTransfer ? getDayScoring({ ...day, activities: [] }, i, daysWithActivities) : null;
+    if (day.departure || isLast) return "Departure day, so it can't be changed.";
+    if (isFirst) return "Arrival day, so it can't be changed.";
+    if (day.transfers?.length) return "Hotel change day, so it can't be changed.";
+    return null;
   };
-  const ratingForDay = (day, i) => (dayIsFree(day, i) ? null : dayRatingFor(day, i));
+  // Why a day has no rating, said where the rating would be.
+  const dayKindFor = (day, i) => {
+    if (dayIsFree(day, i)) return "No tours today";
+    return ratingForDay(day, i) ? null : "Not rated yet";
+  };
+  // Dates on the glance cards only when they are the traveller's own. The
+  // demo start date fills the day detail, but on the list it would read as a
+  // booking somebody never made.
+  // A saved plan already shows its dates at the top, so its days do too.
+  const hasOwnDates = !!(inDeal || exploreStart || travelDates?.fromDate || (it.custom && it.startDate));
+  const glanceDate = (i) => {
+    const d = new Date(tripStart);
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
 
   // The day detail screen takes days in its own shape. Built here so the day
   // deck can swipe across the whole trip without rebuilding on every swipe.
@@ -1175,17 +1330,174 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
     },
     scoringFor: (day, i) => scoringForDay(day, i),
-  }), [daysWithActivities, it.dest, tripStart]);
+    lockFor: (day, i) => lockReasonFor(day, i),
+  }), [daysWithActivities, it.dest, tripStart, editable, selectedDayOptions]);
 
   // Every plan on offer for the day being changed, as cards.
   const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
+  const pillHidden = pillAway || !!toast || topCustomiseSeen;
+
   const showToast = (message, undoData) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, undoData });
     toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   };
+
+  // ─── Taking this trip ───
+  //
+  // The copy is a plan of its own from the moment it is made: its own deal, its
+  // own version, its own dates and party, and every change door back open. The
+  // trip it came from is untouched and stays unreadable-only, so the same one
+  // can be taken again tomorrow by somebody else.
+  // ─── Making it theirs ───
+  //
+  // One copy, its own deal and version, with the dates and the party they just
+  // gave. Then one of two endings, and neither of them is a dialogue:
+  //
+  //   Everything available  the version is priced and saved on the spot, so
+  //                         what they land on is a finished itinerary.
+  //   A stay sold out       the version stays a draft and the trip opens with
+  //                         the hotel marked, because the decision is theirs
+  //                         and the screen they make it on is this one.
+  const makeCopy = ({ startIso, adults, kids, nights, swaps }) => {
+    const copy = copyOf(it, { startIso, adults, kids, nights, swaps });
+    const travelers = adults + kids;
+    const perPerson = Number(String(copy.price).replace(/,/g, "")) || 0;
+    // A stay that is gone comes back as the nearest equivalent in the same
+    // city, already in place. Handing somebody an itinerary with a hotel on it
+    // that cannot be booked, and a note saying so, is worse than swapping it
+    // and telling them what we swapped.
+    const selectedHotelsOnCopy = {};
+    (swaps || []).forEach(({ index, hotel }) => {
+      if (!hotel) return;
+      selectedHotelsOnCopy[index] = {
+        hotelId: hotel.id,
+        hotelName: hotel.name,
+        roomName: hotel.roomType,
+        image: hotel.images?.[0]?.url,
+        bookingScore: hotel.bookingScore,
+        stars: hotel.stars,
+      };
+    });
+    const { dealId: newDeal, versionId: newVersion } = dealsCtx.createDeal({
+      itineraryId: copy.id,
+      dest: copy.dest,
+      title: copy.name,
+      img: copy.img,
+      createdBy: "customer",
+      customItinerary: copy,
+      customizations: {
+        selectedDayOptions: {}, selectedHotels: selectedHotelsOnCopy,
+        travelDates: { fromDate: startIso, nights: copy.nights, travelers },
+        builtItinerary: copy,
+      },
+      indicativePrice: perPerson,
+    });
+    // Nothing is left hanging now: the trip is complete on arrival, so it is
+    // priced like any other finished copy.
+    dealsCtx.requestPricing(newDeal, newVersion, perPerson);
+    setCopyOpen(false);
+    navigate(
+      `/itinerary/${copy.id}?dealId=${newDeal}&versionId=${newVersion}&copied=1&saved=1`,
+      { replace: true }
+    );
+  };
+
+  // The copy lands on a screen that looks like any other plan, so it says once
+  // where it came from, and says it again on each stay that had to move.
+  //
+  // The stays that moved ride on the trip itself. They used to ride in the
+  // address bar, which held exactly one of them; a four-city trip over New
+  // Year can lose two, and the second had nowhere to be said.
+  const swapped = it.hotelSwaps || [];
+  const swapFor = (i) => swapped.find((x) => x.index === i) || null;
+  // Each strip closes on its own, and nothing remembers it: this is a note
+  // about one arrival, not a setting.
+  const [swapsSeen, setSwapsSeen] = useState([]);
+
+  const greeted = useRef(false);
+  // ─── Keyed off the url, not off the mount ───
+  //
+  // Both the trip being read and the copy it makes are this same component, so
+  // React keeps the instance and swaps the route under it: no second mount, and
+  // an effect with no dependencies never runs again. Which is why the toast
+  // only ever appeared on a hard reload. It watches the flag instead.
+  const copiedFlag = params.get("copied");
+  useEffect(() => {
+    if (greeted.current || copiedFlag !== "1") return;
+    greeted.current = true;
+    const moved = (it.hotelSwaps || []).length;
+    showToast(moved
+      ? `${moved === 1 ? "One hotel was" : `${moved} hotels were`} sold out on your dates, so we swapped ${moved === 1 ? "it" : "them"}.`
+      : "Your itinerary is saved. Change anything and we will re-price it.");
+    // A sold-out stay is the one thing on a new copy that needs them, so the
+    // page goes to it rather than leaving the pulse to be found. A beat first,
+    // so it scrolls over a page that has finished arriving.
+    if (!moved) return;
+    const t = setTimeout(() => {
+      document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // And the rail along to the first one. The stay that moved is rarely the
+      // first card, and a pulse happening off the right edge is no help at all.
+      const card = document.querySelector(`[data-stay="${it.hotelSwaps[0].index}"]`);
+      const rail = card?.parentElement;
+      if (card && rail) rail.scrollTo({ left: Math.max(0, card.offsetLeft - 16), behavior: "smooth" });
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [copiedFlag]);
+
+  // How tall the bottom bar is right now. It changes as strips come and go, so
+  // it is watched rather than read once.
+  useEffect(() => {
+    if (!footerEl) return;
+    const read = () => setFooterH(footerEl.offsetHeight || 84);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(footerEl);
+    return () => ro.disconnect();
+  }, [footerEl]);
+
+  // Watched rather than measured against a scroll position: the hero, the
+  // nav and the details block are each their own height, and "has it gone"
+  // is the actual question.
+  useEffect(() => {
+    if (!topCustomiseEl) { setTopCustomiseSeen(false); return undefined; }
+    const io = new IntersectionObserver(([e]) => setTopCustomiseSeen(e.isIntersecting));
+    io.observe(topCustomiseEl);
+    return () => io.disconnect();
+  }, [topCustomiseEl]);
+
+  // Out of the way on the way down, back on the way up or the moment the page
+  // stops moving. Coming back on a pause matters: somebody who scrolls to the
+  // hotels and stops reading should still be able to see how to change them.
+  useEffect(() => {
+    if (!footerEl) return;
+    let n = footerEl.parentElement;
+    while (n) {
+      const oy = getComputedStyle(n).overflowY;
+      if (oy === "auto" || oy === "scroll") break;
+      n = n.parentElement;
+    }
+    const sc = n;
+    if (!sc) return;
+    let last = sc.scrollTop;
+    let idle;
+    const onScroll = () => {
+      const y = sc.scrollTop;
+      const dy = y - last;
+      // A few pixels of drift is a finger resting, not a scroll.
+      if (Math.abs(dy) > 6) {
+        setPillAway(dy > 0 && y > 140);
+        last = y;
+      }
+      clearTimeout(idle);
+      idle = setTimeout(() => setPillAway(false), 600);
+    };
+    sc.addEventListener("scroll", onScroll, { passive: true });
+    return () => { sc.removeEventListener("scroll", onScroll); clearTimeout(idle); };
+  }, [footerEl]);
 
   // Open the hotel-change flow, carrying deal context so the change lands back
   // in editing mode on this same copy.
@@ -1350,7 +1662,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       showToast(`Quote ready · ₹${live.toLocaleString("en-IN")}/person · PDF generated ✓`);
     }, 1800);
   };
-  const handleDownloadPdf = () => showToast("Quote PDF downloaded (demo)");
+  const handleDownloadPdf = () => showToast(viewOnly
+    ? "Itinerary PDF downloaded. No traveller details in it."
+    : "Quote PDF downloaded (demo)");
 
   // ─── Planning a closed trip again ───
   //
@@ -1433,33 +1747,37 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>How customising works</span>
           </button>
         )}
-        {/* Bottom info - title on its own full-width row, then V{n} + Watch below */}
+        {/* ─── One line, four things ───
+            The trip's name, how long it is, the heart, and which version
+            this is. They are the same kind of fact (what this screen is)
+            and they belong on one line together. Who is going is not one of
+            them: that reads below with the route and the dates, where the
+            other two answers about the trip are. */}
         <div style={{ position: "absolute", bottom: 16, left: 16, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-          {/* Title row: the save heart sits at its right end, on the first line */}
-          <div style={{ alignSelf: "stretch", display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <p style={{ flex: 1, minWidth: 0, fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-              <span>Your {it.dest} Trip · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
-              {/* Version badge only once the itinerary is created (priced) */}
-              {quoted && (
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)", backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4 }}>
-                  V{version.num}
-                </span>
-              )}
-            </p>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0, lineHeight: "28px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+            <span>{tripTitle} · <span style={{ fontWeight: 400 }}>{it.nights}N</span></span>
             {inDeal && versionId && (
               <SaveHeart onPhoto saved={dealsCtx.isWished(versionId)} onToggle={() => dealsCtx.toggleWish(versionId)} style={{ margin: "-2px -6px -2px 0" }} />
             )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => setShowViewer({ day: 0, activity: 0 })} style={{
-              display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
-              background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.2)",
-              backdropFilter: "blur(8px)", cursor: "pointer",
-            }}>
-              <Play size={12} color="#fff" fill="#fff" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>Watch the trip</span>
-            </button>
-          </div>
+            {/* Which version this is, beside the heart. A trip that has been
+                rebuilt a few times has several, and the number is how
+                somebody tells the one they are reading from the one they
+                remember. Only once it is priced: before that there is
+                nothing to be a second version of. */}
+            {quoted && (
+              <span style={{
+                fontSize: 12, fontWeight: 800, color: "#fff",
+                background: "rgba(255,255,255,0.24)", border: "1px solid rgba(255,255,255,0.35)",
+                backdropFilter: "blur(8px)", borderRadius: 999, padding: "2px 10px", letterSpacing: 0.4,
+              }}>
+                V{version.num}
+              </span>
+            )}
+          </p>
+          {/* No play button here. Every day card below carries its own
+              videos, which is where somebody looking for them is already
+              looking, and a control in the hero only competes with the one
+              thing the screen is for. */}
         </div>
       </div>
 
@@ -1468,7 +1786,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           overview. It shows itself once the day plan comes up to meet it.
           The hotel page's chip, so jumping from the trip to a hotel and back is
           the same control twice rather than two that look unrelated. */}
-      <SectionNav sections={NAV_SECTIONS} elFor={elForSection} variant="soft" />
+      <SectionNav sections={navSections} elFor={elForSection} variant="soft" />
 
       {/* ─── The trip, in two lines ───
           Cities first, because that is the trip, and the one that says out loud
@@ -1478,77 +1796,73 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           and cost three lines between them, which pushed the itinerary itself
           below the fold, and an icon says "when" and "how many" perfectly well
           next to a date and a number. */}
-      {wizardEditable ? (
-        <div style={{ padding: "12px 16px 4px" }}>
-          {/* ─── Three fields, one language ───
-              Cities, dates and travellers are the three answers this trip was
-              built from, so they are set the way answers are set: a field each
-              with the value in it. Labels, pencils and a heading all came and
-              went; what makes a thing look changeable is that it looks like
-              something a value was typed into.
+      {/* ─── The same three facts, read ───
+          A trip being read opens on the same three answers in the same places:
+          the cities with their nights across the top, the dates and the party
+          under them. Same boxes, same order, same type. What is gone is the
+          caret and the press: there is nothing here to set, so nothing here
+          says it can be. */}
+      {viewOnly ? (
+        <ReadSummary
+          days={it.days}
+          plans={daysWithActivities}
+          travellers={travellers}
+          stays={hotels.length}
+          flights={readFlights}
+          total={grandTotal}
+          onBreakdown={() => document.getElementById("cost-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        />
+      ) : wizardEditable ? (
+        /* ─── Dates first, route under it ───
+            The dates and who is going are the line somebody checks, so
+            they are the line in black. The route is the line somebody
+            reads, and it sits under them in grey at the smaller size.
 
-              The cities field runs full width because the nights belong in it.
-              "3 cities" is shorter and tells a couple nothing, and the whole
-              point of the line is to say where the week goes. It ends in a
-              same caret as the other two: all three are fields that open
-              something, and which kind of something it opens is not a
-              distinction worth two different arrows. */}
-          {(() => {
-            const field = ({ key, Icon, text, days, aria, Caret, wide, go, tour }) => (
-              <button
-                key={key}
-                data-tour={tour}
-                onClick={go}
-                aria-label={aria}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0,
-                  flex: wide ? 1 : "0 0 auto",
-                  padding: "8px 9px 8px 11px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-                  border: `1px solid ${C.div}`, background: C.bg, textAlign: "left",
-                }}
-              >
-                <Icon size={14} color={C.sub} style={{ flexShrink: 0 }} />
-                {days
-                  ? <CityLine days={days} />
-                  : <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{text}</span>}
-                <Caret size={14} color={C.sub} style={{ flexShrink: 0, marginLeft: 1 }} />
-              </button>
-            );
-            return (
-              <>
-                <div style={{ display: "flex" }}>
-                  {field({
-                    key: "cities",
-                    Icon: MapPin,
-                    days: it.days,
-                    aria: "Change cities",
-                    Caret: ChevronDown,
-                    wide: true,
-                    go: () => setCitiesScreen(true),
-                    tour: "edit",
-                  })}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  {field({
-                    key: "dates",
-                    Icon: Calendar,
-                    text: dateLabel,
-                    aria: "Change travel dates",
-                    Caret: ChevronDown,
-                    go: () => setDateSheet(true),
-                  })}
-                  {field({
-                    key: "pax",
-                    Icon: Users,
-                    text: `${travellers} traveller${travellers > 1 ? "s" : ""}`,
-                    aria: "Change travellers",
-                    Caret: ChevronDown,
-                    go: () => setPaxSheet(true),
-                  })}
-                </div>
-              </>
-            );
-          })()}
+            The route wraps rather than counting. It used to measure
+            itself against the width it had and fall back to "+1 city"
+            once it ran out, which saves a line and loses the city that
+            somebody might be opening this screen to change. Four cities
+            over two lines costs seventeen pixels and names all four.
+
+            No icons on either line. A calendar beside a date and a pin
+            beside a list of places say nothing the words have not already
+            said. */
+        <div style={{ padding: "12px 16px 10px", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.head }}>
+              {dateLabel} · <span data-testid="hero-party">{travellers} traveller{travellers > 1 ? "s" : ""}</span>
+            </p>
+            <p data-testid="trip-route" style={{
+              margin: "3px 0 0", fontSize: 12.5, fontWeight: 500, color: C.sub, lineHeight: "18px",
+            }}>
+              {it.days.map((d) => `${d.city} ${d.n}N`).join("  ·  ")}
+            </p>
+          </div>
+          {/* ─── Outlined, not filled ───
+              The ink pill had the weight of a primary action, which this
+              is not: buying the trip is, and that button is in the bar at
+              the foot. An outline with the pencil in it says the same
+              thing at the weight the thing deserves, and it is the shape
+              the rest of the app uses for "change this".
+
+              The floating one stays filled. It has a photograph and a day
+              plan behind it and has to be found; this one is sitting in
+              white space next to the words it edits. */}
+          <button
+            ref={setTopCustomiseEl}
+            data-tour="edit"
+            data-testid="customise-top"
+            onClick={() => setCustomiseOpen(true)}
+            style={{
+              flexShrink: 0, alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 13px 8px 11px", borderRadius: 999,
+              border: `1.5px solid ${C.p300}`, background: C.white, color: C.p600,
+              cursor: "pointer", fontFamily: "inherit",
+              fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
+            }}
+          >
+            <Pencil size={13} color={C.p600} /> Customise
+          </button>
         </div>
       ) : (
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -1615,6 +1929,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       {/* ═══ 3. Itinerary at a Glance ═══ */}
       <div ref={setSectionEl("itinerary")} style={{ padding: "0 16px" }}>
+        {noteOpen && (
+          <MissedPicksNote
+            report={actReport}
+            dest={it.dest}
+            variant={noteVariant}
+            onClose={() => setNoteOpen(false)}
+            onFix={() => customise("cities")}
+          />
+        )}
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, marginBottom: 16 }}>Itinerary at a glance</p>
         {/* Every day shows upfront now. The poster-left card carries the day's
             video count, pace, rating and any heads-up note, so there is nothing
@@ -1656,8 +1979,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 .filter(Boolean);
             }
 
+            // One heads-up on the whole list, on the first day that has one.
+            // A band on every other day taught people to skip them all.
             const candidate = getDayNote(free ? { city: day.city } : { activities: acts });
-            const note = candidate && !notesShown.has(candidate) ? candidate : null;
+            const note = candidate && notesShown.size === 0 ? candidate : null;
             if (note) notesShown.add(note);
 
             return (
@@ -1667,6 +1992,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 changeTestId={`change-day-${i}`}
                 dayNum={day.dayNum}
                 city={day.city}
+                date={hasOwnDates ? glanceDate(i) : null}
+                locked={!!lockReasonFor(day, i)}
+                kind={dayKindFor(day, i)}
                 lines={lines}
                 poster={poster}
                 videoCount={videoCount}
@@ -1676,7 +2004,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 note={note}
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
-                canChange={editable && dayHasOptions(i) && !(free && hasTransfer)}
+                canChange={editable && dayHasOptions(i) && !lockReasonFor(day, i)}
                 onOpen={() => { setDayDetailJump(null); setDayDetailIndex(i); }}
                 onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
@@ -1704,13 +2032,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <Divider />
 
       {/* ═══ 4. Hotels ═══ */}
-      <div id="hotels-section" ref={setSectionEl("hotels")}>
+      <div id="hotels-section" ref={setSectionEl("hotels")} style={{ scrollMarginTop: 62 }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
+
         <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
           {hotels.map((h, i) => {
             const selfBooked = selfBookedStays.has(i);
             const ls = stayState(liveResult, i);
+            // Either the live check found it, or the copy arrived knowing the
+            // stay was gone on these dates. Same badge, same way out.
             const soldOut = ls && ls.status === "sold_out";
+            // A stay the copy arrived having already replaced. The card shows
+            // the hotel that is on the trip; the strip under it says which one
+            // it stands in for.
+            const swap = swapFor(i);
+            const swapOpen = !!swap && !swapsSeen.includes(i);
             if (selfBooked) {
               return (
                 <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
@@ -1728,7 +2064,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               );
             }
             return (
-            <div key={i} style={{ width: 280, minWidth: 280, flexShrink: 0 }}>
+            <div key={i} data-stay={i} style={{
+              width: 280, minWidth: 280, flexShrink: 0,
+              // A stay the copy arrived knowing was gone. The toast said it on
+              // the way in and then left; this is what is still saying it
+              // afterwards, so nobody has to remember which city it was.
+              borderRadius: 14,
+              animation: swapOpen ? "soldPulse 1.7s ease-out 4" : undefined,
+            }}>
               <HotelStayCard
                 image={h.img}
                 imageAlt={h.name}
@@ -1745,9 +2088,27 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 freeCancellation={h.freeCancellation}
                 saved={wishlist.isSaved("hotel", it.dest, h.name)}
                 onSave={() => wishlist.toggle("hotel", it.dest, h.name, { name: h.name, img: h.img, sub: `${h.city}${h.stars ? ` · ${h.stars}-star` : ""}`, city: h.city, stars: h.stars, score: h.rating })}
-                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}`}
+                to={`/hotel-detail/${it.id}/${i}/${encodeURIComponent(h.hotelId || "")}?current=${encodeURIComponent(h.hotelId || "")}${dealQS}${viewOnly ? "&view=1" : ""}`}
                 footer={
                   <>
+                    {swapOpen && (
+                      <div data-testid={`hotel-swapped-${i}`} style={{
+                        display: "flex", alignItems: "flex-start", gap: 7, marginTop: 8,
+                        background: "#FFFAEB", border: "1px solid #FEDF89", borderRadius: 9, padding: "7px 8px 7px 9px",
+                      }}>
+                        <ArrowLeftRight size={12} color="#B54708" strokeWidth={2.3} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, lineHeight: "16px", color: "#93370D", fontWeight: 600 }}>
+                          {swap.from} is sold out on your dates. We put this one in its place.
+                        </span>
+                        <button
+                          aria-label="Dismiss"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSwapsSeen((prev) => [...prev, i]); }}
+                          style={{ flexShrink: 0, border: "none", background: "none", padding: 0, cursor: "pointer", display: "flex", marginTop: 1 }}
+                        >
+                          <XIcon size={13} color="#B54708" />
+                        </button>
+                      </div>
+                    )}
                     {ls?.status === "price_up" && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFF4ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "6px 8px", marginTop: 4 }}>
                         <AlertTriangle size={13} color="#EA580C" strokeWidth={2.2} style={{ flexShrink: 0 }} />
@@ -1815,20 +2176,35 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
       <Divider />
 
-      {/* ═══ Invite partner (co-planner) ═══ */}
-      <div ref={setSectionEl("together")}>
-        <InvitePartnerSection destination={it.dest} />
-      </div>
+      {/* ═══ Invite partner (co-planner) ═══
+          Not on somebody else's trip: there is nothing here yet to plan
+          together, and the invite would go out against a trip they do not own. */}
+      {!viewOnly && (
+        <>
+          <div ref={setSectionEl("together")}>
+            <InvitePartnerSection destination={it.dest} />
+          </div>
+          <Divider />
+        </>
+      )}
 
-      <Divider />
-
-      {/* ═══ 5. Flights ═══ */}
+      {/* ═══ 5. Flights ═══
+          Gone entirely on a copied trip. Showing an empty flights section, or
+          one with somebody else's fares in it, invites a tap we cannot answer. */}
+      {!noFlights && (
+      <>
       <div ref={setSectionEl("flights")}>
       {(() => {
         const padCard = { border: `1px solid ${C.div}`, borderRadius: 16, background: C.white, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.06)", padding: "12px 14px 14px" };
         const changeStyle = { display: "inline-flex", alignItems: "center", gap: 1, flexShrink: 0, fontSize: 12.5, fontWeight: 600, color: C.p600, textDecoration: "none", border: `1px solid ${C.div}`, borderRadius: 20, padding: "5px 12px", background: C.white };
         const divider = <div style={{ borderTop: `1px solid ${C.div}`, margin: "12px 0" }} />;
-        const priceRow = (price, left) => (
+        // ─── No fare on a trip being read ───
+        //
+        // The flights on somebody else's trip were bought on their dates. A
+        // price beside them is a number this reader cannot have, so the row
+        // keeps whatever control it was given and drops the fare. With neither,
+        // there is no row at all.
+        const priceRow = (price, left) => viewOnly ? (left || null) : (
           <div style={{ display: "flex", justifyContent: left ? "space-between" : "flex-end", alignItems: "baseline", gap: 8 }}>
             {left}
             <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
@@ -1851,18 +2227,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         const outTo = `/flights/${it.id}/${intlOutIdx}?current=${encodeURIComponent(selOut?.id || "")}${dealQS}${homeQS}`;
         // Per-leg "Change" — selection is one flight at a time, so each leg links
         // to its own single-leg chooser (one-way mode).
-        const changeCtrl = (legIdx, f) => (
+        // Nothing on a trip being read is changeable, flights least of all:
+        // they are the one part a copy cannot carry, so the screen does not
+        // offer to swap them.
+        const changeCtrl = (legIdx, f) => viewOnly ? null : (
           <Link to={`/flights/${it.id}/${legIdx}?current=${encodeURIComponent(f?.id || "")}${dealQS}${homeQS}&mode=oneway`} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
             <ArrowLeftRight size={13} /> Change
           </Link>
         );
 
-        const removeBtn = (onClick) => (
+        const removeBtn = (onClick) => viewOnly ? null : (
           <button onClick={onClick} aria-label="Remove flight" style={{ display: "inline-flex", alignItems: "center", gap: 2, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.sub, border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}>
             <XIcon size={12} /> Remove
           </button>
         );
-        const addEmpty = (label, onClick) => (
+        const addEmpty = (label, onClick) => viewOnly ? null : (
           <button onClick={onClick} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "24px 14px", border: `1.5px dashed ${C.p300}`, borderRadius: 16, background: C.white, color: C.p600, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             <Plus size={18} /> Add {label} flight
           </button>
@@ -1879,7 +2258,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
         // Kebab menu: lets the customer hand flight booking back to themselves
         // (drops flights from our package + cost) or undo that.
-        const flightsMenu = (
+        const flightsMenu = viewOnly ? null : (
           <div style={{ position: "relative" }}>
             <button onClick={() => setFlightsMenuOpen(o => !o)} aria-label="Flight options" style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${C.div}`, background: C.white, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <MoreHorizontal size={16} color={C.sub} />
@@ -1903,10 +2282,28 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             {/* Section header: Flights + remove/add-flights toggle */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
               <p style={{ fontSize: 18, fontWeight: 700, color: C.head, margin: 0 }}>Flights</p>
-              {flightsMenu}
+              {!draftNoFlights && flightsMenu}
             </div>
 
-            {!flightsIncluded ? (
+            {draftNoFlights ? (
+              /* A draft: no flight cards at all, one line saying so and the
+                 one way to get them. */
+              <div data-testid="flights-draft" style={{ display: "flex", alignItems: "center", gap: 12, marginTop: -4 }}>
+                <p style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 13, color: C.sub, lineHeight: "19px" }}>
+                  <strong style={{ color: C.head, fontWeight: 700 }}>Flights not included.</strong>{" "}
+                  {draftFlightsMode === "add" ? "Add them to see the full price." : "Your travel consultant can add them."}
+                </p>
+                {draftFlightsMode === "add" ? (
+                  <button onClick={() => setDraftFlightsAdded(true)} style={{
+                    flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, padding: "7px 12px", borderRadius: 20,
+                    border: `1px solid ${C.p600}`, background: C.white, color: C.p600, fontSize: 12.5, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                    <Plus size={13} strokeWidth={2.6} /> Add
+                  </button>
+                ) : null}
+              </div>
+            ) : !flightsIncluded ? (
               /* Package only — no flights, no flight cost */
               <div style={{ ...padCard, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", padding: "24px 16px" }}>
                 <Plane size={20} color={C.sub} />
@@ -1919,12 +2316,16 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
                   <Plane size={13} color={C.sub} />
                   <span style={{ fontSize: 12.5, color: C.sub }}>Departing from</span>
-                  <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-                    <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", border: `1px solid ${C.div}`, borderRadius: 8, background: C.white, padding: "4px 24px 4px 10px", fontSize: 12.5, fontWeight: 600, color: C.head, fontFamily: "inherit", cursor: "pointer" }}>
-                      {["Indore", "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata", "Ahmedabad"].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown size={13} color={C.sub} style={{ position: "absolute", right: 7, pointerEvents: "none" }} />
-                  </div>
+                  {viewOnly ? (
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.head }}>{departureCity}</span>
+                  ) : (
+                    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                      <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} style={{ appearance: "none", WebkitAppearance: "none", border: `1px solid ${C.div}`, borderRadius: 8, background: C.white, padding: "4px 24px 4px 10px", fontSize: 12.5, fontWeight: 600, color: C.head, fontFamily: "inherit", cursor: "pointer" }}>
+                        {["Indore", "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata", "Ahmedabad"].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <ChevronDown size={13} color={C.sub} style={{ position: "absolute", right: 7, pointerEvents: "none" }} />
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1944,9 +2345,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                       {selRet && <>{legHead("Return", selRet)}<FlightLegRow f={selRet} /></>}
                       {divider}
                       {priceRow((selOut?.price || 0) + (selRet?.price || 0),
-                        <Link to={outTo} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
-                          <ArrowLeftRight size={13} /> Change flights
-                        </Link>
+                        viewOnly ? null : (
+                          <Link to={outTo} style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, fontSize: 12, fontWeight: 600, color: C.p600, textDecoration: "none" }}>
+                            <ArrowLeftRight size={13} /> Change flights
+                          </Link>
+                        )
                       )}
                     </div>
                   ) : (
@@ -1977,16 +2380,23 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       </div>
 
       <Divider />
+      </>
+      )}
 
-      {/* ═══ 6.5 Your travel consultant ═══ */}
-      <div ref={setSectionEl("consultant")}>
-        <ConsultantSection
-          consultant={consultant}
-          onVersionChange={setConsultantVersion}
-        />
-      </div>
-
-      <Divider />
+      {/* ═══ 6.5 Your travel consultant ═══
+          The consultant belongs to a plan. A trip being read is not one yet,
+          and the consultant on it was that couple's, not this one's. */}
+      {!viewOnly && (
+        <>
+          <div ref={setSectionEl("consultant")}>
+            <ConsultantSection
+              consultant={consultant}
+              onVersionChange={setConsultantVersion}
+            />
+          </div>
+          <Divider />
+        </>
+      )}
 
       {/* ═══ 7. Traveler Stories ═══ */}
       <div ref={setSectionEl("reviews")} style={{ padding: "0 16px" }}>
@@ -2030,7 +2440,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, margin: "0 0 12px" }}>Cost breakdown</p>
         <div style={{ border: `1px solid ${C.div}`, borderRadius: 14, overflow: "hidden" }}>
           {[
-            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0, note: "This flight price may be outdated. Contact your travel consultant for the latest fares." },
+            { label: "Flights", value: costSplit.flights, hide: costSplit.flights <= 0, note: viewOnly ? null : "This flight price may be outdated. Contact your travel consultant for the latest fares." },
             { label: "Hotels", value: costSplit.hotels },
             { label: "Activities", value: costSplit.activities },
             { label: "Taxes (incl. TCS)", value: costSplit.gst + costSplit.tcs },
@@ -2062,7 +2472,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       <div style={{ height: 20 }} />
 
       {/* ═══ Sticky footer - changes panel (floating) + price/CTA row ═══ */}
-      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
+      <div ref={setFooterEl} style={{ position: "sticky", bottom: 0, left: 0, right: 0, zIndex: 20 }}>
         {/* Floating "changes since last version" panel */}
         {inDeal && !closedDeal && hasChanges && !fetchingPrice && (
           <div style={{ background: C.white, borderTop: `1px solid ${C.div}`, boxShadow: "0 -6px 20px rgba(0,0,0,0.07)" }}>
@@ -2126,7 +2536,32 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           />
         )}
 
-        {/* Price + CTA row */}
+        {/* ═══ The one thing to do with somebody else's trip ═══
+            A capsule floating over the page, the shape the day plan uses, not
+            a bar: a white strip across the bottom of a screen that is being
+            read is a second surface competing with the one being read. Pink,
+            because it is the only action on the screen, and the icon keeps a
+            slow beat so the corner stays live. */}
+        {viewOnly && (
+          <div style={{ padding: "0 16px calc(16px + env(safe-area-inset-bottom))", pointerEvents: "none" }}>
+            <button data-testid="use-this-trip" onClick={() => setCopyOpen(true)} style={{
+              width: "100%", pointerEvents: "auto",
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
+              padding: "16px 0", borderRadius: 999, border: "none",
+              background: C.p600, color: "#fff", fontSize: 15.5, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+              boxShadow: "0 12px 30px -8px rgba(227,27,83,0.55)",
+            }}>
+              <span style={{ display: "inline-flex", animation: "recreateSpark 2.4s ease-in-out infinite" }}>
+                <Sparkles size={17} />
+              </span>
+              Recreate this trip
+            </button>
+          </div>
+        )}
+
+        {/* Price + CTA row. */}
+        {!viewOnly && (
         <div style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(10px)", padding: "10px 16px 12px", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", borderTop: `1px solid ${C.div}` }}>
         {fetchingPrice ? (
           <div data-testid="price-loader" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "2px 0" }}>
@@ -2136,7 +2571,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
               <p style={{ margin: "1px 0 0", fontSize: 11.5, color: C.sub }}>{FETCH_MSGS[fetchMsgIdx % FETCH_MSGS.length]}</p>
             </div>
           </div>
-        ) : !inDeal ? (
+        ) : viewOnly ? null : !inDeal ? (
+
           /* Explore itinerary - no quote/PDF; just start planning. */
           <>
             <div>
@@ -2226,6 +2662,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </>
         )}
         </div>
+        )}
       </div>
 
       {/* ═══ Stories-Style Video Viewer ═══ */}
@@ -2256,7 +2693,9 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             tripDays={daysWithActivities.length}
             jumpTo={dayDetailJump}
             onClose={() => { setDayDetailIndex(null); setDayDetailJump(null); }}
-            onChangeDay={dayHasOptions(dayDetailIndex)
+            // A locked day is locked here too: the glance card offers no change
+            // on it, so the day itself cannot either.
+            onChangeDay={editable && dayHasOptions(dayDetailIndex) && !lockReasonFor(daysWithActivities[dayDetailIndex], dayDetailIndex)
               ? () => { const i = dayDetailIndex; setDayDetailIndex(null); setDayDetailJump(null); setChangeDayIndex(i); }
               : null}
           />
@@ -2333,7 +2772,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           activeDay={drawerActiveDay}
           setActiveDay={setDrawerActiveDay}
           onPlay={(day, activity) => setShowViewer({ day, activity })}
-          onChangeDay={(globalDayIndex) => setChangeDayIndex(globalDayIndex)}
+          onChangeDay={editable ? (globalDayIndex) => setChangeDayIndex(globalDayIndex) : null}
           onPhotoOpen={(dayNum, photoIdx) => setShowDayPhotos({ dayNum, photoIdx })}
           dayHasOptions={dayHasOptions}
           onClose={() => setShowDayWiseDrawer(false)}
@@ -2549,7 +2988,11 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <div style={{ ...overlayFrame, zIndex: 150, pointerEvents: "none" }}>
           <div style={{
             position: "absolute",
-            bottom: 70, left: 16, right: 16,
+            // Above the bar, measured the same way the Customise pill is. A
+            // fixed distance up from the screen put it across the save note,
+            // so the one line explaining what Save does was covered by a line
+            // about something else.
+            bottom: footerH + 12, left: 16, right: 16,
             background: "rgba(24,29,39,0.95)",
             color: "#fff",
             borderRadius: 12,
@@ -2610,8 +3053,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       {/* ═══ Changing the trip ═══ */}
-      {paxSheet && (
-        <PartyScreen value={travellers} frame={overlayFrame} onPick={applyPax} onClose={() => setPaxSheet(false)} />
+      {building && (
+        <BuildingScreen
+          frame={overlayFrame}
+          dest={it.dest}
+          cities={tripRoute.map((r) => r.city)}
+          reason={building.reason}
+          summary={building.summary}
+          onDone={() => { const run = building.run; setBuilding(null); run(); }}
+        />
       )}
       {dateSheet && (
         <DateScreen
@@ -2625,15 +3075,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         />
       )}
       {citiesScreen && (
-        <CitiesScreen
+        <RouteChooser
           dest={it.dest}
-          nights={it.nights || routeNights(tripRoute)}
           route={tripRoute}
+          nights={it.nights}
+          startOnCities
           frame={overlayFrame}
+          buildOnSave={false}
           onSave={applyCities}
+          // Nothing we can fly links the cities they want. The consultant
+          // can, so the screen hands them over rather than ending there.
+          onSupport={() => { setCitiesScreen(false); pointAt("consultant", null); }}
           onClose={() => setCitiesScreen(false)}
         />
       )}
+
       {customiseOpen && (
         <CustomisePicker frame={overlayFrame} onPick={customise} onClose={() => setCustomiseOpen(false)} />
       )}
@@ -2647,21 +3103,47 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
            of the shell. Every other overlay here hangs off `overlayFrame`; this
            one now does too, as a layer that passes clicks through to the page
            with one button in it that does not. */
-        <div style={{ ...overlayFrame, zIndex: 55, pointerEvents: "none" }}>
-        <button onClick={() => setCustomiseOpen(true)} style={{
-          position: "absolute", right: 14, bottom: 88, pointerEvents: "auto",
-          display: "inline-flex", alignItems: "center", gap: 7,
-          padding: "10px 15px 10px 13px", borderRadius: 999, border: "none",
-          // Ink, not pink. The bar underneath already has the pink button, and
-          // two of them floating over each other is two primary actions on one
-          // screen: this one is how you change the trip, that one is how you
-          // buy it, and only one of those is the point.
-          background: C.ink, color: "#fff", cursor: "pointer", fontFamily: "inherit",
-          fontSize: 13.5, fontWeight: 700, boxShadow: "0 8px 24px rgba(24,30,76,0.34)",
+        /* Clipped, so the pill leaves at the edge of the phone rather than
+           sliding across the page behind it. */
+        <div style={{ ...overlayFrame, zIndex: 55, pointerEvents: "none", overflow: "hidden" }}>
+        <button onClick={() => setCustomiseOpen(true)} aria-hidden={pillHidden} style={{
+          position: "absolute", right: 14, pointerEvents: pillHidden ? "none" : "auto",
+          // Measured off the bar, not off the screen. Twelve is the gap, and
+          // the bar is whatever it is at this moment.
+          bottom: footerH + 12,
+          transform: pillHidden ? "translateX(calc(100% + 22px))" : "none",
+          opacity: pillHidden ? 0 : 1,
+          transition: "transform 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease-out, bottom 0.18s ease-out",
+          display: "inline-flex", alignItems: "center", gap: 6,
+          // ─── The same button, wherever it is ───
+          // The one at the top of the page is an outlined pill with a
+          // pencil in it. This is that button, so it is that button:
+          // same border, same pink, same pencil, same word. It was ink
+          // and filled, which made the two read as different doors when
+          // only one of them is ever on screen at a time.
+          padding: "9px 14px 9px 12px", borderRadius: 999,
+          border: `1.5px solid ${C.p300}`,
+          background: C.white, color: C.p600, cursor: "pointer", fontFamily: "inherit",
+          fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+          // It is over a photograph and a day plan rather than white
+          // space, so it keeps a shadow to lift it off them. White on
+          // white needs the shadow more than ink did, not less.
+          boxShadow: "0 6px 20px rgba(24,30,76,0.18)",
         }}>
-          <SlidersHorizontal size={16} /> Customise
+          <Pencil size={14} color={C.p600} /> Customise
         </button>
         </div>
+      )}
+
+      {/* ═══ Use this trip: the copy flow, over the trip being read ═══ */}
+      {copyOpen && (
+        <CopyTripScreen
+          it={it}
+          owner={booker}
+          frame={overlayFrame}
+          onDone={makeCopy}
+          onClose={() => setCopyOpen(false)}
+        />
       )}
 
       {/* ═══ Day Traveller Photos Fullscreen ═══ */}
@@ -3480,7 +3962,9 @@ function RecommendedActivitiesSheet({ ideas = [], city, onClose }) {
 
 // ═══ Activity detail - draggable bottom drawer (opens at 50%, snaps 50% ↔ 92%) ═══
 const SHEET_SNAPS = [0.5, 0.92];
-function ActivityDetailSheet({ detail, onClose }) {
+// `footer` is optional: the wizard's activities step passes a select button so
+// somebody can decide from the sheet without closing it first.
+export function ActivityDetailSheet({ detail, onClose, footer }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -3543,6 +4027,11 @@ function ActivityDetailSheet({ detail, onClose }) {
         <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", paddingBottom: 24 }}>
           <ActivityDetailScroll detail={detail} />
         </div>
+        {footer && (
+          <div style={{ flexShrink: 0, padding: "10px 16px 18px", borderTop: `1px solid ${C.div}`, background: "#fff" }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

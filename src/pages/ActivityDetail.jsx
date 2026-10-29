@@ -10,7 +10,7 @@ import { C, allItineraries, destData } from "../data";
 import { getTripById } from "../data/tripData";
 import SaveHeart from "../components/SaveHeart";
 import Logo from "../components/Logo";
-import { buildActivityDetail } from "../data/activityData";
+import { buildActivityDetail, flagChipList } from "../data/activityData";
 
 // ─── Resolve activity from either source ───
 function resolveBooked(tripId, dayIdx, actIdx) {
@@ -347,11 +347,9 @@ function OpenStatus({ detail }) {
 
 // ─── Flag chips ───
 function FlagChips({ flags }) {
-  const list = [];
-  if (flags.topActivity) list.push({ label: "Top activity", icon: "🌟", bg: "#FFF7E0", color: "#7A5300" });
-  if (flags.offbeat) list.push({ label: "Offbeat", icon: "✨", bg: "#F0F4FF", color: "#3344B0" });
-  if (flags.audioGuide) list.push({ label: "Audio guide", icon: "🎧", bg: "#F4F5F8", color: "#4A5072" });
-  if (flags.recommended) list.push({ label: "Recommended", icon: "👍", bg: "#FFEBF1", color: "#FD014F" });
+  // The same list the region cards wear, so a chip here and a chip there mean
+  // the same thing and look the same doing it.
+  const list = flagChipList(flags);
   if (!list.length) return null;
   return (
     <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
