@@ -80,44 +80,34 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 <body>
 <div class="wrap">
   <h1>Itinerary day details</h1>
-  <p class="lede">Each day now says plainly what it is: whether it can be changed, whether it has a rating or score yet, its date, and what is included. Open the links on a phone or in a narrow window.</p>
+  <p class="lede">Six changes to the itinerary and the day detail page, shown on a Bali draft: Day 1 is arrival, Day 4 changes hotel, Day 7 is departure. Open the links on a phone or in a narrow window.</p>
   <div class="base"><span>Live at</span><code>30sundays-activities.vercel.app</code></div>
 
   <section>
-    <div><p class="kicker">On the itinerary and inside each day</p><h2>What changed</h2></div>
-    <p class="note">Shown on a Bali draft. Day 1 is arrival, Day 4 changes hotel, Day 7 is departure.</p>
     <div class="cases">
       <div class="case">
-        <div><h3>Locked days</h3><p>Arrival, departure and hotel change days can't be changed. A small lock on the itinerary; inside the day, the bottom bar says why, e.g. "Hotel change day, can't be changed".</p></div>
+        <div><h3>1. Transfer days are locked, with a one-line reason</h3><p>Arrival, departure and hotel change days show a small lock on the itinerary. Inside the day, the bottom bar says why, e.g. "Hotel change day, can't be changed".</p></div>
         <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">See Day 4</a></div>
       </div>
       <div class="case">
-        <div><h3>No rating</h3><p>Plain grey text where the rating would be: "No tours today" or "Not rated yet".</p></div>
-        <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1&amp;unrated=5" target="_blank" rel="noopener">Day 5 not rated</a></div>
+        <div><h3>2. Missing day score explained</h3><p>Score (How this day feels) is only for days with tours. When it is not ready: "Still getting a feel for this day. Back with it soon." A missing rating is plain grey text: "No tours today" or "Not rated yet".</p></div>
+        <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1&amp;noscore=6" target="_blank" rel="noopener">Day 6, no score</a><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1&amp;unrated=5" target="_blank" rel="noopener">Day 5, not rated</a></div>
       </div>
       <div class="case">
-        <div><h3>No score yet</h3><p>Score (How this day feels) is only for days with tours. When it is not ready: "Still getting a feel for this day. Back with it soon."</p></div>
-        <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1&amp;noscore=6" target="_blank" rel="noopener">Day 6 no score</a></div>
-      </div>
-      <div class="case">
-        <div><h3>Total duration</h3><p>Reads "Total duration: 10.5 hours".</p></div>
-        <div class="links"></div>
-      </div>
-      <div class="case">
-        <div><h3>Hotel transfer</h3><p>Its own small section after the day's tours: "Hotel-to-hotel transfer included", with the two hotel names.</p></div>
+        <div><h3>3. Total duration instead of Day duration</h3><p>Reads "Total duration: 10.5 hours".</p></div>
         <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">See Day 4</a></div>
       </div>
       <div class="case">
-        <div><h3>Dates</h3><p>Each day shows its date in grey brackets: Day 1 (13 Dec) · Ubud.</p></div>
-        <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">See it</a></div>
+        <div><h3>4. Hotel-to-hotel transfer is included</h3><p>Its own small section after the day's tours: "Hotel-to-hotel transfer included", with the two hotel names.</p></div>
+        <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">See Day 4</a></div>
       </div>
       <div class="case">
-        <div><h3>One heads-up</h3><p>Only the first day with a warning shows it.</p></div>
-        <div class="links"></div>
-      </div>
-      <div class="case">
-        <div><h3>Flights in a draft</h3><p>No flight cards and no fare in the total. Plain text: "Flights not included. Your travel consultant can add them." A second version has an Add button for when adding flights is possible.</p></div>
+        <div><h3>5. Flights not included in a draft</h3><p>No flight cards and no fare in the total. Plain text: "Flights not included. Your travel consultant can add them." A second version has an Add button, for when adding flights is possible.</p></div>
         <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">Consultant version</a><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1&amp;flights=add" target="_blank" rel="noopener">Add version</a></div>
+      </div>
+      <div class="case">
+        <div><h3>6. Dates on Itinerary at a glance</h3><p>Each day shows its date in grey brackets: Day 1 (13 Dec) · Ubud.</p></div>
+        <div class="links"><a href="https://30sundays-activities.vercel.app/itinerary/3?dealId=demo_draft_bali&amp;versionId=demo_draft_bali_v1" target="_blank" rel="noopener">See it</a></div>
       </div>
     </div>
     <div class="strip">
