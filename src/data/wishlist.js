@@ -26,12 +26,12 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 
 export const KINDS = ["trip", "region", "activity", "hotel", "restaurant", "shop"];
 export const KIND_LABEL = {
-  trip: "Trips", region: "Regions", activity: "Things to do",
+  trip: "Itineraries", region: "Regions", activity: "Things to do",
   hotel: "Hotels", restaurant: "Food", shop: "Shops",
 };
 // What one of them is called, in a row's small print.
 export const KIND_NOUN = {
-  trip: "Trip", region: "Region", activity: "Thing to do",
+  trip: "Itinerary", region: "Region", activity: "Thing to do",
   hotel: "Hotel", restaurant: "Restaurant", shop: "Shop",
 };
 // The tabs on the Saved screen. Regions are a filter there, not a tab.
@@ -45,6 +45,7 @@ const OLD_SAVES_KEY = "30s_saves_v1";
 const MEMBERS_KEY = "30s_wishlist_members_v1";
 const COPLAN_KEY = "30s_wishlist_coplan_v1";
 const MORE_KEY = "30s_wishlist_more_v5";
+const ITIN_KEY = "30s_wishlist_itins_v1";
 
 // The person using the app, and the demo co-planner. The app is single-user,
 // so the other person on the Bali board is a stub with a few saves of their
@@ -160,6 +161,19 @@ function moreSeed(data) {
   return out;
 }
 
+// Two ready-made Bali itineraries saved to the Bali board, so the board shows
+// what planning from a saved itinerary looks like. Both are real ones from the
+// itinerary list (Swing & Sanur, Cliffs & Coast).
+function itinSeed(data) {
+  const out = { ...data };
+  const day = 24 * 60 * 60000;
+  [["1", 1.5], ["6", 2.5]].forEach(([n, daysAgo]) => {
+    const k = wishKey("trip", "Bali", `it_${n}`);
+    if (!out[k]) out[k] = { key: k, kind: "trip", dest: "Bali", id: `it_${n}`, name: "", by: "you", lovedBy: ["you"], savedAt: Date.now() - daysAgo * day };
+  });
+  return out;
+}
+
 function loadJSON(key, fallback) {
   try { const v = JSON.parse(localStorage.getItem(key)); return v && typeof v === "object" ? v : fallback; } catch { return fallback; }
 }
@@ -179,6 +193,11 @@ function load() {
       localStorage.setItem(MORE_KEY, "1");
       localStorage.setItem(KEY, JSON.stringify(data));
     }
+    if (!localStorage.getItem(ITIN_KEY)) {
+      data = itinSeed(data || {});
+      localStorage.setItem(ITIN_KEY, "1");
+      localStorage.setItem(KEY, JSON.stringify(data));
+    }
     if (!localStorage.getItem(COPLAN_KEY)) {
       data = coPlannerSeed(data || {});
       localStorage.setItem(COPLAN_KEY, "1");
@@ -193,7 +212,7 @@ function persist(data) {
 
 const WishlistContext = createContext(null);
 
-export function WishlistProvider({ children }) {
+export function WishlistProvider({ children, loggedIn = true }) {
   const [map, setMap] = useState(load);
   useEffect(() => { persist(map); }, [map]);
 
@@ -222,11 +241,27 @@ export function WishlistProvider({ children }) {
   const get = useCallback((kind, dest, id) => map[wishKey(kind, dest, id)] || null, [map]);
 
   // meta is { name, img, sub, city, ...anything else worth keeping }.
-  const save = useCallback((kind, dest, id, meta = {}, { silent = false } = {}) => {
+  const commit = useCallback((kind, dest, id, meta = {}, { silent = false } = {}) => {
     const k = wishKey(kind, dest, id);
     setMap((m) => m[k] ? m : { ...m, [k]: { ...meta, key: k, kind, dest, id, name: meta.name || String(id), savedAt: Date.now(), by: "you", lovedBy: ["you"] } });
     if (!silent) raiseToast(meta.name || String(id), dest, { itemKey: k });
   }, [raiseToast]);
+
+  // A save needs an account, so it can follow the person to any phone. When
+  // nobody is logged in, the heart asks them to log in first and holds on to
+  // what they tapped; once they are in, that save goes through on its own,
+  // so they never have to find the heart again.
+  const [pendingSave, setPendingSave] = useState(null); // [kind, dest, id, meta, opts]
+  const save = useCallback((kind, dest, id, meta = {}, opts = {}) => {
+    if (!loggedIn) { setPendingSave([kind, dest, id, meta, opts]); return false; }
+    commit(kind, dest, id, meta, opts);
+    return true;
+  }, [loggedIn, commit]);
+  const finishLogin = useCallback(() => {
+    if (pendingSave) commit(...pendingSave);
+    setPendingSave(null);
+  }, [pendingSave, commit]);
+  const cancelLogin = useCallback(() => setPendingSave(null), []);
 
   const remove = useCallback((kind, dest, id) => {
     const k = wishKey(kind, dest, id);
@@ -277,8 +312,9 @@ export function WishlistProvider({ children }) {
   // Returns true when the heart just turned on, so a caller can react to that.
   const toggle = useCallback((kind, dest, id, meta = {}, opts = {}) => {
     const on = !map[wishKey(kind, dest, id)];
-    if (on) save(kind, dest, id, meta, opts); else remove(kind, dest, id);
-    return on;
+    if (on) return save(kind, dest, id, meta, opts);
+    remove(kind, dest, id);
+    return false;
   }, [map, save, remove]);
 
   const items = useMemo(() => Object.values(map)
@@ -316,8 +352,10 @@ export function WishlistProvider({ children }) {
     toast, dismissToast,
     toggleLove, setNote,
     invite, membersOf,
+    loginFor: pendingSave ? { name: pendingSave[3]?.name || String(pendingSave[2]), dest: pendingSave[1] } : null,
+    finishLogin, cancelLogin,
   }), [items, destinations, counts, isSaved, get, save, remove, removeWithUndo, undoRemove, toggle, forDest, ofKind, toast, dismissToast,
-    toggleLove, setNote, invite, membersOf]);
+    toggleLove, setNote, invite, membersOf, pendingSave, finishLogin, cancelLogin]);
 
   return createElement(WishlistContext.Provider, { value }, children);
 }

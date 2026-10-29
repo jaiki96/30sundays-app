@@ -104,9 +104,12 @@ import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
 import SavedWishlist from "./pages/SavedWishlist";
 import { WishlistHome, WishlistBoard } from "./pages/WishlistBoards";
+import WishlistHomeLab from "./pages/WishlistHomeLab";
+import WishlistHotelDetail from "./pages/WishlistHotelDetail";
 import WishlistActivityDetail from "./pages/WishlistActivityDetail";
 import { DealsProvider } from "./data/deals";
 import WishlistToast from "./components/WishlistToast";
+import WishlistLoginGate from "./components/WishlistLoginGate";
 import { WishlistProvider } from "./data/wishlist";
 import { ProfileProvider } from "./data/profile";
 import { AIPhotosProvider } from "./state/useAIPhotos";
@@ -209,6 +212,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/compare/:dealId" element={<CompareVersions />} />
         <Route path="/saved" element={<WishlistHome />} />
         <Route path="/saved/board/:dest" element={<WishlistBoard />} />
+        <Route path="/saved/home/:v" element={<WishlistHomeLab />} />
         {/* The group board: people on it, who saved what, love it too. Ships
             after the one-person board above. */}
         <Route path="/saved/group" element={<WishlistHome group />} />
@@ -216,6 +220,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         {/* The wishlist before trip boards, kept to compare. */}
         <Route path="/saved/classic" element={<SavedWishlist />} />
         <Route path="/saved/activity/:dest/:id" element={<WishlistActivityDetail />} />
+        <Route path="/saved/hotel/:dest/:id" element={<WishlistHotelDetail />} />
         <Route path="/build" element={<Build userState={userState} otpVerified={otpVerified} setOtpVerified={setOtpVerified} />} />
         <Route path="/login-v2" element={<LoginV2 />} />
         <Route path="/logo-anim" element={<LogoAnim />} />
@@ -289,6 +294,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
       {showNudge && <ProfileGate userState={userState} />}
       {!hideShell && <BottomNav userState={userState} />}
       <WishlistToast />
+      <WishlistLoginGate onLoggedIn={() => setOtpVerified?.(true)} />
     </PhoneFrame>
   );
 }
@@ -303,7 +309,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <WishlistProvider>
+    <WishlistProvider loggedIn={userState !== "new" || otpVerified}>
     <DealsProvider>
     <ProfileProvider>
     <AIPhotosProvider>
