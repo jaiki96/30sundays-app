@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate, useLocation } from "react-rout
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal, ChevronDown, ChevronUp,
   Check, Star, User, Images, ChevronRight, Map, MapPin,
-  Car, Utensils, RotateCcw, Ban, LogIn, LogOut, Heart,
+  Car, Utensils, RotateCcw, Ban, LogIn, LogOut, Heart, Crown,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
@@ -12,6 +12,9 @@ import { useDeals } from "../data/deals";
 import HotelMapScreen from "../components/HotelMapScreen";
 import CardReel from "../components/CardReel";
 import SaveHeart from "../components/SaveHeart";
+import { regionGuide } from "../data/regionGuide";
+import { getConsultant } from "../data/consultants";
+import { StayGuideEntry, StayGuideSheet, GUIDE_VARIANTS } from "../components/StayGuide";
 
 // ─── Change hotel, built like Change day plan ───
 //
@@ -38,10 +41,10 @@ const SORTS = [
 // The cuts people reach for most, on the bar itself. Each writes the same
 // filter state the sheet does, so the two never disagree.
 const QUICK = [
+  { key: "Gold", label: "Gold", icon: true },
   { key: "5 star", label: "5 star" },
   { key: "9+ rated", label: "9+ rated" },
   { key: "Free cancellation", label: "Free cancellation" },
-  { key: "Private transfer", label: "Private transfer" },
   { key: "Early check-in", label: "Early check-in" },
 ];
 
@@ -129,7 +132,30 @@ function Fact({ icon: Icon, children, muted = false }) {
 // the app keeps it. The photo stays a photo. A solid pink heart on white next
 // to the name is signal enough, and the list already says how many are saved
 // and lifts them to the top, so the old "Saved" chip on the photo is gone.
-function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false, onSave }) {
+// ─── Gold ───
+//
+// The two best-reviewed hotels in the city, marked so they can be shortlisted
+// at a glance, the way Luxe works on Agoda. A rich gold so it reads as a mark
+// of quality rather than a notice.
+function GoldTag() {
+  return (
+    <span data-testid="gold-tag" style={{
+      position: "absolute", left: 9, top: 9, zIndex: 2,
+      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+      height: 24, boxSizing: "border-box", lineHeight: 1,
+      padding: "0 10px 0 8px", borderRadius: 6,
+      background: "linear-gradient(135deg, #FCEBB0 0%, #F3CB55 48%, #D9A11E 100%)",
+      border: "1px solid rgba(255,255,255,0.55)",
+      boxShadow: "0 2px 8px rgba(120,80,0,0.28)",
+      fontSize: 11, fontWeight: 800, color: "#3D2A00", letterSpacing: 0.3,
+    }}>
+      <Crown size={12} color="#3D2A00" fill="#3D2A00" strokeWidth={1.5} style={{ display: "block", flexShrink: 0 }} />
+      <span style={{ display: "block", lineHeight: "12px" }}>Gold</span>
+    </span>
+  );
+}
+
+function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false, onSave, gold = false }) {
   const photos = galleryOf(hotel);
   const strip = photos.slice(0, 6);
 
@@ -146,6 +172,7 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false
       {/* Photos: a full-width reel you swipe, with dots under it, the same one
           the region pages use. Tap a picture for all of them. */}
       <CardReel imgs={strip} alt={hotel.name} height={168} onTap={(i) => onGallery(hotel, i)}>
+        {gold && <GoldTag />}
         <button
           data-testid={`gallery-${hotel.id}`}
           onClick={(e) => { e.stopPropagation(); onGallery(hotel, 0); }}
@@ -183,7 +210,6 @@ function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false
             row reads as facts and not as a sentence run on from the line above */}
         <div style={{ display: "flex", gap: "5px 16px", flexWrap: "wrap" }}>
           {hotel.mealPlan !== "Only Room" && <Fact icon={Utensils}>{hotel.mealPlan}</Fact>}
-          <Fact icon={Car}>{hotel.sharedTransfers ? "Shared transfer" : "Private transfer"}</Fact>
           <Fact icon={hotel.freeCancellation ? RotateCcw : Ban} muted={!hotel.freeCancellation}>
             {hotel.freeCancellation ? "Refundable" : "Non-refundable"}
           </Fact>
@@ -277,6 +303,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     landmarks: new Set(),
     amenities: new Set(),
     roomFacilities: new Set(),
+    sharedTransfer: false,
     sort: "recommended",
   });
 
@@ -292,6 +319,19 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     [stayInfo, itinerary],
   );
 
+  // The two best-reviewed hotels in this city. Stars are the same across a
+  // city's list, so the score is what separates them.
+  const goldIds = useMemo(
+    () => new Set([...allHotels].sort((a, b) => b.bookingScore - a.bookingScore).slice(0, 2).map((h) => h.id)),
+    [allHotels],
+  );
+  // What kind of hotel to book here, from the region guide. ?guide=1..5
+  // switches how the entrance to it looks.
+  const stay = itinerary && stayInfo ? regionGuide(itinerary.dest, stayInfo.city)?.stay : null;
+  const guideVariant = GUIDE_VARIANTS.includes(params.get("guide")) ? params.get("guide") : "1";
+  const consultant = getConsultant(params.get("consultant"));
+  const [guideOpen, setGuideOpen] = useState(false);
+
   // The stay you already have is not an option to change to, so it is not in
   // the list. It is only the price everything else is measured against.
   const currentHotel = allHotels.find(h => h.id === currentHotelId);
@@ -300,12 +340,13 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const shown = useMemo(() => {
     let list = allHotels.filter(h => h.id !== currentHotelId).filter(h => {
       for (const f of filters.quick) {
+        if (f === "Gold" && !goldIds.has(h.id)) return false;
         if (f === "5 star" && h.stars !== 5) return false;
         if (f === "9+ rated" && h.bookingScore < 9) return false;
         if (f === "Free cancellation" && !h.freeCancellation) return false;
-        if (f === "Private transfer" && h.sharedTransfers) return false;
         if (f === "Early check-in" && !h.earlyCheckIn) return false;
       }
+      if (filters.sharedTransfer && !h.sharedTransfers) return false;
       if (filters.stars.size && !filters.stars.has(h.stars)) return false;
       if (filters.minRating > 0 && h.bookingScore < filters.minRating) return false;
       if (filters.meals.size && !h.rooms.some(r => filters.meals.has(r.mealPlan))) return false;
@@ -379,11 +420,12 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const landmarkOptions = [...new Set(allHotels.map(h => h.neighbourhood))];
   const activeFilterCount =
     filters.quick.size + filters.stars.size + (filters.minRating > 0 ? 1 : 0) +
-    filters.meals.size + filters.landmarks.size + filters.amenities.size + filters.roomFacilities.size;
+    filters.meals.size + filters.landmarks.size + filters.amenities.size + filters.roomFacilities.size +
+    (filters.sharedTransfer ? 1 : 0);
 
   const clearAllFilters = () => setFilters(prev => ({
     quick: new Set(), stars: new Set(), minRating: 0, meals: new Set(),
-    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), sort: prev.sort,
+    landmarks: new Set(), amenities: new Set(), roomFacilities: new Set(), sharedTransfer: false, sort: prev.sort,
   }));
 
   const openHotel = (hotel) =>
@@ -439,6 +481,11 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </button>
         </div>
       </div>
+      {guideVariant === "3" && stay && (
+        <div style={{ flexShrink: 0, background: C.white }}>
+          <StayGuideEntry stay={stay} city={stayInfo.city} variant="3" onOpen={() => setGuideOpen(true)} />
+        </div>
+      )}
 
       {/* ═══ The list ═══ */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(112px + env(safe-area-inset-bottom))" }}>
@@ -455,6 +502,9 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {guideVariant !== "3" && (
+              <StayGuideEntry stay={stay} city={stayInfo.city} consultant={consultant} variant={guideVariant} onOpen={() => setGuideOpen(true)} />
+            )}
             {/* Saved hotels get a heading of their own, and the rest start under
                 a second one, so it is plain that the first few are the
                 wishlist and not the best matches. Without saves there is one
@@ -481,6 +531,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                   onGallery={(hotel, at) => setGallery({ hotel, at })}
                   saved={isWished(h)}
                   onSave={() => toggleWish(h)}
+                  gold={goldIds.has(h.id)}
                 />
               </Fragment>
             ))}
@@ -520,11 +571,13 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 onClick={() => toggleQuick(q.key)}
                 style={{
                   flexShrink: 0, borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center",
                   border: on ? "1.5px solid #FD014F" : `1.5px solid ${C.div}`,
                   background: on ? "#FFEBF1" : C.white,
                   fontSize: 12, fontWeight: 500, color: on ? "#FD014F" : C.head, whiteSpace: "nowrap",
                 }}
               >
+                {q.icon && <Crown size={11} color={on ? "#FD014F" : "#C8901A"} fill={on ? "#FD014F" : "#C8901A"} strokeWidth={1.5} style={{ marginRight: 4 }} />}
                 {q.label}
               </button>
             );
@@ -548,6 +601,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           )}
         </button>
       </div>
+
+      {guideOpen && stay && <StayGuideSheet stay={stay} city={stayInfo.city} onClose={() => setGuideOpen(false)} />}
 
       {/* ═══ Sorting and filters, one tabbed sheet ═══ */}
       {showSheet && (
@@ -611,6 +666,11 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                   {mealOptions.map(m => (
                     <FilterChip key={m} label={m} on={filters.meals.has(m)} onClick={() => toggleFilter("meals", m)} />
                   ))}
+                </div>
+
+                <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Transfers</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  <FilterChip label="Shared transfer available" on={filters.sharedTransfer} onClick={() => setFilters(prev => ({ ...prev, sharedTransfer: !prev.sharedTransfer }))} />
                 </div>
 
                 <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: "0 0 8px" }}>Nearby landmarks</p>
