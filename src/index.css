@@ -368,3 +368,25 @@
 @media (prefers-reduced-motion: reduce) {
   [class*="unbox-anim"] { animation: none !important; }
 }
+
+/* ─── The stay that needs a decision ───
+   A copied trip can land with one hotel gone on the new dates. The toast says
+   so once and then leaves; this is what is still saying it when the toast has
+   gone. Amber rather than pink, because it is not an action we are offering,
+   it is a thing that happened, and it breathes four times rather than forever:
+   long enough to be found, short of nagging. */
+@keyframes soldPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.45); }
+  70%  { box-shadow: 0 0 0 12px rgba(180, 83, 9, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(180, 83, 9, 0); }
+}
+
+/* The recreate button's icon, on somebody else's trip. The button floats over
+   a long read with nothing else on the screen competing with it, so the icon
+   keeps a slow beat: enough to say the corner is live, not enough to follow
+   down the page. */
+@keyframes recreateSpark {
+  0%, 62%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  72%           { transform: scale(1.22) rotate(-12deg); opacity: 0.92; }
+  82%           { transform: scale(1.06) rotate(9deg); opacity: 1; }
+}

@@ -73,8 +73,9 @@ function pickType(name) {
   return m || { type: "Point of Interest", icon: "📍" };
 }
 
-// Deterministic flag combinations so each activity feels different
-function pickFlags(name) {
+// Deterministic flag combinations so each activity feels different, and the
+// same ones wherever the activity is shown.
+export function activityFlags(name) {
   const h = hash(name);
   return {
     topActivity: h % 4 === 0,
@@ -83,6 +84,21 @@ function pickFlags(name) {
     recommended: h % 7 !== 0,
   };
 }
+
+// ─── The chips an activity wears ───
+//
+// One list, in one order, wherever an activity appears. The detail page shows
+// all of them; a card on a rail has room for the first two, which is why the
+// order matters: what it is beats how it is run, so "Top activity" and
+// "Offbeat" come before "Recommended" and the audio guide.
+export const FLAG_CHIPS = [
+  { key: "topActivity", label: "Top activity", icon: "\u{1F31F}", bg: "#FFF7E0", color: "#7A5300" },
+  { key: "offbeat", label: "Offbeat", icon: "\u2728", bg: "#F0F4FF", color: "#3344B0" },
+  { key: "recommended", label: "Recommended", icon: "\u{1F44D}", bg: "#FFEBF1", color: "#FD014F" },
+  { key: "audioGuide", label: "Audio guide", icon: "\u{1F3A7}", bg: "#F4F5F8", color: "#4A5072" },
+];
+
+export const flagChipList = (flags) => FLAG_CHIPS.filter((c) => flags?.[c.key]);
 
 // Generate 3 deterministic photo slots from the CDN fallback set + activity photo
 function pickPhotos(activity) {
@@ -193,7 +209,7 @@ export function buildActivityDetail(activity, opts = {}) {
   const typeMeta = override
     ? { type: override.primaryType, icon: override.primaryTypeIcon }
     : pickType(name);
-  const flags = pickFlags(name);
+  const flags = activityFlags(name);
 
   // Description: prefer override, then activity, else compose
   const description = override?.description

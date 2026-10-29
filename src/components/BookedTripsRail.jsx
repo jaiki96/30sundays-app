@@ -220,22 +220,23 @@ export default function BookedTripsRail() {
 
   return (
     <div style={{ marginTop: 32 }}>
-      {/* "Just booked" is the claim, and "by real travellers" is the half that
-          makes it one: handwritten, because a line in somebody's hand is the
-          one bit of a sales page that reads as a person saying it. */}
-      <div style={{ padding: `0 ${PAD}px`, marginBottom: 14 }}>
-        <h2 style={{ margin: 0, fontSize: 40, fontWeight: 800, color: C.ink, letterSpacing: "-1.4px", lineHeight: 1 }}>
-          Just booked
+      {/* "Real itineraries" is the claim, and "by real travellers" is the half
+          that makes it one: handwritten, because a line in somebody's hand is
+          the one bit of a sales page that reads as a person saying it.
+          
+          It used to be "Just booked" at 40px with the hand tucked under its
+          right end, which only works while the heading is big and wide enough
+          to tuck something under. At the page's own heading size the two sit
+          side by side on one line instead, and the hand leans five degrees,
+          which is what stops it reading as a font choice. */}
+      <div style={{ padding: `0 ${PAD}px`, marginBottom: 14, display: "flex", alignItems: "baseline", gap: 9 }}>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.ink, letterSpacing: "-0.4px" }}>
+          Real itineraries
         </h2>
-        {/* Tucked under the end of the heading rather than hard against the
-            margin, and leaning five degrees, which is what stops a handwritten
-            line reading as a font choice. */}
-        <p style={{ margin: "-1px 0 0", textAlign: "right", paddingRight: 62, lineHeight: 1.1 }}>
-          <span style={{
-            display: "inline-block", transform: "rotate(-5deg)",
-            fontFamily: "Caveat, cursive", fontSize: 25, fontWeight: 700, color: "#007E72",
-          }}>by real travellers</span>
-        </p>
+        <span style={{
+          display: "inline-block", transform: "rotate(-5deg)", whiteSpace: "nowrap",
+          fontFamily: "Caveat, cursive", fontSize: 20, fontWeight: 700, color: "#007E72",
+        }}>by real travellers</span>
       </div>
 
       <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>

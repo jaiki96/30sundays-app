@@ -8,6 +8,7 @@ import {
 import { C, allItineraries } from "../data";
 import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { useWishlist } from "../data/wishlist";
+import { useDeals } from "../data/deals";
 import HotelMapScreen from "../components/HotelMapScreen";
 import CardReel from "../components/CardReel";
 import SaveHeart from "../components/SaveHeart";
@@ -246,6 +247,7 @@ function Gallery({ hotel, startAt, onClose }) {
 export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const { itineraryId, stayIndex } = useParams();
   const [params] = useSearchParams();
+  const dealsCtx = useDeals();
   const navigate = useNavigate();
   const location = useLocation();
   const currentHotelId = params.get("current");
@@ -278,7 +280,11 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     sort: "recommended",
   });
 
-  const itinerary = allItineraries.find(i => String(i.id) === String(itineraryId));
+  // A trip built in the app, or copied from somebody else's, is not in the
+  // seed catalogue: it lives on its deal. Without this fallback the hotel
+  // chooser answered "Stay not found" for every trip the app itself made.
+  const itinerary = allItineraries.find(i => String(i.id) === String(itineraryId))
+    || dealsCtx.findCustomItinerary(Number(itineraryId), params.get("versionId"));
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const allHotels = useMemo(

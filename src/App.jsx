@@ -40,8 +40,11 @@ import DayDetailLab from "./pages/DayDetailLab";
 import DayDetailImmersive from "./pages/DayDetailImmersive";
 import GlanceCardLab from "./pages/GlanceCardLab";
 import RatingLab from "./pages/RatingLab";
+import StepperLab from "./pages/StepperLab";
 import ProfileLab from "./pages/ProfileLab";
 import ActivitiesEduLab from "./pages/ActivitiesEduLab";
+import ActivityPickLab from "./pages/ActivityPickLab";
+import ActivityNoteLab from "./pages/ActivityNoteLab";
 import SaveVersionLab from "./pages/SaveVersionLab";
 import WeatherOptionsLab from "./pages/WeatherOptionsLab";
 import DestWeatherLab from "./pages/DestWeatherLab";
@@ -55,6 +58,15 @@ import ConsultantLab from "./pages/ConsultantLab";
 import BookedTripsLab from "./pages/BookedTripsLab";
 import RegionDetail from "./pages/RegionDetail";
 import ScoreStripLab from "./pages/ScoreStripLab";
+import RouteEditLab from "./pages/RouteEditLab";
+import Generating from "./pages/Generating";
+import ReadSummaryLab from "./pages/ReadSummaryLab";
+import ReadHeaderLab from "./pages/ReadHeaderLab";
+import TripHeaderLab from "./pages/TripHeaderLab";
+import TripEditLab from "./pages/TripEditLab";
+import TripChipLab from "./pages/TripChipLab";
+import RouteChooserLab from "./pages/RouteChooserLab";
+import RouteStyleLab from "./pages/RouteStyleLab";
 import FlightListing from "./pages/FlightListing";
 import FlightDetail from "./pages/FlightDetail";
 import ReviewChanges from "./pages/ReviewChanges";
@@ -189,6 +201,9 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/listing" element={<Listing userState={userState} leadData={leadData} />} />
         <Route path="/detail/:id" element={<Detail />} />
         <Route path="/itinerary/:id" element={<ItineraryDetail selectedFlights={selectedFlights} selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
+        {/* The same screen, read-only: a trip somebody else booked, opened off
+            the "Real itineraries by real travellers" rails. */}
+        <Route path="/real/:id" element={<ItineraryDetail viewOnly selectedFlights={selectedFlights} selectedHotels={selectedHotels} setSelectedHotels={setSelectedHotels} />} />
         <Route path="/itinerary/:id/payment-plan" element={<PaymentPlan />} />
         <Route path="/plan" element={<Plan userState={userState} setUserState={setUserState} leadData={leadData} setLeadData={setLeadData} />} />
         <Route path="/compare/:dealId" element={<CompareVersions />} />
@@ -213,8 +228,11 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/day-media/:variant" element={<DayDetailImmersive />} />
         <Route path="/glance-lab" element={<GlanceCardLab />} />
         <Route path="/rating-lab" element={<RatingLab />} />
+        <Route path="/stepper-lab" element={<StepperLab />} />
         <Route path="/profile-lab" element={<ProfileLab />} />
         <Route path="/activities-lab" element={<ActivitiesEduLab />} />
+        <Route path="/activity-pick-lab" element={<ActivityPickLab />} />
+        <Route path="/activity-note-lab" element={<ActivityNoteLab />} />
         <Route path="/save-lab" element={<SaveVersionLab />} />
         <Route path="/weather-lab" element={<WeatherOptionsLab />} />
         <Route path="/dest-weather-lab" element={<DestWeatherLab />} />
@@ -227,6 +245,15 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/consultant-lab" element={<ConsultantLab />} />
         <Route path="/booked-lab" element={<BookedTripsLab />} />
         <Route path="/score-strip" element={<ScoreStripLab />} />
+        <Route path="/route-edit-lab" element={<RouteEditLab />} />
+        <Route path="/building-v1" element={<Generating leadData={leadData} />} />
+        <Route path="/read-summary-lab" element={<ReadSummaryLab />} />
+        <Route path="/trip-header-lab" element={<TripHeaderLab />} />
+        <Route path="/trip-edit-lab" element={<TripEditLab />} />
+        <Route path="/trip-chip-lab" element={<TripChipLab />} />
+        <Route path="/read-header-lab" element={<ReadHeaderLab />} />
+        <Route path="/route-style-lab" element={<RouteStyleLab />} />
+        <Route path="/route-chooser-lab" element={<RouteChooserLab />} />
         <Route path="/flights/:itineraryId/:legIndex" element={<FlightListing selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />
         <Route path="/flight-detail/:itineraryId/:legIndex/:flightId" element={<FlightDetail />} />
         <Route path="/review-flight/:itineraryId/:legIndex" element={<ReviewChanges selectedFlights={selectedFlights} setSelectedFlights={setSelectedFlights} />} />

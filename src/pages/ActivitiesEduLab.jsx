@@ -5,16 +5,9 @@ import {
   Pencil, Sparkles, Check, X as XIcon, Download,
 } from "lucide-react";
 import { C } from "../data";
+import { activityRating } from "../data/activityRating";
 import { flatActivities, recommendedRoute } from "../data/buildData";
 import NextStepNote from "../components/NextStepNote";
-
-// Same deterministic stand-in the wizard uses, so the mock reads like the real
-// screen rather than inventing different numbers.
-function activityRating(id) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 10000;
-  return { rating: (4.3 + ((h % 7) * 0.1)).toFixed(1), reviews: 80 + (h % 400) };
-}
 
 // ─── Educating the last step of the wizard ───
 //

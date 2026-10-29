@@ -428,8 +428,19 @@ export function buildDayMeta(dest, route, nights) {
 let buildSeq = 0;
 // Build a complete itinerary object the existing itinerary screen renders as-is.
 export function synthesizeItinerary({ dest, nights, route, picksByCity, vibes, startDate, party, id: idOverride }) {
+  // A city's days hold three activities, so a fourth pick in the same city has
+  // nowhere to go. It used to vanish without a word. Now it is written down,
+  // with the reason, so the itinerary can say what did not make it.
+  const ROOM = 3;
+  const actReport = { kept: [], dropped: [] };
+  route.forEach((stop) => {
+    (picksByCity?.[stop.city] || []).forEach((name, i) => {
+      if (i < ROOM) actReport.kept.push({ name, city: stop.city });
+      else actReport.dropped.push({ name, city: stop.city, reason: `Not enough time in ${stop.city}` });
+    });
+  });
   const days = route.map((stop) => {
-    const chosen = (picksByCity?.[stop.city] || []).slice(0, 3);
+    const chosen = (picksByCity?.[stop.city] || []).slice(0, ROOM);
     const fallback = topActivities(stop.city, 3);
     const sub = (chosen.length ? chosen : fallback).join(" · ");
     return { city: stop.city, n: stop.n, sub };
@@ -460,5 +471,6 @@ export function synthesizeItinerary({ dest, nights, route, picksByCity, vibes, s
     partySize: party || { couples: 1, adults: 0, kids: 0 },
     startDate: startDate || null,
     dayMeta: buildDayMeta(dest, route, nights),
+    actReport,
   };
 }
