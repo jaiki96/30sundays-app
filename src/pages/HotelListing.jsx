@@ -13,8 +13,7 @@ import HotelMapScreen from "../components/HotelMapScreen";
 import CardReel from "../components/CardReel";
 import SaveHeart from "../components/SaveHeart";
 import { regionGuide } from "../data/regionGuide";
-import { getConsultant } from "../data/consultants";
-import { StayGuideEntry, StayGuideSheet, GUIDE_VARIANTS } from "../components/StayGuide";
+import { HonestBand, StayGuideSheet } from "../components/StayGuide";
 
 // ─── Change hotel, built like Change day plan ───
 //
@@ -325,11 +324,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
     () => new Set([...allHotels].sort((a, b) => b.bookingScore - a.bookingScore).slice(0, 2).map((h) => h.id)),
     [allHotels],
   );
-  // What kind of hotel to book here, from the region guide. ?guide=1..5
-  // switches how the entrance to it looks.
+  // What kind of hotel to book here, from the region guide.
   const stay = itinerary && stayInfo ? regionGuide(itinerary.dest, stayInfo.city)?.stay : null;
-  const guideVariant = GUIDE_VARIANTS.includes(params.get("guide")) ? params.get("guide") : "1";
-  const consultant = getConsultant(params.get("consultant"));
   const [guideOpen, setGuideOpen] = useState(false);
 
   // The stay you already have is not an option to change to, so it is not in
@@ -418,6 +414,8 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   });
 
   const landmarkOptions = [...new Set(allHotels.map(h => h.neighbourhood))];
+  const honestAt = Math.min(savedCount + 1, shown.length - 1);
+
   const activeFilterCount =
     filters.quick.size + filters.stars.size + (filters.minRating > 0 ? 1 : 0) +
     filters.meals.size + filters.landmarks.size + filters.amenities.size + filters.roomFacilities.size +
@@ -481,11 +479,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </button>
         </div>
       </div>
-      {guideVariant === "3" && stay && (
-        <div style={{ flexShrink: 0, background: C.white }}>
-          <StayGuideEntry stay={stay} city={stayInfo.city} variant="3" onOpen={() => setGuideOpen(true)} />
-        </div>
-      )}
+
 
       {/* ═══ The list ═══ */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(112px + env(safe-area-inset-bottom))" }}>
@@ -502,9 +496,6 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {guideVariant !== "3" && (
-              <StayGuideEntry stay={stay} city={stayInfo.city} consultant={consultant} variant={guideVariant} onOpen={() => setGuideOpen(true)} />
-            )}
             {/* Saved hotels get a heading of their own, and the rest start under
                 a second one, so it is plain that the first few are the
                 wishlist and not the best matches. Without saves there is one
@@ -533,6 +524,10 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                   onSave={() => toggleWish(h)}
                   gold={goldIds.has(h.id)}
                 />
+                {/* The honest bit, after the second hotel of the main list
+                    (the wishlist group above it does not count), or after
+                    the last one when the list is shorter than that. */}
+                {i === honestAt && <HonestBand city={stayInfo.city} stay={stay} onOpen={() => setGuideOpen(true)} />}
               </Fragment>
             ))}
 

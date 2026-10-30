@@ -1,144 +1,70 @@
 import { useEffect, useState } from "react";
-import { BedDouble, ChevronRight, Hotel, Lightbulb, X as XIcon } from "lucide-react";
+import { BedDouble, Hotel, X as XIcon } from "lucide-react";
 import { C } from "../data";
 
 // ─── What kind of hotel to book here ───
 //
 // The region page already says, per city, what kind of stay works and which
-// room to ask for. Somebody choosing a hotel is the person who needs it most,
-// so the hotel list carries an entrance to it, and the whole guide opens in a
-// sheet over the list rather than taking them off it.
+// room to ask for. The hotel list carries it as "The honest bit": a cream band
+// with wavy edges after the second hotel, in the paper colour of the honest
+// bit and Know before you go elsewhere in the app. It is not at the top, which
+// belongs to the hotels, and it has no close button: people scroll past it.
+// Read why opens the whole guide in a sheet over the list.
 //
 // `stay` is regionGuide(dest, city).stay: { headline, note, rooms }.
-//
-// Five ways in, switchable with ?guide=1..5 to compare. Every one says the
-// advice itself, so it is useful without the tap:
-//   1 postcard    the region page's postcard: cream paper, a handwritten title
-//   2 consultant  the consultant's face and the tip in her words
-//   3 strip       a slim strip under the header, part of the top of the screen
-//   4 type        the advice set large, no box, like the opening of a section
-//   5 stamp       a round "stay guide" stamp beside the advice
-export const GUIDE_VARIANTS = ["1", "2", "3", "4", "5"];
 
 const PAPER = "#FCF6E7";
-const PAPER_EDGE = "#E6DCC4";
 
-export function StayGuideEntry({ stay, city, consultant, variant = "1", onOpen }) {
+// "A pool villa, not a hotel room" -> "In Ubud, choose a pool villa." The
+// advice, said plainly, without the contrast the headline is built on.
+export function stayLine(city, stay) {
+  const what = stay.headline.split(/, not /)[0];
+  return `In ${city}, choose ${what.charAt(0).toLowerCase()}${what.slice(1)}.`;
+}
+
+export function HonestBand({ city, stay, onOpen }) {
   if (!stay) return null;
-
-  if (variant === "2") {
-    const first = consultant?.name?.split(" ")[0] || "Your consultant";
-    return (
-      <button data-testid="stay-guide" onClick={onOpen} style={{ ...reset, display: "flex", alignItems: "flex-end", gap: 8, width: "100%" }}>
-        <Face consultant={consultant} />
-        <span style={{
-          flex: 1, minWidth: 0, background: C.white, border: `1px solid ${C.div}`,
-          borderRadius: "16px 16px 16px 4px", padding: "9px 12px 10px",
-          boxShadow: "0 1px 4px rgba(24,30,76,0.05)",
-        }}>
-          <span style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: C.sub }}>{first}'s tip for {city}</span>
-          <span style={{ display: "block", marginTop: 2, fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "19px" }}>{stay.headline}</span>
-          <span style={{ display: "inline-flex", alignItems: "center", marginTop: 4, fontSize: 12, fontWeight: 700, color: C.p600 }}>
-            Why <ChevronRight size={13} strokeWidth={2.6} />
-          </span>
-        </span>
-      </button>
-    );
-  }
-
-  if (variant === "3") {
-    // Rendered by the list inside its header, flush to the header's edges.
-    return (
-      <button data-testid="stay-guide" onClick={onOpen} style={{
-        ...reset, display: "flex", alignItems: "center", gap: 8, width: "100%",
-        padding: "8px 14px", background: "#FFF5F7", borderTop: `1px solid #FFE0E7`,
-      }}>
-        <Lightbulb size={14} color={C.p600} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.head, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          <strong style={{ fontWeight: 700 }}>{city} tip:</strong> {lower(stay.headline)}
-        </span>
-        <ChevronRight size={15} color={C.p600} strokeWidth={2.6} style={{ flexShrink: 0 }} />
-      </button>
-    );
-  }
-
-  if (variant === "4") {
-    return (
-      <button data-testid="stay-guide" onClick={onOpen} style={{ ...reset, display: "block", width: "100%", padding: "2px 2px 4px" }}>
-        <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.p600 }}>Booking in {city}</span>
-        <span style={{ display: "block", marginTop: 3, fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 25, lineHeight: "29px", color: C.ink }}>
-          {stay.headline}.
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", marginTop: 6, fontSize: 12.5, fontWeight: 700, color: C.head, borderBottom: `1.5px solid ${C.p600}`, paddingBottom: 1 }}>
-          See why and which room to ask for
-        </span>
-      </button>
-    );
-  }
-
-  if (variant === "5") {
-    return (
-      <button data-testid="stay-guide" onClick={onOpen} style={{ ...reset, ...card, display: "flex", alignItems: "center", gap: 12 }}>
-        <Stamp city={city} />
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: C.head, lineHeight: "19px" }}>{stay.headline}</span>
-          <span style={{ display: "inline-flex", alignItems: "center", marginTop: 4, fontSize: 12, fontWeight: 700, color: C.p600 }}>
-            Read the guide <ChevronRight size={13} strokeWidth={2.6} />
-          </span>
-        </span>
-      </button>
-    );
-  }
-
-  // 1: postcard
   return (
     <button data-testid="stay-guide" onClick={onOpen} style={{
-      ...reset, display: "block", width: "100%", position: "relative",
-      background: PAPER, border: `1px solid ${PAPER_EDGE}`, borderRadius: 5,
-      boxShadow: "0 6px 14px rgba(24,29,39,0.09)", padding: "10px 14px 11px",
-      transform: "rotate(-0.6deg)",
+      display: "flex", flexDirection: "column", margin: "0 -16px", width: "calc(100% + 32px)",
+      border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "center",
     }}>
-      <span aria-hidden style={{
-        position: "absolute", top: -7, left: "50%", width: 54, height: 14, marginLeft: -27,
-        background: "rgba(253,1,79,0.16)", transform: "rotate(-3deg)",
-      }} />
-      <span style={{ display: "block", fontFamily: "Caveat, cursive", fontSize: 22, lineHeight: "24px", fontWeight: 700, color: "#181D27" }}>
-        Where to stay in {city}
+      <Wave flip={false} />
+      <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: "100%", boxSizing: "border-box", background: PAPER, padding: "6px 24px 8px" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 9, width: "100%" }}>
+          <span aria-hidden style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(227,27,83,0), rgba(227,27,83,0.55))" }} />
+          <Sparkle />
+          <span style={{ fontFamily: "Caveat, cursive", fontSize: 23, lineHeight: "24px", fontWeight: 700, color: C.head, whiteSpace: "nowrap" }}>The honest bit</span>
+          <Sparkle />
+          <span aria-hidden style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(227,27,83,0.55), rgba(227,27,83,0))" }} />
+        </span>
+        <span style={{ fontSize: 13.5, lineHeight: "19px", fontWeight: 400, color: "#3F3A2E" }}>
+          {stayLine(city, stay)}{" "}
+          <span style={{ fontWeight: 600, color: C.p600, whiteSpace: "nowrap" }}>Read why ›</span>
+        </span>
       </span>
-      <span style={{ display: "block", marginTop: 3, fontSize: 14, fontWeight: 700, color: C.head, lineHeight: "19px" }}>{stay.headline}</span>
-      <span style={{ display: "inline-flex", alignItems: "center", marginTop: 4, fontSize: 12, fontWeight: 700, color: C.p600 }}>
-        Read more <ChevronRight size={13} strokeWidth={2.6} />
-      </span>
+      <Wave flip />
     </button>
   );
 }
 
-function Face({ consultant }) {
-  const initials = (consultant?.name || "30 S").split(" ").map((w) => w[0]).join("").slice(0, 2);
-  return consultant?.avatar ? (
-    <img src={consultant.avatar} alt="" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: `2px solid ${C.white}`, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }} />
-  ) : (
-    <span style={{ width: 34, height: 34, borderRadius: "50%", background: C.p100, color: C.p600, fontSize: 12, fontWeight: 800, display: "grid", placeItems: "center", flexShrink: 0 }}>{initials}</span>
+function Sparkle() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0 }}>
+      <path d="M12 0c1 7 4 10 12 12-8 2-11 5-12 12-1-7-4-10-12-12 8-2 11-5 12-12z" fill={C.p600} />
+    </svg>
   );
 }
 
-// A round stamp, the words set around the edge.
-function Stamp({ city }) {
-  const id = `stamp-${city.replace(/\W/g, "")}`;
+// The scalloped edge, top or bottom. Stretched to the width, so it holds its
+// rhythm on any phone.
+function Wave({ flip }) {
+  const d = flip
+    ? "M0 0 Q 16.25 10 32.5 5 T 65 5 T 97.5 5 T 130 5 T 162.5 5 T 195 5 T 227.5 5 T 260 5 T 292.5 5 T 325 5 T 357.5 5 T 390 5 V 0 Z"
+    : "M0 10 Q 16.25 0 32.5 5 T 65 5 T 97.5 5 T 130 5 T 162.5 5 T 195 5 T 227.5 5 T 260 5 T 292.5 5 T 325 5 T 357.5 5 T 390 5 V 10 Z";
   return (
-    <svg width="58" height="58" viewBox="0 0 58 58" aria-hidden style={{ flexShrink: 0, transform: "rotate(-8deg)" }}>
-      <defs>
-        <path id={id} d="M29,29 m-21,0 a21,21 0 1,1 42,0 a21,21 0 1,1 -42,0" />
-      </defs>
-      <circle cx="29" cy="29" r="27" fill="#FFF5F7" stroke={C.p600} strokeWidth="1.5" strokeDasharray="3 2.4" />
-      <circle cx="29" cy="29" r="15" fill="none" stroke={C.p600} strokeWidth="1" />
-      <text fontSize="7.2" fontWeight="800" fill={C.p600} letterSpacing="1.1">
-        <textPath href={`#${id}`} textLength="128" lengthAdjust="spacing">{`${city} stay guide · ${city} stay guide · `.slice(0, 34)}</textPath>
-      </text>
-      <g transform="translate(21 21)">
-        <path d="M2 14V7l6-5 6 5v7" fill="none" stroke={C.p600} strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M6 14v-4h4v4" fill="none" stroke={C.p600} strokeWidth="1.7" strokeLinejoin="round" />
-      </g>
+    <svg width="100%" height="10" viewBox="0 0 390 10" preserveAspectRatio="none" aria-hidden style={{ display: "block" }}>
+      <path d={d} fill={PAPER} />
     </svg>
   );
 }
@@ -194,11 +120,3 @@ export function StayGuideSheet({ stay, city, onClose }) {
     </div>
   );
 }
-
-const reset = { border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: 0 };
-const card = {
-  width: "100%", boxSizing: "border-box", padding: "11px 12px", borderRadius: 14,
-  background: C.white, border: `1px solid ${C.div}`, boxShadow: "0 1px 4px rgba(24,30,76,0.05)",
-};
-// "A pool villa, not a hotel room" reads as a sentence after "Ubud tip:".
-const lower = (s) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
