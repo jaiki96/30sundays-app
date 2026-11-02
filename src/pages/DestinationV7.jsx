@@ -254,7 +254,7 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
           </button>
         ))}
       </div>
-      <DestWishlistBand dest={dest} forceEmpty={new URLSearchParams(search).get("wish") === "empty"} />
+      <DestWishlistBand dest={dest} forceEmpty={new URLSearchParams(search).get("wish") === "empty"} headStyle={{ ...H2, fontSize: 20 }} />
       <QuickFacts v={v} />
     </div>
   );
