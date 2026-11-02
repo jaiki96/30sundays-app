@@ -35,7 +35,7 @@ const BODY = "#414651";
 const SUB = "#5B6472";
 const LINE = "#EFEBED";
 const LAGOON = "#007E72";
-const H2 = { margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 800, color: INK, letterSpacing: "-0.4px" };
+const H2 = { margin: 0, fontSize: 19, lineHeight: "24px", fontWeight: 700, color: INK, letterSpacing: "-0.3px" };
 const LABEL = { margin: 0, fontSize: 12.5, fontWeight: 600, color: SUB };
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -157,13 +157,16 @@ function Hero({ imgs, onBack, onGallery }) {
           <button aria-label="Share" style={{ ...pill(), position: "static" }}><Share2 size={18} color="#fff" /></button>
           <SaveHeart saved={saved} onToggle={() => setSaved((s) => !s)} size={40} style={{ background: "rgba(255,255,255,0.96)", borderRadius: "50%", boxShadow: "0 2px 8px rgba(16,24,40,0.22)" }} />
         </div>
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 104, display: "flex", justifyContent: "center", alignItems: "center", gap: 6, pointerEvents: "none" }}>
-          {dots.map((i) => {
-            const on = i === idx;
-            const edge = (i === dots[0] && start > 0) || (i === dots[dots.length - 1] && dots[dots.length - 1] < n - 1);
-            const s = on ? 7 : edge ? 4.5 : 6;
-            return <span key={i} style={{ width: s, height: s, borderRadius: "50%", background: on ? "#fff" : "rgba(255,255,255,0.6)", boxShadow: "0 0 3px rgba(0,0,0,0.45)", transition: "all 0.2s" }} />;
-          })}
+        {/* The dots sit low, just above the title, on a small dark pill so they read over the fade. */}
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 58, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 8px", borderRadius: 999, background: "rgba(16,24,40,0.38)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}>
+            {dots.map((i) => {
+              const on = i === idx;
+              const edge = (i === dots[0] && start > 0) || (i === dots[dots.length - 1] && dots[dots.length - 1] < n - 1);
+              const s = on ? 6 : edge ? 4 : 5;
+              return <span key={i} style={{ width: s, height: s, borderRadius: "50%", background: on ? "#fff" : "rgba(255,255,255,0.55)", transition: "all 0.2s" }} />;
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -241,17 +244,53 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
       </div>
       <p style={{ margin: "10px 0 0", fontSize: 14.5, lineHeight: "22px", color: BODY, ...(more ? {} : { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }) }}>{v.intro}</p>
       <button onClick={() => setMore((m) => !m)} style={{ marginTop: 6, alignSelf: "flex-start", padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, color: TEXT, textDecoration: "underline", textUnderlineOffset: 3 }}>{more ? "Read less" : "Read more"}</button>
-      <h2 style={{ margin: "22px 0 10px", fontSize: 17, lineHeight: "22px", fontWeight: 800, color: INK, letterSpacing: "-0.2px" }}>Vibes</h2>
-      <div className="hide-scrollbar" style={{ display: "flex", gap: 10, margin: `0 -${PAD}px`, padding: `0 ${PAD}px`, overflowX: "auto" }}>
-        {tiles.map((t) => (
-          <button key={t.label} onClick={() => onGallery(t.at)} style={{ flex: "0 0 84px", height: 104, borderRadius: 10, overflow: "hidden", position: "relative", border: "none", padding: 0, cursor: "pointer", background: "#ddd" }}>
-            <img src={t.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "55%", background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.65) 100%)" }} />
-            <span style={{ position: "absolute", left: 0, right: 0, bottom: 7, textAlign: "center", fontSize: 12.5, fontWeight: 600, color: "#fff" }}>{t.label}</span>
+      <Vibes dest={dest} tiles={tiles} onGallery={onGallery} />
+      <QuickFacts v={v} />
+    </div>
+  );
+}
+
+// ─── The vibes, from the window seat ───
+// Each vibe is a view out of a plane window, the blind pulled down a different
+// way on each, on a band that goes from sky to the brand's cream. A tap opens
+// the gallery at that photo.
+const BLINDS = [14, 24, 10, 30, 18, 22];
+// A cabin window: a moulded frame lit from above, an inner ring, the view
+// behind glass with a highlight, and a ridged blind with a pull handle.
+function PlaneWindow({ img, blind }) {
+  const w = 100, h = 140;
+  return (
+    <span style={{ display: "block", width: w, height: h, flexShrink: 0, boxSizing: "border-box", padding: 9, borderRadius: `${w * 0.42}px / ${h * 0.31}px`, background: "linear-gradient(180deg, #FFFDF9 0%, #DCD4C8 100%)", boxShadow: "0 12px 22px rgba(16,24,40,0.20), 0 2px 4px rgba(16,24,40,0.12), inset 0 2px 1px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.12)" }}>
+      <span style={{ display: "block", width: "100%", height: "100%", boxSizing: "border-box", padding: 4, borderRadius: `${w * 0.37}px / ${h * 0.27}px`, background: "linear-gradient(180deg, #C9C0B3 0%, #EDE6DC 100%)", boxShadow: "inset 0 3px 6px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.8)" }}>
+        <span style={{ display: "block", position: "relative", width: "100%", height: "100%", borderRadius: `${w * 0.33}px / ${h * 0.24}px`, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.25)" }}>
+          <img src={img} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <span style={{ position: "absolute", inset: 0, boxShadow: "inset 0 6px 12px rgba(0,0,0,0.35), inset 0 -4px 10px rgba(0,0,0,0.18)" }} />
+          <span style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.08) 26%, rgba(255,255,255,0) 40%)" }} />
+          <span style={{ position: "absolute", left: 0, right: 0, top: 0, height: `${blind}%`, background: "repeating-linear-gradient(180deg, rgba(0,0,0,0.03) 0 1px, rgba(0,0,0,0) 1px 5px), linear-gradient(180deg, #F4F0EB 0%, #E6DFD5 100%)", boxShadow: "0 3px 6px rgba(0,0,0,0.28)" }}>
+            <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 6, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)" }} />
+            <span style={{ position: "absolute", left: "50%", bottom: -3, transform: "translateX(-50%)", width: 24, height: 7, borderRadius: 4, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.35)" }} />
+          </span>
+        </span>
+      </span>
+    </span>
+  );
+}
+function Vibes({ dest, tiles, onGallery }) {
+  return (
+    <div style={{ margin: `18px -${PAD}px 0`, background: "linear-gradient(180deg, #EAF4F8 0%, #FFF6E6 100%)", padding: "18px 0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <h2 style={{ margin: 0, padding: `0 ${PAD}px`, fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 23, lineHeight: "28px", fontWeight: 400, color: INK }}>The Vibes of {dest === "Maldives" ? "the Maldives" : dest}</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: `0 ${PAD}px` }}>
+        <PlaneIcon size={16} />
+        <span style={{ flex: 1, borderTop: "1.5px dashed #9FB7BD" }} />
+      </div>
+      <div className="hide-scrollbar" style={{ display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
+        {tiles.map((t, k) => (
+          <button key={t.label} onClick={() => onGallery(t.at)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
+            <PlaneWindow img={t.img} blind={BLINDS[k % BLINDS.length]} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>{t.label}</span>
           </button>
         ))}
       </div>
-      <QuickFacts v={v} />
     </div>
   );
 }
@@ -298,7 +337,7 @@ function BestTime({ dest }) {
   const rows = seasonRows(dest);
   const [open, setOpen] = useState(rows[0]?.key);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Title>Best time to visit</Title>
       <div style={{ margin: `0 ${PAD}px`, display: "flex", flexDirection: "column", gap: 8 }}>
         {rows.map((r) => {
@@ -357,9 +396,9 @@ function ThingsToDo({ dest, gallery, onOpen }) {
   });
   const shown = acts.slice(0, 5);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Title>Things to do</Title>
-      <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD, scrollSnapType: "x mandatory" }}>
+      <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD, scrollSnapType: "x mandatory", scrollPaddingLeft: PAD, scrollPaddingRight: PAD }}>
         {shown.map((a, i) => {
           const on = a.id ? saved.includes(a.id) : !!local[a.name];
           return (
@@ -436,7 +475,7 @@ function Places({ dest, gallery }) {
   if (!areas.length) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", isolation: "isolate" }}>
-      <div style={{ padding: `0 ${PAD}px 14px` }}><h2 style={H2}>Places to visit</h2></div>
+      <div style={{ padding: `0 ${PAD}px 12px` }}><h2 style={H2}>Places to visit</h2></div>
       <div style={{ position: "relative", height: 240 }}>
         <MapContainer center={points[0]} zoom={8} zoomControl={false} attributionControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false} keyboard={false} style={{ position: "absolute", inset: 0, background: "#EAF2F4" }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -453,7 +492,7 @@ function Places({ dest, gallery }) {
           const chips = (a.tag || "").split(/,\s*|\s+and\s+/).filter(Boolean).slice(0, 3);
           const img = gallery[(i + 2) % gallery.length];
           return (
-            <div key={a.city} onClick={() => setSel(a.city)} style={{ flex: "0 0 246px", height: 204, boxSizing: "border-box", background: "#fff", borderRadius: 18, padding: 14, border: on ? `2px solid ${C.p600}` : `1px solid ${LINE}`, boxShadow: "0 4px 14px rgba(16,24,40,0.08)", display: "flex", flexDirection: "column", cursor: "pointer" }}>
+            <div key={a.city} onClick={() => setSel(a.city)} style={{ flex: "0 0 246px", height: 162, boxSizing: "border-box", background: "#fff", borderRadius: 18, padding: 14, border: on ? `2px solid ${C.p600}` : `1px solid ${LINE}`, boxShadow: "0 4px 14px rgba(16,24,40,0.08)", display: "flex", flexDirection: "column", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <img src={img} alt="" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", boxSizing: "border-box", border: `2px solid ${C.p600}`, padding: 2, background: "#fff", flexShrink: 0 }} />
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -462,9 +501,9 @@ function Places({ dest, gallery }) {
                 </div>
                 <SaveHeart saved={saved.includes(a.city)} onToggle={() => toggleRegion(dest, a.city)} size={32} />
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+              <div style={{ display: "flex", flexWrap: "nowrap", overflow: "hidden", gap: 6, marginTop: 10 }}>
                 {chips.map((c) => (
-                  <span key={c} style={{ background: "#F4F2F0", color: INK, fontSize: 12, fontWeight: 500, lineHeight: "18px", padding: "4px 8px", borderRadius: 6 }}>{c.charAt(0).toUpperCase() + c.slice(1)}</span>
+                  <span key={c} style={{ flexShrink: 0, whiteSpace: "nowrap", background: "#F4F2F0", color: INK, fontSize: 12, fontWeight: 500, lineHeight: "18px", padding: "4px 8px", borderRadius: 6 }}>{c.charAt(0).toUpperCase() + c.slice(1)}</span>
                 ))}
               </div>
               <div style={{ flex: 1 }} />
@@ -487,7 +526,7 @@ function GettingThere({ dest, v }) {
   const f = v.flights.find((x) => x.city === city) || v.flights[0];
   const chip = (on) => ({ flexShrink: 0, padding: "7px 13px", borderRadius: 999, border: on ? `1.5px solid ${TEXT}` : `1px solid ${LINE}`, background: "#fff", fontSize: 13, fontWeight: on ? 700 : 500, color: TEXT, whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" });
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Title>Getting there</Title>
       <div className="hs" style={{ gap: 8, paddingLeft: PAD, paddingRight: PAD }}>
         {v.flights.map((x) => <button key={x.city} onClick={() => setCity(x.city)} style={chip(x.city === city)}>{x.city}</button>)}
@@ -549,13 +588,13 @@ function TripRail({ title, cards, choices }) {
   if (!trips || !trips.length) return null;
   const full = current ? `${title} ${current.label}` : title;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
       <div style={{ padding: `0 ${PAD}px`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h2 style={{ ...H2, fontSize: 20, minWidth: 0 }}>
+        <h2 style={{ ...H2, minWidth: 0, position: "relative" }}>
           {title}
           {current && (
-            <button onClick={() => setPicking(true)} aria-haspopup="listbox" style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 2, padding: "1px 6px 1px 8px", borderRadius: 8, border: "none", background: "#F4F2F0", font: "inherit", color: INK, cursor: "pointer", whiteSpace: "nowrap", verticalAlign: "baseline" }}>
-              {current.label}<ChevronDown size={16} strokeWidth={2.6} />
+            <button onClick={() => setPicking((v) => !v)} aria-haspopup="listbox" aria-expanded={picking} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 2, padding: 0, border: "none", background: "none", font: "inherit", fontWeight: 600, color: LAGOON, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {current.label}{picking ? <ChevronUp size={17} strokeWidth={2.4} /> : <ChevronDown size={17} strokeWidth={2.4} />}
             </button>
           )}
         </h2>
@@ -563,30 +602,32 @@ function TripRail({ title, cards, choices }) {
           See all <ArrowRight size={14} />
         </button>
       </div>
-      <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
-        {trips.slice(0, 6).map((t) => <BookedCard key={t.key} t={t} />)}
-      </div>
-      <ListSheet open={all} title={full} count={trips.length} onClose={() => setAll(false)}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {trips.map((t) => <BookedCard key={t.key} t={t} wide />)}
-        </div>
-      </ListSheet>
-      {choices && (
-        <ListSheet open={picking} title={title} onClose={() => setPicking(false)}>
-          <div role="listbox" style={{ background: "#fff", borderRadius: 14, padding: "0 14px" }}>
+      {/* The choices open right under the title, over the cards. */}
+      {choices && picking && (
+        <>
+          <div onClick={() => setPicking(false)} style={{ position: "fixed", inset: 0, zIndex: 29 }} />
+          <div role="listbox" style={{ position: "absolute", top: 34, left: PAD, width: 250, maxHeight: 320, overflowY: "auto", zIndex: 30, background: "#fff", borderRadius: 14, border: `1px solid ${LINE}`, boxShadow: "0 12px 32px rgba(16,24,40,0.16)", padding: "4px 0" }} className="hide-scrollbar">
             {choices.map((c, k) => {
               const on = k === pick;
               return (
-                <button key={c.label} role="option" aria-selected={on} onClick={() => { setPick(k); setPicking(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 0", border: "none", borderTop: k ? "1px solid #F2F0EE" : "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                  <span style={{ flex: 1, fontSize: 15, fontWeight: on ? 700 : 500, color: TEXT }}>{c.label}</span>
-                  <span style={{ fontSize: 13, color: SUB }}>{c.cards.length} trips</span>
-                  <span style={{ width: 18, display: "flex" }}>{on && <Check size={18} color={C.p600} strokeWidth={2.6} />}</span>
+                <button key={c.label} role="option" aria-selected={on} onClick={() => { setPick(k); setPicking(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", border: "none", background: on ? "#F4F2F0" : "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+                  <span style={{ flex: 1, fontSize: 14.5, fontWeight: on ? 700 : 500, color: TEXT }}>{c.label}</span>
+                  <span style={{ fontSize: 12.5, color: SUB }}>{c.cards.length} trips</span>
+                  <span style={{ width: 16, display: "flex" }}>{on && <Check size={16} color={LAGOON} strokeWidth={2.6} />}</span>
                 </button>
               );
             })}
           </div>
-        </ListSheet>
+        </>
       )}
+      <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
+        {trips.slice(0, 6).map((t) => <BookedCard key={t.key} t={t} inDest />)}
+      </div>
+      <ListSheet open={all} title={full} count={trips.length} onClose={() => setAll(false)}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {trips.map((t) => <BookedCard key={t.key} t={t} wide inDest />)}
+        </div>
+      </ListSheet>
     </div>
   );
 }
@@ -643,7 +684,7 @@ function Compare({ dest }) {
   const cell = (on, top) => ({ padding: "12px 6px", fontSize: 13.5, lineHeight: "17px", textAlign: "center", fontWeight: on ? 700 : 500, background: on ? "#FFF5F8" : "#fff", borderTop: top ? `1px solid ${LINE}` : "none", color: TEXT });
   const label = (top) => ({ position: "sticky", left: 0, zIndex: 1, background: "#fff", padding: "12px 8px 12px 12px", fontSize: 12, lineHeight: "17px", color: SUB, borderTop: top ? `1px solid ${LINE}` : "none", borderRight: `1px solid ${LINE}` });
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Title>Compare with similar places</Title>
       <div className="hide-scrollbar" style={{ margin: `0 ${PAD}px`, border: `1px solid ${LINE}`, borderRadius: 12, overflowX: "auto" }}>
         <div style={{ display: "grid", gridTemplateColumns: `92px repeat(${cols.length}, 126px)`, width: "max-content" }}>
@@ -669,7 +710,7 @@ function Questions({ dest }) {
   const [open, setOpen] = useState(0);
   const faq = faqFor(dest);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Title>Common questions</Title>
       <div style={{ padding: `0 ${PAD}px` }}>
         {faq.map((f, i) => (
@@ -718,7 +759,7 @@ function Reviews({ dest, v }) {
   const names = couplePhotoNames[dest] || [];
   const chip = (t) => <span key={t} style={{ display: "inline-flex", background: "#F4F2F0", color: TEXT, fontSize: 12.5, fontWeight: 500, lineHeight: "18px", padding: "5px 10px", borderRadius: 6 }}>{t}</span>;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Title>Traveller Reviews</Title>
       <div style={{ margin: `0 ${PAD}px`, background: `linear-gradient(135deg, ${C.p100} 0%, #fff 100%)`, border: `1px solid ${C.p100}`, borderRadius: 18, padding: "20px 18px", boxShadow: "0 4px 18px rgba(137,18,62,0.08)", display: "flex", alignItems: "center", gap: 18 }}>
         <div style={{ textAlign: "center", flexShrink: 0 }}>
@@ -795,6 +836,9 @@ export default function DestinationV7() {
   const anchors = useRef({});
   const mark = (key) => (el) => { anchors.current[key] = el; };
   const elFor = useCallback((key) => anchors.current[key] || null, []);
+  // In the desktop phone frame the clock and notch sit over the top of the screen.
+  const [framed, setFramed] = useState(false);
+  useEffect(() => { setFramed(document.getElementById("phone-frame")?.style.borderRadius === "44px"); }, []);
   const [activity, setActivity] = useState(null);
   const { forDest, toggleActivity } = useSaves();
 
@@ -812,10 +856,10 @@ export default function DestinationV7() {
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Figtree, system-ui, sans-serif" }}>
       <div ref={scroller} className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-        <SectionNav sections={NAV} elFor={elFor} variant="soft" />
+        <SectionNav sections={NAV} elFor={elFor} variant="soft" inset={framed ? 44 : 0} />
         <Hero imgs={gallery} onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))} onGallery={setGalleryAt} />
         <TitleBlock dest={dest} v={v} tiles={tiles} onGallery={setGalleryAt} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 44, padding: "36px 0 32px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 28, padding: "24px 0 28px" }}>
           {row("facts")}
           <div ref={mark("best")}><BestTime dest={dest} /></div>
           <div ref={mark("todo")}><ThingsToDo dest={dest} gallery={gallery} onOpen={setActivity} /></div>

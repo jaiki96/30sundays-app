@@ -48,7 +48,31 @@ export function Route({ legs, max = 2, size = 11.5 }) {
   );
 }
 
-export default function BookedCard({ t, wide = false }) {
+// On a destination page the route leads: up to three stops with their nights,
+// then the rest counted, on two lines so every card in a rail is the same
+// height. The total nights sit under it.
+function DestRoute({ legs = [], nights }) {
+  const shown = legs.slice(0, 3);
+  const rest = legs.length - shown.length;
+  return (
+    <div>
+      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.ink, lineHeight: "19px", height: 38, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", letterSpacing: "-0.2px" }}>
+        {shown.map((l, i) => (
+          <span key={l.city}>
+            {i > 0 && <span style={{ color: C.inact, fontWeight: 500, margin: "0 4px" }}>→</span>}
+            {l.city}<span style={{ fontWeight: 500, color: C.sub }}> {l.n}N</span>
+          </span>
+        ))}
+        {rest > 0 && <span style={{ fontWeight: 500, color: C.sub }}> +{rest} {rest === 1 ? "city" : "cities"}</span>}
+      </p>
+      <p style={{ margin: "4px 0 0", fontSize: 12, color: C.sub }}>{nights} nights</p>
+    </div>
+  );
+}
+
+// On a destination page the country is already the page, so the card leads
+// with the length of the trip and drops who went.
+export default function BookedCard({ t, wide = false, inDest = false }) {
   const tone = TAG[t.style] || TAG.Relaxed;
   // Who went, as a count rather than a label. "Couple" and "Family" both took
   // a line to say something the numbers say better, and children only show up
@@ -84,11 +108,12 @@ export default function BookedCard({ t, wide = false }) {
       </div>
 
       <div style={{ padding: "11px 13px 13px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        {inDest && <DestRoute legs={t.legs} nights={t.nights} />}
+        {!inDest && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <p style={{ margin: 0, minWidth: 0, fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {t.dest} ({t.nights}N)
           </p>
-          <span style={{
+          {!inDest && <span style={{
             flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
             padding: "4px 10px", borderRadius: 999, border: `1px solid ${C.div}`,
             fontSize: 11.5, fontWeight: 700, color: C.sub, whiteSpace: "nowrap",
@@ -101,10 +126,10 @@ export default function BookedCard({ t, wide = false }) {
                 {kids}<Baby size={12} />
               </span>
             )}
-          </span>
-        </div>
+          </span>}
+        </div>}
 
-        <div style={{ marginTop: 4 }}><Route legs={t.legs} /></div>
+        {!inDest && <div style={{ marginTop: 4 }}><Route legs={t.legs} /></div>}
 
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,

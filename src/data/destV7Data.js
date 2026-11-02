@@ -11,6 +11,8 @@
 import { destData, customerPhotos, maldivesImgs, allItineraries } from "../data";
 import { destMeta, destAreas, cityCoords } from "./buildData";
 
+const CDN = "https://cdn.30sundays.club/app_content";
+
 export const AS_OF = "November 2026";
 
 export const V7_DESTS = ["Bali", "Thailand", "Vietnam", "Maldives", "Sri Lanka", "Mauritius", "New Zealand"];
@@ -55,7 +57,7 @@ export const V7 = {
   Bali: {
     rating: 4.6, reviews: "1,000+",
     intro: "Bali is one island with three holidays in it. Inland around Ubud it is rice terraces, temples and jungle villas. The south coast is beach clubs, surf and sunset dinners on the cliffs. A short boat ride away, Nusa Penida has the cliffs and clear water from the photos. Easy for first-timers, with vegetarian and Indian food everywhere.",
-    tiles: [["Rice fields", 2], ["Waterfalls", 3], ["Cliffs", 5], ["Tree houses", 1]],
+    vibes: [["Islands", `/vibes/bali-islands.jpg`], ["Temples", `/vibes/bali-temples.jpg`], ["Beaches", `/vibes/bali-beaches.jpg`], ["Rice terraces", `${CDN}/bali/tegallalang_rice_fields_4.jpg`], ["Volcanoes", `/vibes/bali-volcanoes.jpg`], ["Nightlife", `/vibes/bali-nightlife.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "DPS", kind: "Direct", time: "About 7 hrs" },
       { city: "Bengaluru", code: "BLR", to: "DPS", kind: "Direct", time: "About 7 hrs" },
@@ -77,7 +79,7 @@ export const V7 = {
   Thailand: {
     rating: 4.6, reviews: "1,000+",
     intro: "Thailand is two trips in one. Bangkok is temples, rooftop bars and night markets that run till late. The south is islands: Phuket and Krabi for long beaches, Phi Phi for the boat days and the clear water. It is close, easy to get around, and the food works for every kind of eater.",
-    tiles: [["Lagoons", 0], ["Temples", 1], ["Beaches", 2], ["Waterfalls", 3], ["Wildlife", 5]],
+    vibes: [["Islands", `${CDN}/thailand/pileh_lagoon_439.jpg`], ["Beaches", `${CDN}/thailand/long_beach_koh_phi_phi_468.jpg`], ["Temples", `${CDN}/thailand/big_buddha_temple_koh_samui_459.jpg`], ["Waterfalls", `${CDN}/thailand/angel_waterfall_park_493.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "BKK", kind: "Direct", time: "About 4.5 hrs" },
       { city: "Mumbai", code: "BOM", to: "BKK", kind: "Direct", time: "About 4.5 hrs" },
@@ -104,7 +106,7 @@ export const V7 = {
   Vietnam: {
     rating: 4.7, reviews: "800+",
     intro: "Vietnam runs north to south, and our trips do too. Hanoi is old streets and coffee, Ha Long Bay is a night on the water among limestone islands, Hoi An is lanterns and tailors. It is great value, the scenery changes every few days, and the food is a reason to go on its own.",
-    tiles: [["Ha Long Bay", 5], ["Mountains", "hero"], ["Islands", 2], ["Food", 3], ["Phu Quoc", 0]],
+    vibes: [["Ha Long Bay", `${CDN}/vietnam/kayaking_halong_bay_500.jpg`], ["Mountains", `${CDN}/vietnam/sapa_valley_501.jpg`], ["Islands", `${CDN}/vietnam/fingernail_island_497.jpg`], ["Food", `${CDN}/vietnam/nem_cuon_cooking_class_ha_long_bay_498.jpg`], ["Culture", `${CDN}/vietnam/hoi_an_memories_show_502.jpg`], ["Sunsets", `${CDN}/vietnam/kissing_bridge_495.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "HAN", kind: "Direct", time: "About 5 hrs" },
       { city: "Mumbai", code: "BOM", to: "SGN", kind: "Direct", time: "About 5.5 hrs" },
@@ -130,7 +132,7 @@ export const V7 = {
   Maldives: {
     rating: 4.8, reviews: "600+",
     intro: "The Maldives is a holiday you take at your resort. Each one sits on its own island, with a lagoon, a reef to snorkel and a villa over the water or on the beach. You fly into Malé and finish the journey by seaplane or speedboat. Short to reach from India, and as calm as a trip gets.",
-    tiles: [["Villas", 0], ["Lagoons", 1], ["Islands", 2], ["Beaches", 3]],
+    vibes: [["Overwater villas", `${CDN}/hotels/maldives/hero-images/3_hero.webp`], ["Lagoons", `${CDN}/hotels/maldives/hero-images/134_hero.webp`], ["Private islands", `${CDN}/hotels/maldives/hero-images/48_hero.webp`], ["Sunsets", `${CDN}/hotels/maldives/hero-images/11_hero.webp`], ["Infinity pools", `${CDN}/hotels/maldives/hero-images/15_hero.webp`]],
     flights: [
       { city: "Bengaluru", code: "BLR", to: "MLE", kind: "Direct", time: "About 1.5 hrs" },
       { city: "Mumbai", code: "BOM", to: "MLE", kind: "Direct", time: "About 3 hrs" },
@@ -153,7 +155,7 @@ export const V7 = {
   "Sri Lanka": {
     rating: 4.6, reviews: "500+",
     intro: "Sri Lanka packs a lot into a small island. Tea hills around Ella and Nuwara Eliya, the rock fort at Sigiriya, safaris at Yala, and a south coast of beaches and old Galle Fort. Distances are short, flights from India are quicker than most domestic ones, and the food feels close to home.",
-    tiles: [["Kandy", "hero"], ["Beaches", 0], ["Snorkelling", 2], ["Surfing", 4], ["Sigiriya", 5]],
+    vibes: [["Wildlife", `${CDN}/srilanka/elephant_transit_home_udawalawe_SLA00070.jpg`], ["Beaches", `${CDN}/srilanka/taprobane_island_viewpoint_SLA00057.jpg`], ["Ancient cities", `${CDN}/srilanka/hot_air_balloon_flight_sigiriya_SLA00062.jpg`], ["Temples", `${CDN}/srilanka/koneswaram_temple_trincomalee_SLA00071.jpg`], ["Surfing", `${CDN}/srilanka/surfing_lessons_south_coast_SLA00061.jpg`], ["Hill country", `${CDN}/srilanka/victoria_lake_kandy_SLA00074.jpg`]],
     flights: [
       { city: "Chennai", code: "MAA", to: "CMB", kind: "Direct", time: "About 1.5 hrs" },
       { city: "Bengaluru", code: "BLR", to: "CMB", kind: "Direct", time: "About 1.5 hrs" },
@@ -179,8 +181,7 @@ export const V7 = {
   Mauritius: {
     rating: 4.7, reviews: "400+",
     intro: "Mauritius is beaches with more to do than lie on them. Resorts sit on calm lagoons ringed by a reef, and inland there are mountains, waterfalls and the seven coloured earths. It feels easy for Indian travellers, with familiar food and Hindi widely understood, and it suits a slow trip as well as an active one.",
-    tiles: [["Catamarans", 0], ["Dolphins", 1], ["Islands", 2], ["Gorges", 5], ["Viewpoints", 3]],
-    lead: 2,
+    vibes: [["Dolphins", `https://images.unsplash.com/photo-1607153333879-c174d265f1d2?w=900&q=80&auto=format&fit=crop`], ["Reefs", `https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=900&q=80&auto=format&fit=crop`], ["Waterfalls", `https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?w=900&q=80&auto=format&fit=crop`], ["Resorts", `https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=900&q=80&auto=format&fit=crop`]],
     flights: [
       { city: "Mumbai", code: "BOM", to: "MRU", kind: "Direct", time: "About 6 hrs" },
       { city: "Delhi", code: "DEL", to: "MRU", kind: "Direct", time: "About 7.5 hrs" },
@@ -202,7 +203,7 @@ export const V7 = {
   "New Zealand": {
     rating: 4.8, reviews: "300+",
     intro: "New Zealand is a road trip through very big scenery. The North Island has Hobbiton, Rotorua's hot springs and Auckland's harbour. The South Island has Queenstown, the fiords at Milford Sound and the glaciers on the west coast. It is far and it is worth it; give it at least ten nights.",
-    tiles: [["Lakes", 0], ["Waterfalls", 2], ["Rivers", 3], ["Fiordland", 4], ["Coast", 5]],
+    vibes: [["Mountains", `${CDN}/new_zealand/lake_matheson_NZA00064.jpg`], ["Self drive", `${CDN}/new_zealand/haast_pass_NZA00065.jpg`], ["Adventure", `${CDN}/new_zealand/aratiatia_rapids_NZA00057.jpg`], ["Lakes", `${CDN}/new_zealand/moke_lake_NZA00054.jpg`], ["Fiordland", `${CDN}/new_zealand/te_anau_NZA00060.jpg`], ["Coast", `${CDN}/new_zealand/hole_in_the_rock_NZA00061.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "AKL", kind: "1 layover", time: "About 16 hrs" },
       { city: "Mumbai", code: "BOM", to: "AKL", kind: "1 layover", time: "About 17 hrs" },
@@ -227,22 +228,24 @@ export const V7 = {
   },
 };
 
-// Each vibe tile names the photograph it shows: an index into the
-// destination's activity pictures, or "hero".
+// The vibes: what each place is best known for, each with a photograph that
+// actually shows it. Bali's come from the destination design; the rest from
+// the app's own picture pools. A country with few real photos gets fewer vibes
+// rather than a picture of something else.
 export function tilesFor(dest) {
-  const d = destData[dest] || {};
-  return (V7[dest]?.tiles || []).map(([label, k]) => ({ label, img: k === "hero" ? d.hero : (d.actImgs || [])[k] }))
-    .filter((t) => t.img && !isBanned(t.img));
+  return (V7[dest]?.vibes || []).map(([label, img]) => ({ label, img })).filter((t) => t.img && !isBanned(t.img));
 }
 
 // The photographs for a destination: its hero, its activity pictures, then a
 // few from travellers, never the banned ones.
 export function galleryFor(dest) {
   const d = destData[dest] || {};
-  const lead = V7[dest]?.lead != null ? [(d.actImgs || [])[V7[dest].lead]] : [];
-  const base = [...lead, d.hero, d.card, d.circle, ...(d.actImgs || []), ...(dest === "Maldives" ? maldivesImgs : [])];
+  const base = [d.hero, d.card, d.circle, ...(d.actImgs || []), ...(dest === "Maldives" ? maldivesImgs : [])];
   const cust = (customerPhotos[dest] || []).slice(0, 4);
-  return [...new Set([...base, ...cust].filter(Boolean))].filter((s) => !isBanned(s)).slice(0, 12);
+  const vibes = (V7[dest]?.vibes || []).map(([, img]) => img);
+  // Mauritius's hero is a hotel room, so it opens on its first vibe instead.
+  const first = dest === "Mauritius" ? [] : base.slice(0, 1);
+  return [...new Set([...first, ...vibes, ...base.slice(1), ...cust].filter(Boolean))].filter((s) => !isBanned(s)).slice(0, 16);
 }
 
 // The five questions, answered for this destination.
