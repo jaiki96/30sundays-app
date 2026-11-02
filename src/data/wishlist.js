@@ -46,6 +46,7 @@ const MEMBERS_KEY = "30s_wishlist_members_v1";
 const COPLAN_KEY = "30s_wishlist_coplan_v1";
 const MORE_KEY = "30s_wishlist_more_v5";
 const ITIN_KEY = "30s_wishlist_itins_v1";
+const ACTS_KEY = "30s_wishlist_acts_v1";
 
 // The person using the app, and the demo co-planner. The app is single-user,
 // so the other person on the Bali board is a stub with a few saves of their
@@ -174,6 +175,17 @@ function itinSeed(data) {
   return out;
 }
 
+// Two more Bali things to do, so a Ubud day has saves spread over two plans
+// and the itinerary has a wishlist it only partly covers.
+function actsSeed(data) {
+  const out = { ...data };
+  [["Ubud::Kintamani volcano hike", "Ubud", 0.8], ["Canggu::Surf lesson", "Canggu", 0.9]].forEach(([id, city, daysAgo]) => {
+    const k = wishKey("activity", "Bali", id);
+    if (!out[k]) out[k] = { key: k, kind: "activity", dest: "Bali", id, name: id.split("::")[1], city, sub: city, by: "you", lovedBy: ["you"], savedAt: Date.now() - daysAgo * 86400000 };
+  });
+  return out;
+}
+
 function loadJSON(key, fallback) {
   try { const v = JSON.parse(localStorage.getItem(key)); return v && typeof v === "object" ? v : fallback; } catch { return fallback; }
 }
@@ -196,6 +208,11 @@ function load() {
     if (!localStorage.getItem(ITIN_KEY)) {
       data = itinSeed(data || {});
       localStorage.setItem(ITIN_KEY, "1");
+      localStorage.setItem(KEY, JSON.stringify(data));
+    }
+    if (!localStorage.getItem(ACTS_KEY)) {
+      data = actsSeed(data || {});
+      localStorage.setItem(ACTS_KEY, "1");
       localStorage.setItem(KEY, JSON.stringify(data));
     }
     if (!localStorage.getItem(COPLAN_KEY)) {

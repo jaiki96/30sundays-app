@@ -154,6 +154,71 @@ function GoldTag() {
   );
 }
 
+// ─── The wishlist shelf ───
+//
+// The saved hotels for this town, on a pale pink band that runs edge to edge,
+// as a short rail of compact cards. Chosen from five options on the wishlist
+// canvas (H1), without the heart graphic beside the title.
+const SHELF_TINT = "#FFF1F3";
+
+function WishlistShelf({ hotels, city, nights, currentHotel, onOpen, onSave }) {
+  return (
+    <div data-testid="wishlist-shelf" style={{ margin: "-14px -16px 0", padding: "16px 0 18px", background: SHELF_TINT, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <p style={{ margin: 0, fontSize: 16.5, fontWeight: 800, color: C.head }}>Your wishlist stays</p>
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: C.p600 }}>
+          {hotels.length === 1 ? `1 of your saves is in ${city}` : `${hotels.length} of your saves are in ${city}`}
+        </p>
+      </div>
+      <div className="hide-scrollbar" style={{ display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", padding: "0 16px 4px", scrollPaddingLeft: 16 }}>
+        {hotels.map((h) => (
+          <ShelfCard
+            key={h.id}
+            hotel={h}
+            solo={hotels.length === 1}
+            nights={nights}
+            priceDelta={currentHotel ? (h.pricePerNight - currentHotel.pricePerNight) * nights : null}
+            onOpen={onOpen}
+            onSave={() => onSave(h)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ShelfCard({ hotel, solo, nights, priceDelta, onOpen, onSave }) {
+  const photo = galleryOf(hotel)[0];
+  return (
+    <div
+      data-testid={`shelf-hotel-${hotel.id}`}
+      onClick={() => onOpen(hotel)}
+      role="button"
+      style={{
+        flex: "none", width: solo ? "100%" : "84%", scrollSnapAlign: "start",
+        borderRadius: 14, overflow: "hidden", background: C.white, cursor: "pointer",
+        boxShadow: "0 2px 10px rgba(227,27,83,0.10)",
+      }}
+    >
+      <div style={{ position: "relative", height: 124, background: C.bg }}>
+        {photo && <img src={photo.url || photo} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        <SaveHeart onPhoto saved onToggle={onSave} style={{ position: "absolute", top: 6, right: 6 }} />
+      </div>
+      <div style={{ padding: "10px 12px 11px", display: "flex", flexDirection: "column", gap: 7 }}>
+        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.head, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{hotel.name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Stars n={hotel.stars} />
+          <ScoreChip score={hotel.bookingScore} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderTop: `1px solid ${C.div}`, paddingTop: 9 }}>
+          <PriceDelta delta={priceDelta} nights={nights} fallbackPrice={hotel.pricePerNight} />
+          <ChevronRight size={18} color={C.sub} style={{ flexShrink: 0 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HotelCard({ hotel, nights, priceDelta, onOpen, onGallery, saved = false, onSave, gold = false }) {
   const photos = galleryOf(hotel);
   const strip = photos.slice(0, 6);
@@ -500,18 +565,26 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
                 a second one, so it is plain that the first few are the
                 wishlist and not the best matches. Without saves there is one
                 list and no headings at all. */}
-            {shown.map((h, i) => (
+            {/* Saved hotels sit on a pink shelf of their own, swiped
+                sideways, so they read as the wishlist at a glance and the
+                list under it stays plain. Without saves there is one list
+                and no headings at all. */}
+            {savedCount > 0 && (
+              <WishlistShelf
+                hotels={shown.slice(0, savedCount)}
+                city={stayInfo.city}
+                nights={nights}
+                currentHotel={currentHotel}
+                onOpen={openHotel}
+                onSave={toggleWish}
+              />
+            )}
+            {shown.map((h, i) => i < savedCount ? null : (
               <Fragment key={h.id}>
-                {savedCount > 0 && i === 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 -4px" }}>
-                    <Heart size={16} color={C.p600} fill={C.p600} />
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: C.head }}>From your wishlist</p>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.p600 }}>{savedCount} saved</span>
-                  </div>
-                )}
                 {savedCount > 0 && i === savedCount && (
-                  <p style={{ margin: "10px 0 -4px", paddingTop: 16, borderTop: `1px solid ${C.div}`, fontSize: 15, fontWeight: 800, color: C.head }}>
+                  <p style={{ margin: "2px 0 -4px", display: "flex", alignItems: "baseline", gap: 8, fontSize: 15, fontWeight: 800, color: C.head }}>
                     All hotels in {stayInfo.city}
+                    <span style={{ fontSize: 12.5, fontWeight: 500, color: C.sub }}>{shown.length - savedCount} more</span>
                   </p>
                 )}
                 <HotelCard

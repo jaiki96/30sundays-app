@@ -18,6 +18,7 @@ import {
   V7, V7_DESTS, AS_OF, seasonsFor, areasFor, galleryFor, tilesFor, faqFor, priceShort, isBanned, itineraryRows,
 } from "../data/destV7Data";
 import SectionNav from "../components/SectionNav";
+import { DestWishlistBand } from "../components/wishlist/WishlistEntry";
 import { Sun, Compass, MapPin, Plane, Route, Star as StarIcon } from "lucide-react";
 
 // ─── The destination page, v7 ───
@@ -226,6 +227,8 @@ function Gallery({ dest, imgs, tiles, at, onClose }) {
 // ─── 2. Title, rating, intro ───
 function TitleBlock({ dest, v, tiles, onGallery }) {
   const [more, setMore] = useState(false);
+  // ?wish=empty shows the wishlist band as someone with no saves sees it.
+  const { search } = useLocation();
   return (
     <div style={{ padding: `0 ${PAD}px`, marginTop: -44, position: "relative", zIndex: 1, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
@@ -251,6 +254,7 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
           </button>
         ))}
       </div>
+      <DestWishlistBand dest={dest} forceEmpty={new URLSearchParams(search).get("wish") === "empty"} />
       <QuickFacts v={v} />
     </div>
   );
