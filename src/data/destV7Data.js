@@ -57,7 +57,7 @@ export const V7 = {
   Bali: {
     rating: 4.6, reviews: "1,000+",
     intro: "Bali is one island with three holidays in it. Inland around Ubud it is rice terraces, temples and jungle villas. The south coast is beach clubs, surf and sunset dinners on the cliffs. A short boat ride away, Nusa Penida has the cliffs and clear water from the photos. Easy for first-timers, with vegetarian and Indian food everywhere.",
-    vibes: [["Islands", `/vibes/bali-islands.jpg`], ["Temples", `/vibes/bali-temples.jpg`], ["Beaches", `/vibes/bali-beaches.jpg`], ["Rice terraces", `${CDN}/bali/tegallalang_rice_fields_4.jpg`], ["Volcanoes", `/vibes/bali-volcanoes.jpg`], ["Nightlife", `/vibes/bali-nightlife.jpg`]],
+    vibes: [["Islands", `/vibes/bali-islands.jpg`, `${CDN}/bali/kelingking_beach_65.jpg`, `${CDN}/bali/tree_house_nusa_penida_3.jpg`], ["Temples", `/vibes/bali-temples.jpg`, `/vibes/bali-temples-2.jpg`, `/vibes/bali-temples-3.jpg`], ["Beaches", `/vibes/bali-beaches.jpg`, `/vibes/bali-beaches-2.jpg`], ["Rice terraces", `${CDN}/bali/tegallalang_rice_fields_4.jpg`, `/vibes/bali-rice-2.jpg`], ["Volcanoes", `/vibes/bali-volcanoes.jpg`], ["Nightlife", `/vibes/bali-nightlife.jpg`, `/vibes/bali-nightlife-2.jpg`, `/vibes/bali-nightlife-3.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "DPS", kind: "Direct", time: "About 7 hrs" },
       { city: "Bengaluru", code: "BLR", to: "DPS", kind: "Direct", time: "About 7 hrs" },
@@ -106,7 +106,7 @@ export const V7 = {
   Vietnam: {
     rating: 4.7, reviews: "800+",
     intro: "Vietnam runs north to south, and our trips do too. Hanoi is old streets and coffee, Ha Long Bay is a night on the water among limestone islands, Hoi An is lanterns and tailors. It is great value, the scenery changes every few days, and the food is a reason to go on its own.",
-    vibes: [["Ha Long Bay", `${CDN}/vietnam/kayaking_halong_bay_500.jpg`], ["Mountains", `${CDN}/vietnam/sapa_valley_501.jpg`], ["Islands", `${CDN}/vietnam/fingernail_island_497.jpg`], ["Food", `${CDN}/vietnam/nem_cuon_cooking_class_ha_long_bay_498.jpg`], ["Culture", `${CDN}/vietnam/hoi_an_memories_show_502.jpg`], ["Sunsets", `${CDN}/vietnam/kissing_bridge_495.jpg`]],
+    vibes: [["Ha Long Bay", `${CDN}/vietnam/kayaking_halong_bay_500.jpg`, `${CDN}/vietnam/sunrise_tai_chi_ha_long_bay_499.jpg`], ["Mountains", `${CDN}/vietnam/sapa_valley_501.jpg`], ["Islands", `${CDN}/vietnam/fingernail_island_497.jpg`, `${CDN}/vietnam/xuong_island_496.jpg`], ["Food", `${CDN}/vietnam/nem_cuon_cooking_class_ha_long_bay_498.jpg`], ["Culture", `${CDN}/vietnam/hoi_an_memories_show_502.jpg`], ["Sunsets", `${CDN}/vietnam/kissing_bridge_495.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "HAN", kind: "Direct", time: "About 5 hrs" },
       { city: "Mumbai", code: "BOM", to: "SGN", kind: "Direct", time: "About 5.5 hrs" },
@@ -132,7 +132,7 @@ export const V7 = {
   Maldives: {
     rating: 4.8, reviews: "600+",
     intro: "The Maldives is a holiday you take at your resort. Each one sits on its own island, with a lagoon, a reef to snorkel and a villa over the water or on the beach. You fly into Malé and finish the journey by seaplane or speedboat. Short to reach from India, and as calm as a trip gets.",
-    vibes: [["Overwater villas", `${CDN}/hotels/maldives/hero-images/3_hero.webp`], ["Lagoons", `${CDN}/hotels/maldives/hero-images/134_hero.webp`], ["Private islands", `${CDN}/hotels/maldives/hero-images/48_hero.webp`], ["Sunsets", `${CDN}/hotels/maldives/hero-images/11_hero.webp`], ["Infinity pools", `${CDN}/hotels/maldives/hero-images/15_hero.webp`]],
+    vibes: [["Overwater villas", `${CDN}/hotels/maldives/hero-images/3_hero.webp`, `${CDN}/hotels/maldives/hero-images/12_hero.webp`, `${CDN}/hotels/maldives/hero-images/37_hero.webp`], ["Lagoons", `${CDN}/hotels/maldives/hero-images/134_hero.webp`, `${CDN}/hotels/maldives/hero-images/13_hero.webp`], ["Private islands", `${CDN}/hotels/maldives/hero-images/48_hero.webp`, `${CDN}/hotels/maldives/hero-images/126_hero.webp`, `${CDN}/hotels/maldives/hero-images/16_hero.webp`], ["Sunsets", `${CDN}/hotels/maldives/hero-images/11_hero.webp`], ["Infinity pools", `${CDN}/hotels/maldives/hero-images/15_hero.webp`]],
     flights: [
       { city: "Bengaluru", code: "BLR", to: "MLE", kind: "Direct", time: "About 1.5 hrs" },
       { city: "Mumbai", code: "BOM", to: "MLE", kind: "Direct", time: "About 3 hrs" },
@@ -155,7 +155,7 @@ export const V7 = {
   "Sri Lanka": {
     rating: 4.6, reviews: "500+",
     intro: "Sri Lanka packs a lot into a small island. Tea hills around Ella and Nuwara Eliya, the rock fort at Sigiriya, safaris at Yala, and a south coast of beaches and old Galle Fort. Distances are short, flights from India are quicker than most domestic ones, and the food feels close to home.",
-    vibes: [["Wildlife", `${CDN}/srilanka/elephant_transit_home_udawalawe_SLA00070.jpg`], ["Beaches", `${CDN}/srilanka/taprobane_island_viewpoint_SLA00057.jpg`], ["Ancient cities", `${CDN}/srilanka/hot_air_balloon_flight_sigiriya_SLA00062.jpg`], ["Temples", `${CDN}/srilanka/koneswaram_temple_trincomalee_SLA00071.jpg`], ["Surfing", `${CDN}/srilanka/surfing_lessons_south_coast_SLA00061.jpg`], ["Hill country", `${CDN}/srilanka/victoria_lake_kandy_SLA00074.jpg`]],
+    vibes: [["Wildlife", `${CDN}/srilanka/elephant_transit_home_udawalawe_SLA00070.jpg`], ["Beaches", `${CDN}/srilanka/taprobane_island_viewpoint_SLA00057.jpg`, `${CDN}/srilanka/cinnamon_island_bentota_SLA00063.jpg`], ["Ancient cities", `${CDN}/srilanka/hot_air_balloon_flight_sigiriya_SLA00062.jpg`, `${CDN}/srilanka/yatala_vehera_tissamaharama_SLA00067.jpg`], ["Temples", `${CDN}/srilanka/koneswaram_temple_trincomalee_SLA00071.jpg`, `${CDN}/srilanka/bhadrakali_amman_temple_trincomalee_SLA00072.jpg`, `${CDN}/srilanka/katharagama_temple_SLA00069.jpg`], ["Surfing", `${CDN}/srilanka/surfing_lessons_south_coast_SLA00061.jpg`], ["Hill country", `${CDN}/srilanka/victoria_lake_kandy_SLA00074.jpg`]],
     flights: [
       { city: "Chennai", code: "MAA", to: "CMB", kind: "Direct", time: "About 1.5 hrs" },
       { city: "Bengaluru", code: "BLR", to: "CMB", kind: "Direct", time: "About 1.5 hrs" },
@@ -203,7 +203,7 @@ export const V7 = {
   "New Zealand": {
     rating: 4.8, reviews: "300+",
     intro: "New Zealand is a road trip through very big scenery. The North Island has Hobbiton, Rotorua's hot springs and Auckland's harbour. The South Island has Queenstown, the fiords at Milford Sound and the glaciers on the west coast. It is far and it is worth it; give it at least ten nights.",
-    vibes: [["Mountains", `${CDN}/new_zealand/lake_matheson_NZA00064.jpg`], ["Self drive", `${CDN}/new_zealand/haast_pass_NZA00065.jpg`], ["Adventure", `${CDN}/new_zealand/aratiatia_rapids_NZA00057.jpg`], ["Lakes", `${CDN}/new_zealand/moke_lake_NZA00054.jpg`], ["Fiordland", `${CDN}/new_zealand/te_anau_NZA00060.jpg`], ["Coast", `${CDN}/new_zealand/hole_in_the_rock_NZA00061.jpg`]],
+    vibes: [["Mountains", `${CDN}/new_zealand/lake_matheson_NZA00064.jpg`], ["Self drive", `${CDN}/new_zealand/haast_pass_NZA00065.jpg`], ["Adventure", `${CDN}/new_zealand/aratiatia_rapids_NZA00057.jpg`], ["Lakes", `${CDN}/new_zealand/moke_lake_NZA00054.jpg`, `${CDN}/new_zealand/lake_taupo_NZA00055.jpg`, `${CDN}/new_zealand/lake_hawea_NZA00066.jpg`], ["Fiordland", `${CDN}/new_zealand/te_anau_NZA00060.jpg`], ["Coast", `${CDN}/new_zealand/hole_in_the_rock_NZA00061.jpg`, `${CDN}/new_zealand/roberton_island_NZA00062.jpg`]],
     flights: [
       { city: "Delhi", code: "DEL", to: "AKL", kind: "1 layover", time: "About 16 hrs" },
       { city: "Mumbai", code: "BOM", to: "AKL", kind: "1 layover", time: "About 17 hrs" },
@@ -232,8 +232,11 @@ export const V7 = {
 // actually shows it. Bali's come from the destination design; the rest from
 // the app's own picture pools. A country with few real photos gets fewer vibes
 // rather than a picture of something else.
+// A vibe can hold more than one photograph of the same thing: shut its blind
+// and open it again, and the next one is there.
 export function tilesFor(dest) {
-  return (V7[dest]?.vibes || []).map(([label, img]) => ({ label, img })).filter((t) => t.img && !isBanned(t.img));
+  return (V7[dest]?.vibes || []).map(([label, ...imgs]) => ({ label, img: imgs[0], imgs: imgs.filter((i) => !isBanned(i)) }))
+    .filter((t) => t.img && !isBanned(t.img));
 }
 
 // The photographs for a destination: its hero, its activity pictures, then a
@@ -242,10 +245,10 @@ export function galleryFor(dest) {
   const d = destData[dest] || {};
   const base = [d.hero, d.card, d.circle, ...(d.actImgs || []), ...(dest === "Maldives" ? maldivesImgs : [])];
   const cust = (customerPhotos[dest] || []).slice(0, 4);
-  const vibes = (V7[dest]?.vibes || []).map(([, img]) => img);
+  const vibes = (V7[dest]?.vibes || []).flatMap(([, ...imgs]) => imgs);
   // Mauritius's hero is a hotel room, so it opens on its first vibe instead.
   const first = dest === "Mauritius" ? [] : base.slice(0, 1);
-  return [...new Set([...first, ...vibes, ...base.slice(1), ...cust].filter(Boolean))].filter((s) => !isBanned(s)).slice(0, 16);
+  return [...new Set([...first, ...vibes, ...base.slice(1), ...cust].filter(Boolean))].filter((s) => !isBanned(s)).slice(0, 28);
 }
 
 // The five questions, answered for this destination.

@@ -254,41 +254,135 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
 // Each vibe is a view out of a plane window, the blind pulled down a different
 // way on each, on a band that goes from sky to the brand's cream. A tap opens
 // the gallery at that photo.
-const BLINDS = [14, 24, 10, 30, 18, 22];
 // A cabin window: a moulded frame lit from above, an inner ring, the view
-// behind glass with a highlight, and a ridged blind with a pull handle.
-function PlaneWindow({ img, blind }) {
+// behind glass with a highlight, and a ridged blind with a pull handle. Every
+// blind starts at the same height. Drag it and it follows the finger, all the
+// way up to just its lip or all the way down, and it stays where it is left,
+// like a real one. A tap on the handle opens it fully or shuts it; a tap on
+// the view opens the gallery.
+//
+// Shut, the window naps: a handwritten "z z z" drifts off the blind. Open it
+// again and there is a new view of the same vibe, when we have one; the label
+// under it never changes, so it never says something the photo does not.
+const BLIND_REST = 16;
+const BLIND_TOP = 6;   // only the lip and handle left showing
+const BLIND_SHUT = 92;
+const SHUT_AT = 85;
+const GLASS_H = 114; // 140 window, less the 9px frame and 4px ring top and bottom
+function PlaneWindow({ imgs, onOpen, nudge }) {
   const w = 100, h = 140;
+  const [pos, setPos] = useState(BLIND_REST);
+  const [dragging, setDragging] = useState(false);
+  const [view, setView] = useState(0);
+  const [spring, setSpring] = useState(false);
+  const drag = useRef(null);
+  const wasShut = useRef(false);
+  // New view on the way back up from shut.
+  useEffect(() => {
+    if (dragging) return;
+    if (pos >= SHUT_AT) wasShut.current = true;
+    else if (pos < 50 && wasShut.current) { wasShut.current = false; if (imgs.length > 1) setView((v) => (v + 1) % imgs.length); }
+  }, [pos, dragging, imgs.length]);
+  // The one-time hint: dip and spring back.
+  useEffect(() => {
+    if (!nudge) return;
+    const t1 = setTimeout(() => setPos(48), 50);
+    const t2 = setTimeout(() => { setSpring(true); setPos(BLIND_REST); }, 650);
+    const t3 = setTimeout(() => setSpring(false), 1400);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [nudge]);
+  const down = (e) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    drag.current = { y: e.clientY, from: pos, moved: false };
+    setDragging(true);
+  };
+  const move = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dy) > 3) d.moved = true;
+    setPos(Math.max(BLIND_TOP, Math.min(BLIND_SHUT, d.from + (dy / GLASS_H) * 100)));
+  };
+  const up = (e) => {
+    const d = drag.current;
+    drag.current = null;
+    setDragging(false);
+    if (!d) return;
+    e.stopPropagation();
+    // A tap, not a drag: all the way open, or all the way shut.
+    if (!d.moved) setPos(d.from > (BLIND_TOP + BLIND_SHUT) / 2 ? BLIND_TOP : BLIND_SHUT);
+  };
+  const ease = dragging ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)";
+  const asleep = pos >= SHUT_AT && !dragging;
+  const img = imgs[view] || imgs[0];
   return (
     <span style={{ display: "block", width: w, height: h, flexShrink: 0, boxSizing: "border-box", padding: 9, borderRadius: `${w * 0.42}px / ${h * 0.31}px`, background: "linear-gradient(180deg, #FFFDF9 0%, #DCD4C8 100%)", boxShadow: "0 12px 22px rgba(16,24,40,0.20), 0 2px 4px rgba(16,24,40,0.12), inset 0 2px 1px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.12)" }}>
       <span style={{ display: "block", width: "100%", height: "100%", boxSizing: "border-box", padding: 4, borderRadius: `${w * 0.37}px / ${h * 0.27}px`, background: "linear-gradient(180deg, #C9C0B3 0%, #EDE6DC 100%)", boxShadow: "inset 0 3px 6px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.8)" }}>
-        <span style={{ display: "block", position: "relative", width: "100%", height: "100%", borderRadius: `${w * 0.33}px / ${h * 0.24}px`, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.25)" }}>
-          <img src={img} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          <span style={{ position: "absolute", inset: 0, boxShadow: "inset 0 6px 12px rgba(0,0,0,0.35), inset 0 -4px 10px rgba(0,0,0,0.18)" }} />
-          <span style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.08) 26%, rgba(255,255,255,0) 40%)" }} />
-          <span style={{ position: "absolute", left: 0, right: 0, top: 0, height: `${blind}%`, background: "repeating-linear-gradient(180deg, rgba(0,0,0,0.03) 0 1px, rgba(0,0,0,0) 1px 5px), linear-gradient(180deg, #F4F0EB 0%, #E6DFD5 100%)", boxShadow: "0 3px 6px rgba(0,0,0,0.28)" }}>
+        <span onClick={() => onOpen(img)} style={{ display: "block", position: "relative", width: "100%", height: "100%", borderRadius: `${w * 0.33}px / ${h * 0.24}px`, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.25)", cursor: "pointer" }}>
+          {imgs.map((src, n) => (
+            <img key={src} src={src} alt="" loading={n === 0 ? "lazy" : "eager"} draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none", opacity: n === view ? 1 : 0, transition: "opacity 0.3s ease" }} />
+          ))}
+          <span style={{ position: "absolute", inset: 0, boxShadow: "inset 0 6px 12px rgba(0,0,0,0.35), inset 0 -4px 10px rgba(0,0,0,0.18)", pointerEvents: "none" }} />
+          <span style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.08) 26%, rgba(255,255,255,0) 40%)", pointerEvents: "none" }} />
+          <span style={{ position: "absolute", left: 0, right: 0, top: 0, height: `${pos}%`, transition: ease, background: "repeating-linear-gradient(180deg, rgba(0,0,0,0.03) 0 1px, rgba(0,0,0,0) 1px 5px), linear-gradient(180deg, #F4F0EB 0%, #E6DFD5 100%)", boxShadow: "0 3px 6px rgba(0,0,0,0.28)", pointerEvents: "none" }}>
+            {asleep && (
+              <span aria-hidden="true" style={{ position: "absolute", left: "50%", top: "36%", transform: "translateX(-50%)", width: 40, height: 40 }}>
+                {[0, 1, 2].map((z) => (
+                  <span key={z} style={{ position: "absolute", left: 4 + z * 11, top: 22 - z * 9, fontFamily: "Caveat, cursive", fontWeight: 700, fontSize: 15 + z * 3, color: "#8C8273", opacity: 0, animation: `v7zzz 2.1s ease-out ${z * 0.45}s infinite` }}>z</span>
+                ))}
+              </span>
+            )}
             <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 6, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)" }} />
             <span style={{ position: "absolute", left: "50%", bottom: -3, transform: "translateX(-50%)", width: 24, height: 7, borderRadius: 4, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.35)" }} />
           </span>
+          {/* Where the blind can be grabbed: the blind itself and a finger's width under its handle. */}
+          <span role="slider" aria-label="Window blind" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pos)}
+            onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={(e) => e.stopPropagation()}
+            style={{ position: "absolute", left: 0, right: 0, top: 0, height: `calc(${pos}% + 20px)`, transition: ease, touchAction: "none", cursor: dragging ? "grabbing" : "grab" }} />
         </span>
       </span>
     </span>
   );
 }
+// Once per visitor, the second window's blind dips and springs back as the
+// band comes into view, so the blinds read as something to play with.
+function useNudgeOnce(ref) {
+  const [go, setGo] = useState(false);
+  useEffect(() => {
+    let seen = false;
+    try { seen = localStorage.getItem("v7-blind-nudge") === "1"; } catch { /* storage off */ }
+    const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (seen || calm || !ref.current || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.intersectionRatio >= 0.6)) {
+        setTimeout(() => setGo(true), 400);
+        try { localStorage.setItem("v7-blind-nudge", "1"); } catch { /* storage off */ }
+        io.disconnect();
+      }
+    }, { threshold: [0.6] });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [ref]);
+  return go;
+}
 function Vibes({ dest, tiles, onGallery }) {
+  const band = useRef(null);
+  const nudge = useNudgeOnce(band);
   return (
-    <div style={{ margin: `18px -${PAD}px 0`, background: "linear-gradient(180deg, #EAF4F8 0%, #FFF6E6 100%)", padding: "18px 0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+    <div ref={band} style={{ margin: `6px -${PAD}px 0`, background: "linear-gradient(180deg, #FFFFFF 0%, #EAF4F8 16%, #F3F5EF 52%, #FFF6E6 84%, #FFFFFF 100%)", padding: "30px 0 30px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <style>{"@keyframes v7zzz { 0% { opacity: 0; transform: translate(0, 4px) scale(0.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(7px, -12px) scale(1.05); } }"}</style>
       <h2 style={{ margin: 0, padding: `0 ${PAD}px`, fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 23, lineHeight: "28px", fontWeight: 400, color: INK }}>The Vibes of {dest === "Maldives" ? "the Maldives" : dest}</h2>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: `0 ${PAD}px` }}>
         <PlaneIcon size={16} />
         <span style={{ flex: 1, borderTop: "1.5px dashed #9FB7BD" }} />
       </div>
       <div className="hide-scrollbar" style={{ display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
-        {tiles.map((t, k) => (
-          <button key={t.label} onClick={() => onGallery(t.at)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
-            <PlaneWindow img={t.img} blind={BLINDS[k % BLINDS.length]} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>{t.label}</span>
-          </button>
+        {tiles.map((t, n) => (
+          <div key={t.label} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <PlaneWindow imgs={t.imgs} nudge={nudge && n === 1} onOpen={(img) => onGallery(t.ats[Math.max(0, t.imgs.indexOf(img))])} />
+            <button onClick={() => onGallery(t.at)} style={{ padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>{t.label}</button>
+          </div>
         ))}
       </div>
     </div>
@@ -849,7 +943,7 @@ export default function DestinationV7() {
       </div>
     );
   }
-  const tiles = tilesFor(dest).map((x) => ({ ...x, at: Math.max(0, gallery.indexOf(x.img)) }));
+  const tiles = tilesFor(dest).map((x) => ({ ...x, at: Math.max(0, gallery.indexOf(x.img)), ats: x.imgs.map((i) => Math.max(0, gallery.indexOf(i))) }));
   const rows = itineraryRows(dest, gallery);
   const row = (after) => rows.filter((r) => r.after === after).map((r) => <TripRail key={dest + r.after} title={r.title} cards={r.cards} choices={r.choices} />);
 
