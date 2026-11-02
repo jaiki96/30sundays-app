@@ -8,6 +8,7 @@ import { regionsFor, regionByCity, activitiesFor, activityById } from "../../dat
 import { regionFood } from "../../data/regionFood";
 import { generateHotelsForCity } from "../../data/hotelData";
 import { KindDisc } from "../../data/wishlistKinds";
+import SaveHeart from "../SaveHeart";
 
 // ─── The wishlist, as a way in ───
 //
@@ -89,105 +90,107 @@ function Collage({ photos }) {
   );
 }
 
-// ─── Home (E1) ───
-export function HomeWishlistCard({ forceEmpty = false }) {
+// ─── One card, on home and on a destination page ───
+// Home (E1) adds the destination chips; the destination page (E4) is the same
+// card for its own destination, without them. With nothing saved it peeks at
+// three picks you can heart right there, and its button says what comes next:
+// glimpses of the place, in a deck you swipe.
+function WishlistCard({ testid, style, title, seeAll, chips, dest, empty }) {
   const navigate = useNavigate();
-  const { destinations, forDest } = useWishlist();
-  const saved = forceEmpty ? [] : destinations.filter((d) => forDest(d).some((it) => KINDS.includes(it.kind)));
-  const [pick, setPick] = useState(null);
-  const [choosing, setChoosing] = useState(null);
-  const empty = saved.length === 0;
-  const dest = pick || (empty ? ALL_DESTS[0]?.name : saved[0]);
   const s = useDestSaves(dest);
-  const chips = empty ? ALL_DESTS.map((d) => d.name) : saved;
-
+  const [choosing, setChoosing] = useState(false);
   return (
-    <div data-testid="home-wishlist" style={{ margin: "28px 18px 0", padding: 16, borderRadius: 18, background: C.white, boxShadow: "0 4px 18px rgba(120,86,40,0.08)", display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#181E4C", letterSpacing: "-0.2px" }}>
-          {empty ? "Start your wishlist" : "Your wishlist"}
+    // A pale pink ground and a solid heart by the title, so it reads as the
+    // wishlist at a glance and not as one more white card on the page.
+    <div data-testid={testid} style={{ padding: 16, borderRadius: 18, background: TINT, border: `1px solid ${C.p100}`, display: "flex", flexDirection: "column", gap: 12, ...style }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#181E4C", letterSpacing: "-0.2px", display: "flex", alignItems: "center", gap: 8 }}>
+          <Heart size={20} color={C.p600} fill={C.p600} style={{ flexShrink: 0 }} />{title}
         </h2>
         {!empty && (
-          <button onClick={() => navigate("/saved")} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: C.p600 }}>See all</button>
+          <button onClick={() => navigate(seeAll)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: C.p600, flexShrink: 0 }}>See all</button>
         )}
       </div>
-      <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
-        {chips.map((d) => (
-          <DestChip key={d} name={d} count={empty ? 0 : forDest(d).filter((it) => KINDS.includes(it.kind)).length} on={d === dest} onClick={() => setPick(d)} />
-        ))}
-      </div>
+      {chips}
       {empty ? (
-        <DeckPreview key={dest} dest={dest} onOpen={() => setChoosing(dest)} />
+        <DeckPreview key={dest} dest={dest} onOpen={() => setChoosing(true)} />
       ) : (
-        <button onClick={() => navigate(`/saved/board/${encodeURIComponent(dest)}`)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: 12 }}>
+        <button onClick={() => navigate(`/saved/board/${encodeURIComponent(dest)}`)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 12 }}>
           <Collage photos={s.photos} />
           <KindCounts counts={s.counts} />
         </button>
       )}
-      <button onClick={() => setChoosing(dest)} style={outlineBtn}>
-        {empty ? <>Choose what you like in {dest}</> : <><Plus size={16} />Shortlist more in {dest}</>}
+      <button onClick={() => setChoosing(true)} style={outlineBtn}>
+        {empty ? <>Glimpses of {dest}<ChevronRight size={17} /></> : <><Plus size={16} />Shortlist more in {dest}</>}
       </button>
-      {choosing && <ChooseSheet dest={choosing} onClose={() => setChoosing(null)} />}
+      {choosing && <ChooseSheet dest={dest} onClose={() => setChoosing(false)} />}
     </div>
   );
 }
 
-// The empty state's peek at the deck: three of the first cards, to show what
-// there is to choose from. Tapping one opens the deck.
-function DeckPreview({ dest, onOpen }) {
-  const deck = useDeck(dest, true).slice(0, 3);
+// ─── Home (E1) ───
+export function HomeWishlistCard({ forceEmpty = false }) {
+  const { destinations, forDest } = useWishlist();
+  const saved = forceEmpty ? [] : destinations.filter((d) => forDest(d).some((it) => KINDS.includes(it.kind)));
+  const [pick, setPick] = useState(null);
+  const empty = saved.length === 0;
+  const dest = pick || (empty ? ALL_DESTS[0]?.name : saved[0]);
+  const names = empty ? ALL_DESTS.map((d) => d.name) : saved;
   return (
-    <div className="hide-scrollbar" style={{ display: "flex", gap: 10, overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
-      {deck.map((c) => (
-        <button key={c.key} onClick={onOpen} style={{ flex: "0 0 132px", border: "none", background: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ position: "relative", display: "block", height: 112 }}>
-            <img src={c.img} alt="" style={{ width: 132, height: 112, borderRadius: 12, objectFit: "cover", display: "block", background: C.bg }} />
-            <span style={{ position: "absolute", left: 7, bottom: 7 }}><KindDisc kind={c.kind} size={22} /></span>
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.head, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c.name}</span>
-        </button>
-      ))}
-    </div>
+    <WishlistCard
+      key={dest}
+      testid="home-wishlist"
+      style={{ margin: "28px 18px 0" }}
+      title={empty ? "Start your wishlist" : "Your wishlist"}
+      seeAll="/saved"
+      dest={dest}
+      empty={empty}
+      chips={(
+        <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
+          {names.map((d) => (
+            <DestChip key={d} name={d} count={empty ? 0 : forDest(d).filter((it) => KINDS.includes(it.kind)).length} on={d === dest} onClick={() => setPick(d)} />
+          ))}
+        </div>
+      )}
+    />
   );
 }
 
 // ─── Destination page (E4) ───
 export function DestWishlistBand({ dest, forceEmpty = false }) {
-  const navigate = useNavigate();
   const s = useDestSaves(dest);
-  const [choosing, setChoosing] = useState(false);
   const empty = forceEmpty || s.total === 0;
-
   return (
-    <div data-testid="dest-wishlist" style={{ margin: "18px -16px 0", padding: 16, background: TINT, display: "flex", flexDirection: "column", gap: 12 }}>
-      {empty ? (
-        <>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: C.head, display: "flex", alignItems: "center", gap: 7 }}>
-            <Heart size={16} color={C.p600} />Start your {dest} wishlist
-          </p>
-          <DeckPreview dest={dest} onOpen={() => setChoosing(true)} />
-        </>
-      ) : (
-        <button onClick={() => navigate(`/saved/board/${encodeURIComponent(dest)}`)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ display: "flex" }}>
-              {s.photos.slice(0, 4).map((p, i) => (
-                <img key={p} src={p} alt="" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: `2.5px solid ${TINT}`, marginLeft: i ? -12 : 0, background: C.bg }} />
-              ))}
-            </span>
-            <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: C.head }}>Your {dest} wishlist</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.p600 }}>{s.total} saved</span>
-            </span>
-            <ChevronRight size={20} color={C.head} />
-          </span>
-          <KindCounts counts={s.counts} size={18} />
-        </button>
-      )}
-      <button onClick={() => setChoosing(true)} style={{ ...outlineBtn, height: 42, border: "none" }}>
-        {empty ? "Choose what you like" : <><Plus size={15} />Shortlist more</>}
-      </button>
-      {choosing && <ChooseSheet dest={dest} onClose={() => setChoosing(false)} />}
+    <WishlistCard
+      testid="dest-wishlist"
+      style={{ margin: "18px 0 0" }}
+      title={empty ? `Start your ${dest} wishlist` : `Your ${dest} wishlist`}
+      seeAll={`/saved/board/${encodeURIComponent(dest)}`}
+      dest={dest}
+      empty={empty}
+    />
+  );
+}
+
+// The empty state's peek: three picks not yet saved, each with its heart
+// beside the name so it can be saved there and then. A photo opens the deck.
+function DeckPreview({ dest, onOpen }) {
+  const { isSaved, toggle } = useWishlist();
+  const deck = useDeck(dest).slice(0, 3);
+  return (
+    <div className="hide-scrollbar" style={{ display: "flex", gap: 10, overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
+      {deck.map((c) => (
+        <div key={c.key} style={{ flex: "0 0 132px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <button onClick={onOpen} aria-label={`See ${c.name}`} style={{ position: "relative", display: "block", height: 112, padding: 0, border: "none", background: "none", cursor: "pointer" }}>
+            <img src={c.img} alt="" style={{ width: 132, height: 112, borderRadius: 12, objectFit: "cover", display: "block", background: C.bg }} />
+            <span style={{ position: "absolute", left: 7, bottom: 7 }}><KindDisc kind={c.kind} size={22} /></span>
+          </button>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.head, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c.name}</span>
+            <SaveHeart saved={isSaved(c.kind, dest, c.id)} onToggle={() => toggle(c.kind, dest, c.id, c.meta)} size={26} style={{ margin: "-5px -5px -5px 0" }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { regionByCity } from "../data/discoverData";
 import { regionGuide } from "../data/regionGuide";
 import { cityCoords } from "../data/buildData";
 import SaveHeart from "../components/SaveHeart";
+import { ChooseSheet } from "../components/wishlist/WishlistEntry";
 import { activityRating, regionEnjoyed, regionStay, hotelFacts } from "../data/cardFacts";
 import { GREEN } from "../data/dayRatings";
 
@@ -492,6 +493,7 @@ export function WishlistBoard({ group = false }) {
   // straight from a link, with nothing behind it, it goes to the Wishlist.
   const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(baseOf(group), { replace: true }));
   const [planning, setPlanning] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const itins = rows.filter((r) => r.kind === "trip" && r.itineraryId != null);
   const startPlan = (pick) => navigate(pick?.itin
     ? `/build?dest=${encodeURIComponent(dest)}&from=wishlist&use=itin&itin=${pick.itin.itineraryId}${pick.itin.dealId ? `&deal=${pick.itin.dealId}` : ""}`
@@ -563,6 +565,11 @@ export function WishlistBoard({ group = false }) {
                 <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: C.sub, letterSpacing: 0 }}>{rows.length} {rows.length === 1 ? "save" : "saves"}</span>
               </h1>
             </div>
+            {/* More to save, from the same deck the home and destination
+                pages open. The plan button below stays the one pink action. */}
+            <button data-testid="board-shortlist" onClick={() => setChoosing(true)} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, height: 36, padding: "0 12px", borderRadius: 999, border: `1.5px solid ${C.p600}`, background: C.white, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: C.p600 }}>
+              <Plus size={15} /> Shortlist more
+            </button>
             {group && <button onClick={() => setInviting(true)} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, height: 36, padding: "0 12px 0 5px", borderRadius: 999, border: `1px solid ${C.div}`, background: C.white, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: NAVY }}>
               <AvatarStack people={people} size={26} /> <UserPlus size={15} /> Invite
             </button>}
@@ -630,6 +637,7 @@ export function WishlistBoard({ group = false }) {
       </div>
 
       {planning && <PlanSheet dest={dest} rows={rows} itins={itins} onPick={startPlan} onClose={() => setPlanning(false)} />}
+      {choosing && <ChooseSheet dest={dest} onClose={() => setChoosing(false)} />}
       {noteFor && <NoteSheet row={noteFor} joined={joined} group={group} onClose={() => setNoteFor(null)} onSave={(t) => { setNote(noteFor.key, t); setNoteFor(null); }} />}
       {group && inviting && <InviteSheet dest={dest} people={people} onInvite={(k) => invite(dest, k)} onClose={() => setInviting(false)} />}
     </div>
