@@ -18,15 +18,17 @@ import {
   V7, V7_DESTS, AS_OF, seasonsFor, areasFor, galleryFor, tilesFor, faqFor, priceShort, isBanned, itineraryRows,
 } from "../data/destV7Data";
 import SectionNav from "../components/SectionNav";
+import { DestWishlistBand } from "../components/wishlist/WishlistEntry";
 import { Sun, Compass, MapPin, Plane, Route, Star as StarIcon } from "lucide-react";
 
 // ─── The destination page, v7 ───
 //
 // The design signed off on the canvas, built for every destination. One
-// scroll, in this order: photos and vibe tiles, the title, know before you go,
-// best time, things to do, places, getting there, real itineraries, Sunday
-// School, compare, questions, and the reviews last. One fuchsia action: Plan
-// my trip, in the bar at the foot.
+// scroll, in this order: photos, the title and intro, the vibes out of the
+// plane windows, recently booked itineraries, places with their trips, best
+// time, the wishlist, then things to do, getting there, Sunday School,
+// compare, questions, and the reviews last. One fuchsia action: Plan my trip,
+// in the bar at the foot.
 
 const PAD = 16;
 const INK = "#181E4C";
@@ -245,7 +247,6 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
       <p style={{ margin: "10px 0 0", fontSize: 14.5, lineHeight: "22px", color: BODY, ...(more ? {} : { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }) }}>{v.intro}</p>
       <button onClick={() => setMore((m) => !m)} style={{ marginTop: 6, alignSelf: "flex-start", padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, color: TEXT, textDecoration: "underline", textUnderlineOffset: 3 }}>{more ? "Read less" : "Read more"}</button>
       <Vibes dest={dest} tiles={tiles} onGallery={onGallery} />
-      <QuickFacts v={v} />
     </div>
   );
 }
@@ -258,16 +259,16 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
 // behind glass with a highlight, and a ridged blind with a pull handle. Every
 // blind starts at the same height. Drag it and it follows the finger, all the
 // way up to just its lip or all the way down, and it stays where it is left,
-// like a real one. A tap on the handle opens it fully or shuts it; a tap on
-// the view opens the gallery.
+// like a real one. A tap anywhere on the window, blind or view, opens the
+// gallery.
 //
 // Shut, the window naps: a handwritten "z z z" drifts off the blind. Open it
 // again and there is a new view of the same vibe, when we have one; the label
 // under it never changes, so it never says something the photo does not.
 const BLIND_REST = 16;
 const BLIND_TOP = 6;   // only the lip and handle left showing
-const BLIND_SHUT = 92;
-const SHUT_AT = 85;
+const BLIND_SHUT = 100; // the whole view covered, the lip resting on the sill
+const SHUT_AT = 88;
 const GLASS_H = 114; // 140 window, less the 9px frame and 4px ring top and bottom
 function PlaneWindow({ imgs, onOpen, nudge }) {
   const w = 100, h = 140;
@@ -277,11 +278,18 @@ function PlaneWindow({ imgs, onOpen, nudge }) {
   const [spring, setSpring] = useState(false);
   const drag = useRef(null);
   const wasShut = useRef(false);
-  // New view on the way back up from shut.
+  // The new view goes in behind the blind once it has finished closing, so
+  // it is already there as the blind starts to lift.
+  // Dragged by hand, the blind is wherever the finger is, so the swap happens
+  // the moment it touches the sill. Tapped shut, it is still sliding, so the
+  // swap waits for it to land.
   useEffect(() => {
-    if (dragging) return;
-    if (pos >= SHUT_AT) wasShut.current = true;
-    else if (pos < 50 && wasShut.current) { wasShut.current = false; if (imgs.length > 1) setView((v) => (v + 1) % imgs.length); }
+    if (pos < SHUT_AT) { wasShut.current = false; return undefined; }
+    if (wasShut.current || imgs.length < 2) return undefined;
+    const swap = () => { wasShut.current = true; setView((v) => (v + 1) % imgs.length); };
+    if (dragging) { if (pos >= BLIND_SHUT - 2) swap(); return undefined; }
+    const t = setTimeout(swap, 480);
+    return () => clearTimeout(t);
   }, [pos, dragging, imgs.length]);
   // The one-time hint: dip and spring back.
   useEffect(() => {
@@ -310,8 +318,8 @@ function PlaneWindow({ imgs, onOpen, nudge }) {
     setDragging(false);
     if (!d) return;
     e.stopPropagation();
-    // A tap, not a drag: all the way open, or all the way shut.
-    if (!d.moved) setPos(d.from > (BLIND_TOP + BLIND_SHUT) / 2 ? BLIND_TOP : BLIND_SHUT);
+    // A tap, not a drag, opens the gallery at this view, as a tap on the view does.
+    if (!d.moved) onOpen(img);
   };
   const ease = dragging ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)";
   const asleep = pos >= SHUT_AT && !dragging;
@@ -321,7 +329,7 @@ function PlaneWindow({ imgs, onOpen, nudge }) {
       <span style={{ display: "block", width: "100%", height: "100%", boxSizing: "border-box", padding: 4, borderRadius: `${w * 0.37}px / ${h * 0.27}px`, background: "linear-gradient(180deg, #C9C0B3 0%, #EDE6DC 100%)", boxShadow: "inset 0 3px 6px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.8)" }}>
         <span onClick={() => onOpen(img)} style={{ display: "block", position: "relative", width: "100%", height: "100%", borderRadius: `${w * 0.33}px / ${h * 0.24}px`, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.25)", cursor: "pointer" }}>
           {imgs.map((src, n) => (
-            <img key={src} src={src} alt="" loading={n === 0 ? "lazy" : "eager"} draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none", opacity: n === view ? 1 : 0, transition: "opacity 0.3s ease" }} />
+            <img key={src} src={src} alt="" loading={n === 0 ? "lazy" : "eager"} draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none", opacity: n === view ? 1 : 0 }} />
           ))}
           <span style={{ position: "absolute", inset: 0, boxShadow: "inset 0 6px 12px rgba(0,0,0,0.35), inset 0 -4px 10px rgba(0,0,0,0.18)", pointerEvents: "none" }} />
           <span style={{ position: "absolute", inset: 0, background: "linear-gradient(115deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.08) 26%, rgba(255,255,255,0) 40%)", pointerEvents: "none" }} />
@@ -334,7 +342,7 @@ function PlaneWindow({ imgs, onOpen, nudge }) {
               </span>
             )}
             <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 6, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)" }} />
-            <span style={{ position: "absolute", left: "50%", bottom: -3, transform: "translateX(-50%)", width: 24, height: 7, borderRadius: 4, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.35)" }} />
+            <span style={{ position: "absolute", left: "50%", bottom: pos >= SHUT_AT ? 3 : -3, transition: "bottom 0.3s ease", transform: "translateX(-50%)", width: 24, height: 7, borderRadius: 4, background: "linear-gradient(180deg, #DAD2C7, #C8BFB2)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.35)" }} />
           </span>
           {/* Where the blind can be grabbed: the blind itself and a finger's width under its handle. */}
           <span role="slider" aria-label="Window blind" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pos)}
@@ -370,7 +378,7 @@ function Vibes({ dest, tiles, onGallery }) {
   const band = useRef(null);
   const nudge = useNudgeOnce(band);
   return (
-    <div ref={band} style={{ margin: `6px -${PAD}px 0`, background: "linear-gradient(180deg, #FFFFFF 0%, #EAF4F8 16%, #F3F5EF 52%, #FFF6E6 84%, #FFFFFF 100%)", padding: "30px 0 30px", display: "flex", flexDirection: "column", gap: 10 }}>
+    <div ref={band} style={{ margin: `6px -${PAD}px 0`, background: "linear-gradient(180deg, #FFFFFF 0%, #EAF4F8 16%, #F3F5EF 52%, #FFF6E6 84%, #FFFFFF 100%)", padding: "22px 0 18px", display: "flex", flexDirection: "column", gap: 10 }}>
       <style>{"@keyframes v7zzz { 0% { opacity: 0; transform: translate(0, 4px) scale(0.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(7px, -12px) scale(1.05); } }"}</style>
       <h2 style={{ margin: 0, padding: `0 ${PAD}px`, fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 23, lineHeight: "28px", fontWeight: 400, color: INK }}>The Vibes of {dest === "Maldives" ? "the Maldives" : dest}</h2>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: `0 ${PAD}px` }}>
@@ -389,43 +397,6 @@ function Vibes({ dest, tiles, onGallery }) {
   );
 }
 
-// ─── Flights and visa, side by side ───
-// Said once and short. The full list by city, the airports, the visa detail
-// and the money all live in Getting there further down.
-const hrs = (t) => Number((t.match(/[\d.]+/) || [0])[0]);
-function flightSummary(v) {
-  const direct = v.flights.filter((f) => f.kind === "Direct");
-  const rows = direct.length ? direct : v.flights;
-  const lo = Math.min(...rows.map((f) => hrs(f.time)));
-  const hi = Math.max(...rows.map((f) => hrs(f.time)));
-  const value = lo === hi ? `About ${lo} hrs` : `${lo} to ${hi} hrs`;
-  const cities = rows.slice(0, 3).map((f) => f.city).join(", ") + (rows.length > 3 ? " and more" : "");
-  return direct.length ? { value, sub: `Direct from ${cities}` } : { value, sub: "No direct flights, 1 layover" };
-}
-function PassportIcon() {
-  return <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#254342" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M9 16h6" /></svg>;
-}
-function QuickFacts({ v }) {
-  const f = flightSummary(v);
-  const cell = (icon, label, value, sub, right) => (
-    <div style={{ padding: "12px 14px", borderRight: right ? `1px solid ${LINE}` : "none" }}>
-      <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: SUB }}>{icon}{label}</p>
-      <p style={{ margin: "5px 0 0", fontSize: 15.5, lineHeight: "20px", fontWeight: 700, color: TEXT }}>{value}</p>
-      <p style={{ margin: "2px 0 0", fontSize: 12, lineHeight: "16px", color: BODY }}>{sub}</p>
-    </div>
-  );
-  return (
-    <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr", border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
-      {cell(<PlaneIcon size={16} />, "Flights", f.value, f.sub, true)}
-      {cell(<PassportIcon />, "Visa", v.visa.short, v.visa.stay, false)}
-    </div>
-  );
-}
-
-// ─── 4. Best time ───
-// Seasons as an accordion: the first is open. Each header sits on its own
-// season's pale colour, and the open season's details sit on white under it,
-// so it is plain which one is open.
 const SEASON_LINE = { peak: "#EBCDF3", shoulder: "#E9D6BC", off: "#E2DEDA" };
 function BestTime({ dest }) {
   const rows = seasonRows(dest);
@@ -727,16 +698,16 @@ function TripRail({ title, cards, choices }) {
 }
 
 function Itineraries({ dest }) {
-  return <TripRail title="Recently booked trips" cards={BOOKED_TRIPS.filter((t) => t.dest === dest)} />;
+  return <TripRail title="Recently booked itineraries" cards={BOOKED_TRIPS.filter((t) => t.dest === dest)} />;
 }
 
 // The section bar, as on the itinerary page.
 const NAV = [
+  { key: "trips", label: "Itineraries", Icon: Route },
+  { key: "places", label: "Places", Icon: MapPin },
   { key: "best", label: "Best time", Icon: Sun },
   { key: "todo", label: "Things to do", Icon: Compass },
-  { key: "places", label: "Places", Icon: MapPin },
   { key: "getting", label: "Getting there", Icon: Plane },
-  { key: "trips", label: "Itineraries", Icon: Route },
   { key: "reviews", label: "Reviews", Icon: StarIcon },
 ];
 
@@ -935,6 +906,8 @@ export default function DestinationV7() {
   useEffect(() => { setFramed(document.getElementById("phone-frame")?.style.borderRadius === "44px"); }, []);
   const [activity, setActivity] = useState(null);
   const { forDest, toggleActivity } = useSaves();
+  // ?wish=empty shows the wishlist card as someone with no saves sees it.
+  const wishEmpty = new URLSearchParams(useLocation().search).get("wish") === "empty";
 
   if (!v) {
     return (
@@ -953,15 +926,16 @@ export default function DestinationV7() {
         <SectionNav sections={NAV} elFor={elFor} variant="soft" inset={framed ? 44 : 0} />
         <Hero imgs={gallery} onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))} onGallery={setGalleryAt} />
         <TitleBlock dest={dest} v={v} tiles={tiles} onGallery={setGalleryAt} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 28, padding: "24px 0 28px" }}>
-          {row("facts")}
-          <div ref={mark("best")}><BestTime dest={dest} /></div>
-          <div ref={mark("todo")}><ThingsToDo dest={dest} gallery={gallery} onOpen={setActivity} /></div>
-          {row("todo")}
+        <div style={{ display: "flex", flexDirection: "column", gap: 22, padding: "8px 0 24px" }}>
+          <div ref={mark("trips")}><Itineraries dest={dest} /></div>
           <div ref={mark("places")}><Places dest={dest} gallery={gallery} /></div>
           {row("places")}
+          <div ref={mark("best")}><BestTime dest={dest} /></div>
+          <DestWishlistBand dest={dest} forceEmpty={wishEmpty} headStyle={H2} style={{ margin: `0 ${PAD}px` }} />
+          {row("facts")}
+          <div ref={mark("todo")}><ThingsToDo dest={dest} gallery={gallery} onOpen={setActivity} /></div>
+          {row("todo")}
           <div ref={mark("getting")}><GettingThere dest={dest} v={v} /></div>
-          <div ref={mark("trips")}><Itineraries dest={dest} /></div>
           <SundaySchool dest={dest} gallery={gallery} />
           {row("school")}
           <Compare dest={dest} />

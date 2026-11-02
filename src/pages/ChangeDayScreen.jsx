@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeft, Search, X as XIcon, SlidersHorizontal,
-  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight,
+  Clock, Car, MapPin, Layers, Play, Heart, Zap, Gauge, Flame, Moon, ChevronRight, Check,
 } from "lucide-react";
 import { C } from "../data";
 import { DayRatingPill } from "../components/DayRating";
@@ -9,6 +9,7 @@ import { TRANSFERS, PACES, RATING_BANDS } from "../data/dayOptionShape";
 import { FilterChip, SearchableCheckList } from "./HotelListing";
 import CardReel from "../components/CardReel";
 import { useWishlist } from "../data/wishlist";
+import { KindDisc } from "../data/wishlistKinds";
 
 // ─── Change day plan, full screen ───
 //
@@ -340,15 +341,62 @@ function DayGallery({ opt, startAt, onClose }) {
   );
 }
 
+// ─── Activities from the wishlist, on top ───
+// The saved things to do that a plan for this day holds, as a sideways row of
+// small chips. Ticking one filters the list to the plans that include it,
+// through the same activity filter the sheet writes. Chosen on the wishlist
+// canvas (D2), with a small icon instead of a photo.
+function WishlistPicks({ names, picked, onToggle }) {
+  return (
+    <div data-testid="wishlist-picks" style={{ margin: "0 -16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <p style={{ margin: 0, padding: "0 16px", fontSize: 15, fontWeight: 800, color: C.head }}>Include activities from your wishlist</p>
+      <div className="hide-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "0 16px" }}>
+        {names.map((n) => {
+          const on = picked.includes(n);
+          return (
+            <button
+              key={n}
+              data-testid={`wishlist-pick-${n}`}
+              onClick={() => onToggle(n)}
+              aria-pressed={on}
+              style={{
+                flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8,
+                height: 40, padding: "0 12px 0 6px", borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
+                border: `1.5px solid ${on ? C.p600 : C.div}`, background: on ? "#FFF1F3" : C.white,
+                fontSize: 13, fontWeight: 700, color: C.head, whiteSpace: "nowrap",
+              }}
+            >
+              <KindDisc kind="activity" size={26} />
+              {n}
+              <span style={{
+                width: 18, height: 18, borderRadius: "50%", flexShrink: 0, boxSizing: "border-box",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: on ? C.p600 : C.white, border: on ? "none" : "1.5px solid #A4A7AE",
+              }}>
+                {on && <Check size={11} color="#fff" strokeWidth={3.2} />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── The screen ──────────────────────────────────────────────────────────────────────────
 export default function ChangeDayScreen({
-  dayNumber, city, options, onOpen, onClose, onLeisureDay, frameStyle,
+  dayNumber, city, options, onOpen, onClose, onLeisureDay, frameStyle, preselect,
 }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [sheetTab, setSheetTab] = useState("Filters");
-  const [f, setF] = useState({ transfer: [], pace: [], rating: [], activities: [], sort: "recommended" });
+  // preselect: a saved activity to start ticked, when this opens from the
+  // wishlist's "Add", spelled the way this day's plans spell it.
+  const [f, setF] = useState(() => ({
+    transfer: [], pace: [], rating: [], sort: "recommended",
+    activities: preselect ? [...new Set(options.flatMap((o) => o.activities || []))].filter((n) => n.toLowerCase() === String(preselect).toLowerCase()) : [],
+  }));
   // Which plan's pictures are open, and which one you tapped.
   const [gallery, setGallery] = useState(null);
 
@@ -359,6 +407,19 @@ export default function ChangeDayScreen({
   const hitsFor = (o) => (o.activities || [])
     .filter((n) => savedByName.has(String(n).toLowerCase()))
     .map((n) => ({ name: n }));
+
+  // The saved activities this day can hold: each one some plan here includes,
+  // under the plan's own spelling so it drops straight into the filter.
+  const savedHere = useMemo(() => {
+    const seen = new Set();
+    return options.filter((o) => !o.isCurrent).flatMap((o) => o.activities || [])
+      .filter((n) => savedByName.has(String(n).toLowerCase()))
+      .filter((n) => (seen.has(n) ? false : (seen.add(n), true)));
+  }, [options, savedByName]);
+  const toggleSaved = (name) => setF((d) => ({
+    ...d,
+    activities: d.activities.includes(name) ? d.activities.filter((x) => x !== name) : [...d.activities, name],
+  }));
 
   // Every activity on offer for this day, for the searchable filter.
   const activityOptions = useMemo(
@@ -453,13 +514,16 @@ export default function ChangeDayScreen({
 
       {/* List */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "14px 16px calc(112px + env(safe-area-inset-bottom))" }}>
+        {savedHere.length > 0 && (
+          <WishlistPicks names={savedHere} picked={f.activities} onToggle={toggleSaved} />
+        )}
         {shown.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 20px" }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.head }}>Nothing matches those filters</p>
             <p style={{ margin: "6px 0 16px", fontSize: 13, color: C.sub, lineHeight: "19px" }}>
               Try clearing a filter, or search for a place you had in mind.
             </p>
-            <button onClick={() => { setF({ duration: [], transfer: [], pace: [], rating: [], sort: f.sort }); setQuery(""); }} style={{
+            <button onClick={() => { setF({ transfer: [], pace: [], rating: [], activities: [], sort: f.sort }); setQuery(""); }} style={{
               padding: "10px 18px", borderRadius: 999, border: `1px solid ${C.div}`, background: C.white,
               fontSize: 13, fontWeight: 600, color: C.p600, cursor: "pointer", fontFamily: "inherit",
             }}>Clear filters</button>

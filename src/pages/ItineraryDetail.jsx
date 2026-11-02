@@ -60,6 +60,7 @@ const PREBOOKING_CONSULTANTS = [
 import { getUpgradeInfo } from "../data/upgradeData";
 import { useDeals, computePrice, effectiveStatus, isExpired, QUOTE_VALID_DAYS, STATUS_LABEL } from "../data/deals";
 import { runLiveCheck, stayState } from "../data/liveCheck";
+import { useCoverage, CoverageLine, CoverageSheet } from "../components/wishlist/WishlistCoverage";
 
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
 
@@ -1171,6 +1172,12 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     return { ...resolved, freeCancellation: match ? match.freeCancellation : undefined };
   });
 
+  // How much of the wishlist for this destination the trip holds, said in one
+  // line under the title; View opens the breakdown.
+  const coverage = useCoverage({ dest: it.dest, days: it.days, dayActs: daysWithActivities, picked: selectedDayOptions, hotels });
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const [changeDayPick, setChangeDayPick] = useState(null); // a saved activity to start ticked
+
   // Stays the customer chose to book themselves — set from the hotel chooser,
   // stored in App selectedHotels so both screens agree. Excluded from cost.
   const selfBookedStays = new Set((selectedHotels?.[it.id]?.stays || []).map((s, i) => (s?.selfBooked ? i : -1)).filter(i => i >= 0));
@@ -1508,6 +1515,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   // Selecting a day option stages a confirmation; nothing changes until Continue.
   const handleChangeDaySelect = (dayIndex, option) => {
     setChangeDayIndex(null);
+    setChangeDayPick(null);
     setPreviewDay(null);
     setAllCombosIndex(null);
     setPendingDayChange({ dayIndex, option });
@@ -1925,6 +1933,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </div>
       )}
 
+      <CoverageLine dest={it.dest} cov={coverage} onView={() => setCoverageOpen(true)} />
       <Divider />
 
       {/* ═══ 3. Itinerary at a Glance ═══ */}
@@ -2854,14 +2863,34 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       {/* ═══ Change day plan, full screen ═══ */}
+      {coverageOpen && (
+        <CoverageSheet
+          dest={it.dest}
+          cov={coverage}
+          onClose={() => setCoverageOpen(false)}
+          onAdd={editable ? (r) => {
+            setCoverageOpen(false);
+            if (r.kind === "hotel") {
+              const at = it.days.findIndex((d) => d.city === r.city);
+              if (at >= 0) return openHotelFlow(at, hotels[at]?.hotelId);
+            }
+            if (r.kind === "activity") {
+              const at = daysWithActivities.findIndex((d) => d.city === r.city);
+              if (at >= 0 && dayHasOptions(at)) { setChangeDayPick(r.name); return setChangeDayIndex(at); }
+            }
+            customise("cities");
+          } : null}
+        />
+      )}
       {changeDayData && (
         <ChangeDayScreen
           frameStyle={overlayFrame}
+          preselect={changeDayPick}
           dayNumber={changeDayData.dayNumber}
           city={changeDayData.city}
           options={dayOptionCards}
           onOpen={(opt) => setOptionPreview(opt)}
-          onClose={() => setChangeDayIndex(null)}
+          onClose={() => { setChangeDayIndex(null); setChangeDayPick(null); }}
           onLeisureDay={() => handleChangeDaySelect(changeDayIndex, {
             id: "leisure-day",
             activities: ["Free day, explore at your own pace"],
