@@ -759,7 +759,7 @@ function ViewAll({ onClick }) {
 // Portalled into the phone shell, the way every other overlay in the app is.
 // A sheet rendered where it is written would position itself against the
 // scrolling page inside the card and open somewhere above the fold.
-function ListSheet({ open, title, count, children, onClose }) {
+export function ListSheet({ open, title, count, children, onClose }) {
   const [frame, setFrame] = useState(null);
   useEffect(() => { setFrame(document.getElementById("phone-frame")); }, []);
   if (!open || !frame) return null;
@@ -821,7 +821,7 @@ const SHOWN_TRIPS = 6;
 // The heart sits beside the name, at the right edge of the card. It saves
 // the thing the name names, so it belongs to the name, and the photograph
 // stays a photograph.
-function ActCard({ a, city, dest, saved, onSave, onOpen, width = 255, imgH = 165 }) {
+export function ActCard({ a, city, dest, saved, onSave, onOpen, width = 255, imgH = 165 }) {
   const imgs = a.imgs?.length ? a.imgs : [a.img].filter(Boolean);
   // The score the activity page will open with, read off the same builder the
   // map card reads, so the three places this activity appears on one screen

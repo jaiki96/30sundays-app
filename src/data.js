@@ -283,6 +283,27 @@ export const allItineraries = [
   { id: 106, dest: "Bali", vibe: "Explorer", name: "Bali Grand Tour", nights: 18, price: "1,72,998", route: [{ city: "Canggu", n: 2 }, { city: "Ubud", n: 2 }, { city: "Kintamani", n: 1 }, { city: "Sidemen", n: 2 }, { city: "Amed", n: 2 }, { city: "Lovina", n: 1 }, { city: "Munduk", n: 2 }, { city: "Pemuteran", n: 2 }, { city: "Nusa Penida", n: 2 }, { city: "Seminyak", n: 2 }], veg: false, img: baliImgs[4],
     days: [{ city: "Canggu", n: 2, sub: "Surf" }, { city: "Ubud", n: 2, sub: "Culture" }, { city: "Kintamani", n: 1, sub: "Volcano" }, { city: "Sidemen", n: 2, sub: "Valley" }, { city: "Amed", n: 2, sub: "Dive" }, { city: "Lovina", n: 1, sub: "Dolphins" }, { city: "Munduk", n: 2, sub: "Waterfalls" }, { city: "Pemuteran", n: 2, sub: "Snorkel" }, { city: "Nusa Penida", n: 2, sub: "Beaches" }, { city: "Seminyak", n: 2, sub: "Sunset" }],
     pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  // Bali samples (2026-11-02): no trip in the catalogue went to the Gili
+  // Islands or had an ATV ride, and the destination page has a row for each.
+  // Marked sample until the team builds them for real.
+  { id: 110, sample: true, dest: "Bali", vibe: "Relaxed", name: "Bali & the Gilis", nights: 8, price: "79,998", route: [{ city: "Ubud", n: 3 }, { city: "Seminyak", n: 2 }, { city: "Gili Trawangan", n: 3 }], veg: true, img: baliImgs[2],
+    days: [{ city: "Ubud", n: 3, sub: "Rice terraces · Temples · Yoga" }, { city: "Seminyak", n: 2, sub: "Beach clubs · Sunset" }, { city: "Gili Trawangan", n: 3, sub: "Snorkel with turtles · Cycling · Beach" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 111, sample: true, dest: "Bali", vibe: "Explorer", name: "Gili Island Hop", nights: 10, price: "92,498", route: [{ city: "Ubud", n: 3 }, { city: "Gili Trawangan", n: 2 }, { city: "Gili Air", n: 2 }, { city: "Uluwatu", n: 3 }], veg: false, img: baliImgs[5],
+    days: [{ city: "Ubud", n: 3, sub: "Waterfalls · Rice fields · Monkey Forest" }, { city: "Gili Trawangan", n: 2, sub: "Turtle snorkel · Sunset" }, { city: "Gili Air", n: 2, sub: "Quiet beaches · Diving" }, { city: "Uluwatu", n: 3, sub: "Temple · Kecak dance · Cliffs" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "Medium" },
+  { id: 112, sample: true, dest: "Bali", vibe: "Offbeat", name: "Slow Gili Air", nights: 7, price: "71,998", route: [{ city: "Canggu", n: 2 }, { city: "Gili Air", n: 3 }, { city: "Ubud", n: 2 }], veg: true, img: baliImgs[1],
+    days: [{ city: "Canggu", n: 2, sub: "Surf · Cafés" }, { city: "Gili Air", n: 3, sub: "No cars · Snorkel · Hammocks" }, { city: "Ubud", n: 2, sub: "Yoga · Rice fields" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
+  { id: 113, sample: true, dest: "Bali", vibe: "Explorer", name: "Ubud by ATV", nights: 6, price: "56,998", route: [{ city: "Ubud", n: 3 }, { city: "Seminyak", n: 3 }], veg: true, img: baliImgs[2],
+    days: [{ city: "Ubud", n: 3, sub: "ATV ride · Rice fields · Waterfalls" }, { city: "Seminyak", n: 3, sub: "Beach clubs · Sunset" }],
+    pace: "Balanced", crowds: "Mixed", vegFood: "High" },
+  { id: 114, sample: true, dest: "Bali", vibe: "Explorer", name: "Jungle, Volcano & Surf", nights: 7, price: "61,498", route: [{ city: "Ubud", n: 2 }, { city: "Kintamani", n: 2 }, { city: "Canggu", n: 3 }], veg: false, img: baliImgs[3],
+    days: [{ city: "Ubud", n: 2, sub: "ATV ride through the jungle · Monkey Forest" }, { city: "Kintamani", n: 2, sub: "Mt Batur sunrise · Hot springs" }, { city: "Canggu", n: 3, sub: "Surf · Beach clubs" }],
+    pace: "Packed", crowds: "Mixed", vegFood: "Medium" },
+  { id: 115, sample: true, dest: "Bali", vibe: "Relaxed", name: "Mud & Massages", nights: 5, price: "52,498", route: [{ city: "Ubud", n: 3 }, { city: "Nusa Dua", n: 2 }], veg: true, img: baliImgs[3],
+    days: [{ city: "Ubud", n: 3, sub: "ATV ride · Spa · Temples" }, { city: "Nusa Dua", n: 2, sub: "Calm beach · Resort" }],
+    pace: "Unhurried", crowds: "Low", vegFood: "High" },
   // Vietnam (3)
   { id: 10, dest: "Vietnam", vibe: "Explorer", name: "Bays & Boulevards", nights: 7, price: "65,098", route: [{ city: "Hanoi", n: 2 }, { city: "Ha Long", n: 2 }, { city: "HCMC", n: 3 }], veg: false, img: vietnamImgs[5],
     days: [{ city: "Hanoi", n: 2, sub: "Old Quarter · Street food · Temple" }, { city: "Ha Long", n: 2, sub: "Bay cruise · Kayaking · Caves" }, { city: "HCMC", n: 3, sub: "Cu Chi · Markets · Rooftop bars" }],

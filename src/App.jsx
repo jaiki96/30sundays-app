@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PhoneFrame from "./components/PhoneFrame";
 import BottomNav from "./components/BottomNav";
 import UserToggle from "./components/UserToggle";
@@ -23,7 +23,6 @@ import HeartLab from "./pages/HeartLab";
 import { HomeLabIndex, CtaLab, CardsLab, PlansLab, StatesLab, HOME_LAB_PAGES } from "./pages/home_lab";
 import ChatScreen from "./pages/ChatScreen";
 import Destination from "./pages/Destination";
-import MaldivesDestination from "./pages/MaldivesDestination";
 import MaldivesQuote from "./pages/MaldivesQuote";
 import ResortDetail from "./pages/ResortDetail";
 import Listing from "./pages/Listing";
@@ -99,6 +98,7 @@ import Discover from "./pages/Discover";
 import DiscoverRoutes from "./pages/DiscoverRoutes";
 import RoutesCouples from "./pages/RoutesCouples";
 import DiscoverWF from "./pages/DiscoverWF";
+import DestinationV7, { DestinationV7Index } from "./pages/DestinationV7";
 import WishlistWF from "./pages/WishlistWF";
 import RoutesWF from "./pages/RoutesWF";
 import CompareVersions from "./pages/CompareVersions";
@@ -117,14 +117,11 @@ import { GiftingProvider } from "./state/useGifting";
 import { AI_PHOTOS_VARIANT } from "./data/aiPhotosVariant";
 import { LAB_VARIANT } from "./data/labVariant";
 
-// Destination pages: new discover-style layout everywhere except Maldives and
-// Mauritius, which keep their existing layouts.
+// Destination pages: one design for every country (the v7 to v9 work on the
+// design canvas, approved 2026-11-02). The earlier layouts stay reachable on
+// their own routes (/wf/:name, /old-bali-page).
 function DestinationLayout() {
-  const { name } = useParams();
-  const dn = decodeURIComponent(name || "");
-  if (dn === "Maldives") return <MaldivesDestination />;
-  if (dn === "Mauritius") return <Destination />;
-  return <DiscoverWF />;
+  return <DestinationV7 />;
 }
 
 function AppContent({ userState, setUserState, otpVerified, setOtpVerified, leadData, setLeadData, selectedFlights, setSelectedFlights, selectedHotels, setSelectedHotels }) {
@@ -146,7 +143,7 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
   // The two share links (/day-media/v1, /day-media/v2) go to the dev team, so they
   // show only the screen, no demo-state switcher.
   // Design labs hide it too, so the cards can be judged without it on top of them.
-  const shareLink = pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
+  const shareLink = pathname.startsWith("/destination-v7") || pathname.startsWith("/day-media/") || pathname === "/glance-lab" || pathname === "/rating-lab" || pathname === "/profile-lab" || pathname === "/activities-lab" || pathname === "/save-lab" || pathname === "/weather-lab" || pathname === "/dest-weather-lab" || pathname === "/plans-lab" || pathname === "/stage-home" || pathname === "/hotel-lab" || pathname === "/hotel-lab-2" || pathname === "/hotel-lab-3" || pathname === "/hotel-lab-3b" || pathname === "/consultant-lab" || pathname === "/booked-lab" || pathname === "/score-strip";
 
   // The photo lab is a desktop testing tool that talks to Gemini for real, so
   // it sits outside the phone frame and outside the app shell entirely. On its
@@ -198,6 +195,8 @@ function AppContent({ userState, setUserState, otpVerified, setOtpVerified, lead
         <Route path="/chat" element={<ChatScreen />} />
         <Route path="/resort/:resortId" element={<ResortDetail />} />
         <Route path="/maldives-quote" element={<MaldivesQuote />} />
+        <Route path="/destination-v7" element={<DestinationV7Index />} />
+        <Route path="/destination-v7/:name" element={<DestinationV7 />} />
         <Route path="/destination/:name" element={<DestinationLayout />} />
         <Route path="/destination/:name/region/:city" element={<RegionDetail />} />
         <Route path="/old-bali-page" element={<Destination name="Bali" />} />
