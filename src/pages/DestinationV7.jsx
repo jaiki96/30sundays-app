@@ -253,55 +253,32 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
 
 // ─── The vibes, from the window seat ───
 // Each vibe is a view out of a plane window, on a band that goes from sky to
-// the brand's cream.
+// the brand's cream, in a row that loops.
 // A cabin window: a moulded frame lit from above, an inner ring, the view
 // behind glass with a highlight, and a ridged blind with a pull handle.
 //
-// The blinds follow the row. A window fully in view has its blind right at
-// the top; one cut off at the edge is covered by as much as is hidden, so the
-// share of the blind that is open is the share of the window's width in view.
-// Swipe and the window leaving pulls its blind down while the one arriving
-// lifts it, in step with the finger. A window that has shut all the way comes
-// back with a new view of the same vibe, when we have one; the label under it
-// never changes, so it never says something the photo does not.
-//
-// A blind can still be dragged by hand, and it stays where it is left until
-// the row moves again. Shut by hand, the window naps: a handwritten "z z z"
-// drifts off the blind. A tap anywhere on the window, blind or view, opens
-// the gallery.
+// Every blind rests right at the top. Drag one and it follows the finger and
+// stays where it is left, like a real one. Shut all the way, the window naps:
+// a handwritten "z z z" drifts off the blind, and when it is lifted again
+// there is a new view of the same vibe, when we have one; the label under it
+// never changes, so it never says something the photo does not. A tap
+// anywhere on the window, blind or view, opens the gallery.
 const BLIND_TOP = 6;   // open: only the lip and handle left showing
 const BLIND_SHUT = 100; // the whole view covered, the lip resting on the sill
 const SHUT_AT = 88;
 const GLASS_H = 114; // 140 window, less the 9px frame and 4px ring top and bottom
-function PlaneWindow({ imgs, onOpen, nudge, seen, view, onNext, instant, canSwap }) {
+// The blind's place (hand) and the view belong to the vibe, not to this one
+// copy of it in the loop, so going round the loop never changes them.
+function PlaneWindow({ imgs, onOpen, nudge, view, hand, setHand }) {
   const w = 100, h = 140;
-  const auto = BLIND_SHUT - (BLIND_SHUT - BLIND_TOP) * seen;
-  const [hand, setHand] = useState(null); // where a finger left it; null follows the row
   const [dragging, setDragging] = useState(false);
   const [spring, setSpring] = useState(false);
   const drag = useRef(null);
-  const handAt = useRef(seen);
-  const opened = useRef(false);
-  const pos = hand ?? auto;
-  // Once the row moves on, a blind set by hand goes back to following it.
-  useEffect(() => {
-    if (hand != null && !dragging && Math.abs(seen - handAt.current) > 0.02) setHand(null);
-  }, [seen, hand, dragging]);
-  // Shut all the way after being open: the next view goes in behind the
-  // blind, so it is already there as the blind starts to lift.
-  useEffect(() => {
-    if (pos < SHUT_AT) { opened.current = true; return; }
-    if (opened.current && pos >= BLIND_SHUT - 1) {
-      opened.current = false;
-      // Not when the row has just been moved round its loop: that is the
-      // same view, only further along.
-      if (imgs.length > 1 && canSwap()) onNext();
-    }
-  }, [pos, imgs.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pos = hand ?? BLIND_TOP;
   // The one-time hint: dip and spring back.
   useEffect(() => {
     if (!nudge) return;
-    const t1 = setTimeout(() => { handAt.current = seen; setHand(48); }, 50);
+    const t1 = setTimeout(() => setHand(48), 50);
     const t2 = setTimeout(() => { setSpring(true); setHand(null); }, 650);
     const t3 = setTimeout(() => setSpring(false), 1400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
@@ -319,7 +296,6 @@ function PlaneWindow({ imgs, onOpen, nudge, seen, view, onNext, instant, canSwap
     if (!d.moved && Math.abs(e.clientX - d.x) > 6) d.swiped = true; // sideways: the row scrolls, not the blind
     if (!d.swiped && Math.abs(dy) > 3) d.moved = true;
     if (!d.moved) return;
-    handAt.current = seen;
     setHand(Math.max(BLIND_TOP, Math.min(BLIND_SHUT, d.from + (dy / GLASS_H) * 100)));
   };
   const up = (e) => {
@@ -333,9 +309,8 @@ function PlaneWindow({ imgs, onOpen, nudge, seen, view, onNext, instant, canSwap
   };
   // The browser took the gesture over to scroll the row: not a tap.
   const cancel = () => { drag.current = null; setDragging(false); };
-  // Following the row, the blind trails the finger by a breath so it glides.
-  const ease = dragging || instant ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : hand != null ? "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)" : "height 0.2s ease-out";
-  const asleep = hand != null && pos >= SHUT_AT && !dragging;
+  const ease = dragging ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)";
+  const asleep = pos >= SHUT_AT && !dragging;
   const img = imgs[view] || imgs[0];
   return (
     <span style={{ display: "block", width: w, height: h, flexShrink: 0, boxSizing: "border-box", padding: 9, borderRadius: `${w * 0.42}px / ${h * 0.31}px`, background: "linear-gradient(180deg, #FFFDF9 0%, #DCD4C8 100%)", boxShadow: "0 12px 22px rgba(16,24,40,0.20), 0 2px 4px rgba(16,24,40,0.12), inset 0 2px 1px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.12)" }}>
@@ -387,34 +362,7 @@ function useNudgeOnce(ref) {
   }, [ref]);
   return go;
 }
-// How much of each window's width is inside the row, 0 to 1, kept up to date
-// as the row scrolls, once a frame at most.
-function useSeen(row, n) {
-  const [seen, setSeen] = useState(() => Array(n).fill(1));
-  useLayoutEffect(() => {
-    const el = row.current;
-    if (!el) return undefined;
-    let raf = 0;
-    const measure = () => {
-      raf = 0;
-      const box = el.getBoundingClientRect();
-      const next = [...el.children].map((c) => {
-        const r = (c.firstElementChild || c).getBoundingClientRect();
-        const inside = Math.max(0, Math.min(r.right, box.right) - Math.max(r.left, box.left));
-        return r.width ? Math.round((inside / r.width) * 1000) / 1000 : 1;
-      });
-      setSeen((prev) => (prev.length === next.length && prev.every((v, k) => v === next[k]) ? prev : next));
-    };
-    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
-    measure();
-    el.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => { el.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); cancelAnimationFrame(raf); };
-  }, [row, n]);
-  return seen;
-}
-// The row loops, as the rows of cards further down do. A window's view is
-// kept per vibe, not per copy, so going round the loop never changes it.
+// The row loops, as the rows of cards further down do.
 function Vibes({ dest, tiles, onGallery }) {
   const band = useRef(null);
   const row = useRef(null);
@@ -422,17 +370,20 @@ function Vibes({ dest, tiles, onGallery }) {
   const n = tiles.length;
   const loop = n > 3;
   const all = (loop ? [0, 1, 2] : [0]).flatMap((copy) => tiles.map((t, i) => ({ t, i, copy })));
-  const seen = useSeen(row, all.length);
   const [views, setViews] = useState({});
-  const [instant, setInstant] = useState(false);
-  // Counted from the start too, so the first settling of the blinds on load
-  // does not change any view.
-  const jumpedAt = useRef(performance.now());
-  useLoop(row, n, loop, {
-    center: false,
-    onJump: () => { jumpedAt.current = performance.now(); setInstant(true); setTimeout(() => setInstant(false), 260); },
-  });
-  const canSwap = () => performance.now() - jumpedAt.current > 300;
+  const [hands, setHands] = useState({});
+  const shut = useRef({});
+  useLoop(row, n, loop, { center: false });
+  // Where a vibe's blind is. Pulled all the way down after being open, the
+  // next view goes in behind it, so it is already there as the blind lifts.
+  const setHand = (i, at) => {
+    if (at != null && at >= BLIND_SHUT - 1 && !shut.current[i]) {
+      shut.current[i] = true;
+      if (tiles[i].imgs.length > 1) setViews((v) => ({ ...v, [i]: (v[i] || 0) + 1 }));
+    }
+    if (at == null || at < SHUT_AT) shut.current[i] = false;
+    setHands((h) => ({ ...h, [i]: at }));
+  };
   return (
     <div ref={band} style={{ margin: `6px -${PAD}px 0`, background: "linear-gradient(180deg, #FFFFFF 0%, #EAF4F8 16%, #F3F5EF 52%, #FFF6E6 84%, #FFFFFF 100%)", padding: "22px 0 18px", display: "flex", flexDirection: "column", gap: 10 }}>
       <style>{"@keyframes v7zzz { 0% { opacity: 0; transform: translate(0, 4px) scale(0.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(7px, -12px) scale(1.05); } }"}</style>
@@ -444,9 +395,8 @@ function Vibes({ dest, tiles, onGallery }) {
       <div ref={row} className="hide-scrollbar" style={{ position: "relative", display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
         {all.map(({ t, i, copy }, idx) => (
           <div key={`${copy}-${t.label}`} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <PlaneWindow imgs={t.imgs} seen={seen[idx] ?? 1} nudge={nudge && idx === (loop ? n : 0) + 1}
-              view={(views[i] || 0) % t.imgs.length} onNext={() => setViews((v) => ({ ...v, [i]: (v[i] || 0) + 1 }))}
-              instant={instant} canSwap={canSwap}
+            <PlaneWindow imgs={t.imgs} nudge={nudge && idx === (loop ? n : 0) + 1}
+              view={(views[i] || 0) % t.imgs.length} hand={hands[i] ?? null} setHand={(at) => setHand(i, at)}
               onOpen={(img) => onGallery(t.ats[Math.max(0, t.imgs.indexOf(img))])} />
             <button onClick={() => onGallery(t.at)} style={{ padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>{t.label}</button>
           </div>

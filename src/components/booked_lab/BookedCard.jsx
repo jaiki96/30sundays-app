@@ -50,8 +50,9 @@ export function Route({ legs, max = 2, size = 11.5 }) {
 
 // On a destination page the route leads: up to three stops with their nights,
 // then the rest counted, on two lines so every card in a rail is the same
-// height. The total nights sit under it.
-function DestRoute({ legs = [], nights }) {
+// height. Under it, one line: the price, and across from it the total nights.
+// No pace tag and no divider, so the card is shorter.
+function DestRoute({ legs = [] }) {
   const shown = legs.slice(0, 3);
   const rest = legs.length - shown.length;
   return (
@@ -65,7 +66,16 @@ function DestRoute({ legs = [], nights }) {
         ))}
         {rest > 0 && <span style={{ fontWeight: 500, color: C.sub }}> +{rest} {rest === 1 ? "city" : "cities"}</span>}
       </p>
-      <p style={{ margin: "4px 0 0", fontSize: 12, color: C.sub }}>{nights} nights</p>
+    </div>
+  );
+}
+function DestFoot({ price, nights }) {
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+      <p style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>
+        ₹{price} <span style={{ fontSize: 10, fontWeight: 600, color: C.inact, letterSpacing: 0 }}>per person</span>
+      </p>
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: C.sub, whiteSpace: "nowrap" }}>{nights} nights</span>
     </div>
   );
 }
@@ -88,7 +98,7 @@ export default function BookedCard({ t, wide = false, inDest = false }) {
       display: "flex", flexDirection: "column",
     }}>
       <div style={{ position: "relative" }}>
-        <img src={t.img} alt={t.dest} style={{ width: "100%", height: wide ? 150 : 138, objectFit: "cover", display: "block" }} />
+        <img src={t.img} alt={t.dest} style={{ width: "100%", height: inDest ? (wide ? 140 : 124) : wide ? 150 : 138, objectFit: "cover", display: "block" }} />
         <span style={{
           position: "absolute", left: 11, bottom: 10, maxWidth: "calc(100% - 22px)",
           display: "inline-flex", alignItems: "center", gap: 7,
@@ -107,8 +117,8 @@ export default function BookedCard({ t, wide = false, inDest = false }) {
         </span>
       </div>
 
-      <div style={{ padding: "11px 13px 13px" }}>
-        {inDest && <DestRoute legs={t.legs} nights={t.nights} />}
+      <div style={{ padding: inDest ? "10px 12px 12px" : "11px 13px 13px" }}>
+        {inDest && <><DestRoute legs={t.legs} /><DestFoot price={t.price} nights={t.nights} /></>}
         {!inDest && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <p style={{ margin: 0, minWidth: 0, fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {t.dest} ({t.nights}N)
@@ -131,7 +141,7 @@ export default function BookedCard({ t, wide = false, inDest = false }) {
 
         {!inDest && <div style={{ marginTop: 4 }}><Route legs={t.legs} /></div>}
 
-        <div style={{
+        {!inDest && <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
           marginTop: 11, paddingTop: 11, borderTop: `1px solid ${C.div}`,
         }}>
@@ -142,7 +152,7 @@ export default function BookedCard({ t, wide = false, inDest = false }) {
             flexShrink: 0, padding: "4px 10px", borderRadius: 999,
             background: tone.bg, color: tone.fg, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
           }}>{t.style}</span>
-        </div>
+        </div>}
       </div>
     </Link>
   );
