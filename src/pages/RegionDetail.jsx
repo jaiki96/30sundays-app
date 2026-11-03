@@ -733,6 +733,18 @@ function Sec({ title, action, children, flush }) {
 }
 
 
+// The kind's icon in a soft tile, where a place has no photograph (shops carry
+// none). Brought back after the region rewrite dropped it while the shop and
+// place rows still drew it, which crashed every region page.
+function Well({ Icon, tone = WELL.neutral, size = 34 }) {
+  return (
+    <span style={{
+      width: size, height: size, borderRadius: R.well, flexShrink: 0, background: tone.bg,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}><Icon size={Math.round(size * 0.47)} color={tone.fg} /></span>
+  );
+}
+
 function Card({ children, pad = 14 }) {
   return (
     <div style={{ background: C.white, borderRadius: R.card, boxShadow: SHADOW.card, padding: pad }}>
