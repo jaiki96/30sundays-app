@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -15,7 +15,7 @@ import { weatherData, monthSky } from "../data/weatherData";
 import { activitiesFor } from "../data/discoverData";
 import { buildActivityDetail } from "../data/activityData";
 import {
-  V7, V7_DESTS, AS_OF, seasonsFor, areasFor, galleryFor, tilesFor, faqFor, priceShort, isBanned, itineraryRows,
+  V7, V7_DESTS, AS_OF, seasonsFor, areasFor, galleryFor, tilesFor, faqFor, priceShort, isBanned, itineraryRows, tripsByArea, tripsForActs,
 } from "../data/destV7Data";
 import SectionNav from "../components/SectionNav";
 import { DestWishlistBand } from "../components/wishlist/WishlistEntry";
@@ -252,65 +252,74 @@ function TitleBlock({ dest, v, tiles, onGallery }) {
 }
 
 // ─── The vibes, from the window seat ───
-// Each vibe is a view out of a plane window, the blind pulled down a different
-// way on each, on a band that goes from sky to the brand's cream. A tap opens
-// the gallery at that photo.
+// Each vibe is a view out of a plane window, on a band that goes from sky to
+// the brand's cream.
 // A cabin window: a moulded frame lit from above, an inner ring, the view
-// behind glass with a highlight, and a ridged blind with a pull handle. Every
-// blind starts at the same height. Drag it and it follows the finger, all the
-// way up to just its lip or all the way down, and it stays where it is left,
-// like a real one. A tap anywhere on the window, blind or view, opens the
-// gallery.
+// behind glass with a highlight, and a ridged blind with a pull handle.
 //
-// Shut, the window naps: a handwritten "z z z" drifts off the blind. Open it
-// again and there is a new view of the same vibe, when we have one; the label
-// under it never changes, so it never says something the photo does not.
-const BLIND_REST = 16;
-const BLIND_TOP = 6;   // only the lip and handle left showing
+// The blinds follow the row. A window fully in view has its blind right at
+// the top; one cut off at the edge is covered by as much as is hidden, so the
+// share of the blind that is open is the share of the window's width in view.
+// Swipe and the window leaving pulls its blind down while the one arriving
+// lifts it, in step with the finger. A window that has shut all the way comes
+// back with a new view of the same vibe, when we have one; the label under it
+// never changes, so it never says something the photo does not.
+//
+// A blind can still be dragged by hand, and it stays where it is left until
+// the row moves again. Shut by hand, the window naps: a handwritten "z z z"
+// drifts off the blind. A tap anywhere on the window, blind or view, opens
+// the gallery.
+const BLIND_TOP = 6;   // open: only the lip and handle left showing
 const BLIND_SHUT = 100; // the whole view covered, the lip resting on the sill
 const SHUT_AT = 88;
 const GLASS_H = 114; // 140 window, less the 9px frame and 4px ring top and bottom
-function PlaneWindow({ imgs, onOpen, nudge }) {
+function PlaneWindow({ imgs, onOpen, nudge, seen }) {
   const w = 100, h = 140;
-  const [pos, setPos] = useState(BLIND_REST);
+  const auto = BLIND_SHUT - (BLIND_SHUT - BLIND_TOP) * seen;
+  const [hand, setHand] = useState(null); // where a finger left it; null follows the row
   const [dragging, setDragging] = useState(false);
   const [view, setView] = useState(0);
   const [spring, setSpring] = useState(false);
   const drag = useRef(null);
-  const wasShut = useRef(false);
-  // The new view goes in behind the blind once it has finished closing, so
-  // it is already there as the blind starts to lift.
-  // Dragged by hand, the blind is wherever the finger is, so the swap happens
-  // the moment it touches the sill. Tapped shut, it is still sliding, so the
-  // swap waits for it to land.
+  const handAt = useRef(seen);
+  const opened = useRef(false);
+  const pos = hand ?? auto;
+  // Once the row moves on, a blind set by hand goes back to following it.
   useEffect(() => {
-    if (pos < SHUT_AT) { wasShut.current = false; return undefined; }
-    if (wasShut.current || imgs.length < 2) return undefined;
-    const swap = () => { wasShut.current = true; setView((v) => (v + 1) % imgs.length); };
-    if (dragging) { if (pos >= BLIND_SHUT - 2) swap(); return undefined; }
-    const t = setTimeout(swap, 480);
-    return () => clearTimeout(t);
-  }, [pos, dragging, imgs.length]);
+    if (hand != null && !dragging && Math.abs(seen - handAt.current) > 0.02) setHand(null);
+  }, [seen, hand, dragging]);
+  // Shut all the way after being open: the next view goes in behind the
+  // blind, so it is already there as the blind starts to lift.
+  useEffect(() => {
+    if (pos < SHUT_AT) { opened.current = true; return; }
+    if (opened.current && pos >= BLIND_SHUT - 1 && imgs.length > 1) {
+      opened.current = false;
+      setView((v) => (v + 1) % imgs.length);
+    }
+  }, [pos, imgs.length]);
   // The one-time hint: dip and spring back.
   useEffect(() => {
     if (!nudge) return;
-    const t1 = setTimeout(() => setPos(48), 50);
-    const t2 = setTimeout(() => { setSpring(true); setPos(BLIND_REST); }, 650);
+    const t1 = setTimeout(() => { handAt.current = seen; setHand(48); }, 50);
+    const t2 = setTimeout(() => { setSpring(true); setHand(null); }, 650);
     const t3 = setTimeout(() => setSpring(false), 1400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [nudge]);
+  }, [nudge]); // eslint-disable-line react-hooks/exhaustive-deps
   const down = (e) => {
     e.stopPropagation();
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    drag.current = { y: e.clientY, from: pos, moved: false };
+    drag.current = { x: e.clientX, y: e.clientY, from: pos, moved: false, swiped: false };
     setDragging(true);
   };
   const move = (e) => {
     const d = drag.current;
     if (!d) return;
     const dy = e.clientY - d.y;
-    if (Math.abs(dy) > 3) d.moved = true;
-    setPos(Math.max(BLIND_TOP, Math.min(BLIND_SHUT, d.from + (dy / GLASS_H) * 100)));
+    if (!d.moved && Math.abs(e.clientX - d.x) > 6) d.swiped = true; // sideways: the row scrolls, not the blind
+    if (!d.swiped && Math.abs(dy) > 3) d.moved = true;
+    if (!d.moved) return;
+    handAt.current = seen;
+    setHand(Math.max(BLIND_TOP, Math.min(BLIND_SHUT, d.from + (dy / GLASS_H) * 100)));
   };
   const up = (e) => {
     const d = drag.current;
@@ -319,10 +328,13 @@ function PlaneWindow({ imgs, onOpen, nudge }) {
     if (!d) return;
     e.stopPropagation();
     // A tap, not a drag, opens the gallery at this view, as a tap on the view does.
-    if (!d.moved) onOpen(img);
+    if (!d.moved && !d.swiped) onOpen(img);
   };
-  const ease = dragging ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)";
-  const asleep = pos >= SHUT_AT && !dragging;
+  // The browser took the gesture over to scroll the row: not a tap.
+  const cancel = () => { drag.current = null; setDragging(false); };
+  // Following the row, the blind trails the finger by a breath so it glides.
+  const ease = dragging ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : hand != null ? "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)" : "height 0.2s ease-out";
+  const asleep = hand != null && pos >= SHUT_AT && !dragging;
   const img = imgs[view] || imgs[0];
   return (
     <span style={{ display: "block", width: w, height: h, flexShrink: 0, boxSizing: "border-box", padding: 9, borderRadius: `${w * 0.42}px / ${h * 0.31}px`, background: "linear-gradient(180deg, #FFFDF9 0%, #DCD4C8 100%)", boxShadow: "0 12px 22px rgba(16,24,40,0.20), 0 2px 4px rgba(16,24,40,0.12), inset 0 2px 1px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.12)" }}>
@@ -346,8 +358,8 @@ function PlaneWindow({ imgs, onOpen, nudge }) {
           </span>
           {/* Where the blind can be grabbed: the blind itself and a finger's width under its handle. */}
           <span role="slider" aria-label="Window blind" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pos)}
-            onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={(e) => e.stopPropagation()}
-            style={{ position: "absolute", left: 0, right: 0, top: 0, height: `calc(${pos}% + 20px)`, transition: ease, touchAction: "none", cursor: dragging ? "grabbing" : "grab" }} />
+            onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onClick={(e) => e.stopPropagation()}
+            style={{ position: "absolute", left: 0, right: 0, top: 0, height: `calc(${pos}% + 20px)`, transition: ease, touchAction: "pan-x", cursor: dragging ? "grabbing" : "grab" }} />
         </span>
       </span>
     </span>
@@ -374,9 +386,37 @@ function useNudgeOnce(ref) {
   }, [ref]);
   return go;
 }
+// How much of each window's width is inside the row, 0 to 1, kept up to date
+// as the row scrolls, once a frame at most.
+function useSeen(row, n) {
+  const [seen, setSeen] = useState(() => Array(n).fill(1));
+  useLayoutEffect(() => {
+    const el = row.current;
+    if (!el) return undefined;
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const box = el.getBoundingClientRect();
+      const next = [...el.children].map((c) => {
+        const r = (c.firstElementChild || c).getBoundingClientRect();
+        const inside = Math.max(0, Math.min(r.right, box.right) - Math.max(r.left, box.left));
+        return r.width ? Math.round((inside / r.width) * 1000) / 1000 : 1;
+      });
+      setSeen((prev) => (prev.length === next.length && prev.every((v, k) => v === next[k]) ? prev : next));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    measure();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => { el.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); cancelAnimationFrame(raf); };
+  }, [row, n]);
+  return seen;
+}
 function Vibes({ dest, tiles, onGallery }) {
   const band = useRef(null);
+  const row = useRef(null);
   const nudge = useNudgeOnce(band);
+  const seen = useSeen(row, tiles.length);
   return (
     <div ref={band} style={{ margin: `6px -${PAD}px 0`, background: "linear-gradient(180deg, #FFFFFF 0%, #EAF4F8 16%, #F3F5EF 52%, #FFF6E6 84%, #FFFFFF 100%)", padding: "22px 0 18px", display: "flex", flexDirection: "column", gap: 10 }}>
       <style>{"@keyframes v7zzz { 0% { opacity: 0; transform: translate(0, 4px) scale(0.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(7px, -12px) scale(1.05); } }"}</style>
@@ -385,10 +425,10 @@ function Vibes({ dest, tiles, onGallery }) {
         <PlaneIcon size={16} />
         <span style={{ flex: 1, borderTop: "1.5px dashed #9FB7BD" }} />
       </div>
-      <div className="hide-scrollbar" style={{ display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
+      <div ref={row} className="hide-scrollbar" style={{ display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
         {tiles.map((t, n) => (
           <div key={t.label} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <PlaneWindow imgs={t.imgs} nudge={nudge && n === 1} onOpen={(img) => onGallery(t.ats[Math.max(0, t.imgs.indexOf(img))])} />
+            <PlaneWindow imgs={t.imgs} seen={seen[n] ?? 1} nudge={nudge && n === 1} onOpen={(img) => onGallery(t.ats[Math.max(0, t.imgs.indexOf(img))])} />
             <button onClick={() => onGallery(t.at)} style={{ padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>{t.label}</button>
           </div>
         ))}
@@ -438,6 +478,93 @@ function BestTime({ dest }) {
 }
 
 // ─── 5. Things to do ───
+// ─── The card in view leads ───
+// Under Things to do and Places to visit, the trips below a row are the
+// trips of the card at the start of that row. A spotlight, two hairlines from
+// the card's corners out to the edges of the screen with a breath of lagoon
+// between them, joins the card to its trips and follows it as the row is
+// swiped; between two cards the light dims. Swipe on and the next card's
+// trips fade in. When a card has no trips, the section is not shown.
+const SPOT_H = 36;
+function useLead(rail, count, center = false) {
+  const [lead, setLead] = useState({ k: 0, spot: null });
+  useLayoutEffect(() => {
+    const el = rail.current;
+    if (!el) return undefined;
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const box = el.getBoundingClientRect();
+      let best = null;
+      [...el.children].forEach((c, k) => {
+        const r = c.getBoundingClientRect();
+        const d = center ? Math.abs((r.left + r.right) / 2 - (box.left + box.right) / 2) : Math.abs(r.left - box.left - PAD);
+        if (!best || d < best.d) best = { d, k, l: r.left - box.left, r: r.right - box.left, w: r.width };
+      });
+      if (!best) return;
+      setLead({ k: best.k, spot: { l: best.l + 12, r: best.r - 12, w: box.width, o: 1 - Math.min(1, best.d / (best.w / 2)) * 0.7 } });
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    measure();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => { el.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); cancelAnimationFrame(raf); };
+  }, [rail, count, center]);
+  return lead;
+}
+// Bring a card to the start, or the middle, of its row.
+const bringCard = (rail, k, center = false) => {
+  const el = rail.current;
+  const card = el?.children[k];
+  if (card) el.scrollTo({ left: card.offsetLeft - (center ? (el.clientWidth - card.offsetWidth) / 2 : PAD), behavior: "smooth" });
+};
+// A row that goes round and round: three copies of the cards, starting on
+// the middle one, and whenever a swipe comes to rest in the first or the last
+// copy it is moved, unseen, to the same card in the middle one.
+function useLoop(rail, n, on) {
+  useLayoutEffect(() => {
+    const el = rail.current;
+    if (!on || !el?.children[n]) return;
+    const card = el.children[n];
+    el.scrollLeft = card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2;
+  }, [rail, n, on]);
+  useEffect(() => {
+    const el = rail.current;
+    if (!on || !el) return undefined;
+    let t = 0;
+    const settle = () => {
+      const kids = el.children;
+      const span = kids[n].offsetLeft - kids[0].offsetLeft;
+      const mid = el.scrollLeft + el.clientWidth / 2;
+      if (mid < kids[n].offsetLeft) el.scrollLeft += span;
+      else if (mid > kids[2 * n].offsetLeft) el.scrollLeft -= span;
+    };
+    const onScroll = () => { clearTimeout(t); t = setTimeout(settle, 140); };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => { el.removeEventListener("scroll", onScroll); clearTimeout(t); };
+  }, [rail, n, on]);
+}
+function LedTrips({ spot, word, cards, lift = 14 }) {
+  if (!spot || !cards.length) return null;
+  return (
+    <>
+      <svg width="100%" height={SPOT_H} viewBox={`0 0 ${spot.w} ${SPOT_H}`} preserveAspectRatio="none" aria-hidden="true" style={{ display: "block", marginTop: -lift, opacity: spot.o, transition: "opacity 0.2s ease-out" }}>
+        <defs>
+          <linearGradient id="v7spot" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={LAGOON} stopOpacity="0.13" />
+            <stop offset="1" stopColor={LAGOON} stopOpacity="0.05" />
+          </linearGradient>
+        </defs>
+        <path d={`M${spot.l} 0 L${spot.r} 0 L${spot.w} ${SPOT_H} L0 ${SPOT_H} Z`} fill="url(#v7spot)" />
+        <path d={`M${spot.l} 0 L0 ${SPOT_H} M${spot.r} 0 L${spot.w} ${SPOT_H}`} stroke={LAGOON} strokeOpacity="0.45" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div style={{ background: "linear-gradient(180deg, rgba(0,126,114,0.05) 0%, rgba(0,126,114,0) 100%)", padding: "12px 0 4px" }}>
+        <TripRail title="Trips with" word={word} cards={cards} />
+      </div>
+    </>
+  );
+}
+
 function ThingsToDo({ dest, gallery, onOpen }) {
   const [all, setAll] = useState(false);
   const { forDest, toggleActivity } = useSaves();
@@ -459,32 +586,48 @@ function ThingsToDo({ dest, gallery, onOpen }) {
     const hours = buildActivityDetail({ name: a.name }, { city: a.city, country: dest }).typicalDuration;
     return { ...a, img, hours };
   });
-  const shown = acts.slice(0, 5);
+  // The ones that have trips come first, so the trips under the row are
+  // there for as many cards as we can.
+  const tripsOf = tripsForActs(dest, gallery, acts);
+  const order = acts.map((a, i) => i).sort((x, y) => (tripsOf[y].length > 0) - (tripsOf[x].length > 0));
+  const shown = order.slice(0, 5).map((i) => acts[i]);
+  const shownTrips = order.slice(0, 5).map((i) => tripsOf[i]);
+  // The card in the middle leads, and the row loops.
+  const n = shown.length;
+  const loop = n > 2;
+  const cards = (loop ? [0, 1, 2] : [0]).flatMap((copy) => shown.map((a, i) => ({ a, i, copy })));
+  const rail = useRef(null);
+  useLoop(rail, n, loop);
+  const { k: at, spot } = useLead(rail, cards.length, true);
+  const k = at % n;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Title>Things to do</Title>
-      <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD, scrollSnapType: "x mandatory", scrollPaddingLeft: PAD, scrollPaddingRight: PAD }}>
-        {shown.map((a, i) => {
+      <div style={{ padding: `0 ${PAD}px`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <h2 style={H2}>Things to do</h2>
+        {acts.length > shown.length && (
+          <button onClick={() => setAll(true)} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: INK }}>
+            See all {acts.length} <ArrowRight size={14} />
+          </button>
+        )}
+      </div>
+      <div ref={rail} className="hs" style={{ position: "relative", gap: 12, paddingLeft: PAD, paddingRight: PAD, paddingBottom: 14, scrollSnapType: "x mandatory" }}>
+        {cards.map(({ a, i, copy }, idx) => {
           const on = a.id ? saved.includes(a.id) : !!local[a.name];
           return (
-            <div key={a.name + i} onClick={() => onOpen(a)} role="button" tabIndex={0} style={{ flex: "0 0 262px", height: 340, borderRadius: 18, overflow: "hidden", position: "relative", background: "#2a2224", scrollSnapAlign: "start", cursor: "pointer" }}>
+            <div key={`${copy}-${a.name}-${i}`} onClick={() => (idx === at ? onOpen(a) : bringCard(rail, idx, true))} role="button" tabIndex={0} style={{ flex: "0 0 160px", height: 284, borderRadius: 16, overflow: "hidden", position: "relative", background: "#2a2224", scrollSnapAlign: "center", cursor: "pointer" }}>
               <img src={a.img} alt="" loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)" }} />
-              <SaveHeart saved={on} onToggle={() => (a.id ? toggleActivity(dest, a.id) : setLocal((s) => ({ ...s, [a.name]: !s[a.name] })))} size={34}
-                style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.96)", borderRadius: "50%", boxShadow: "0 2px 8px rgba(16,24,40,0.22)" }} />
-              <div style={{ position: "absolute", left: 16, right: 16, bottom: 16 }}>
-                <p style={{ margin: 0, fontFamily: "'DM Serif Display', Georgia, serif", fontStyle: "italic", fontSize: 24, lineHeight: "28px", color: "#fff" }}>{a.name}</p>
-                <p style={{ margin: "6px 0 0", fontSize: 12.5, fontWeight: 500, color: "rgba(255,255,255,0.85)" }}>{a.city}</p>
+              <SaveHeart saved={on} onToggle={() => (a.id ? toggleActivity(dest, a.id) : setLocal((s) => ({ ...s, [a.name]: !s[a.name] })))} size={30}
+                style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.96)", borderRadius: "50%", boxShadow: "0 2px 8px rgba(16,24,40,0.22)" }} />
+              <div style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
+                <p style={{ margin: 0, fontFamily: "'DM Serif Display', Georgia, serif", fontStyle: "italic", fontSize: 19, lineHeight: "22px", color: "#fff" }}>{a.name}</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.85)" }}>{a.city}</p>
               </div>
             </div>
           );
         })}
       </div>
-      {acts.length > shown.length && (
-        <button onClick={() => setAll(true)} style={{ margin: `0 ${PAD}px`, alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: INK }}>
-          View all {acts.length} <ArrowRight size={14} />
-        </button>
-      )}
+      <div style={{ marginTop: -12 }}><LedTrips spot={spot} word={shown[k]?.name} cards={shownTrips[k] || []} /></div>
       {/* The same list the city page opens: every activity, one under the
           other, each one opening its own screen. */}
       <ListSheet open={all} title={`Things to do in ${dest}`} count={acts.length} onClose={() => setAll(false)}>
@@ -520,12 +663,24 @@ const dotIcon = (on, label) => L.divIcon({
   iconSize: [12, 12], iconAnchor: [6, 6],
 });
 
+// The place in view leads (see useLead): its pin is lit on the map and the
+// trips under the row are the trips that stay there.
 function Places({ dest, gallery }) {
   const navigate = useNavigate();
   const { forDest, toggleRegion } = useSaves();
   const saved = forDest(dest).regions;
   const areas = useMemo(() => areasFor(dest).filter((a) => a.lat != null), [dest]);
-  const [sel, setSel] = useState(areas[0]?.city);
+  const trips = useMemo(() => tripsByArea(dest, gallery), [dest, gallery]);
+  const rail = useRef(null);
+  // The card in the middle leads, and the row loops.
+  const n = areas.length;
+  const loop = n > 2;
+  const cards = (loop ? [0, 1, 2] : [0]).flatMap((copy) => areas.map((a, i) => ({ a, i, copy })));
+  useLoop(rail, n, loop);
+  const { k: at, spot } = useLead(rail, cards.length, true);
+  const sel = areas[at % Math.max(1, n)]?.city;
+  const bring = (city) => bringCard(rail, (loop ? n : 0) + areas.findIndex((a) => a.city === city), true);
+  const list = trips[sel] || [];
   const points = useMemo(() => {
     const all = areas.map((a) => [a.lat, a.lng]);
     const mid = (k) => [...all].map((p) => p[k]).sort((x, y) => x - y)[Math.floor(all.length / 2)];
@@ -546,18 +701,19 @@ function Places({ dest, gallery }) {
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <FitAll points={points} />
           {areas.map((a) => (
-            <Marker key={a.city} position={[a.lat, a.lng]} icon={dotIcon(a.city === sel, a.city)} eventHandlers={{ click: () => setSel(a.city) }} />
+            <Marker key={a.city} position={[a.lat, a.lng]} icon={dotIcon(a.city === sel, a.city)} eventHandlers={{ click: () => bring(a.city) }} />
           ))}
         </MapContainer>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 64, background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 100%)", zIndex: 400, pointerEvents: "none" }} />
       </div>
-      <div className="hs" style={{ gap: 12, paddingLeft: PAD, paddingRight: PAD, marginTop: -40, position: "relative", zIndex: 500, paddingTop: 4, paddingBottom: 14 }}>
-        {areas.map((a, i) => {
-          const on = a.city === sel;
+      {/* Side room enough that the first and last cards can sit in the middle too. */}
+      <div ref={rail} className="hs" style={{ gap: 12, paddingLeft: "calc((100% - 246px) / 2)", paddingRight: "calc((100% - 246px) / 2)", marginTop: -40, position: "relative", zIndex: 500, paddingTop: 4, paddingBottom: 14 }}>
+        {cards.map(({ a, i, copy }, idx) => {
+          const on = idx === at;
           const chips = (a.tag || "").split(/,\s*|\s+and\s+/).filter(Boolean).slice(0, 3);
           const img = gallery[(i + 2) % gallery.length];
           return (
-            <div key={a.city} onClick={() => setSel(a.city)} style={{ flex: "0 0 246px", height: 162, boxSizing: "border-box", background: "#fff", borderRadius: 18, padding: 14, border: on ? `2px solid ${C.p600}` : `1px solid ${LINE}`, boxShadow: "0 4px 14px rgba(16,24,40,0.08)", display: "flex", flexDirection: "column", cursor: "pointer" }}>
+            <div key={`${copy}-${a.city}`} onClick={() => bringCard(rail, idx, true)} style={{ scrollSnapAlign: "center", flex: "0 0 246px", height: 162, boxSizing: "border-box", background: "#fff", borderRadius: 18, padding: 14, border: on ? `2px solid ${C.p600}` : `1px solid ${LINE}`, boxShadow: "0 4px 14px rgba(16,24,40,0.08)", display: "flex", flexDirection: "column", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <img src={img} alt="" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", boxSizing: "border-box", border: `2px solid ${C.p600}`, padding: 2, background: "#fff", flexShrink: 0 }} />
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -581,6 +737,7 @@ function Places({ dest, gallery }) {
           );
         })}
       </div>
+      <LedTrips spot={spot} word={sel} cards={list} />
     </div>
   );
 }
@@ -644,19 +801,20 @@ function GettingThere({ dest, v }) {
 // row has choices, the activity or place sits at the end of the title with an
 // arrow; tapping it lists what this country's trips include, and picking one
 // loads those trips in place.
-function TripRail({ title, cards, choices }) {
+function TripRail({ title, cards, choices, word }) {
   const [pick, setPick] = useState(0);
   const [picking, setPicking] = useState(false);
   const [all, setAll] = useState(false);
   const current = choices ? choices[Math.min(pick, choices.length - 1)] : null;
   const trips = current ? current.cards : cards;
   if (!trips || !trips.length) return null;
-  const full = current ? `${title} ${current.label}` : title;
+  const full = current ? `${title} ${current.label}` : word ? `${title} ${word}` : title;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
       <div style={{ padding: `0 ${PAD}px`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h2 style={{ ...H2, minWidth: 0, position: "relative" }}>
           {title}
+          {word && <span key={word} style={{ marginLeft: 6, fontWeight: 600, color: LAGOON, display: "inline-block", animation: "v7in 0.35s ease-out" }}>{word}</span>}
           {current && (
             <button onClick={() => setPicking((v) => !v)} aria-haspopup="listbox" aria-expanded={picking} style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 2, padding: 0, border: "none", background: "none", font: "inherit", fontWeight: 600, color: LAGOON, cursor: "pointer", whiteSpace: "nowrap" }}>
               {current.label}{picking ? <ChevronUp size={17} strokeWidth={2.4} /> : <ChevronDown size={17} strokeWidth={2.4} />}
@@ -685,7 +843,8 @@ function TripRail({ title, cards, choices }) {
           </div>
         </>
       )}
-      <div className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch" }}>
+      <style>{"@keyframes v7in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }"}</style>
+      <div key={word} className="hs" style={{ gap: 13, paddingLeft: PAD, paddingRight: PAD, alignItems: "stretch", animation: word ? "v7in 0.35s ease-out" : undefined }}>
         {trips.slice(0, 6).map((t) => <BookedCard key={t.key} t={t} inDest />)}
       </div>
       <ListSheet open={all} title={full} count={trips.length} onClose={() => setAll(false)}>
@@ -929,12 +1088,10 @@ export default function DestinationV7() {
         <div style={{ display: "flex", flexDirection: "column", gap: 22, padding: "8px 0 24px" }}>
           <div ref={mark("trips")}><Itineraries dest={dest} /></div>
           <div ref={mark("places")}><Places dest={dest} gallery={gallery} /></div>
-          {row("places")}
           <div ref={mark("best")}><BestTime dest={dest} /></div>
           <DestWishlistBand dest={dest} forceEmpty={wishEmpty} headStyle={H2} style={{ margin: `0 ${PAD}px` }} />
           {row("facts")}
           <div ref={mark("todo")}><ThingsToDo dest={dest} gallery={gallery} onOpen={setActivity} /></div>
-          {row("todo")}
           <div ref={mark("getting")}><GettingThere dest={dest} v={v} /></div>
           <SundaySchool dest={dest} gallery={gallery} />
           {row("school")}

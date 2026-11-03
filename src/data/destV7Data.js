@@ -308,6 +308,38 @@ function toCard(it, i, gallery) {
   };
 }
 
+// The trips that stay in each place, for the row under Places to visit: it
+// shows the trips of whichever place is in view. A route stop counts when it
+// is the place or a part of it (Gili covers Gili Trawangan and Gili Air).
+export function tripsByArea(dest, gallery) {
+  const all = allItineraries.filter((it) => it.dest === dest && okTrip(it));
+  let n = 0;
+  return Object.fromEntries(areasFor(dest).map((a) => {
+    const hit = (c = "") => c === a.city || c.startsWith(`${a.city} `) || a.city.startsWith(`${c} `);
+    return [a.city, all.filter((it) => (it.route || []).some((r) => hit(r.city))).map((it) => toCard(it, n++, gallery))];
+  }));
+}
+
+// The trips with each thing to do, for the row under Things to do. A trip has
+// it when one of its days names it by a word that means something (Surf,
+// Monkey Forest, Bay cruise; not "tour" or "beach"), and, when the activity
+// is in a town the trips go to, the trip goes there.
+const ACT_STOP = new Set(["tour", "trip", "visit", "with", "walk", "walking", "day", "class", "lesson", "ride", "party", "hike", "climb", "morning", "the", "and", "beach", "temple", "island", "town", "old"]);
+const actWords = (t) => String(t).toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/)
+  .filter((w) => w && !ACT_STOP.has(w)).map((w) => w.replace(/s$/, "")).filter((w) => w.length > 2 && !ACT_STOP.has(w));
+export function tripsForActs(dest, gallery, acts) {
+  const all = allItineraries.filter((it) => it.dest === dest && okTrip(it));
+  const towns = new Set(all.flatMap((it) => (it.route || []).map((r) => r.city)));
+  let n = 0;
+  return acts.map((a) => {
+    const want = new Set(actWords(a.name));
+    if (!want.size) return [];
+    const inTown = towns.has(a.city) ? (it) => (it.route || []).some((r) => r.city === a.city) : () => true;
+    return all.filter((it) => inTown(it) && tokensOf(it).some((t) => actWords(t).some((w) => want.has(w))))
+      .map((it) => toCard(it, n++, gallery));
+  });
+}
+
 // Trip rows. A row with a choice keeps every option, each with its own trips,
 // so the activity or place at the end of its title can be changed in place.
 // Options are only things at least two of this country's trips include.
