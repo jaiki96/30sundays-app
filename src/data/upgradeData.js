@@ -87,6 +87,58 @@ const upgradeData = {
     },
   ],
 
+  // Bali 7N Relaxed (id: 3), Ubud, Kintamani, Sanur
+  3: [
+    {
+      cityIndex: 0, // Ubud, 4★ → 5★
+      current: {
+        name: "Ubud Grand Resort",
+        stars: 4,
+        type: "Deluxe Room · Breakfast included",
+        rating: 8.4,
+        img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
+      },
+      upgrade: {
+        name: "Viceroy Bali",
+        stars: 5,
+        type: "Pool Villa · All meals included",
+        rating: 9.2,
+        img: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80&auto=format&fit=crop",
+        delta: 2100,
+        perks: [
+          "Private infinity pool",
+          "Valley view terrace",
+          "Daily breakfast and dinner",
+          "Spa session for two",
+        ],
+      },
+    },
+    {
+      cityIndex: 2, // Sanur, 4★ → 5★
+      current: {
+        name: "Sanur Grand Resort",
+        stars: 4,
+        type: "Deluxe Room · Breakfast included",
+        rating: 8.1,
+        img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
+      },
+      upgrade: {
+        name: "Fairmont Sanur Beach Bali",
+        stars: 5,
+        type: "Ocean Suite · Breakfast included",
+        rating: 9.0,
+        img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=80&auto=format&fit=crop",
+        delta: 1900,
+        perks: [
+          "Beachfront suite",
+          "Two pools and a kids club",
+          "Club lounge access",
+          "Sunrise yoga on the sand",
+        ],
+      },
+    },
+  ],
+
   // Bali 7N Explorer (id: 4), Ubud, Kintamani, Canggu
   4: [
     {

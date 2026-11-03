@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { Fragment, useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Play, MapPin, Star, Plane, ChevronDown, ChevronUp, X as XIcon, ArrowLeftRight, RefreshCw, Calendar, Users, Zap, Sparkles, ChevronRight, SlidersHorizontal, Search, Download, Check, Plus, Minus, Pencil, MoreHorizontal, AlertTriangle, Phone, Info, HelpCircle, ArrowDownUp, ThumbsUp } from "lucide-react";
 import { C, allItineraries, destData, reviews, getCustomerPhotos, customerPhotos, couplesCount, couplePhotoNames, photoTags } from "../data";
@@ -27,6 +27,8 @@ import { getTourRating, RATING_META } from "../data/tourRatings";
 import { getDayRating, tourKeysForDay } from "../data/dayRatings";
 import { DayRatingPill, DayRatingRow } from "../components/DayRating";
 import GlanceDayCard from "../components/GlanceDayCard";
+import PopularActivities from "../components/PopularActivities";
+import SimilarTrips from "../components/SimilarTrips";
 import { getDayNote } from "../data/dayNotes";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
@@ -581,6 +583,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const elForSection = useCallback((key) => sectionEls.current[key] || null, []);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
+  const [popularAct, setPopularAct] = useState(null);           // { act, city } opened from a Popular among travellers card
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
@@ -1934,6 +1937,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       <CoverageLine dest={it.dest} cov={coverage} onView={() => setCoverageOpen(true)} />
+      {/* Other trips to the same country, led by their route. Only on a trip that can still change. */}
+      {editable && <SimilarTrips it={it} />}
       <Divider />
 
       {/* ═══ 3. Itinerary at a Glance ═══ */}
@@ -1994,9 +1999,17 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             const note = candidate && notesShown.size === 0 ? candidate : null;
             if (note) notesShown.add(note);
 
+            // After the last day in a city: what other travellers add there.
+            // Only on a trip that can still change.
+            const lastInCity = isLast || daysWithActivities[i + 1]?.city !== day.city;
+            const cityNames = lastInCity
+              ? daysWithActivities.filter((d) => d.city === day.city)
+                  .flatMap((d) => (d.activities || []).map((a) => a?.name || a?.title || a))
+              : null;
+
             return (
+              <Fragment key={i}>
               <GlanceDayCard
-                key={i}
                 testId={`day-details-${i}`}
                 changeTestId={`change-day-${i}`}
                 dayNum={day.dayNum}
@@ -2018,6 +2031,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
               />
+              {lastInCity && editable && (
+                <PopularActivities
+                  dest={it.dest}
+                  city={day.city}
+                  exclude={cityNames}
+                  onOpen={(act) => setPopularAct({ act, city: day.city })}
+                />
+              )}
+              </Fragment>
             );
           }); })()}
         </div>
@@ -2860,6 +2882,14 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
             )}
           </div>
         </div>
+      )}
+
+      {/* ═══ An activity opened from Popular among travellers ═══ */}
+      {popularAct && (
+        <ActivityDetailSheet
+          detail={buildActivityDetail(popularAct.act, { city: popularAct.city, country: it.dest })}
+          onClose={() => setPopularAct(null)}
+        />
       )}
 
       {/* ═══ Change day plan, full screen ═══ */}
