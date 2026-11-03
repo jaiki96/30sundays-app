@@ -273,12 +273,11 @@ const BLIND_TOP = 6;   // open: only the lip and handle left showing
 const BLIND_SHUT = 100; // the whole view covered, the lip resting on the sill
 const SHUT_AT = 88;
 const GLASS_H = 114; // 140 window, less the 9px frame and 4px ring top and bottom
-function PlaneWindow({ imgs, onOpen, nudge, seen }) {
+function PlaneWindow({ imgs, onOpen, nudge, seen, view, onNext, instant, canSwap }) {
   const w = 100, h = 140;
   const auto = BLIND_SHUT - (BLIND_SHUT - BLIND_TOP) * seen;
   const [hand, setHand] = useState(null); // where a finger left it; null follows the row
   const [dragging, setDragging] = useState(false);
-  const [view, setView] = useState(0);
   const [spring, setSpring] = useState(false);
   const drag = useRef(null);
   const handAt = useRef(seen);
@@ -292,11 +291,13 @@ function PlaneWindow({ imgs, onOpen, nudge, seen }) {
   // blind, so it is already there as the blind starts to lift.
   useEffect(() => {
     if (pos < SHUT_AT) { opened.current = true; return; }
-    if (opened.current && pos >= BLIND_SHUT - 1 && imgs.length > 1) {
+    if (opened.current && pos >= BLIND_SHUT - 1) {
       opened.current = false;
-      setView((v) => (v + 1) % imgs.length);
+      // Not when the row has just been moved round its loop: that is the
+      // same view, only further along.
+      if (imgs.length > 1 && canSwap()) onNext();
     }
-  }, [pos, imgs.length]);
+  }, [pos, imgs.length]); // eslint-disable-line react-hooks/exhaustive-deps
   // The one-time hint: dip and spring back.
   useEffect(() => {
     if (!nudge) return;
@@ -333,7 +334,7 @@ function PlaneWindow({ imgs, onOpen, nudge, seen }) {
   // The browser took the gesture over to scroll the row: not a tap.
   const cancel = () => { drag.current = null; setDragging(false); };
   // Following the row, the blind trails the finger by a breath so it glides.
-  const ease = dragging ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : hand != null ? "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)" : "height 0.2s ease-out";
+  const ease = dragging || instant ? "none" : spring ? "height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)" : hand != null ? "height 0.42s cubic-bezier(0.22, 1, 0.36, 1)" : "height 0.2s ease-out";
   const asleep = hand != null && pos >= SHUT_AT && !dragging;
   const img = imgs[view] || imgs[0];
   return (
@@ -412,11 +413,26 @@ function useSeen(row, n) {
   }, [row, n]);
   return seen;
 }
+// The row loops, as the rows of cards further down do. A window's view is
+// kept per vibe, not per copy, so going round the loop never changes it.
 function Vibes({ dest, tiles, onGallery }) {
   const band = useRef(null);
   const row = useRef(null);
   const nudge = useNudgeOnce(band);
-  const seen = useSeen(row, tiles.length);
+  const n = tiles.length;
+  const loop = n > 3;
+  const all = (loop ? [0, 1, 2] : [0]).flatMap((copy) => tiles.map((t, i) => ({ t, i, copy })));
+  const seen = useSeen(row, all.length);
+  const [views, setViews] = useState({});
+  const [instant, setInstant] = useState(false);
+  // Counted from the start too, so the first settling of the blinds on load
+  // does not change any view.
+  const jumpedAt = useRef(performance.now());
+  useLoop(row, n, loop, {
+    center: false,
+    onJump: () => { jumpedAt.current = performance.now(); setInstant(true); setTimeout(() => setInstant(false), 260); },
+  });
+  const canSwap = () => performance.now() - jumpedAt.current > 300;
   return (
     <div ref={band} style={{ margin: `6px -${PAD}px 0`, background: "linear-gradient(180deg, #FFFFFF 0%, #EAF4F8 16%, #F3F5EF 52%, #FFF6E6 84%, #FFFFFF 100%)", padding: "22px 0 18px", display: "flex", flexDirection: "column", gap: 10 }}>
       <style>{"@keyframes v7zzz { 0% { opacity: 0; transform: translate(0, 4px) scale(0.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(7px, -12px) scale(1.05); } }"}</style>
@@ -425,10 +441,13 @@ function Vibes({ dest, tiles, onGallery }) {
         <PlaneIcon size={16} />
         <span style={{ flex: 1, borderTop: "1.5px dashed #9FB7BD" }} />
       </div>
-      <div ref={row} className="hide-scrollbar" style={{ display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
-        {tiles.map((t, n) => (
-          <div key={t.label} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <PlaneWindow imgs={t.imgs} seen={seen[n] ?? 1} nudge={nudge && n === 1} onOpen={(img) => onGallery(t.ats[Math.max(0, t.imgs.indexOf(img))])} />
+      <div ref={row} className="hide-scrollbar" style={{ position: "relative", display: "flex", gap: 16, padding: `8px ${PAD}px 12px`, overflowX: "auto" }}>
+        {all.map(({ t, i, copy }, idx) => (
+          <div key={`${copy}-${t.label}`} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <PlaneWindow imgs={t.imgs} seen={seen[idx] ?? 1} nudge={nudge && idx === (loop ? n : 0) + 1}
+              view={(views[i] || 0) % t.imgs.length} onNext={() => setViews((v) => ({ ...v, [i]: (v[i] || 0) + 1 }))}
+              instant={instant} canSwap={canSwap}
+              onOpen={(img) => onGallery(t.ats[Math.max(0, t.imgs.indexOf(img))])} />
             <button onClick={() => onGallery(t.at)} style={{ padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>{t.label}</button>
           </div>
         ))}
@@ -521,13 +540,15 @@ const bringCard = (rail, k, center = false) => {
 // A row that goes round and round: three copies of the cards, starting on
 // the middle one, and whenever a swipe comes to rest in the first or the last
 // copy it is moved, unseen, to the same card in the middle one.
-function useLoop(rail, n, on) {
+function useLoop(rail, n, on, { center = true, onJump } = {}) {
+  const jump = useRef(onJump);
+  jump.current = onJump;
   useLayoutEffect(() => {
     const el = rail.current;
     if (!on || !el?.children[n]) return;
     const card = el.children[n];
-    el.scrollLeft = card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2;
-  }, [rail, n, on]);
+    el.scrollLeft = card.offsetLeft - (center ? (el.clientWidth - card.offsetWidth) / 2 : PAD);
+  }, [rail, n, on, center]);
   useEffect(() => {
     const el = rail.current;
     if (!on || !el) return undefined;
@@ -536,8 +557,10 @@ function useLoop(rail, n, on) {
       const kids = el.children;
       const span = kids[n].offsetLeft - kids[0].offsetLeft;
       const mid = el.scrollLeft + el.clientWidth / 2;
-      if (mid < kids[n].offsetLeft) el.scrollLeft += span;
-      else if (mid > kids[2 * n].offsetLeft) el.scrollLeft -= span;
+      const by = mid < kids[n].offsetLeft ? span : mid > kids[2 * n].offsetLeft ? -span : 0;
+      if (!by) return;
+      jump.current?.();
+      el.scrollLeft += by;
     };
     const onScroll = () => { clearTimeout(t); t = setTimeout(settle, 140); };
     el.addEventListener("scroll", onScroll, { passive: true });
