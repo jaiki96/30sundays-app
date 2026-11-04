@@ -20,15 +20,45 @@ import { destAreas, respread, routeNights, areaImg } from "../data/buildData";
 // pink button, Save Itinerary.
 
 const GOLD = "#FDA201";
+// The glass every label over a photo in the app uses.
+const GLASS = { background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" };
 
-// The place to suggest adding, per country, in the order we would suggest it.
-// Islands first: they are what people most often wish they had added.
+// What we add, and where, from the trips we actually sell (30 Sundays sales
+// data, Bali 7N: Seminyak opens 93% of trips and Ubud closes 90%, with Nusa
+// Penida and the Gilis in between, Penida first when both). Per country, the
+// places to suggest in order, the nights each usually gets, the stop it goes
+// after, and the reason we give.
 const ADD_FIRST = {
-  Bali: ["Nusa Penida", "Uluwatu", "Seminyak", "Canggu"],
-  Vietnam: ["Ha Long", "Phu Quoc", "Hoi An"],
-  Thailand: ["Krabi", "Koh Samui", "Phuket"],
+  Bali: ["Gili Trawangan", "Nusa Penida"],
+  Vietnam: ["Ha Long", "Phu Quoc", "Da Nang", "Hoi An"],
+  Thailand: ["Phi Phi", "Krabi", "Phuket"],
   "Sri Lanka": ["Ella", "Mirissa", "Galle"],
 };
+const ADD_NIGHTS = { "Gili Trawangan": [1, 2], "Nusa Penida": [1, 2], "Ha Long": [1], "Phi Phi": [2, 1] };
+const ADD_AFTER = { "Gili Trawangan": "Nusa Penida", "Ha Long": "Hanoi", "Phi Phi": "Krabi" };
+// A place that only makes sense from another one: the bay cruise leaves
+// from Hanoi.
+const ADD_NEEDS = { "Ha Long": "Hanoi" };
+const ADD_WHY = {
+  "Gili Trawangan": "Turtles, no cars and sunsets. Nearly half our Bali trips stop here.",
+  "Nusa Penida": "Cliffs and manta rays. Nearly half our Bali trips stop here.",
+  "Ha Long": "A night on the bay. Most of our Hanoi trips add it.",
+  "Phi Phi": "Maya Bay and island hops. On most of our Krabi and Phuket trips.",
+};
+
+// k nights taken from the longest stays, one at a time (the later one on a
+// tie, usually the beach end), never leaving a stay under two nights. Null
+// when there is not enough to give.
+function take(route, k) {
+  const out = route.map((r) => ({ ...r }));
+  for (let t = 0; t < k; t += 1) {
+    let i = -1;
+    out.forEach((r, j) => { if (r.n > 2 && (i < 0 || r.n >= out[i].n)) i = j; });
+    if (i < 0) return null;
+    out[i].n -= 1;
+  }
+  return out;
+}
 
 const areaOf = (dest, city) => (destAreas[dest] || []).find((a) => a.city === city);
 const line = (route) => route.map((r) => `${r.city} ${r.n}N`).join(" → ");
@@ -53,53 +83,62 @@ export function betterRows(dest, route) {
   const have = new Set(route.map((r) => r.city));
   const rows = [];
 
-  // One stop fewer, its nights shared out across the others. The longest
-  // stay is the heart of the trip, so it is never the one dropped; the
-  // shortest stops go first, and a stop in the middle before an end.
+  // More relaxed: first a second night on a one-night stop (a one-night
+  // island is mostly boats), taken from the longest stay; then one stop
+  // fewer, its nights shared out. The longest stay is the heart of the trip,
+  // so it is never the one dropped; short stops go first, middle before end.
   if (route.length >= 2) {
-    const longest = route.reduce((m, r, j) => (r.n > route[m].n ? j : m), 0);
+    const cards = [];
+    route.forEach((r, k) => {
+      if (r.n !== 1) return;
+      const next = take(route, 1);
+      if (!next) return;
+      next[k].n += 1;
+      cards.push({ route: next, img: photoFor(dest, r.city, cards.length), why: `Two nights on ${r.city}, so it is not all boats. Same length of trip.` });
+    });
+    // Only on trips of three stops or more (two stops less one is a single
+    // town, not a slower trip), and never one of the longest stays.
+    const maxN = Math.max(...route.map((r) => r.n));
     const mid = (k) => (k > 0 && k < route.length - 1 ? 0 : 1);
-    const order = route.map((_, k) => k).filter((k) => k !== longest)
-      .sort((a, b) => route[a].n - route[b].n || mid(a) - mid(b));
-    const cards = order.map((k) => {
-      const drop = route[k];
-      const rest = route.filter((_, j) => j !== k);
-      const next = respread(rest, total);
-      const gain = next.filter((r) => r.n > (route.find((x) => x.city === r.city)?.n || 0)).map((r) => r.city);
-      return {
-        route: next,
-        img: photoFor(dest, gain[0] || next[0].city, k),
-        why: `One hotel change fewer. ${drop.city}'s ${drop.n === 1 ? "night goes" : "nights go"} to ${listOf(gain.length ? gain : next.map((r) => r.city))}, so you unpack once less and slow down.`,
-      };
-    }).slice(0, 3);
-    rows.push({ key: "relaxed", label: "Make it more relaxed", Icon: Leaf, cards });
+    route.map((_, k) => k).filter((k) => route.length >= 3 && route[k].n < maxN)
+      .sort((a, b) => route[a].n - route[b].n || mid(a) - mid(b))
+      .forEach((k) => {
+        const next = respread(route.filter((_, j) => j !== k), total);
+        const gain = next.filter((r) => r.n > (route.find((x) => x.city === r.city)?.n || 0)).map((r) => r.city);
+        cards.push({
+          route: next,
+          img: photoFor(dest, gain[0] || next[0].city, cards.length),
+          why: `One hotel change fewer. More time in ${listOf((gain.length ? gain : next.map((r) => r.city)).slice(0, 2))}.`,
+        });
+      });
+    if (cards.length) rows.push({ key: "relaxed", label: "Make it more relaxed", Icon: Leaf, cards: cards.slice(0, 3) });
   }
 
-  // A place the trip does not visit yet.
-  const pool = [...(ADD_FIRST[dest] || []), ...(destAreas[dest] || []).map((a) => a.city)];
-  const place = pool.find((c) => !have.has(c) && areaOf(dest, c));
+  // A place the trip does not visit yet, put where our trips put it. Where
+  // we know what people add, only those; a trip that has them all gets no row.
+  const pool = ADD_FIRST[dest] || (destAreas[dest] || []).map((a) => a.city);
+  const place = pool.find((c) => !have.has(c) && areaOf(dest, c) && (!ADD_NEEDS[c] || have.has(ADD_NEEDS[c])));
   if (place) {
     const area = areaOf(dest, place);
-    const n = Math.min(2, area.n || 2);
-    const blurb = area.blurb || area.tag;
-    // A stop in the middle with the fewest nights, to give up for the new
-    // place. Squeezing every stay to make room left one-night stops.
-    const midK = route.map((_, k) => k).filter((k) => k > 0 && k < route.length - 1)
-      .sort((a, b) => route[a].n - route[b].n)[0];
-    const options = [
-      // Two nights longer, nothing else moves.
-      [...route, { city: place, n }],
-      // In place of the last stop, same length.
-      route.length >= 2 ? [...route.slice(0, -1), { city: place, n: route[route.length - 1].n }] : null,
-      // In place of a short stop in the middle, same length.
-      midK != null ? [...route.filter((_, j) => j !== midK), { city: place, n: route[midK].n }] : null,
-    ].filter(Boolean);
+    const after = route.findIndex((r) => r.city === ADD_AFTER[place]);
+    // After its usual neighbour; else before the last stop; on a one-stop
+    // trip, first (the stop there is the beach end).
+    const at = after >= 0 ? after + 1 : route.length >= 2 ? route.length - 1 : 0;
+    const put = (r, n) => [...r.slice(0, at), { city: place, n }, ...r.slice(at)];
+    const options = [];
+    (ADD_NIGHTS[place] || [Math.min(2, area.n || 2)]).forEach((n) => {
+      const room = take(route, n);
+      if (room) options.push(put(room, n)); // same length, nights from the longest stays
+      options.push(put(route, n)); // n nights longer, nothing else moves
+    });
     const seen = new Set();
-    const cards = options.filter((r) => { const k = line(r); if (seen.has(k)) return false; seen.add(k); return true; }).map((r, k) => ({
-      route: r,
-      img: photoFor(dest, place, k),
-      why: `${blurb} Most ${dest} trips that add one more place add ${place}.`,
-    }));
+    const cards = options.filter((r) => { const k = line(r); if (seen.has(k)) return false; seen.add(k); return true; })
+      .slice(0, 3)
+      .map((r, k) => ({
+        route: r,
+        img: photoFor(dest, place, k),
+        why: ADD_WHY[place] || `${area.tag || place}. Often added in ${dest}.`,
+      }));
     rows.push({ key: "place", label: `Add ${place}`, Icon: MapPin, cards });
   }
 
@@ -110,7 +149,7 @@ export function betterRows(dest, route) {
     return {
       route: next,
       img: photoFor(dest, r.city, k + 2),
-      why: `${tag ? `${r.city}: ${tag.toLowerCase()}. ` : ""}One more night there, without moving hotel. The trip becomes ${total + 1} nights.`,
+      why: `${tag ? `${tag}. ` : ""}One more night, same hotel.`,
     };
   }).slice(0, 3);
   rows.push({ key: "night", label: "Stay one more night", Icon: Moon, cards });
@@ -143,10 +182,10 @@ function RouteCard({ card, onPick }) {
         onClick={(e) => { e.stopPropagation(); setWhy((v) => !v); }}
         style={{
           position: "absolute", top: 8, right: 8, zIndex: 2, width: 28, height: 28, borderRadius: "50%",
-          border: "none", background: "rgba(255,255,255,0.92)", display: "grid", placeItems: "center", cursor: "pointer", padding: 0,
+          border: "none", ...GLASS, display: "grid", placeItems: "center", cursor: "pointer", padding: 0,
         }}
       >
-        {why ? <XIcon size={14} color={C.head} strokeWidth={2.4} /> : <Info size={15} color={C.head} strokeWidth={2.2} />}
+        {why ? <XIcon size={14} color="#fff" strokeWidth={2.4} /> : <Info size={15} color="#fff" strokeWidth={2.2} />}
       </button>
       <span style={{ position: "absolute", left: 12, right: 12, bottom: 10, color: "#fff" }}>
         {/* A long trip's route runs smaller and stops at four lines; the
@@ -157,18 +196,18 @@ function RouteCard({ card, onPick }) {
         }}>{line(card.route)}</span>
         <span style={{ display: "block", marginTop: 3, fontSize: 12.5, opacity: 0.9 }}>{nights} nights</span>
       </span>
+      {/* Why: two short lines on glass under the i, leaving the route in
+          view at the foot of the card. */}
       {why && (
         <span
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: "absolute", left: 8, right: 8, top: 42, bottom: 8, zIndex: 1, borderRadius: 10,
-            background: "rgba(255,255,255,0.96)", padding: "10px 12px", boxSizing: "border-box",
-            fontSize: 12.5, lineHeight: 1.45, color: C.head, overflow: "auto", cursor: "default",
+            position: "absolute", left: 8, right: 8, top: 42, zIndex: 1, borderRadius: 10, ...GLASS,
+            padding: "6px 10px", boxSizing: "border-box", cursor: "default",
+            fontSize: 11.5, fontWeight: 500, lineHeight: 1.35, color: "#fff",
+            display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden",
           }}
-        >
-          <span style={{ display: "block", fontWeight: 700, marginBottom: 3 }}>Why we suggest this</span>
-          {card.why}
-        </span>
+        >{card.why}</span>
       )}
     </div>
   );

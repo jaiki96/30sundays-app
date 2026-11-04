@@ -6,7 +6,7 @@ import {
   Car, Utensils, RotateCcw, Ban, LogIn, LogOut, Heart, Crown,
 } from "lucide-react";
 import { C, allItineraries } from "../data";
-import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { stayHotels, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { useWishlist } from "../data/wishlist";
 import { useDeals } from "../data/deals";
 import HotelMapScreen from "../components/HotelMapScreen";
@@ -379,7 +379,7 @@ export default function HotelListing({ selectedHotels, setSelectedHotels }) {
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const allHotels = useMemo(
-    () => (stayInfo ? generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights) : []),
+    () => (stayInfo ? stayHotels(itinerary, Number(stayIndex)) : []),
     [stayInfo, itinerary],
   );
 

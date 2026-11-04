@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Star, ChevronUp, ChevronDown, UtensilsCrossed, ArrowLeftRight, Sparkles, Check } from "lucide-react";
 import { C, allItineraries } from "../data";
-import { generateHotelsForCity, getStayInfo, formatHotelPrice } from "../data/hotelData";
+import { stayHotels, getStayInfo, formatHotelPrice } from "../data/hotelData";
 import { getMauritiusHotel } from "../data/mauritiusData";
 import { useDeals, computePrice } from "../data/deals";
 import { useWishlist } from "../data/wishlist";
@@ -36,7 +36,7 @@ export default function HotelPDP() {
   const stayInfo = itinerary ? getStayInfo(itinerary, Number(stayIndex)) : null;
 
   const hotels = itinerary && stayInfo
-    ? generateHotelsForCity(stayInfo.city, itinerary.dest, stayInfo.checkIn, stayInfo.checkOut, stayInfo.nights)
+    ? stayHotels(itinerary, Number(stayIndex))
     : [];
   const hotel = hotels.find(h => h.id === decodeURIComponent(hotelId));
 

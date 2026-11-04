@@ -55,9 +55,10 @@ export default function HotelStayCard({
         {dayLabel && (
           <span style={{
             position: "absolute", top: 10, left: 10,
-            background: C.white, borderRadius: 8, padding: "4px 10px",
-            fontSize: 12, fontWeight: 700, color: C.head,
-            boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+            // Glass, as every label over a photo in the app is.
+            background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+            borderRadius: 8, padding: "4px 10px",
+            fontSize: 12, fontWeight: 700, color: "#fff",
           }}>{dayLabel}</span>
         )}
         {recommendedBadge && (

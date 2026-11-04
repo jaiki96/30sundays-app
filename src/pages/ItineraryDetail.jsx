@@ -47,7 +47,7 @@ import { DayMediaDetail } from "./DayDetailImmersive";
 import { toMediaDays } from "../data/dayMediaShape";
 import { buildActivityDetail } from "../data/activityData";
 import { getMauritiusHotel } from "../data/mauritiusData";
-import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
+import { stayHotels, stayCard } from "../data/hotelData";
 import { copyOf } from "../data/copyTrip";
 import { BOOKED_TRIPS } from "../data/bookedTrips";
 import InclusionsDrawer from "../components/InclusionsDrawer";
@@ -93,25 +93,20 @@ function getDayActivities(it) {
   return expanded;
 }
 
-// Sample hotels per city
-// Hotel-property photos for the stub (resorts/rooms, not activities)
-const HOTEL_STUB_IMGS = [
-  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=80&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80&auto=format&fit=crop",
-];
 
 function getHotels(it) {
   return it.days.map((day, i) => {
+    // Name, stars, score and photo come from the same place the hotel behind
+    // the card does, so the card and the hotel page agree.
+    const card = stayCard(it, i);
     const base = {
       city: day.city,
       dayRange: `Day ${it.days.slice(0, i).reduce((a, d) => a + d.n, 0) + 1}–${it.days.slice(0, i + 1).reduce((a, d) => a + d.n, 0)}`,
       name: `${day.city} Grand Resort`,
       type: "Deluxe Room · Breakfast included",
-      stars: [4, 5, 4, 5][i % 4],
-      rating: [8.4, 8.9, 8.1, 8.7][i % 4], // Booking.com 10-point scale
-      img: HOTEL_STUB_IMGS[i % HOTEL_STUB_IMGS.length],
+      stars: card.stars,
+      rating: card.rating,
+      img: card.img,
     };
     // Mauritius uses real hotels from the sheet, each carrying its inclusions
     // (honeymoon perks + value add-ons) surfaced in the accordion below.
@@ -542,7 +537,6 @@ const NAV_SECTIONS = [
   { key: "together", label: "Plan together", Icon: Users },
   { key: "flights", label: "Flights", Icon: Plane },
   { key: "consultant", label: "Consultant", Icon: Headphones },
-  { key: "reviews", label: "Reviews", Icon: Star },
   { key: "map", label: "Journey map", Icon: MapIcon },
   { key: "cost", label: "Cost", Icon: IndianRupee },
 ];
@@ -1173,8 +1167,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         }
       : { ...h, hotelId: `${h.city}-hotel-0` }; // default to first hotel
     // Pull refundability from the real generated hotel behind this stay.
-    const si = getStayInfo(it, i);
-    const match = si && generateHotelsForCity(si.city, it.dest, si.checkIn, si.checkOut, si.nights).find(x => x.id === resolved.hotelId);
+    const match = stayHotels(it, i).find(x => x.id === resolved.hotelId);
     return { ...resolved, freeCancellation: match ? match.freeCancellation : undefined };
   });
 
@@ -1347,7 +1340,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   }), [daysWithActivities, it.dest, tripStart, editable, selectedDayOptions]);
 
   // Every plan on offer for the day being changed, as cards.
-  const destReviews = reviews.filter(r => r.dest === it.dest).length > 0 ? reviews.filter(r => r.dest === it.dest) : reviews.slice(0, 3);
 
   // ─── Change Day handlers ───
   const pillHidden = pillAway || !!toast || topCustomiseSeen;
@@ -2483,35 +2475,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           <Divider />
         </>
       )}
-
-      {/* ═══ 7. Traveler Stories ═══ */}
-      <div ref={setSectionEl("reviews")} style={{ padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          <span style={{ fontSize: 20, fontWeight: 700, color: C.head }}>4.6</span>
-          <span style={{ fontSize: 12, color: C.sub }}>/5</span>
-          <div style={{ display: "flex", gap: 1, marginLeft: 4 }}>{[1,2,3,4,5].map(s => <Star key={s} size={12} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
-        </div>
-        <p style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>Based on Google reviews</p>
-        <p style={{ fontSize: 14, fontWeight: 600, color: C.head, marginBottom: 10 }}>Our customers say</p>
-        {destReviews.slice(0, 3).map((r, i) => (
-          <div key={i}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#F0F0F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: C.sub, flexShrink: 0 }}>{r.name[0]}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: C.head, margin: 0 }}>{r.name}</p>
-                  <div style={{ display: "flex", gap: 1 }}>{[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FBBC05" color="#FBBC05" strokeWidth={0} />)}</div>
-                </div>
-                <p style={{ fontSize: 13, color: C.sub, margin: "4px 0 0", lineHeight: "18px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>"{r.text}"</p>
-              </div>
-            </div>
-            {i < 2 && <div style={{ height: 1, background: C.div }} />}
-          </div>
-        ))}
-      </div>
-
-      <Divider />
 
       {/* ═══ 6. Journey Map ═══ */}
       <div ref={setSectionEl("map")} style={{ padding: "0 16px" }}>

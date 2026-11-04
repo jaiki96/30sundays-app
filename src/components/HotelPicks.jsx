@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Users, MapPin, ChevronRight } from "lucide-react";
 import { C } from "../data";
-import { generateHotelsForCity, getStayInfo } from "../data/hotelData";
+import { stayHotels, getStayInfo } from "../data/hotelData";
 import { useWishlist } from "../data/wishlist";
 import { PriceDelta } from "../pages/HotelListing";
 import SaveHeart from "./SaveHeart";
@@ -42,7 +42,7 @@ const photoOf = (x) => (typeof x === "string" ? x : x?.url);
 export function picksFor(it, stayIndex, shown) {
   const si = getStayInfo(it, stayIndex);
   if (!si) return null;
-  const all = generateHotelsForCity(si.city, it.dest, si.checkIn, si.checkOut, si.nights);
+  const all = stayHotels(it, stayIndex);
   const cur = all.find((h) => h.id === shown.hotelId) || all[0];
   if (!cur) return null;
   const nights = si.nights;
