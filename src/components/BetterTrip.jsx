@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Leaf, MapPin, Moon, ChevronDown, ChevronUp, Info, X as XIcon } from "lucide-react";
 import { C, destData } from "../data";
 import { destAreas, respread, routeNights, areaImg } from "../data/buildData";
+import { PHOTO_HEART_SHADOW } from "./SaveHeart";
 
 // ─── Make this itinerary even better ───
 //
@@ -182,10 +183,13 @@ function RouteCard({ card, onPick }) {
         onClick={(e) => { e.stopPropagation(); setWhy((v) => !v); }}
         style={{
           position: "absolute", top: 8, right: 8, zIndex: 2, width: 28, height: 28, borderRadius: "50%",
-          border: "none", ...GLASS, display: "grid", placeItems: "center", cursor: "pointer", padding: 0,
+          // Just the icon, white, with the photo-icon shadow so it reads on
+          // any picture. The 28px box is only the tap target.
+          border: "none", background: "none", display: "grid", placeItems: "center", cursor: "pointer", padding: 0,
+          filter: PHOTO_HEART_SHADOW,
         }}
       >
-        {why ? <XIcon size={14} color="#fff" strokeWidth={2.4} /> : <Info size={15} color="#fff" strokeWidth={2.2} />}
+        {why ? <XIcon size={18} color="#fff" strokeWidth={2.4} /> : <Info size={19} color="#fff" strokeWidth={2.2} />}
       </button>
       <span style={{ position: "absolute", left: 12, right: 12, bottom: 10, color: "#fff" }}>
         {/* A long trip's route runs smaller and stops at four lines; the
