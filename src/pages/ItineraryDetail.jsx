@@ -584,7 +584,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const [popularAct, setPopularAct] = useState(null); // { act, city } opened from a People like you also chose card
   const [popularDayPick, setPopularDayPick] = useState(null); // { name, days } for View plans
   const [hotelInView, setHotelInView] = useState(0); // the hotel card the picks under the row follow
-  const [betterPick, setBetterPick] = useState(null); // a route from Make this itinerary even better, awaiting OK
+  const [betterPick, setBetterPick] = useState(null); // a route from People like you also tried, awaiting OK
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray

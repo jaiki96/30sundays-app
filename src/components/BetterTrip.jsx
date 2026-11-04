@@ -4,7 +4,7 @@ import { C, destData } from "../data";
 import { destAreas, respread, routeNights, areaImg } from "../data/buildData";
 import { PHOTO_HEART_SHADOW } from "./SaveHeart";
 
-// ─── Make this itinerary even better ───
+// ─── People like you also tried ───
 //
 // After Itinerary at a glance, before Hotels: three full-width rows, closed
 // until tapped, one open at a time (canvas board R1). An open row shows other
@@ -223,8 +223,8 @@ export default function BetterTrip({ dest, route, onPick }) {
   if (!rows.length) return null;
 
   return (
-    <section aria-label="Make this itinerary even better" style={{ padding: "4px 0 2px" }}>
-      <p style={{ margin: "0 0 12px", padding: "0 16px", fontSize: 17, fontWeight: 700, color: C.head }}>Make this itinerary even better</p>
+    <section aria-label="People like you also tried" style={{ padding: "4px 0 2px" }}>
+      <p style={{ margin: "0 0 12px", padding: "0 16px", fontSize: 17, fontWeight: 700, color: C.head }}>People like you also tried</p>
       {rows.map((r) => {
         const isOpen = open === r.key;
         return (
