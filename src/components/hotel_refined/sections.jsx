@@ -594,8 +594,8 @@ function RoomSheet({ room, chosen, onClose, onPick }) {
   );
 }
 
-export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title }) {
-  const [detail, setDetail] = useState(null);
+export function Rooms({ hotel, onPick, selectedId, readOnly = false, nights = 3, title, openId = null }) {
+  const [detail, setDetail] = useState(() => (openId ? hotel.rooms.find((r) => r.id === openId) || null : null));
 
   return (
     <>

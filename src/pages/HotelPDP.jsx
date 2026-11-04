@@ -45,7 +45,11 @@ export default function HotelPDP() {
   const currentHotel = currentHotelId ? hotels.find(h => h.id === currentHotelId) : null;
   const currentRoomPrice = currentHotel ? currentHotel.rooms[0].pricePerNight : 0;
 
+  // room: a room to open straight away, from the room upgrade under the
+  // trip's hotels. It starts picked, with its details open.
+  const openRoomId = params.get("room");
   const [selectedRoomId, setSelectedRoomId] = useState(() => {
+    if (openRoomId && hotel?.rooms?.some((r) => r.id === openRoomId)) return openRoomId;
     if (isCurrentHotel && hotel?.rooms?.length) return hotel.rooms[0].id;
     return hotel?.rooms?.[0]?.id || null;
   });
@@ -414,6 +418,7 @@ export default function HotelPDP() {
       hotel={shown}
       onBack={goBack}
       selectedRoomId={readOnly ? null : selectedRoomId}
+      openRoomId={readOnly ? null : openRoomId}
       onPickRoom={readOnly ? undefined : (room) => setSelectedRoomId(room.id)}
       readOnly={readOnly}
       roomsTitle={readOnly ? "The room on this trip" : undefined}

@@ -27,9 +27,9 @@ import { getTourRating, RATING_META } from "../data/tourRatings";
 import { getDayRating, tourKeysForDay } from "../data/dayRatings";
 import { DayRatingPill, DayRatingRow } from "../components/DayRating";
 import GlanceDayCard from "../components/GlanceDayCard";
-import PopularActivities from "../components/PopularActivities";
-import SimilarTrips from "../components/SimilarTrips";
-import { getDayNote } from "../data/dayNotes";
+import PopularActivities, { DayPickSheet } from "../components/PopularActivities";
+import HotelPicks from "../components/HotelPicks";
+import BetterTrip, { BetterTripConfirm } from "../components/BetterTrip";
 import { DayScoreRow, DayScoreModal } from "../components/DayScoring";
 import ItineraryScoreboard from "../components/ItineraryScoreboard";
 import SpotlightTour from "../components/SpotlightTour";
@@ -583,7 +583,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const elForSection = useCallback((key) => sectionEls.current[key] || null, []);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
-  const [popularAct, setPopularAct] = useState(null);           // { act, city } opened from a Popular among travellers card
+  const [popularAct, setPopularAct] = useState(null);
+  const [popularDayPick, setPopularDayPick] = useState(null); // { name, days } for View plans
+  const [hotelInView, setHotelInView] = useState(0); // the hotel card the picks under the row follow
+  const [betterPick, setBetterPick] = useState(null); // a route from Make this itinerary even better, awaiting OK           // { act, city } opened from a Popular among travellers card
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
@@ -1634,6 +1637,36 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
     const data = generateDayOptions(it, dayIndex, daysWithActivities);
     return data && data.options.length > 1;
   };
+  // The days in a city whose plans include an activity, for "View plans".
+  // Every day of the city comes back, in order; the ones that cannot take it
+  // carry a reason, so the day step can show them greyed.
+  const planDaysFor = (city, name) => {
+    const want = String(name).toLowerCase();
+    return daysWithActivities.map((d, i) => ({ d, i })).filter(({ d }) => d.city === city).map(({ d, i }) => {
+      const lock = lockReasonFor(d, i);
+      const plans = lock || !dayHasOptions(i) ? [] : [
+        ...(generateDayOptions(it, i, daysWithActivities)?.options || []),
+        ...(getAllDayCombinations(it, i, daysWithActivities)?.combinations || []),
+      ].filter((p) => !p.isCurrent);
+      const has = plans.some((p) => (p.activities || []).some((n) => n.toLowerCase() === want));
+      const acts = (selectedDayOptions[i]?.activities || (d.activities || []).map((a) => a?.name || a)).filter(Boolean);
+      return {
+        index: i,
+        dayNum: d.dayNum,
+        date: hasOwnDates ? glanceDate(i) : null,
+        now: acts.join(", "),
+        free: dayIsFree(d, i) || !acts.length,
+        reason: lock || (has ? null : "No plans with this activity"),
+      };
+    });
+  };
+  const openPlansFor = (name, city) => {
+    const days = planDaysFor(city, name);
+    const open = days.filter((x) => !x.reason);
+    if (!open.length) return;
+    if (open.length === 1) { setChangeDayPick(name); setChangeDayIndex(open[0].index); return; }
+    setPopularDayPick({ name, days });
+  };
 
   // ─── Deal actions ───
   const handleSaveToPlans = () => {
@@ -1937,8 +1970,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       <CoverageLine dest={it.dest} cov={coverage} onView={() => setCoverageOpen(true)} />
-      {/* Other trips to the same country, led by their route. Only on a trip that can still change. */}
-      {editable && <SimilarTrips it={it} />}
       <Divider />
 
       {/* ═══ 3. Itinerary at a Glance ═══ */}
@@ -1959,7 +1990,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* A note earns its place once. Repeating the same warning on three
               days running is noise, and it teaches people to skip the band. */}
-          {(() => { const notesShown = new Set(); return daysWithActivities.map((day, i) => {
+          {(() => { return daysWithActivities.map((day, i) => {
             const swapped = selectedDayOptions[i];
             // What a day carries decides what the card can say about it.
             //   tours    → pace, rating, videos, and alternatives to swap to
@@ -1993,12 +2024,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 .filter(Boolean);
             }
 
-            // One heads-up on the whole list, on the first day that has one.
-            // A band on every other day taught people to skip them all.
-            const candidate = getDayNote(free ? { city: day.city } : { activities: acts });
-            const note = candidate && notesShown.size === 0 ? candidate : null;
-            if (note) notesShown.add(note);
-
             // After the last day in a city: what other travellers add there.
             // Only on a trip that can still change.
             const lastInCity = isLast || daysWithActivities[i + 1]?.city !== day.city;
@@ -2023,7 +2048,6 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 pace={scoring?.pace.label}
                 paceLevel={scoring?.pace.level}
                 rating={ratingForDay(day, i)}
-                note={note}
                 // A transfer day has nothing to swap. A free day does: the
                 // alternatives are tours you can add to it.
                 canChange={editable && dayHasOptions(i) && !lockReasonFor(day, i)}
@@ -2037,6 +2061,8 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                   city={day.city}
                   exclude={cityNames}
                   onOpen={(act) => setPopularAct({ act, city: day.city })}
+                  canPlan={(name) => planDaysFor(day.city, name).some((x) => !x.reason)}
+                  onPlans={(act) => openPlansFor(act.name, day.city)}
                 />
               )}
               </Fragment>
@@ -2060,13 +2086,29 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         )}
       </div>
 
+      {/* Other shapes of this trip: more relaxed, one more place, one more
+          night. Each makes a new itinerary, so only on a plan that can be
+          rebuilt into a new version. */}
+      {wizardEditable && (
+        <>
+          <Divider />
+          <BetterTrip dest={it.dest} route={tripRoute} onPick={(card) => setBetterPick(card)} />
+        </>
+      )}
+
       <Divider />
 
       {/* ═══ 4. Hotels ═══ */}
       <div id="hotels-section" ref={setSectionEl("hotels")} style={{ scrollMarginTop: 62 }}>
         <p style={{ fontSize: 17, fontWeight: 700, color: C.head, padding: "0 16px", marginBottom: 12 }}>Hotels</p>
 
-        <div className="hs" style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}>
+        <div
+          className="hs"
+          // Which card is in view, so the picks under the row follow it. Cards
+          // are 280 wide with a 12 gap.
+          onScroll={(e) => setHotelInView(Math.min(hotels.length - 1, Math.round(e.currentTarget.scrollLeft / 292)))}
+          style={{ gap: 12, paddingLeft: 16, paddingRight: 16 }}
+        >
           {hotels.map((h, i) => {
             const selfBooked = selfBookedStays.has(i);
             const ls = stayState(liveResult, i);
@@ -2180,8 +2222,21 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
 
         {/* Sold-out is communicated on the hotel card itself (badge) + toast; no section banner. */}
 
+        {/* What travellers like you chose instead, following the hotel in
+            view. It takes the place of the upgrade banner on a trip that can
+            still change. */}
+        {editable && (
+          <HotelPicks
+            it={it}
+            stays={hotels.map((h, i) => (selfBookedStays.has(i) ? null : h))}
+            active={hotelInView}
+            onOpenHotel={(i, id) => navigate(`/hotel-detail/${it.id}/${i}/${encodeURIComponent(id)}?current=${encodeURIComponent(hotels[i]?.hotelId || "")}${dealQS}`)}
+            onOpenRoom={(i, id, roomId) => navigate(`/hotel-detail/${it.id}/${i}/${encodeURIComponent(id)}?current=${encodeURIComponent(hotels[i]?.hotelId || "")}&room=${encodeURIComponent(roomId)}${dealQS}`)}
+          />
+        )}
+
         {/* Single hotel-upgrade banner (per-card chips removed) */}
-        {upgradeInfo.upgradeCount >= 1 && (
+        {!editable && upgradeInfo.upgradeCount >= 1 && (
           <div onClick={() => setShowUpgradeDrawer(true)} style={{
             margin: "16px 16px 0", background: "linear-gradient(135deg, #FFF8E7 0%, #FFF1D6 100%)", border: "1.5px solid #E8D5A3",
             borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
@@ -2885,6 +2940,15 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
       )}
 
       {/* ═══ An activity opened from Popular among travellers ═══ */}
+      {popularDayPick && (
+        <DayPickSheet
+          activity={popularDayPick.name}
+          days={popularDayPick.days}
+          frameStyle={overlayFrame}
+          onClose={() => setPopularDayPick(null)}
+          onPick={(i) => { const name = popularDayPick.name; setPopularDayPick(null); setChangeDayPick(name); setChangeDayIndex(i); }}
+        />
+      )}
       {popularAct && (
         <ActivityDetailSheet
           detail={buildActivityDetail(popularAct.act, { city: popularAct.city, country: it.dest })}
@@ -3041,6 +3105,20 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
           </div>
         );
       })()}
+
+      {betterPick && (
+        <BetterTripConfirm
+          from={tripRoute}
+          to={betterPick.route}
+          frameStyle={overlayFrame}
+          onClose={() => setBetterPick(null)}
+          onConfirm={() => {
+            const next = betterPick.route;
+            setBetterPick(null);
+            startBuild("route", `${next.map((r) => r.city).join(" · ")} · ${routeNights(next)} nights`, () => rebuild(next, tripStart));
+          }}
+        />
+      )}
 
       {/* ═══ Toast Notification ═══ */}
       {toast && (

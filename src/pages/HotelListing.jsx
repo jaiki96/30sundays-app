@@ -59,7 +59,7 @@ const galleryOf = (hotel) => [
 ].filter((v, i, a) => a.indexOf(v) === i);
 
 // ─── The one number that matters: what this swap does to the trip ───
-function PriceDelta({ delta, nights, fallbackPrice }) {
+export function PriceDelta({ delta, nights, fallbackPrice }) {
   if (delta === null) {
     return (
       <span style={{ fontSize: 13, fontWeight: 700, color: C.head }}>

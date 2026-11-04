@@ -158,6 +158,8 @@ export default function HotelV3({
   onPickRoom,
   onOpenSimilar,
   selectedRoomId,
+  // A room whose details open as the page does.
+  openRoomId = null,
   jumpRef,
   // The three places this screen opens from each bring something of their own:
   // a booking card or a stay summary above the fold, perks and add-ons after
@@ -267,6 +269,7 @@ export default function HotelV3({
             hotel={hotel}
             onPick={onPickRoom}
             selectedId={selectedRoomId}
+            openId={openRoomId}
             readOnly={readOnly}
             title={roomsTitle}
             nights={nights}

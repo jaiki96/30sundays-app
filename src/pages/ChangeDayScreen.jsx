@@ -427,6 +427,12 @@ export default function ChangeDayScreen({
     [options],
   );
 
+  // How many of the day's current activities a plan keeps.
+  const kept = useMemo(() => {
+    const now = new Set((options.find((o) => o.isCurrent)?.activities || []).map((n) => String(n).toLowerCase()));
+    return (o) => (o.activities || []).filter((n) => now.has(String(n).toLowerCase())).length;
+  }, [options]);
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     // The plan already on the day is not an option to change to, so it is not
@@ -446,10 +452,13 @@ export default function ChangeDayScreen({
     });
     if (f.sort === "asc") list = [...list].sort((a, b) => a.priceDelta - b.priceDelta);
     else if (f.sort === "desc") list = [...list].sort((a, b) => b.priceDelta - a.priceDelta);
-    // Recommended: best reviewed first.
-    else list = [...list].sort((a, b) => (b.rating?.enjoyedPct || 0) - (a.rating?.enjoyedPct || 0));
+    // Recommended: best reviewed first. When an activity was asked for, the
+    // plans that keep most of what is on the day now come first, so adding it
+    // costs the least.
+    else list = [...list].sort((a, b) => (preselect ? kept(b) - kept(a) : 0)
+      || (b.rating?.enjoyedPct || 0) - (a.rating?.enjoyedPct || 0));
     return list;
-  }, [options, query, f]);
+  }, [options, query, f, preselect, kept]);
 
   const activeCount = f.transfer.length + f.pace.length + f.rating.length + f.activities.length;
   const quickOn = (q) => f[q.group].includes(q.key);
