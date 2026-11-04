@@ -64,6 +64,10 @@ import { useDeals, computePrice, effectiveStatus, isExpired, QUOTE_VALID_DAYS, S
 import { runLiveCheck, stayState } from "../data/liveCheck";
 import { useCoverage, CoverageLine, CoverageSheet } from "../components/wishlist/WishlistCoverage";
 
+// The "People like you also chose" activity row after each town's days. Off
+// on every itinerary for now (user, 2026-11-04); flip to bring it back.
+const SHOW_POPULAR_ACTIVITIES = false;
+
 const Divider = () => <div style={{ height: 6, background: "#F5F5F5", margin: "20px 0" }} />;
 
 // Rotating reassurance copy shown in the bottom bar while we fetch live pricing.
@@ -577,10 +581,10 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
   const elForSection = useCallback((key) => sectionEls.current[key] || null, []);
   const [changeDayIndex, setChangeDayIndex] = useState(null); // which day's bottom sheet is open
   const [dayDetailIndex, setDayDetailIndex] = useState(null); // which day's full-screen detail is open
-  const [popularAct, setPopularAct] = useState(null);
+  const [popularAct, setPopularAct] = useState(null); // { act, city } opened from a People like you also chose card
   const [popularDayPick, setPopularDayPick] = useState(null); // { name, days } for View plans
   const [hotelInView, setHotelInView] = useState(0); // the hotel card the picks under the row follow
-  const [betterPick, setBetterPick] = useState(null); // a route from Make this itinerary even better, awaiting OK           // { act, city } opened from a Popular among travellers card
+  const [betterPick, setBetterPick] = useState(null); // a route from Make this itinerary even better, awaiting OK
   const [dayDetailJump, setDayDetailJump] = useState(null);   // section to land on, e.g. "reviews"
   const [optionPreview, setOptionPreview] = useState(null);   // the day plan opened from Change day plan
   const [previewDay, setPreviewDay] = useState(null); // { dayIndex, option } - preview overlay above the tray
@@ -2047,7 +2051,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
                 onOpenReviews={() => { setDayDetailJump("reviews"); setDayDetailIndex(i); }}
                 onChange={() => setChangeDayIndex(i)}
               />
-              {lastInCity && editable && (
+              {SHOW_POPULAR_ACTIVITIES && lastInCity && editable && (
                 <PopularActivities
                   dest={it.dest}
                   city={day.city}
@@ -2902,7 +2906,7 @@ export default function ItineraryDetail({ selectedFlights, selectedHotels, setSe
         </div>
       )}
 
-      {/* ═══ An activity opened from Popular among travellers ═══ */}
+      {/* ═══ An activity opened from People like you also chose ═══ */}
       {popularDayPick && (
         <DayPickSheet
           activity={popularDayPick.name}

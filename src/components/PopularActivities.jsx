@@ -2,8 +2,10 @@ import { useMemo } from "react";
 import { Users, ChevronRight, X as XIcon } from "lucide-react";
 import { C } from "../data";
 import { regionDetail } from "../data/regionData";
+import { useWishlist } from "../data/wishlist";
+import SaveHeart from "./SaveHeart";
 
-// ─── Popular among travellers ───
+// ─── People like you also chose (activities) ───
 //
 // A short rail after the last day in a city: things other travellers add
 // there that this trip does not have yet. It is a suggestion, so it stays
@@ -32,29 +34,65 @@ function addPrice(name) {
 }
 const inr = (n) => n.toLocaleString("en-IN");
 
+// The catalogue hands out photos from a shared pool, so a card could carry a
+// picture of somewhere else (Kelingking showed the Bali swing). On Bali each
+// card takes a photo of what it is, else of its town, and a row never shows
+// the same photo twice. The swing and the Handara gate never show, since we
+// tell people to skip both.
+const CDN = "https://cdn.30sundays.club/app_content/bali";
+const OWN_PHOTO = [
+  [/kelingking|broken beach|angel/i, `${CDN}/kelingking_beach_65.jpg`],
+  [/tegal+alang|rice terrace|rice field|paddies/i, `${CDN}/tegallalang_rice_fields_4.jpg`],
+  [/waterfall|banyumala|rafting/i, `${CDN}/banyumala_waterfall_56.jpg`],
+  [/tree ?house/i, `${CDN}/tree_house_nusa_penida_3.jpg`],
+  [/temple|tirta|tanah lot|monkey|kecak/i, "/vibes/bali-temples.jpg"],
+  [/snorkel|manta|dive|turtle|crystal bay|island/i, "/vibes/bali-islands.jpg"],
+  [/volcano|batur/i, "/vibes/bali-volcanoes.jpg"],
+  [/club|cocktail|bar\b|nightlife/i, "/vibes/bali-nightlife.jpg"],
+  [/beach|sunset|surf/i, "/vibes/bali-beaches.jpg"],
+];
+const TOWN_PHOTO = {
+  Ubud: `${CDN}/tegallalang_rice_fields_4.jpg`,
+  "Nusa Penida": `${CDN}/kelingking_beach_65.jpg`,
+  Seminyak: "/vibes/bali-beaches-2.jpg",
+  "Gili Trawangan": "/vibes/bali-islands.jpg",
+};
+const SPARE = ["/vibes/bali-temples-2.jpg", "/vibes/bali-rice-2.jpg", "/vibes/bali-nightlife-2.jpg", "/vibes/bali-temples-3.jpg", "/vibes/bali-beaches.jpg"];
+const SKIP = /swing|handara/i;
+function photosFor(acts, city) {
+  const used = new Set();
+  return acts.map((a) => {
+    const own = OWN_PHOTO.find(([re]) => re.test(a.name))?.[1];
+    const pick = [own, TOWN_PHOTO[city], ...SPARE, SKIP.test(a.img) ? null : a.img]
+      .find((u) => u && !used.has(u)) || own || TOWN_PHOTO[city] || SPARE[0];
+    used.add(pick);
+    return pick;
+  });
+}
+
 export function popularFor(dest, city, exclude = []) {
   const r = regionDetail(dest, city);
   if (!r?.acts?.length) return [];
   const have = new Set(exclude.map((n) => String(n).toLowerCase()));
-  return r.acts
-    .filter((a) => a.img && !have.has(a.name.toLowerCase()))
-    .slice(0, MAX)
-    .map((a) => ({ ...a, add: addPrice(a.name) }));
+  const acts = r.acts.filter((a) => a.img && !have.has(a.name.toLowerCase())).slice(0, MAX);
+  const imgs = dest === "Bali" ? photosFor(acts, city) : acts.map((a) => a.img);
+  return acts.map((a, i) => ({ ...a, img: imgs[i], add: addPrice(a.name) }));
 }
 
 export default function PopularActivities({ dest, city, exclude, onOpen, canPlan, onPlans }) {
   const acts = useMemo(() => popularFor(dest, city, exclude), [dest, city, exclude]);
+  const { isSaved, toggle } = useWishlist();
   if (!acts.length) return null;
 
   return (
     <section
-      aria-label={`Popular among travellers in ${city}`}
+      aria-label={`People like you also chose, ${city}`}
       style={{ margin: "4px -16px", background: CREAM, padding: "20px 0 22px" }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 16px", marginBottom: 12 }}>
         <Users size={18} color={GOLD} strokeWidth={2} aria-hidden />
         <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.head }}>
-          Popular among travellers in {city}
+          People like you also chose
         </p>
       </div>
 
@@ -84,10 +122,20 @@ export default function PopularActivities({ dest, city, exclude, onOpen, canPlan
               <img src={a.img} alt="" loading="lazy"
                 style={{ display: "block", width: "100%", height: 112, objectFit: "cover" }} />
               <span style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column" }}>
-                <span style={{
-                  fontSize: 15, fontWeight: 600, color: C.head, lineHeight: 1.3,
-                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                }}>{a.name}</span>
+                {/* The heart beside the name, right aligned, where every card
+                    in the app keeps it. */}
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{
+                    flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: C.head, lineHeight: 1.3,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}>{a.name}</span>
+                  <SaveHeart
+                    size={28}
+                    saved={isSaved("activity", dest, a.id)}
+                    onToggle={() => toggle("activity", dest, a.id, { name: a.name, img: a.img, sub: city, city })}
+                    style={{ margin: "-5px -6px -5px 0" }}
+                  />
+                </span>
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: C.head, whiteSpace: "nowrap" }}>+₹{inr(a.add)} a person</span>
                   {/* The day plans that include this activity, already filtered. */}
